@@ -118,8 +118,8 @@ export function ChatbotInterface({
     console.log('Message sent:', message);
     onSendMessage?.(message);
     const userMessage = message;
-    // DELAY clearing input để tránh "nhảy"
-    setTimeout(() => setMessage(""), 0);
+    // CLEAR input immediately after capturing message
+    setMessage("");
 
     try {
       // Call real RASA API
