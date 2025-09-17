@@ -252,39 +252,16 @@ export default function PublicLandingPage() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Đang tải...</p>
-        </div>
-      </div>
-    );
-  }
+  // Define safe derived variables with fallbacks for when landingPage is undefined
+  const isDarkTheme = (landingPage?.theme ?? 'light') === 'dark';
+  const finalPrice = landingPage?.finalPrice ?? 0;
+  const originalPrice = landingPage?.originalPrice ?? null;
+  const hasDiscount = originalPrice != null && originalPrice > finalPrice;
+  const discountPercent = hasDiscount ? Math.round(((originalPrice - finalPrice)/originalPrice)*100) : 0;
 
-  if (error || !landingPage) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Không tìm thấy trang</h1>
-          <p className="text-muted-foreground">Trang landing page không tồn tại hoặc đã bị tắt.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const finalPrice = landingPage.finalPrice || 0;
-  const originalPrice = landingPage.originalPrice;
-  const hasDiscount = originalPrice && originalPrice > finalPrice;
-  const discountPercent = hasDiscount ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
-
-  // Extract theme and color customization
-  const isDarkTheme = landingPage.theme === 'dark';
-  const primaryColor = landingPage.primaryColor || '#007bff';
-  
   // Memoized color info calculation for performance
   const colorInfo = useMemo(() => {
+    const primaryColor = landingPage?.primaryColor || '#007bff';
     // Enhanced color normalization that handles all formats: hex, rgb(), hsl(), named colors
     const normalizeColor = (color: string) => {
       try {
@@ -385,7 +362,7 @@ export default function PublicLandingPage() {
     };
     
     return normalizeColor(primaryColor);
-  }, [primaryColor]);
+  }, [landingPage?.primaryColor]);
   
   // Generate CSS custom properties for dynamic theming
   const themeStyles = useMemo(() => ({
@@ -421,6 +398,29 @@ export default function PublicLandingPage() {
       };
     }
   }, [isDarkTheme, colorInfo.rgb]);
+
+  // Early returns for loading and error states (after all hooks are defined)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !landingPage) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Không tìm thấy trang</h1>
+          <p className="text-muted-foreground">Trang landing page không tồn tại hoặc đã bị tắt.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
