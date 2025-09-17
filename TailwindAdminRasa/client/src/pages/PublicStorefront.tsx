@@ -83,6 +83,7 @@ export default function PublicStorefront() {
   const [selectedMember, setSelectedMember] = useState<SearchResult | null>(null);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [cartNotification, setCartNotification] = useState<{show: boolean, message: string}>({show: false, message: ''});
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -109,10 +110,12 @@ export default function PublicStorefront() {
           ? { ...item, quantity: Math.round((item.quantity + 0.1) * 100) / 100 }
           : item
       ));
-      toast({
-        title: "Đã thêm vào giỏ hàng",
-        description: `Tăng ${product.name} lên ${Math.round((existingItem.quantity + 0.1) * 100) / 100}kg`,
+      // Show top notification instead of toast
+      setCartNotification({
+        show: true, 
+        message: `Tăng ${product.name} lên ${Math.round((existingItem.quantity + 0.1) * 100) / 100}kg`
       });
+      setTimeout(() => setCartNotification({show: false, message: ''}), 3000);
     } else {
       setCart([...cart, {
         productId: product.id,
@@ -122,10 +125,12 @@ export default function PublicStorefront() {
         image: product.image,
         category: product.category
       }]);
-      toast({
-        title: "Đã thêm vào giỏ hàng",
-        description: `${product.name} - 0.1kg`,
+      // Show top notification instead of toast
+      setCartNotification({
+        show: true, 
+        message: `Đã thêm ${product.name} - 0.1kg vào giỏ hàng`
       });
+      setTimeout(() => setCartNotification({show: false, message: ''}), 3000);
     }
   };
 
@@ -434,6 +439,16 @@ export default function PublicStorefront() {
         </div>
       </section>
 
+      {/* Cart Notification - Top */}
+      {cartNotification.show && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top-2">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <ShoppingCart className="w-5 h-5" />
+            <span className="font-medium">{cartNotification.message}</span>
+          </div>
+        </div>
+      )}
+
       {/* Products Section */}
       <section className="py-8">
         <div className="container mx-auto px-4">
@@ -681,7 +696,7 @@ export default function PublicStorefront() {
                   (selectedMember && (isEditingAddress || !selectedMember.recentAddress))) && (
                   <div>
                     <Label htmlFor="customerAddress">
-                      Địa chỉ giao hàng{selectedMember && selectedMember.recentAddress ? ' (chỉnh sửa)' : ' *'}
+                      {selectedMember && selectedMember.recentAddress ? 'Nếu thay đổi địa chỉ vui lòng nhập thêm địa chỉ' : 'Địa chỉ giao hàng *'}
                     </Label>
                     <Textarea
                       id="customerAddress"
