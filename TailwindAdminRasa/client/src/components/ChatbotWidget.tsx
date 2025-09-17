@@ -231,7 +231,7 @@ export default function ChatbotWidget({
 
   // Auto scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages.length]);
 
   // Enhanced auto-focus with better timing and accessibility  

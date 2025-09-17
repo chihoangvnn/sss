@@ -107,8 +107,9 @@ export function ChatbotInterface({
     }, 1000);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
@@ -289,7 +290,7 @@ export function ChatbotInterface({
                   placeholder="Nhập tin nhắn để thử nghiệm..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   className="flex-1"
                   data-testid="input-test-message"
                 />
