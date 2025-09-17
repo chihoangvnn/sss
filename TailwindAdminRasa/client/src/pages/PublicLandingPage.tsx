@@ -22,6 +22,7 @@ import {
   Truck,
   CreditCard
 } from "lucide-react";
+import ChatbotWidget from "@/components/ChatbotWidget";
 
 interface OrderFormData {
   name: string;
@@ -578,6 +579,40 @@ export default function PublicLandingPage() {
           </Card>
         </div>
       )}
+
+      {/* Chatbot Widget */}
+      <ChatbotWidget 
+        pageType="landing_page"
+        pageContext={{
+          featuredProduct: landingPage?.product ? {
+            id: landingPage.product.id,
+            name: landingPage.product.name,
+            price: landingPage.product.price,
+            description: landingPage.product.description
+          } : undefined
+        }}
+        onAddToCart={(productId, quantity) => {
+          // For landing page, add to order form directly
+          setOrderForm(prev => ({
+            ...prev,
+            quantity: quantity
+          }));
+          setShowOrderForm(true);
+        }}
+        onCreateOrder={(orderData) => {
+          // Convert chatbot order to landing page order format
+          setOrderForm({
+            name: orderData.customerName || '',
+            phone: orderData.customerPhone || '',
+            email: orderData.customerEmail || '',
+            address: orderData.customerAddress || '',
+            quantity: orderData.quantity || 1,
+            paymentMethod: orderData.paymentMethod || 'cod',
+            notes: orderData.notes || ''
+          });
+          setShowOrderForm(true);
+        }}
+      />
     </div>
   );
 }
