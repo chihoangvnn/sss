@@ -28,7 +28,12 @@ import {
   Award,
   Lock,
   Eye,
-  TrendingUp
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
 import ChatbotWidget from "@/components/ChatbotWidget";
 
@@ -41,6 +46,23 @@ interface OrderFormData {
   paymentMethod: 'cod' | 'bank_transfer' | 'online';
   notes: string;
 }
+
+interface ValidationErrors {
+  name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  paymentMethod?: string;
+}
+
+type CheckoutStep = 'product' | 'customer' | 'payment' | 'confirm';
+
+const CHECKOUT_STEPS = [
+  { id: 'product', title: 'Sản phẩm', description: 'Xem lại sản phẩm' },
+  { id: 'customer', title: 'Thông tin', description: 'Thông tin khách hàng' },
+  { id: 'payment', title: 'Thanh toán', description: 'Phương thức thanh toán' },
+  { id: 'confirm', title: 'Xác nhận', description: 'Xác nhận đơn hàng' }
+] as const;
 
 export default function PublicLandingPage() {
   const { slug } = useParams();
@@ -57,6 +79,9 @@ export default function PublicLandingPage() {
   });
 
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [currentStep, setCurrentStep] = useState<CheckoutStep>('product');
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [viewersCount, setViewersCount] = useState(Math.floor(Math.random() * 20) + 5);
   const [recentPurchases, setRecentPurchases] = useState([
     "Anh Minh vừa mua 2 phút trước",
@@ -97,16 +122,7 @@ export default function PublicLandingPage() {
         title: "Đặt hàng thành công!",
         description: "Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất.",
       });
-      setShowOrderForm(false);
-      setOrderForm({
-        name: "",
-        phone: "",
-        email: "",
-        address: "",
-        quantity: 1,
-        paymentMethod: 'cod',
-        notes: ""
-      });
+      resetCheckoutForm();
     },
     onError: () => {
       toast({
@@ -117,11 +133,80 @@ export default function PublicLandingPage() {
     },
   });
 
+  // Form validation functions
+  const validateField = (field: string, value: string) => {
+    switch (field) {
+      case 'name':
+        if (!value.trim()) return 'Họ và tên là bắt buộc';
+        if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự';
+        return '';
+      case 'phone':
+        if (!value.trim()) return 'Số điện thoại là bắt buộc';
+        const phoneRegex = /^(\+84|0)[0-9]{9,10}$/;
+        if (!phoneRegex.test(value.replace(/\s/g, ''))) {
+          return 'Số điện thoại không hợp lệ (VD: 0123456789)';
+        }
+        return '';
+      case 'email':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          return 'Email không hợp lệ';
+        }
+        return '';
+      case 'address':
+        if (!value.trim()) return 'Địa chỉ giao hàng là bắt buộc';
+        if (value.trim().length < 10) return 'Vui lòng nhập địa chỉ chi tiết';
+        return '';
+      default:
+        return '';
+    }
+  };
+
+  const validateCurrentStep = () => {
+    const errors: ValidationErrors = {};
+    
+    if (currentStep === 'customer') {
+      errors.name = validateField('name', orderForm.name);
+      errors.phone = validateField('phone', orderForm.phone);
+      errors.email = validateField('email', orderForm.email);
+      errors.address = validateField('address', orderForm.address);
+    }
+    
+    setValidationErrors(errors);
+    return Object.values(errors).every(error => !error);
+  };
+
+  const handleFieldChange = (field: string, value: string) => {
+    setOrderForm(prev => ({ ...prev, [field]: value }));
+    setTouchedFields(prev => new Set(prev).add(field));
+    
+    // Real-time validation for touched fields
+    if (touchedFields.has(field)) {
+      const error = validateField(field, value);
+      setValidationErrors(prev => ({ ...prev, [field]: error }));
+    }
+  };
+
+  const handleNextStep = () => {
+    if (validateCurrentStep()) {
+      const stepIndex = CHECKOUT_STEPS.findIndex(step => step.id === currentStep);
+      if (stepIndex < CHECKOUT_STEPS.length - 1) {
+        setCurrentStep(CHECKOUT_STEPS[stepIndex + 1].id as CheckoutStep);
+      }
+    }
+  };
+
+  const handlePrevStep = () => {
+    const stepIndex = CHECKOUT_STEPS.findIndex(step => step.id === currentStep);
+    if (stepIndex > 0) {
+      setCurrentStep(CHECKOUT_STEPS[stepIndex - 1].id as CheckoutStep);
+    }
+  };
+
   const handleOrder = () => {
-    if (!orderForm.name || !orderForm.phone || !orderForm.address) {
+    if (!validateCurrentStep()) {
       toast({
         title: "Lỗi",
-        description: "Vui lòng điền đầy đủ thông tin bắt buộc.",
+        description: "Vui lòng kiểm tra lại thông tin.",
         variant: "destructive",
       });
       return;
@@ -149,6 +234,22 @@ export default function PublicLandingPage() {
     };
 
     orderMutation.mutate(orderData);
+  };
+
+  const resetCheckoutForm = () => {
+    setShowOrderForm(false);
+    setCurrentStep('product');
+    setValidationErrors({});
+    setTouchedFields(new Set());
+    setOrderForm({
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      quantity: 1,
+      paymentMethod: 'cod',
+      notes: ""
+    });
   };
 
   if (isLoading) {
@@ -588,205 +689,504 @@ export default function PublicLandingPage() {
         </div>
       </section>
 
-      {/* Order Form Modal */}
+      {/* Multi-Step Checkout Modal */}
       {showOrderForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto transition-colors duration-300 ${themeClasses.card}`}>
-            <CardHeader>
-              <CardTitle className="text-xl">Đặt hàng: {landingPage.displayName}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Product Summary */}
-              <div className={`p-4 rounded-lg transition-colors duration-300 ${isDarkTheme ? 'bg-gray-700' : 'bg-muted'}`}>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold">{landingPage.displayName}</h3>
-                    <p className={`text-sm transition-colors duration-300 ${themeClasses.textMuted}`}>
-                      {landingPage.displayDescription}
-                    </p>
-                  </div>
-                  {landingPage.displayImage && (
-                    <img
-                      src={landingPage.displayImage}
-                      alt={landingPage.displayName}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  )}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <Card className={`w-full max-w-lg max-h-[95vh] overflow-hidden transition-all duration-300 transform ${themeClasses.card}`}>
+            {/* Header with Progress */}
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between mb-4">
+                <CardTitle className="text-lg md:text-xl">Đặt hàng</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetCheckoutForm}
+                  className="h-8 w-8 p-0 hover:bg-destructive/10"
+                  data-testid="button-close-checkout"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  {CHECKOUT_STEPS.map((step, index) => {
+                    const isActive = step.id === currentStep;
+                    const isCompleted = CHECKOUT_STEPS.findIndex(s => s.id === currentStep) > index;
+                    return (
+                      <div key={step.id} className={`flex-1 text-center transition-colors duration-200 ${
+                        isActive ? 'text-primary font-medium' : isCompleted ? 'text-green-600' : ''
+                      }`}>
+                        {step.title}
+                      </div>
+                    );
+                  })}
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Label>Số lượng:</Label>
-                    <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  {CHECKOUT_STEPS.map((step, index) => {
+                    const isActive = step.id === currentStep;
+                    const isCompleted = CHECKOUT_STEPS.findIndex(s => s.id === currentStep) > index;
+                    return (
+                      <div
+                        key={step.id}
+                        className={`h-2 flex-1 rounded-full transition-all duration-300 ${
+                          isActive ? 'bg-primary' : isCompleted ? 'bg-green-500' : 'bg-muted'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="px-6 pb-6 space-y-6 overflow-y-auto max-h-[60vh]">
+              {/* Step 1: Product Review */}
+              {currentStep === 'product' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">Xem lại sản phẩm</h3>
+                    <p className="text-sm text-muted-foreground">Kiểm tra thông tin sản phẩm và số lượng</p>
+                  </div>
+                  
+                  <div className={`p-4 rounded-lg border transition-colors duration-300 ${isDarkTheme ? 'bg-gray-800 border-gray-700' : 'bg-muted/50 border-border'}`}>
+                    <div className="flex gap-4 items-start">
+                      {landingPage.displayImage && (
+                        <img
+                          src={landingPage.displayImage}
+                          alt={landingPage.displayName}
+                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold mb-1 truncate">{landingPage.displayName}</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {landingPage.displayDescription}
+                        </p>
+                        <div className="flex items-baseline gap-2 mt-2">
+                          <span className="text-xl font-bold text-primary">
+                            {finalPrice.toLocaleString('vi-VN')}đ
+                          </span>
+                          {hasDiscount && (
+                            <span className="text-sm line-through text-muted-foreground">
+                              {originalPrice.toLocaleString('vi-VN')}đ
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quantity Selector - Touch Optimized */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Số lượng</Label>
+                    <div className="flex items-center justify-center gap-4">
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="lg"
                         onClick={() => setOrderForm(prev => ({ 
                           ...prev, 
                           quantity: Math.max(1, prev.quantity - 1) 
                         }))}
-                        className="transition-colors duration-300"
+                        className="h-12 w-12 rounded-full transition-colors duration-300"
+                        disabled={orderForm.quantity <= 1}
                         data-testid="button-decrease-quantity"
                       >
-                        <Minus className="h-4 w-4" />
+                        <Minus className="h-5 w-5" />
                       </Button>
-                      <span className="w-12 text-center font-semibold">{orderForm.quantity}</span>
+                      
+                      <div className="bg-muted rounded-lg px-6 py-3 min-w-[80px] text-center">
+                        <span className="text-2xl font-bold">{orderForm.quantity}</span>
+                      </div>
+                      
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="lg"
                         onClick={() => setOrderForm(prev => ({ 
                           ...prev, 
                           quantity: prev.quantity + 1 
                         }))}
-                        className="transition-colors duration-300"
+                        className="h-12 w-12 rounded-full transition-colors duration-300"
                         data-testid="button-increase-quantity"
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold transition-colors duration-300" style={{color: 'var(--theme-primary)'}}>
-                      {(finalPrice * orderForm.quantity).toLocaleString('vi-VN')}đ
-                    </p>
+
+                  {/* Price Summary */}
+                  <div className={`p-4 rounded-lg border transition-colors duration-300 ${isDarkTheme ? 'bg-gray-800 border-gray-700' : 'bg-primary/5 border-primary/20'}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Tổng cộng:</span>
+                      <span className="text-2xl font-bold text-primary">
+                        {(finalPrice * orderForm.quantity).toLocaleString('vi-VN')}đ
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Customer Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Thông tin khách hàng</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="orderName">Họ và tên *</Label>
-                    <Input
-                      id="orderName"
-                      value={orderForm.name}
-                      onChange={(e) => setOrderForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nguyễn Văn A"
-                      data-testid="input-order-name"
+              {/* Step 2: Customer Information */}
+              {currentStep === 'customer' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">Thông tin khách hàng</h3>
+                    <p className="text-sm text-muted-foreground">Điền thông tin để chúng tôi giao hàng</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Name Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="orderName" className="text-base font-medium">
+                        Họ và tên <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="orderName"
+                        value={orderForm.name}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        onBlur={() => setTouchedFields(prev => new Set(prev).add('name'))}
+                        placeholder="Nguyễn Văn A"
+                        className={`h-12 text-base transition-colors duration-300 ${
+                          validationErrors.name && touchedFields.has('name') ? 'border-destructive focus-visible:ring-destructive' : ''
+                        }`}
+                        autoComplete="name"
+                        data-testid="input-order-name"
+                      />
+                      {validationErrors.name && touchedFields.has('name') && (
+                        <div className="flex items-center gap-1 text-destructive text-sm">
+                          <AlertCircle className="h-4 w-4" />
+                          {validationErrors.name}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Phone Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="orderPhone" className="text-base font-medium">
+                        Số điện thoại <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="orderPhone"
+                        type="tel"
+                        value={orderForm.phone}
+                        onChange={(e) => handleFieldChange('phone', e.target.value)}
+                        onBlur={() => setTouchedFields(prev => new Set(prev).add('phone'))}
+                        placeholder="0123 456 789"
+                        className={`h-12 text-base transition-colors duration-300 ${
+                          validationErrors.phone && touchedFields.has('phone') ? 'border-destructive focus-visible:ring-destructive' : ''
+                        }`}
+                        autoComplete="tel"
+                        data-testid="input-order-phone"
+                      />
+                      {validationErrors.phone && touchedFields.has('phone') && (
+                        <div className="flex items-center gap-1 text-destructive text-sm">
+                          <AlertCircle className="h-4 w-4" />
+                          {validationErrors.phone}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Email Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="orderEmail" className="text-base font-medium">Email</Label>
+                      <Input
+                        id="orderEmail"
+                        type="email"
+                        value={orderForm.email}
+                        onChange={(e) => handleFieldChange('email', e.target.value)}
+                        onBlur={() => setTouchedFields(prev => new Set(prev).add('email'))}
+                        placeholder="email@example.com"
+                        className={`h-12 text-base transition-colors duration-300 ${
+                          validationErrors.email && touchedFields.has('email') ? 'border-destructive focus-visible:ring-destructive' : ''
+                        }`}
+                        autoComplete="email"
+                        data-testid="input-order-email"
+                      />
+                      {validationErrors.email && touchedFields.has('email') && (
+                        <div className="flex items-center gap-1 text-destructive text-sm">
+                          <AlertCircle className="h-4 w-4" />
+                          {validationErrors.email}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Address Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="orderAddress" className="text-base font-medium">
+                        Địa chỉ giao hàng <span className="text-destructive">*</span>
+                      </Label>
+                      <Textarea
+                        id="orderAddress"
+                        value={orderForm.address}
+                        onChange={(e) => handleFieldChange('address', e.target.value)}
+                        onBlur={() => setTouchedFields(prev => new Set(prev).add('address'))}
+                        placeholder="Số nhà, đường, phường, quận, thành phố"
+                        rows={3}
+                        className={`text-base transition-colors duration-300 resize-none ${
+                          validationErrors.address && touchedFields.has('address') ? 'border-destructive focus-visible:ring-destructive' : ''
+                        }`}
+                        autoComplete="street-address"
+                        data-testid="input-order-address"
+                      />
+                      {validationErrors.address && touchedFields.has('address') && (
+                        <div className="flex items-center gap-1 text-destructive text-sm">
+                          <AlertCircle className="h-4 w-4" />
+                          {validationErrors.address}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Payment Method */}
+              {currentStep === 'payment' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">Phương thức thanh toán</h3>
+                    <p className="text-sm text-muted-foreground">Chọn cách thức thanh toán phù hợp</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {landingPage.paymentMethods?.cod && (
+                      <label 
+                        htmlFor="cod" 
+                        className={`flex items-start gap-4 p-4 border rounded-lg cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
+                          orderForm.paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          id="cod"
+                          name="paymentMethod"
+                          value="cod"
+                          checked={orderForm.paymentMethod === 'cod'}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                          className="mt-1 w-4 h-4"
+                          data-testid="radio-payment-cod"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Truck className="h-5 w-5 text-primary" />
+                            <span className="font-medium">Thanh toán khi nhận hàng (COD)</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Thanh toán bằng tiền mặt khi nhận được hàng
+                          </p>
+                        </div>
+                      </label>
+                    )}
+                    
+                    {landingPage.paymentMethods?.bankTransfer && (
+                      <label 
+                        htmlFor="bank_transfer"
+                        className={`flex items-start gap-4 p-4 border rounded-lg cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
+                          orderForm.paymentMethod === 'bank_transfer' ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          id="bank_transfer"
+                          name="paymentMethod"
+                          value="bank_transfer"
+                          checked={orderForm.paymentMethod === 'bank_transfer'}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                          className="mt-1 w-4 h-4"
+                          data-testid="radio-payment-bank"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                            <span className="font-medium">Chuyển khoản ngân hàng</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Chuyển khoản trước khi giao hàng
+                          </p>
+                        </div>
+                      </label>
+                    )}
+                    
+                    {landingPage.paymentMethods?.online && (
+                      <label 
+                        htmlFor="online"
+                        className={`flex items-start gap-4 p-4 border rounded-lg cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
+                          orderForm.paymentMethod === 'online' ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          id="online"
+                          name="paymentMethod"
+                          value="online"
+                          checked={orderForm.paymentMethod === 'online'}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                          className="mt-1 w-4 h-4"
+                          data-testid="radio-payment-online"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Shield className="h-5 w-5 text-primary" />
+                            <span className="font-medium">Thanh toán online</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Thanh toán an toàn qua cổng thanh toán
+                          </p>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+                  
+                  {/* Notes Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="orderNotes" className="text-base font-medium">Ghi chú</Label>
+                    <Textarea
+                      id="orderNotes"
+                      value={orderForm.notes}
+                      onChange={(e) => setOrderForm(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Ghi chú thêm cho đơn hàng (không bắt buộc)..."
+                      rows={3}
+                      className="text-base resize-none"
+                      data-testid="input-order-notes"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="orderPhone">Số điện thoại *</Label>
-                    <Input
-                      id="orderPhone"
-                      value={orderForm.phone}
-                      onChange={(e) => setOrderForm(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="0123456789"
-                      data-testid="input-order-phone"
-                    />
+                </div>
+              )}
+
+              {/* Step 4: Order Confirmation */}
+              {currentStep === 'confirm' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Xác nhận đặt hàng</h3>
+                    <p className="text-sm text-muted-foreground">Kiểm tra lại thông tin trước khi đặt hàng</p>
+                  </div>
+                  
+                  {/* Order Summary */}
+                  <div className="space-y-4">
+                    {/* Product Info */}
+                    <div className={`p-4 border rounded-lg space-y-3 transition-colors duration-300 ${isDarkTheme ? 'bg-gray-800 border-gray-700' : 'bg-muted/30 border-border'}`}>
+                      <div className="flex items-center gap-3">
+                        <ShoppingCart className="h-5 w-5 text-primary" />
+                        <span className="font-medium">Sản phẩm</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>{landingPage.displayName} x {orderForm.quantity}</span>
+                        <span className="font-semibold">{(finalPrice * orderForm.quantity).toLocaleString('vi-VN')}đ</span>
+                      </div>
+                    </div>
+                    
+                    {/* Customer Info */}
+                    <div className={`p-4 border rounded-lg space-y-3 transition-colors duration-300 ${isDarkTheme ? 'bg-gray-800 border-gray-700' : 'bg-muted/30 border-border'}`}>
+                      <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-primary" />
+                        <span className="font-medium">Thông tin khách hàng</span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div><strong>Tên:</strong> {orderForm.name}</div>
+                        <div><strong>SĐT:</strong> {orderForm.phone}</div>
+                        {orderForm.email && <div><strong>Email:</strong> {orderForm.email}</div>}
+                        <div><strong>Địa chỉ:</strong> {orderForm.address}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Payment Info */}
+                    <div className={`p-4 border rounded-lg space-y-3 transition-colors duration-300 ${isDarkTheme ? 'bg-gray-800 border-gray-700' : 'bg-muted/30 border-border'}`}>
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="h-5 w-5 text-primary" />
+                        <span className="font-medium">Thanh toán</span>
+                      </div>
+                      <div className="text-sm">
+                        {orderForm.paymentMethod === 'cod' && 'Thanh toán khi nhận hàng (COD)'}
+                        {orderForm.paymentMethod === 'bank_transfer' && 'Chuyển khoản ngân hàng'}
+                        {orderForm.paymentMethod === 'online' && 'Thanh toán online'}
+                      </div>
+                    </div>
+                    
+                    {orderForm.notes && (
+                      <div className={`p-4 border rounded-lg space-y-3 transition-colors duration-300 ${isDarkTheme ? 'bg-gray-800 border-gray-700' : 'bg-muted/30 border-border'}`}>
+                        <div className="flex items-center gap-3">
+                          <Eye className="h-5 w-5 text-primary" />
+                          <span className="font-medium">Ghi chú</span>
+                        </div>
+                        <p className="text-sm">{orderForm.notes}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                <div>
-                  <Label htmlFor="orderEmail">Email</Label>
-                  <Input
-                    id="orderEmail"
-                    type="email"
-                    value={orderForm.email}
-                    onChange={(e) => setOrderForm(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="example@email.com"
-                    data-testid="input-order-email"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="orderAddress">Địa chỉ giao hàng *</Label>
-                  <Textarea
-                    id="orderAddress"
-                    value={orderForm.address}
-                    onChange={(e) => setOrderForm(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="Số nhà, đường, phường, quận, thành phố"
-                    rows={3}
-                    data-testid="input-order-address"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="orderNotes">Ghi chú (không bắt buộc)</Label>
-                  <Textarea
-                    id="orderNotes"
-                    value={orderForm.notes}
-                    onChange={(e) => setOrderForm(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Ghi chú thêm về đơn hàng..."
-                    rows={2}
-                    data-testid="input-order-notes"
-                  />
-                </div>
-              </div>
-
-              {/* Payment Method */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Phương thức thanh toán</h3>
-                <div className="space-y-3">
-                  {landingPage.paymentMethods?.cod && (
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="cod"
-                        name="paymentMethod"
-                        value="cod"
-                        checked={orderForm.paymentMethod === 'cod'}
-                        onChange={(e) => setOrderForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
-                        data-testid="radio-payment-cod"
-                      />
-                      <Label htmlFor="cod">Thanh toán khi nhận hàng (COD)</Label>
-                    </div>
-                  )}
-                  {landingPage.paymentMethods?.bankTransfer && (
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="bank_transfer"
-                        name="paymentMethod"
-                        value="bank_transfer"
-                        checked={orderForm.paymentMethod === 'bank_transfer'}
-                        onChange={(e) => setOrderForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
-                        data-testid="radio-payment-bank"
-                      />
-                      <Label htmlFor="bank_transfer">Chuyển khoản ngân hàng</Label>
-                    </div>
-                  )}
-                  {landingPage.paymentMethods?.online && (
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        id="online"
-                        name="paymentMethod"
-                        value="online"
-                        checked={orderForm.paymentMethod === 'online'}
-                        onChange={(e) => setOrderForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
-                        data-testid="radio-payment-online"
-                      />
-                      <Label htmlFor="online">Thanh toán online</Label>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowOrderForm(false)}
-                  className="flex-1 transition-colors duration-300"
-                  data-testid="button-cancel-order"
-                >
-                  Hủy
-                </Button>
-                <Button
-                  onClick={handleOrder}
-                  disabled={orderMutation.isPending}
-                  className="flex-1 transition-colors duration-300"
-                  style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
-                  data-testid="button-confirm-order"
-                >
-                  {orderMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đặt hàng'}
-                </Button>
-              </div>
+              )}
             </CardContent>
+
+            {/* Navigation Buttons */}
+            <div className="border-t p-4 space-y-3">
+              {currentStep === 'product' && (
+                <Button
+                  onClick={handleNextStep}
+                  className="w-full h-12 text-base font-medium transition-colors duration-300"
+                  style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
+                  data-testid="button-next-step"
+                >
+                  Tiếp tục
+                  <ChevronRight className="h-5 w-5 ml-2" />
+                </Button>
+              )}
+              
+              {(currentStep === 'customer' || currentStep === 'payment') && (
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevStep}
+                    className="flex-1 h-12 text-base transition-colors duration-300"
+                    data-testid="button-prev-step"
+                  >
+                    <ChevronLeft className="h-5 w-5 mr-2" />
+                    Quay lại
+                  </Button>
+                  <Button
+                    onClick={handleNextStep}
+                    className="flex-1 h-12 text-base font-medium transition-colors duration-300"
+                    style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
+                    data-testid="button-next-step"
+                  >
+                    Tiếp tục
+                    <ChevronRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </div>
+              )}
+              
+              {currentStep === 'confirm' && (
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleOrder}
+                    disabled={orderMutation.isPending}
+                    className="w-full h-12 text-base font-medium transition-colors duration-300"
+                    style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
+                    data-testid="button-confirm-order"
+                  >
+                    {orderMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-5 w-5 mr-2" />
+                        Xác nhận đặt hàng
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevStep}
+                    disabled={orderMutation.isPending}
+                    className="w-full h-12 text-base transition-colors duration-300"
+                    data-testid="button-prev-step"
+                  >
+                    <ChevronLeft className="h-5 w-5 mr-2" />
+                    Quay lại chỉnh sửa
+                  </Button>
+                </div>
+              )}
+            </div>
           </Card>
         </div>
       )}
