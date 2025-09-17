@@ -23,6 +23,7 @@ import LandingPageEditor from "@/pages/LandingPageEditor";
 import PublicLandingPage from "@/pages/PublicLandingPage";
 import PublicStorefront from "@/pages/PublicStorefront";
 import StorefrontManager from "@/pages/StorefrontManager";
+import CategoryManager from "@/pages/CategoryManager";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/orders/:id" component={OrderDetails} />
       <Route path="/customers" component={Customers} />
       <Route path="/customers/:id" component={CustomerDetails} />
+      <Route path="/categories" component={CategoryManager} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/chatbot" component={Chatbot} />
       <Route path="/facebook" component={SocialMedia} />

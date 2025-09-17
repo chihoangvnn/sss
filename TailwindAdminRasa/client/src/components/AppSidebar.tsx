@@ -15,7 +15,8 @@ import {
   Store,
   Bot,
   Globe,
-  Palette
+  Palette,
+  Tags
 } from "lucide-react";
 
 import {
@@ -44,6 +45,11 @@ const mainMenuItems = [
     url: "/products",
     icon: Package2,
     badge: "24",
+  },
+  {
+    title: "Danh mục",
+    url: "/categories",
+    icon: Tags,
   },
   {
     title: "Đơn hàng",
