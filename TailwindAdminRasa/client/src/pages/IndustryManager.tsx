@@ -55,7 +55,7 @@ export default function IndustryManager() {
   // Save industry mutation
   const saveMutation = useMutation({
     mutationFn: async (data: IndustryFormData) => {
-      const url = editingIndustry ? `/api/industries/${editingIndustry.id}` : '/api/industries';
+      const url = editingIndustry ? `/api/industries?id=${editingIndustry.id}` : '/api/industries';
       const method = editingIndustry ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -95,7 +95,7 @@ export default function IndustryManager() {
   // Delete industry mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/industries/${id}`, {
+      const response = await fetch(`/api/industries?id=${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete');
@@ -128,7 +128,7 @@ export default function IndustryManager() {
   // Move industry up/down mutation
   const moveMutation = useMutation({
     mutationFn: async ({ id, newSortOrder }: { id: string; newSortOrder: number }) => {
-      const response = await fetch(`/api/industries/${id}`, {
+      const response = await fetch(`/api/industries?id=${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sortOrder: newSortOrder }),

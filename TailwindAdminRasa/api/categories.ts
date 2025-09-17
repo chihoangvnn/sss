@@ -23,25 +23,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     } else if (req.method === 'POST') {
       // POST /api/categories
-      const { name, description, isActive = true, sortOrder = 0 } = req.body;
+      const { name, description, industryId, isActive = true, sortOrder = 0 } = req.body;
       
       if (!name) {
         return res.status(400).json({ error: 'Name is required' });
       }
       
+      if (!industryId) {
+        return res.status(400).json({ error: 'Industry ID is required' });
+      }
+      
       const category = await storage.createCategory({
         name,
         description,
+        industryId,
         isActive,
         sortOrder
       });
       res.json({ ...category, message: 'Category created successfully' });
     } else if (req.method === 'PUT' && id && typeof id === 'string') {
       // PUT /api/categories/:id
-      const { name, description, isActive, sortOrder } = req.body;
+      const { name, description, industryId, isActive, sortOrder } = req.body;
       const category = await storage.updateCategory(id, {
         name,
         description,
+        industryId,
         isActive,
         sortOrder
       });
