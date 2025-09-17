@@ -320,6 +320,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Industries API
+  app.get("/api/industries", async (req, res) => {
+    try {
+      const industries = await storage.getIndustries();
+      res.json(industries);
+    } catch (error) {
+      console.error("Error fetching industries:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/industries/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const industry = await storage.getIndustry(id);
+      if (industry) {
+        res.json(industry);
+      } else {
+        res.status(404).json({ error: "Industry not found" });
+      }
+    } catch (error) {
+      console.error("Error fetching industry:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/industries", async (req, res) => {
+    try {
+      const { name, description, isActive = true, sortOrder = 0 } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      
+      const industry = await storage.createIndustry({
+        name,
+        description,
+        isActive,
+        sortOrder
+      });
+      res.json({ ...industry, message: "Industry created successfully" });
+    } catch (error) {
+      console.error("Error creating industry:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.put("/api/industries/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, isActive, sortOrder } = req.body;
+      const industry = await storage.updateIndustry(id, {
+        name,
+        description,
+        isActive,
+        sortOrder
+      });
+      if (industry) {
+        res.json({ ...industry, message: "Industry updated successfully" });
+      } else {
+        res.status(404).json({ error: "Industry not found" });
+      }
+    } catch (error) {
+      console.error("Error updating industry:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/industries/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteIndustry(id);
+      if (success) {
+        res.json({ message: "Industry deleted successfully" });
+      } else {
+        res.status(404).json({ error: "Industry not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting industry:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Categories API
   app.get("/api/categories", async (req, res) => {
     try {

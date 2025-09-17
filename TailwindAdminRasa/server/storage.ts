@@ -1,13 +1,13 @@
 import { 
   users, products, customers, orders, orderItems, socialAccounts, chatbotConversations,
-  storefrontConfig, storefrontOrders, categories, payments,
+  storefrontConfig, storefrontOrders, categories, industries, payments,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
   type ChatbotConversation, type InsertChatbotConversation,
   type StorefrontConfig, type InsertStorefrontConfig,
   type StorefrontOrder, type InsertStorefrontOrder,
-  type Category, type InsertCategory,
+  type Category, type InsertCategory, type Industry, type InsertIndustry,
   type Payment, type InsertPayment
 } from "@shared/schema";
 import { db } from "./db";
@@ -18,6 +18,13 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  // Industry methods
+  getIndustries(): Promise<Industry[]>;
+  getIndustry(id: string): Promise<Industry | undefined>;
+  createIndustry(industry: InsertIndustry): Promise<Industry>;
+  updateIndustry(id: string, industry: Partial<InsertIndustry>): Promise<Industry | undefined>;
+  deleteIndustry(id: string): Promise<boolean>;
 
   // Category methods
   getCategories(): Promise<Category[]>;
@@ -104,6 +111,35 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  // Industry methods
+  async getIndustries(): Promise<Industry[]> {
+    return await db.select().from(industries).orderBy(industries.sortOrder, industries.name);
+  }
+
+  async getIndustry(id: string): Promise<Industry | undefined> {
+    const [industry] = await db.select().from(industries).where(eq(industries.id, id));
+    return industry || undefined;
+  }
+
+  async createIndustry(industry: InsertIndustry): Promise<Industry> {
+    const [newIndustry] = await db.insert(industries).values(industry).returning();
+    return newIndustry;
+  }
+
+  async updateIndustry(id: string, industry: Partial<InsertIndustry>): Promise<Industry | undefined> {
+    const [updatedIndustry] = await db
+      .update(industries)
+      .set({ ...industry, updatedAt: new Date() })
+      .where(eq(industries.id, id))
+      .returning();
+    return updatedIndustry || undefined;
+  }
+
+  async deleteIndustry(id: string): Promise<boolean> {
+    const result = await db.delete(industries).where(eq(industries.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Category methods
