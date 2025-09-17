@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { X, Save, Plus, Trash2, Printer } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { CustomerSearchInput } from "./CustomerSearchInput";
+import { ProductSearchInput } from "./ProductSearchInput";
 import type { Order, Customer, Product } from "@shared/schema";
 
 interface OrderWithDetails extends Order {
@@ -116,12 +118,20 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     const item = newItems[index];
     
     if (field === 'productId') {
-      const product = products.find(p => p.id === value);
-      if (product) {
-        item.productId = value;
-        item.productName = product.name;
-        item.price = parseFloat(product.price);
-        item.total = item.quantity * item.price;
+      if (value === '' || !value) {
+        // Clear product selection
+        item.productId = '';
+        item.productName = '';
+        item.price = 0;
+        item.total = 0;
+      } else {
+        const product = products.find(p => p.id === value);
+        if (product) {
+          item.productId = value;
+          item.productName = product.name;
+          item.price = parseFloat(product.price);
+          item.total = item.quantity * item.price;
+        }
       }
     } else if (field === 'quantity') {
       item.quantity = parseFloat(value) || 1;
@@ -130,6 +140,19 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
       item.price = parseFloat(value) || 0;
       item.total = item.quantity * item.price;
     }
+    
+    setOrderItems(newItems);
+  };
+
+  // Set order item product (new function for search input)
+  const setOrderItemProduct = (index: number, product: Product) => {
+    const newItems = [...orderItems];
+    const item = newItems[index];
+    
+    item.productId = product.id;
+    item.productName = product.name;
+    item.price = parseFloat(product.price);
+    item.total = item.quantity * item.price;
     
     setOrderItems(newItems);
   };
@@ -403,25 +426,19 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
         
         <CardContent className="overflow-y-auto max-h-[calc(90vh-120px)]">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Customer Selection */}
+            {/* Customer Selection - New Search Input */}
             <div className="space-y-2">
               <Label htmlFor="customer">Khách hàng</Label>
-              <Select
+              <CustomerSearchInput
                 value={formData.customerId}
-                onValueChange={(value) => setFormData({ ...formData, customerId: value })}
-              >
-                <SelectTrigger data-testid="select-customer">
-                  <SelectValue placeholder="Khách lẻ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="retail">Khách lẻ</SelectItem>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name} ({customer.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onSelect={(customer) => {
+                  setFormData({ 
+                    ...formData, 
+                    customerId: customer ? customer.id : "retail" 
+                  });
+                }}
+                placeholder="Gõ tên hoặc SĐT khách hàng..."
+              />
             </div>
 
             {/* Order Status */}
@@ -485,23 +502,28 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
 
               {orderItems.map((item, index) => (
                 <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
-                  {/* Product Selection */}
+                  {/* Product Selection - New Search Input */}
                   <div className="flex-1">
-                    <Select
-                      value={item.productId}
-                      onValueChange={(value) => updateOrderItem(index, 'productId', value)}
-                    >
-                      <SelectTrigger data-testid={`select-product-${index}`}>
-                        <SelectValue placeholder="Chọn sản phẩm" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} - {formatPrice(parseFloat(product.price))}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {item.productId ? (
+                      <div className="p-2 border rounded-lg bg-gray-50">
+                        <div className="font-medium">{item.productName}</div>
+                        <div className="text-sm text-gray-600">{formatPrice(item.price)}</div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => updateOrderItem(index, 'productId', '')}
+                          className="mt-1 text-xs"
+                        >
+                          Đổi sản phẩm
+                        </Button>
+                      </div>
+                    ) : (
+                      <ProductSearchInput
+                        onSelect={(product) => setOrderItemProduct(index, product)}
+                        placeholder="Gõ tên sản phẩm..."
+                      />
+                    )}
                   </div>
 
                   {/* Quantity */}
