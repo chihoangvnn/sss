@@ -152,6 +152,21 @@ export const payments = pgTable("payments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Shop settings table for default contact information
+export const shopSettings = pgTable("shop_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessName: text("business_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  address: text("address").notNull(),
+  description: text("description"),
+  website: text("website"),
+  logo: text("logo"),
+  isDefault: boolean("is_default").notNull().default(true), // Allow multiple settings but mark one as default
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Schema for inserts
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -219,6 +234,12 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
   updatedAt: true,
 });
 
+export const insertShopSettingsSchema = createInsertSchema(shopSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -255,3 +276,6 @@ export type StorefrontOrder = typeof storefrontOrders.$inferSelect;
 
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type Payment = typeof payments.$inferSelect;
+
+export type InsertShopSettings = z.infer<typeof insertShopSettingsSchema>;
+export type ShopSettings = typeof shopSettings.$inferSelect;
