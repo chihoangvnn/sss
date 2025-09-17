@@ -27,7 +27,7 @@ interface Product {
   price: string;
   stock: number;
   categoryId?: string;
-  status: "active" | "inactive" | "out-of-stock";
+  status: "active" | "inactive" | "out_of_stock";
   image?: string;
 }
 
@@ -60,7 +60,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     stock: "0",
     industryId: "",
     categoryId: "",
-    status: "active" as "active" | "inactive" | "out-of-stock",
+    status: "active" as "active" | "inactive" | "out_of_stock",
     image: "",
   });
 
@@ -193,9 +193,9 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     const saveData = {
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
-      price: parseFloat(formData.price),
+      price: formData.price, // Send as string to match backend
       stock: parseInt(formData.stock) || 0,
-      categoryId: formData.categoryId || null,
+      categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
       status: formData.status,
       image: formData.image.trim() || undefined,
     };
@@ -307,7 +307,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                     <SelectValue placeholder="Chọn ngành hàng" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Không có ngành hàng</SelectItem>
+                    <SelectItem value="none">Không có ngành hàng</SelectItem>
                     {activeIndustries.map((industry) => (
                       <SelectItem key={industry.id} value={industry.id}>
                         {industry.name}
@@ -327,7 +327,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                     <SelectValue placeholder={formData.industryId ? "Chọn danh mục" : "Chọn ngành hàng trước"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Không có danh mục</SelectItem>
+                    <SelectItem value="none">Không có danh mục</SelectItem>
                     {filteredCategories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
@@ -345,7 +345,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 <Label htmlFor="status">Trạng thái</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: "active" | "inactive" | "out-of-stock") => 
+                  onValueChange={(value: "active" | "inactive" | "out_of_stock") => 
                     setFormData(prev => ({ ...prev, status: value }))
                   }
                 >
@@ -355,7 +355,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   <SelectContent>
                     <SelectItem value="active">Hoạt động</SelectItem>
                     <SelectItem value="inactive">Tạm dừng</SelectItem>
-                    <SelectItem value="out-of-stock">Hết hàng</SelectItem>
+                    <SelectItem value="out_of_stock">Hết hàng</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
