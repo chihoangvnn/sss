@@ -295,6 +295,13 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     setOrderItems([...orderItems, newItem]);
   };
 
+  // HTML escape utility
+  const escapeHtml = (text: string): string => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
   // Print receipt function
   const printReceipt = (orderData: any) => {
     const printWindow = window.open('', '_blank');
@@ -303,10 +310,14 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     const customerName = formData.customerId === 'retail' ? 'Khách lẻ' : 
       customers.find(c => c.id === formData.customerId)?.name || 'Khách hàng';
     
+    // Safely format order ID
+    const orderId = orderData?.id ? orderData.id.slice(-8) : 'N/A';
+    
+    // Build receipt with escaped content
     const receiptHtml = `
       <html>
         <head>
-          <title>Hóa đơn - ${orderData.id}</title>
+          <title>Hóa đơn - ${escapeHtml(orderId)}</title>
           <style>
             body { 
               font-family: 'Courier New', monospace; 
@@ -332,18 +343,18 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
           </div>
           
           <div>
-            <div>Mã ĐH: ${orderData.id.slice(-8)}</div>
-            <div>Khách hàng: ${customerName}</div>
+            <div>Mã ĐH: ${escapeHtml(orderId)}</div>
+            <div>Khách hàng: ${escapeHtml(customerName)}</div>
             <div>Ngày: ${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}</div>
           </div>
           
           <div style="margin: 10px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0;">
             ${orderItems.map(item => `
               <div class="item">
-                <div>${item.productName}</div>
+                <div>${escapeHtml(item.productName || 'Sản phẩm')}</div>
               </div>
               <div class="item">
-                <div>${item.quantity}kg x ${parseInt(item.price.toString()).toLocaleString('vi-VN')}đ</div>
+                <div>${item.quantity} x ${parseFloat(item.price.toString()).toLocaleString('vi-VN')}đ</div>
                 <div><strong>${formatPrice(item.total)}</strong></div>
               </div>
             `).join('')}
