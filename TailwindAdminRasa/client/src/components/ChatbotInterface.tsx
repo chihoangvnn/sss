@@ -342,6 +342,8 @@ export function ChatbotInterface({
         <div className="max-w-3xl mx-auto">
           <div className="flex gap-3">
             <Input
+              id="admin-chat-input"
+              name="admin-chat-input"
               placeholder="Nhập tin nhắn để test chatbot..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}

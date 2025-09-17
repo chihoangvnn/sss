@@ -613,6 +613,8 @@ export default function ChatbotWidget({
       <div className="p-4 border-t bg-white shadow-lg">
         <div className="flex space-x-3">
           <Input
+            id="mobile-chat-input"
+            name="mobile-chat-input"
             ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -715,6 +717,8 @@ export default function ChatbotWidget({
           <div className="p-4 border-t bg-white">
             <div className="flex space-x-2">
               <Input
+                id="desktop-chat-input"
+                name="desktop-chat-input"
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
