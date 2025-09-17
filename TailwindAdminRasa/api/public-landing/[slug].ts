@@ -20,6 +20,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "Landing page not found or inactive" });
     }
 
+    // Get theme and color from query params for testing
+    const theme = req.query.theme as string || 'light';
+    const primaryColor = req.query.color as string || '#007bff';
+
     // Generate landing page data
     const landingPage = {
       id: `demo-${product.id}`,
@@ -28,10 +32,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       description: product.description,
       productId: product.id,
       customPrice: parseFloat(product.price),
+      finalPrice: parseFloat(product.price),
+      originalPrice: parseFloat(product.price) * 1.2, // 20% discount for demo
       heroTitle: `Mua ngay ${product.name}`,
+      heroSubtitle: `${product.description}`,
       isActive: true,
-      theme: 'light',
-      primaryColor: '#007bff',
+      theme: theme,
+      primaryColor: primaryColor,
+      displayName: product.name,
+      displayDescription: product.description,
+      displayImage: product.image,
+      callToAction: "Đặt hàng ngay",
       contactInfo: {
         phone: '0123456789',
         email: 'contact@store.com',

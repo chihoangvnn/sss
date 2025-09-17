@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -178,10 +178,156 @@ export default function PublicLandingPage() {
   const hasDiscount = originalPrice && originalPrice > finalPrice;
   const discountPercent = hasDiscount ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0;
 
+  // Extract theme and color customization
+  const isDarkTheme = landingPage.theme === 'dark';
+  const primaryColor = landingPage.primaryColor || '#007bff';
+  
+  // Memoized color info calculation for performance
+  const colorInfo = useMemo(() => {
+    // Enhanced color normalization that handles all formats: hex, rgb(), hsl(), named colors
+    const normalizeColor = (color: string) => {
+      try {
+        // Handle hex colors directly (most common case)
+        if (color.startsWith('#')) {
+          let hex = color.toLowerCase();
+          // Handle shorthand hex (#abc -> #aabbcc)
+          if (hex.length === 4) {
+            hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+          }
+          
+          if (hex.length === 7) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            
+            // Validate RGB values
+            if (!isNaN(r) && !isNaN(g) && !isNaN(b) && r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+              return {
+                hex,
+                rgb: `${r}, ${g}, ${b}`
+              };
+            }
+          }
+        }
+        
+        // Handle rgb() format directly
+        const rgbMatch = color.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+        if (rgbMatch) {
+          const r = parseInt(rgbMatch[1], 10);
+          const g = parseInt(rgbMatch[2], 10);
+          const b = parseInt(rgbMatch[3], 10);
+          
+          if (!isNaN(r) && !isNaN(g) && !isNaN(b) && r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            // Convert RGB to hex
+            const hex = '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+            return {
+              hex,
+              rgb: `${r}, ${g}, ${b}`
+            };
+          }
+        }
+        
+        // Use canvas to normalize named colors, hsl(), and other complex formats
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return { hex: '#007bff', rgb: '0, 123, 255' };
+        
+        // Clear and set the color - canvas will normalize it
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = color;
+        const normalizedColor = context.fillStyle;
+        
+        // Parse canvas-normalized "rgb(r, g, b)" string format
+        const canvasRgbMatch = normalizedColor.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+        if (canvasRgbMatch) {
+          const r = parseInt(canvasRgbMatch[1], 10);
+          const g = parseInt(canvasRgbMatch[2], 10);
+          const b = parseInt(canvasRgbMatch[3], 10);
+          
+          if (!isNaN(r) && !isNaN(g) && !isNaN(b) && r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+            // Convert RGB to hex
+            const hex = '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+            return {
+              hex,
+              rgb: `${r}, ${g}, ${b}`
+            };
+          }
+        }
+        
+        // Handle if canvas returns hex (for some browsers/inputs)
+        if (normalizedColor.startsWith('#')) {
+          let hex = normalizedColor.toLowerCase();
+          if (hex.length === 4) {
+            hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+          }
+          
+          if (hex.length === 7) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            
+            if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+              return {
+                hex,
+                rgb: `${r}, ${g}, ${b}`
+              };
+            }
+          }
+        }
+        
+        // Final fallback to default blue if all parsing failed
+        return { hex: '#007bff', rgb: '0, 123, 255' };
+      } catch (error) {
+        // Fallback to default blue on any error
+        return { hex: '#007bff', rgb: '0, 123, 255' };
+      }
+    };
+    
+    return normalizeColor(primaryColor);
+  }, [primaryColor]);
+  
+  // Generate CSS custom properties for dynamic theming
+  const themeStyles = useMemo(() => ({
+    '--theme-primary': colorInfo.hex,
+    '--theme-primary-rgb': colorInfo.rgb,
+    '--theme-primary-light': `rgba(${colorInfo.rgb}, 0.1)`,
+    '--theme-primary-lighter': `rgba(${colorInfo.rgb}, 0.05)`,
+    '--theme-primary-dark': `rgba(${colorInfo.rgb}, 0.9)`,
+  } as React.CSSProperties), [colorInfo]);
+
+  // Theme-aware CSS classes
+  const themeClasses = useMemo(() => ({
+    background: isDarkTheme ? 'bg-gray-900 text-white' : 'bg-background',
+    card: isDarkTheme ? 'bg-gray-800 text-white' : 'bg-card',
+    header: isDarkTheme ? 'bg-gray-800/95 border-gray-700' : 'bg-card/95 border-border',
+    socialProof: isDarkTheme 
+      ? 'bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-green-700' 
+      : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200',
+    textMuted: isDarkTheme ? 'text-gray-300' : 'text-muted-foreground',
+  }), [isDarkTheme]);
+  
+  // Dynamic hero gradient style - brand-aware for both light and dark themes
+  const heroGradientStyle = useMemo(() => {
+    if (isDarkTheme) {
+      // Dark theme: Use brand colors exclusively, no fixed gray colors
+      return { 
+        background: `linear-gradient(to right, var(--theme-primary-dark), rgba(${colorInfo.rgb}, 0.25), var(--theme-primary-light))` 
+      };
+    } else {
+      // Light theme: Use lighter brand color variants
+      return { 
+        background: `linear-gradient(to right, var(--theme-primary-lighter), var(--theme-primary-light))` 
+      };
+    }
+  }, [isDarkTheme, colorInfo.rgb]);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className={`min-h-screen transition-colors duration-300 ${themeClasses.background}`}
+      style={themeStyles}
+    >
       {/* Mobile-First Sticky Header */}
-      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur-sm">
+      <header className={`sticky top-0 z-40 border-b backdrop-blur-sm transition-colors duration-300 ${themeClasses.header}`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -197,7 +343,7 @@ export default function PublicLandingPage() {
                 <span className="hidden sm:inline">đang xem</span>
               </div>
               {landingPage.contactInfo?.phone && (
-                <a href={`tel:${landingPage.contactInfo.phone}`} className="flex items-center gap-2 hover:text-primary">
+                <a href={`tel:${landingPage.contactInfo.phone}`} className="flex items-center gap-2 transition-colors duration-300" style={{color: 'var(--theme-primary)'}}>
                   <Phone className="h-4 w-4" />
                   <span className="hidden sm:inline">{landingPage.contactInfo.phone}</span>
                   <span className="sm:hidden">Gọi</span>
@@ -209,7 +355,10 @@ export default function PublicLandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-12 bg-gradient-to-r from-primary/5 to-primary/10">
+      <section 
+        className="py-12 transition-colors duration-300" 
+        style={heroGradientStyle}
+      >
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -217,7 +366,7 @@ export default function PublicLandingPage() {
                 {landingPage.heroTitle || landingPage.title}
               </h1>
               {landingPage.heroSubtitle && (
-                <p className="text-xl text-muted-foreground mb-8">
+                <p className={`text-xl mb-8 transition-colors duration-300 ${themeClasses.textMuted}`}>
                   {landingPage.heroSubtitle}
                 </p>
               )}
@@ -225,12 +374,12 @@ export default function PublicLandingPage() {
               {/* Price */}
               <div className="mb-8">
                 <div className="flex items-baseline gap-4">
-                  <span className="text-4xl font-bold text-primary">
+                  <span className="text-4xl font-bold transition-colors duration-300" style={{color: 'var(--theme-primary)'}}>
                     {finalPrice.toLocaleString('vi-VN')}đ
                   </span>
                   {hasDiscount && (
                     <>
-                      <span className="text-2xl text-muted-foreground line-through">
+                      <span className={`text-2xl line-through transition-colors duration-300 ${themeClasses.textMuted}`}>
                         {originalPrice.toLocaleString('vi-VN')}đ
                       </span>
                       <Badge variant="destructive" className="text-lg px-3 py-1">
@@ -240,7 +389,7 @@ export default function PublicLandingPage() {
                   )}
                 </div>
                 {hasDiscount && (
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className={`text-sm mt-2 transition-colors duration-300 ${themeClasses.textMuted}`}>
                     Tiết kiệm: {(originalPrice - finalPrice).toLocaleString('vi-VN')}đ
                   </p>
                 )}
@@ -248,7 +397,8 @@ export default function PublicLandingPage() {
 
               <Button 
                 size="lg" 
-                className="text-lg px-8 py-4"
+                className="text-lg px-8 py-4 transition-colors duration-300"
+                style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
                 onClick={() => setShowOrderForm(true)}
                 data-testid="button-order-now"
               >
@@ -271,14 +421,14 @@ export default function PublicLandingPage() {
       </section>
 
       {/* Social Proof & Urgency Strip */}
-      <section className="py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-y border-green-200">
+      <section className={`py-4 border-y transition-colors duration-300 ${themeClasses.socialProof}`}>
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-3">
             {/* Recent Purchases */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm font-semibold text-green-800">🔥 Hoạt động gần đây:</span>
-              <div className="flex flex-col md:flex-row gap-1 md:gap-2 text-xs text-green-700">
+              <span className={`text-sm font-semibold transition-colors duration-300 ${isDarkTheme ? 'text-green-300' : 'text-green-800'}`}>🔥 Hoạt động gần đây:</span>
+              <div className={`flex flex-col md:flex-row gap-1 md:gap-2 text-xs transition-colors duration-300 ${isDarkTheme ? 'text-green-400' : 'text-green-700'}`}>
                 {recentPurchases.slice(0, 2).map((purchase, i) => (
                   <span key={i} className="flex items-center gap-1">
                     • {purchase} <Badge variant="outline" className="text-xs ml-1">✅</Badge>
@@ -288,7 +438,7 @@ export default function PublicLandingPage() {
             </div>
             
             {/* Urgency Timer */}
-            <div className="flex items-center gap-2 text-orange-600">
+            <div className={`flex items-center gap-2 transition-colors duration-300 ${isDarkTheme ? 'text-orange-400' : 'text-orange-600'}`}>
               <Clock className="h-4 w-4 animate-pulse" />
               <span className="text-sm font-medium">⏰ Còn {Math.floor(Math.random() * 12) + 1}h!</span>
             </div>
@@ -298,15 +448,15 @@ export default function PublicLandingPage() {
 
       {/* Features Section */}
       {landingPage.features && landingPage.features.length > 0 && (
-        <section className="py-16 bg-card">
+        <section className={`py-16 transition-colors duration-300 ${themeClasses.card}`}>
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold text-center mb-12">Điểm nổi bật</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {landingPage.features.map((feature: string, index: number) => (
                 <div key={index} className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                      <Check className="h-4 w-4 text-primary-foreground" />
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-300" style={{backgroundColor: 'var(--theme-primary)'}}>
+                      <Check className="h-4 w-4 text-white" />
                     </div>
                   </div>
                   <p className="text-lg">{feature}</p>
@@ -324,7 +474,7 @@ export default function PublicLandingPage() {
             <h2 className="text-3xl font-bold text-center mb-12">Khách hàng nói gì</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {landingPage.testimonials.map((testimonial: any, index: number) => (
-                <Card key={index}>
+                <Card key={index} className={`transition-colors duration-300 ${themeClasses.card}`}>
                   <CardContent className="pt-6">
                     <div className="flex items-center mb-4">
                       {[...Array(5)].map((_, i) => (
@@ -336,7 +486,7 @@ export default function PublicLandingPage() {
                         />
                       ))}
                     </div>
-                    <p className="text-muted-foreground mb-4">"{testimonial.content}"</p>
+                    <p className={`mb-4 transition-colors duration-300 ${themeClasses.textMuted}`}>"{testimonial.content}"</p>
                     <div className="flex items-center gap-3">
                       {testimonial.avatar && (
                         <img
@@ -358,29 +508,29 @@ export default function PublicLandingPage() {
       )}
 
       {/* Trust Badges */}
-      <section className="py-12 bg-card">
+      <section className={`py-12 transition-colors duration-300 ${themeClasses.card}`}>
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Truck className="h-8 w-8 text-primary" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors duration-300" style={{backgroundColor: 'var(--theme-primary-light)'}}>
+                <Truck className="h-8 w-8 transition-colors duration-300" style={{color: 'var(--theme-primary)'}} />
               </div>
               <h3 className="font-semibold mb-2">Giao hàng tận nơi</h3>
-              <p className="text-muted-foreground">Giao hàng toàn quốc, nhanh chóng</p>
+              <p className={`transition-colors duration-300 ${themeClasses.textMuted}`}>Giao hàng toàn quốc, nhanh chóng</p>
             </div>
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Shield className="h-8 w-8 text-primary" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors duration-300" style={{backgroundColor: 'var(--theme-primary-light)'}}>
+                <Shield className="h-8 w-8 transition-colors duration-300" style={{color: 'var(--theme-primary)'}} />
               </div>
               <h3 className="font-semibold mb-2">Bảo hành chính hãng</h3>
-              <p className="text-muted-foreground">Cam kết chất lượng 100%</p>
+              <p className={`transition-colors duration-300 ${themeClasses.textMuted}`}>Cam kết chất lượng 100%</p>
             </div>
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <CreditCard className="h-8 w-8 text-primary" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors duration-300" style={{backgroundColor: 'var(--theme-primary-light)'}}>
+                <CreditCard className="h-8 w-8 transition-colors duration-300" style={{color: 'var(--theme-primary)'}} />
               </div>
               <h3 className="font-semibold mb-2">Đa dạng thanh toán</h3>
-              <p className="text-muted-foreground">COD, chuyển khoản, online</p>
+              <p className={`transition-colors duration-300 ${themeClasses.textMuted}`}>COD, chuyển khoản, online</p>
             </div>
           </div>
         </div>
@@ -389,7 +539,7 @@ export default function PublicLandingPage() {
       {/* Contact Section */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <Card className="max-w-2xl mx-auto">
+          <Card className={`max-w-2xl mx-auto transition-colors duration-300 ${themeClasses.card}`}>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Liên hệ ngay để được tư vấn</CardTitle>
             </CardHeader>
@@ -397,10 +547,11 @@ export default function PublicLandingPage() {
               <div className="space-y-4">
                 {landingPage.contactInfo?.phone && (
                   <div className="flex items-center justify-center gap-3">
-                    <Phone className="h-5 w-5 text-primary" />
+                    <Phone className="h-5 w-5 transition-colors duration-300" style={{color: 'var(--theme-primary)'}} />
                     <a 
                       href={`tel:${landingPage.contactInfo.phone}`}
-                      className="text-lg font-semibold text-primary hover:underline"
+                      className="text-lg font-semibold hover:underline transition-colors duration-300"
+                      style={{color: 'var(--theme-primary)'}}
                     >
                       {landingPage.contactInfo.phone}
                     </a>
@@ -408,10 +559,11 @@ export default function PublicLandingPage() {
                 )}
                 {landingPage.contactInfo?.email && (
                   <div className="flex items-center justify-center gap-3">
-                    <Mail className="h-5 w-5 text-primary" />
+                    <Mail className="h-5 w-5 transition-colors duration-300" style={{color: 'var(--theme-primary)'}} />
                     <a 
                       href={`mailto:${landingPage.contactInfo.email}`}
-                      className="text-primary hover:underline"
+                      className="hover:underline transition-colors duration-300"
+                      style={{color: 'var(--theme-primary)'}}
                     >
                       {landingPage.contactInfo.email}
                     </a>
@@ -423,7 +575,8 @@ export default function PublicLandingPage() {
                 <Button 
                   size="lg" 
                   onClick={() => setShowOrderForm(true)}
-                  className="text-lg px-8 py-4"
+                  className="text-lg px-8 py-4 transition-colors duration-300"
+                  style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
                   data-testid="button-order-contact"
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
@@ -438,17 +591,17 @@ export default function PublicLandingPage() {
       {/* Order Form Modal */}
       {showOrderForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <Card className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto transition-colors duration-300 ${themeClasses.card}`}>
             <CardHeader>
               <CardTitle className="text-xl">Đặt hàng: {landingPage.displayName}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Product Summary */}
-              <div className="bg-muted p-4 rounded-lg">
+              <div className={`p-4 rounded-lg transition-colors duration-300 ${isDarkTheme ? 'bg-gray-700' : 'bg-muted'}`}>
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-semibold">{landingPage.displayName}</h3>
-                    <p className="text-muted-foreground text-sm">
+                    <p className={`text-sm transition-colors duration-300 ${themeClasses.textMuted}`}>
                       {landingPage.displayDescription}
                     </p>
                   </div>
@@ -472,6 +625,7 @@ export default function PublicLandingPage() {
                           ...prev, 
                           quantity: Math.max(1, prev.quantity - 1) 
                         }))}
+                        className="transition-colors duration-300"
                         data-testid="button-decrease-quantity"
                       >
                         <Minus className="h-4 w-4" />
@@ -484,6 +638,7 @@ export default function PublicLandingPage() {
                           ...prev, 
                           quantity: prev.quantity + 1 
                         }))}
+                        className="transition-colors duration-300"
                         data-testid="button-increase-quantity"
                       >
                         <Plus className="h-4 w-4" />
@@ -491,7 +646,7 @@ export default function PublicLandingPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-2xl font-bold transition-colors duration-300" style={{color: 'var(--theme-primary)'}}>
                       {(finalPrice * orderForm.quantity).toLocaleString('vi-VN')}đ
                     </p>
                   </div>
@@ -616,7 +771,7 @@ export default function PublicLandingPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowOrderForm(false)}
-                  className="flex-1"
+                  className="flex-1 transition-colors duration-300"
                   data-testid="button-cancel-order"
                 >
                   Hủy
@@ -624,7 +779,8 @@ export default function PublicLandingPage() {
                 <Button
                   onClick={handleOrder}
                   disabled={orderMutation.isPending}
-                  className="flex-1"
+                  className="flex-1 transition-colors duration-300"
+                  style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
                   data-testid="button-confirm-order"
                 >
                   {orderMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đặt hàng'}
@@ -636,12 +792,12 @@ export default function PublicLandingPage() {
       )}
 
       {/* Sticky Mobile Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t p-4 md:hidden">
+      <div className={`fixed bottom-0 left-0 right-0 z-50 border-t p-4 md:hidden transition-colors duration-300 ${themeClasses.card}`}>
         <div className="flex gap-3">
           <Button 
             variant="outline" 
             size="sm" 
-            className="flex-1"
+            className="flex-1 transition-colors duration-300"
             onClick={() => landingPage.contactInfo?.phone && window.open(`tel:${landingPage.contactInfo.phone}`)}
           >
             <Phone className="h-4 w-4 mr-1" />
@@ -649,7 +805,8 @@ export default function PublicLandingPage() {
           </Button>
           <Button 
             size="sm" 
-            className="flex-1 basis-2/3 bg-gradient-to-r from-primary to-primary/80"
+            className="flex-1 basis-2/3 transition-colors duration-300"
+            style={{background: `linear-gradient(to right, var(--theme-primary), var(--theme-primary-dark))`}}
             onClick={() => setShowOrderForm(true)}
           >
             <ShoppingCart className="h-4 w-4 mr-2" />
