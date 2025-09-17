@@ -10,6 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import { X, Save } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
+interface Industry {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -25,7 +35,11 @@ interface Category {
   id: string;
   name: string;
   description?: string;
+  industryId: string;
   isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface ProductFormProps {
@@ -44,10 +58,34 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     description: "",
     price: "",
     stock: "0",
+    industryId: "",
     categoryId: "",
     status: "active" as "active" | "inactive" | "out-of-stock",
     image: "",
   });
+
+  // Fetch industries for dropdown
+  const { data: industries = [], isLoading: industriesLoading, error: industriesError } = useQuery<Industry[]>({
+    queryKey: ['/api/industries'],
+    queryFn: async () => {
+      const response = await fetch('/api/industries');
+      if (!response.ok) throw new Error('Failed to fetch industries');
+      return response.json();
+    },
+  });
+
+  // Fetch categories for dropdown
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    },
+  });
+
+  const isLoading = industriesLoading || categoriesLoading;
+  const fetchError = industriesError || categoriesError;
 
   // Load product data if editing
   useEffect(() => {
@@ -57,6 +95,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         description: product.description || "",
         price: product.price,
         stock: product.stock.toString(),
+        industryId: "",
         categoryId: product.categoryId || "",
         status: product.status,
         image: product.image || "",
@@ -64,10 +103,34 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     }
   }, [product]);
 
-  // Fetch categories for dropdown
-  const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
-  });
+  // Auto-select industry when editing and categories are loaded
+  useEffect(() => {
+    if (product && product.categoryId && categories.length > 0 && !formData.industryId) {
+      const category = categories.find(c => c.id === product.categoryId);
+      if (category) {
+        setFormData(prev => ({ ...prev, industryId: category.industryId }));
+      }
+    }
+  }, [product, categories, formData.industryId]);
+
+  // Show error if data fetch fails
+  if (fetchError) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-8">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">Lỗi khi tải dữ liệu</p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={onClose} variant="outline">Đóng</Button>
+                <Button onClick={() => window.location.reload()}>Thử lại</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Save product mutation
   const saveMutation = useMutation({
@@ -140,7 +203,22 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     saveMutation.mutate(saveData);
   };
 
-  const activeCategories = categories.filter(category => category.isActive);
+  // Filter categories based on selected industry
+  const filteredCategories = categories.filter(category => {
+    const industryMatch = formData.industryId ? category.industryId === formData.industryId : true;
+    return category.isActive && industryMatch;
+  });
+
+  const activeIndustries = industries.filter(industry => industry.isActive);
+
+  // Handle industry change - reset category selection
+  const handleIndustryChange = (industryId: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      industryId, 
+      categoryId: "" // Reset category when industry changes
+    }));
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -217,20 +295,40 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </div>
             </div>
 
-            {/* Category and Status */}
+            {/* Industry and Category */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="industry">Ngành hàng</Label>
+                <Select
+                  value={formData.industryId}
+                  onValueChange={handleIndustryChange}
+                >
+                  <SelectTrigger data-testid="select-product-industry">
+                    <SelectValue placeholder="Chọn ngành hàng" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Không có ngành hàng</SelectItem>
+                    {activeIndustries.map((industry) => (
+                      <SelectItem key={industry.id} value={industry.id}>
+                        {industry.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="category">Danh mục</Label>
                 <Select
                   value={formData.categoryId}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
+                  disabled={!formData.industryId}
                 >
                   <SelectTrigger data-testid="select-product-category">
-                    <SelectValue placeholder="Chọn danh mục" />
+                    <SelectValue placeholder={formData.industryId ? "Chọn danh mục" : "Chọn ngành hàng trước"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Không có danh mục</SelectItem>
-                    {activeCategories.map((category) => (
+                    <SelectItem value="">Không có danh mục</SelectItem>
+                    {filteredCategories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
                       </SelectItem>
@@ -238,6 +336,11 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div></div>
               <div>
                 <Label htmlFor="status">Trạng thái</Label>
                 <Select
