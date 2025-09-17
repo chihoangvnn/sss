@@ -614,7 +614,13 @@ export default function ChatbotWidget({
             ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(inputValue)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {
+                e.preventDefault();
+                e.stopPropagation();
+                sendMessage(inputValue);
+              }
+            }}
             placeholder="Nhập tin nhắn..."
             className="flex-1 border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-xl"
 
@@ -710,7 +716,13 @@ export default function ChatbotWidget({
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(inputValue)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sendMessage(inputValue);
+                  }
+                }}
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 text-sm border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-lg"
     
