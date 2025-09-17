@@ -234,19 +234,16 @@ export default function ChatbotWidget({
     messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
   }, [messages.length]);
 
-  // Enhanced auto-focus with better timing and accessibility
+  // Enhanced auto-focus with better timing and accessibility  
   useEffect(() => {
-    if (isOpen && !isMinimized) {
-      // Improved auto-focus timing for better UX
+    if (isOpen && !isMinimized && inputValue === "") {
+      // Only auto-focus when chat opens AND input is empty (not during typing)
       const focusTimer = setTimeout(() => {
-        // Only focus if not on mobile to avoid virtual keyboard issues
         const isMobile = window.innerWidth < 768;
-        if (!isMobile && inputRef.current) {
+        if (!isMobile && inputRef.current && document.activeElement !== inputRef.current) {
           inputRef.current.focus();
-          // Set cursor to end for better UX
-          inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
         }
-      }, 200); // Slightly longer delay for smoother experience
+      }, 200);
       
       return () => clearTimeout(focusTimer);
     }
@@ -620,7 +617,7 @@ export default function ChatbotWidget({
             onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(inputValue)}
             placeholder="Nhập tin nhắn..."
             className="flex-1 border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-xl"
-            disabled={isTyping}
+
           />
           <Button 
             onClick={() => sendMessage(inputValue)}
@@ -716,7 +713,7 @@ export default function ChatbotWidget({
                 onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(inputValue)}
                 placeholder="Nhập tin nhắn..."
                 className="flex-1 text-sm border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-lg"
-                disabled={isTyping}
+    
               />
               <Button 
                 size="sm"
