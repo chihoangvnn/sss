@@ -16,7 +16,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       } else {
         // GET /api/categories
-        const categories = await storage.getCategories();
+        const { industryId } = req.query;
+        const industryIdParam = typeof industryId === 'string' ? industryId : undefined;
+        const categories = await storage.getCategories(industryIdParam);
         res.json(categories);
       }
     } else if (req.method === 'POST') {

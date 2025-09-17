@@ -406,7 +406,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Categories API
   app.get("/api/categories", async (req, res) => {
     try {
-      const categories = await storage.getCategories();
+      const { industryId } = req.query;
+      const industryIdParam = typeof industryId === 'string' ? industryId : undefined;
+      const categories = await storage.getCategories(industryIdParam);
       res.json(categories);
     } catch (error) {
       console.error("Error fetching categories:", error);
