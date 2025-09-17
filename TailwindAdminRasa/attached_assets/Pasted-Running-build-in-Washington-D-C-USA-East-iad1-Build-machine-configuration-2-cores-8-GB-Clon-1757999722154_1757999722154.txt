@@ -1,0 +1,59 @@
+Running build in Washington, D.C., USA (East) – iad1
+Build machine configuration: 2 cores, 8 GB
+Cloning github.com/chihoangvnn/TailwindAdminRasa (Branch: main, Commit: 5de29ae)
+Previous build caches not available
+Cloning completed: 597.000ms
+Found .vercelignore
+Removed 25 ignored files defined in .vercelignore
+  /.git/config
+  /.git/description
+  /.git/FETCH_HEAD
+  /.git/HEAD
+  /.git/hooks/applypatch-msg.sample
+  /.git/hooks/commit-msg.sample
+  /.git/hooks/fsmonitor-watchman.sample
+  /.git/hooks/post-update.sample
+  /.git/hooks/pre-applypatch.sample
+  /.git/hooks/pre-commit.sample
+Running "vercel build"
+Vercel CLI 47.1.1
+Installing dependencies...
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+added 750 packages in 16s
+81 packages are looking for funding
+  run `npm fund` for details
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+vite v5.4.19 building for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2549 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                   2.41 kB │ gzip:   0.97 kB
+../dist/public/assets/index-DDObIUz5.css   76.17 kB │ gzip:  12.48 kB
+../dist/public/assets/index-B0J8hOXR.js   865.32 kB │ gzip: 249.78 kB
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.12s
+  dist/index.js  79.3kb
+⚡ Done in 10ms
+Using TypeScript 5.6.3 (local user-provided)
+Using TypeScript 5.6.3 (local user-provided)
+Using TypeScript 5.6.3 (local user-provided)
+Using TypeScript 5.6.3 (local user-provided)
+Using TypeScript 5.6.3 (local user-provided)
+Using TypeScript 5.6.3 (local user-provided)
+api/landing-orders.ts(29,7): error TS2322: Type '{ id: string; name: string; email: string; phone: string | null; avatar: string | null; status: "active" | "inactive" | "vip"; joinDate: Date | null; }' is not assignable to type 'string'.
+Using TypeScript 5.6.3 (local user-provided)
+Using TypeScript 5.6.3 (local user-provided)
+Using TypeScript 5.6.3 (local user-provided)
+Build Completed in /vercel/output [40s]
+Deploying outputs...
+Deployment completed

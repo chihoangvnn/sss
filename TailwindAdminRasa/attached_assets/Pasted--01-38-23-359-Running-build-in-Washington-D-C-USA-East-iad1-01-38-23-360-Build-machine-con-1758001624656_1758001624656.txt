@@ -1,0 +1,70 @@
+[01:38:23.359] Running build in Washington, D.C., USA (East) – iad1
+[01:38:23.360] Build machine configuration: 2 cores, 8 GB
+[01:38:23.377] Cloning github.com/chihoangvnn/TailwindAdminRasa (Branch: main, Commit: 82b1d46)
+[01:38:23.580] Previous build caches not available
+[01:38:23.937] Cloning completed: 560.000ms
+[01:38:23.969] Found .vercelignore
+[01:38:23.974] Removed 25 ignored files defined in .vercelignore
+[01:38:23.974]   /.git/config
+[01:38:23.974]   /.git/description
+[01:38:23.974]   /.git/FETCH_HEAD
+[01:38:23.974]   /.git/HEAD
+[01:38:23.974]   /.git/hooks/applypatch-msg.sample
+[01:38:23.975]   /.git/hooks/commit-msg.sample
+[01:38:23.975]   /.git/hooks/fsmonitor-watchman.sample
+[01:38:23.975]   /.git/hooks/post-update.sample
+[01:38:23.975]   /.git/hooks/pre-applypatch.sample
+[01:38:23.975]   /.git/hooks/pre-commit.sample
+[01:38:24.264] Running "vercel build"
+[01:38:24.670] Vercel CLI 47.1.1
+[01:38:26.035] Installing dependencies...
+[01:38:32.112] npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+[01:38:32.176] npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+[01:38:42.772] 
+[01:38:42.773] added 750 packages in 16s
+[01:38:42.773] 
+[01:38:42.774] 81 packages are looking for funding
+[01:38:42.774]   run `npm fund` for details
+[01:38:43.463] 
+[01:38:43.464] > rest-express@1.0.0 build
+[01:38:43.464] > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+[01:38:43.464] 
+[01:38:43.729] [36mvite v5.4.19 [32mbuilding for production...[36m[39m
+[01:38:43.781] transforming...
+[01:38:44.055] Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+[01:38:44.057]   npx update-browserslist-db@latest
+[01:38:44.057]   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[01:38:45.082] 
+[01:38:45.083] A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+[01:38:51.936] [32m✓[39m 2549 modules transformed.
+[01:38:52.574] rendering chunks...
+[01:38:52.587] computing gzip size...
+[01:38:52.613] [2m../dist/public/[22m[32mindex.html                 [39m[1m[2m  2.41 kB[22m[1m[22m[2m │ gzip:   0.97 kB[22m
+[01:38:52.614] [2m../dist/public/[22m[2massets/[22m[35mindex-DDObIUz5.css  [39m[1m[2m 76.17 kB[22m[1m[22m[2m │ gzip:  12.48 kB[22m
+[01:38:52.614] [2m../dist/public/[22m[2massets/[22m[36mindex-B0J8hOXR.js   [39m[1m[33m865.32 kB[39m[22m[2m │ gzip: 249.78 kB[22m
+[01:38:52.615] [33m
+[01:38:52.619] (!) Some chunks are larger than 500 kB after minification. Consider:
+[01:38:52.620] - Using dynamic import() to code-split the application
+[01:38:52.620] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[01:38:52.620] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[01:38:52.620] [32m✓ built in 8.86s[39m
+[01:38:52.667] 
+[01:38:52.667]   dist/index.js  79.3kb
+[01:38:52.667] 
+[01:38:52.668] ⚡ Done in 11ms
+[01:38:52.941] Using TypeScript 5.6.3 (local user-provided)
+[01:38:56.946] Using TypeScript 5.6.3 (local user-provided)
+[01:38:59.783] Using TypeScript 5.6.3 (local user-provided)
+[01:39:00.995] Using TypeScript 5.6.3 (local user-provided)
+[01:39:02.384] Using TypeScript 5.6.3 (local user-provided)
+[01:39:02.615] Using TypeScript 5.6.3 (local user-provided)
+[01:39:04.226] Using TypeScript 5.6.3 (local user-provided)
+[01:39:05.479] Using TypeScript 5.6.3 (local user-provided)
+[01:39:06.355] Using TypeScript 5.6.3 (local user-provided)
+[01:39:07.445] Build Completed in /vercel/output [41s]
+[01:39:07.745] Deploying outputs...
+[01:39:15.081] Deployment completed
+[01:39:15.904] Creating build cache...
+[01:40:53.163] Created build cache: 1:37.255 (m:ss.mmm)
+[01:40:53.164] Uploading build cache [132.26 MB]
+[01:40:55.023] Build cache uploaded: 1.863s

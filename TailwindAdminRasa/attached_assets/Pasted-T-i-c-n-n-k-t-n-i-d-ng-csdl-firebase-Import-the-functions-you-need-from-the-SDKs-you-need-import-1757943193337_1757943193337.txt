@@ -1,0 +1,123 @@
+Tôi cần nó kết nối dùng csdl firebase
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBYZDXhGbUnO8LfDKuQRfvD30aN7xBKaCM",
+  authDomain: "rasanew-71d16.firebaseapp.com",
+  projectId: "rasanew-71d16",
+  storageBucket: "rasanew-71d16.firebasestorage.app",
+  messagingSenderId: "21194757939",
+  appId: "1:21194757939:web:f70da3ae3c5cb12c1cd046",
+  measurementId: "G-T2E42MVYZE"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+
+
+sản phẩm
+có phần tạo Nghành hàng. catalog và danh mục con catalog sub
+Có số lượng đã bán, sản phẩm có thể là hàng hóa đơn tính dừ 0.01 để bán theo kg
+có cập nhập số lượng đã bán, hàng tồn kho.
+một sản phẩm có khi có vài mã hàng Ví Dụ như Táo, có Táo Nhỏ, Táo Lớn
+Vòng Trầm Hương có Vòng Loại A, Loại B
+Trong sản phẩm có hình ảnh + video clip (video link facebook hoặc youtube, tiktok)
+Có mô tả
+
+
+Đơn hàng
+Có lên đơn bán hàng, 
+quản lý công nợ cho khách lẻ hoặc khách hàng
+đơn hàng có thể cập nhập sửa, edit, xóa
+
+Khách hàng:
+có quản lý công nợ, giao dịnh
+Có danh sách top 10 sản phẩm hay mua
+có lưu lại tất cả sản phẩm đã mua
+
+Kho hàng:
++ Lọc tồn kho
++ lọc hết hàng
++ lọc bán chậm
++Lọc hết hạn
+
+Phần tích hợp mạng xã hội
+
+Facebook: Sử dụng Graph API với token trang. (có thêm kết nối với rasa từ webhook)
+
+TikTok: Cần quyền truy cập API từ TikTok Developers.
+
+Instagram: Sử dụng Instagram Graph API với tài khoản doanh nghiệp hoặc người sáng tạo.
+
+YouTube: Sử dụng YouTube Data API v3 với OAuth 2.0 token.
+
+Mỗi nền tảng có phần kết nối api phù hợp + quản lý trực quan để phát triển lên mô hình fram số lượng nhiều
+
+TẠO API CHUYÊN NGHIỆP
+1. Tạo Đơn Hàng và Kiểm Tra Kho
+
+Tạo Đơn Hàng: Khi khách hàng yêu cầu đặt hàng, Rasa thu thập thông tin về sản phẩm và thông tin giao hàng, sau đó gọi API để tạo đơn hàng trong hệ thống quản lý đơn hàng.
+
+Kiểm Tra Kho: Rasa gọi API kho để kiểm tra tình trạng tồn kho. Nếu sản phẩm hết hàng, Rasa thông báo cho khách và cung cấp các tùy chọn như chờ hàng hoặc đổi sản phẩm.
+
+API cần phát triển:
+
+API tạo đơn hàng.
+
+API kiểm tra tồn kho.
+
+API cập nhật tình trạng đơn hàng.
+
+2. Tính Tiền và Tạo Mã QR
+
+Sau khi đơn hàng được tạo, Rasa gọi API tính tổng tiền (bao gồm thuế, phí vận chuyển) và tạo mã QR cho thanh toán.
+
+Rasa gửi mã QR này cho khách hàng để xác nhận và thanh toán.
+
+API cần phát triển:
+
+API tính tiền (tính tổng tiền cho đơn hàng).
+
+API tạo mã QR cho thanh toán.
+
+3. Tự Động Tư Vấn Facebook
+
+Facebook Messenger API nhận tin nhắn từ khách hàng trên Fanpage và gửi đến Rasa qua webhook.
+
+Rasa phân tích và nhận diện yêu cầu của khách hàng để tư vấn về sản phẩm hoặc vấn đề liên quan, gợi ý các sản phẩm phổ biến trong cùng catalog.
+
+API cần phát triển:
+
+API nhận tin nhắn từ Facebook.
+
+API gửi phản hồi từ Rasa về Facebook.
+
+4. Tư Vấn Thông Minh và Flow
+
+Rasa sử dụng Story và Rules để xây dựng các kịch bản tư vấn thông minh.
+
+Rasa tự động tư vấn sản phẩm theo các câu hỏi hoặc yêu cầu của khách hàng, như là gợi ý các sản phẩm dựa trên nhu cầu.
+
+API cần phát triển:
+
+Xây dựng các Story và Rules cho các flow tư vấn (ví dụ: tư vấn sản phẩm dựa trên yêu cầu của khách).
+
+Tóm tắt mô tả cho dev:
+
+Tạo Đơn Hàng và Kiểm Tra Kho: Phát triển API để tạo đơn hàng và kiểm tra kho. Nếu hết hàng, cung cấp các tùy chọn cho khách (chờ hàng hoặc đổi món).
+
+Tính Tiền và Tạo Mã QR: Sau khi đơn hàng được tạo, phát triển API tính tiền và tạo mã QR cho thanh toán.
+
+Tự Động Tư Vấn Facebook: Tích hợp API để nhận tin nhắn từ Facebook Messenger và tư vấn tự động qua Rasa.
+
+Tư Vấn Thông Minh và Flow: Phát triển các Story và Rules trong Rasa để tư vấn thông minh và chủ động.
+
+Các API trên sẽ kết nối với Rasa qua webhook hoặc trực tiếp và giúp tự động hóa quy trình tạo đơn hàng, tư vấn khách hàng, và xử lý thanh toán.
