@@ -573,10 +573,10 @@ export default function PublicStorefront() {
               <div className="space-y-3">
                 {/* Phone Input - Always visible */}
                 <div>
-                  <Label htmlFor="customerPhone">Số điện thoại *</Label>
+                  <Label htmlFor="customerPhoneSearch">Số điện thoại *</Label>
                   <Input
-                    id="customerPhone"
-                    name="customerPhone"
+                    id="customerPhoneSearch"
+                    name="customerPhoneSearch"
                     value={customerInfo.phone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     placeholder="Nhập số điện thoại (3 số cuối để tìm member)"
@@ -687,7 +687,7 @@ export default function PublicStorefront() {
                     </div>
 
                     <div>
-                      <Label htmlFor="customerPhone">Số điện thoại *</Label>
+                      <Label htmlFor="customerPhoneFull">Số điện thoại *</Label>
                       <Input
                         id="customerPhoneFull"
                         name="customerPhoneFull"
