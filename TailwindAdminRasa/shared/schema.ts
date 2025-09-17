@@ -10,11 +10,23 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
 });
 
-// Categories table
+// Industries table - Ngành hàng
+export const industries = pgTable("industries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Categories table - Sub catalog
 export const categories = pgTable("categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
+  industryId: varchar("industry_id").notNull().references(() => industries.id),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -183,6 +195,12 @@ export const insertStorefrontConfigSchema = createInsertSchema(storefrontConfig)
   updatedAt: true,
 });
 
+export const insertIndustrySchema = createInsertSchema(industries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
   createdAt: true,
@@ -225,6 +243,9 @@ export type ChatbotConversation = typeof chatbotConversations.$inferSelect;
 
 export type InsertStorefrontConfig = z.infer<typeof insertStorefrontConfigSchema>;
 export type StorefrontConfig = typeof storefrontConfig.$inferSelect;
+
+export type InsertIndustry = z.infer<typeof insertIndustrySchema>;
+export type Industry = typeof industries.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Category = typeof categories.$inferSelect;
