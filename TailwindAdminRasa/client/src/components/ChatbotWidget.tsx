@@ -316,7 +316,7 @@ export default function ChatbotWidget({
 
   // Mobile full-screen overlay
   const MobileChat = () => (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+    <div className="fixed inset-0 z-[9998] bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-green-500 text-white">
         <h3 className="font-semibold">Trợ lý mua sắm</h3>
@@ -371,7 +371,7 @@ export default function ChatbotWidget({
 
   // Desktop popup
   const DesktopChat = () => (
-    <Card className="fixed bottom-20 right-4 w-96 h-96 shadow-xl z-50 flex flex-col">
+    <Card className="fixed bottom-20 right-4 w-96 h-96 shadow-xl z-[9998] flex flex-col">
       {/* Header */}
       <CardHeader className="pb-2 bg-green-500 text-white rounded-t-lg">
         <div className="flex items-center justify-between">
@@ -449,7 +449,7 @@ export default function ChatbotWidget({
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 w-14 h-14 rounded-full shadow-lg bg-green-600 hover:bg-green-700 z-40"
+          className="fixed bottom-4 right-4 w-14 h-14 rounded-full shadow-2xl bg-green-600 hover:bg-green-700 z-[9999] transition-all duration-200 hover:scale-110"
           size="lg"
         >
           <MessageCircle className="w-6 h-6" />
