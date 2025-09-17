@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit3, Trash2, Save, X, ArrowUp, ArrowDown } from "lucide-react";
 
-interface Category {
+interface Industry {
   id: string;
   name: string;
   description?: string;
@@ -20,9 +21,21 @@ interface Category {
   updatedAt?: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  industryId: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface CategoryFormData {
   name: string;
   description: string;
+  industryId: string;
   isActive: boolean;
   sortOrder: number;
 }
@@ -32,17 +45,37 @@ export default function CategoryManager() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [selectedIndustryFilter, setSelectedIndustryFilter] = useState<string>("all");
   const [formData, setFormData] = useState<CategoryFormData>({
     name: "",
     description: "",
+    industryId: "",
     isActive: true,
     sortOrder: 0,
   });
 
-  // Fetch categories
-  const { data: categories = [], isLoading } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
+  // Fetch industries
+  const { data: industries = [], isLoading: industriesLoading, error: industriesError } = useQuery<Industry[]>({
+    queryKey: ['/api/industries'],
+    queryFn: async () => {
+      const response = await fetch('/api/industries');
+      if (!response.ok) throw new Error('Failed to fetch industries');
+      return response.json();
+    },
   });
+
+  // Fetch categories
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    },
+  });
+
+  const isLoading = industriesLoading || categoriesLoading;
+  const error = industriesError || categoriesError;
 
   // Save category mutation
   const saveMutation = useMutation({
@@ -57,8 +90,12 @@ export default function CategoryManager() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save category');
+        try {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save category');
+        } catch {
+          throw new Error('Failed to save category');
+        }
       }
       
       return response.json();
@@ -87,7 +124,15 @@ export default function CategoryManager() {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete');
-      return response.json();
+      // Handle 204 No Content or empty response
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return null;
+      }
+      try {
+        return await response.json();
+      } catch {
+        return null; // Fallback for empty/non-JSON responses
+      }
     },
     onSuccess: () => {
       toast({
@@ -119,12 +164,20 @@ export default function CategoryManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
     },
+    onError: () => {
+      toast({
+        title: "Lỗi",
+        description: "Không thể di chuyển danh mục",
+        variant: "destructive",
+      });
+    },
   });
 
   const resetForm = () => {
     setFormData({
       name: "",
       description: "",
+      industryId: "",
       isActive: true,
       sortOrder: 0,
     });
@@ -133,10 +186,16 @@ export default function CategoryManager() {
   };
 
   const handleCreate = () => {
-    const maxSortOrder = Math.max(...categories.map(c => c.sortOrder), -1);
+    // Get max sort order for the selected industry filter or all categories
+    const relevantCategories = selectedIndustryFilter !== 'all' 
+      ? categories.filter(c => c.industryId === selectedIndustryFilter)
+      : categories;
+    const maxSortOrder = Math.max(...relevantCategories.map(c => c.sortOrder), -1);
+    
     setFormData({
       name: "",
       description: "",
+      industryId: selectedIndustryFilter !== 'all' ? selectedIndustryFilter : "",
       isActive: true,
       sortOrder: maxSortOrder + 1,
     });
@@ -148,6 +207,7 @@ export default function CategoryManager() {
     setFormData({
       name: category.name,
       description: category.description || "",
+      industryId: category.industryId,
       isActive: category.isActive,
       sortOrder: category.sortOrder,
     });
@@ -173,6 +233,15 @@ export default function CategoryManager() {
       return;
     }
 
+    if (!formData.industryId || !industries.some(i => i.id === formData.industryId)) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn ngành hàng hợp lệ",
+        variant: "destructive",
+      });
+      return;
+    }
+
     saveMutation.mutate({
       ...formData,
       name: formData.name.trim(),
@@ -182,19 +251,51 @@ export default function CategoryManager() {
 
   const moveCategoryUp = (category: Category, index: number) => {
     if (index === 0) return;
-    const prevCategory = sortedCategories[index - 1];
+    const prevCategory = filteredCategories[index - 1];
     updateSortMutation.mutate({ id: category.id, sortOrder: prevCategory.sortOrder });
     updateSortMutation.mutate({ id: prevCategory.id, sortOrder: category.sortOrder });
   };
 
   const moveCategoryDown = (category: Category, index: number) => {
-    if (index === sortedCategories.length - 1) return;
-    const nextCategory = sortedCategories[index + 1];
+    if (index === filteredCategories.length - 1) return;
+    const nextCategory = filteredCategories[index + 1];
     updateSortMutation.mutate({ id: category.id, sortOrder: nextCategory.sortOrder });
     updateSortMutation.mutate({ id: nextCategory.id, sortOrder: category.sortOrder });
   };
 
-  const sortedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+  // Filter and sort categories
+  const filteredCategories = categories
+    .filter(category => selectedIndustryFilter && selectedIndustryFilter !== "all" ? category.industryId === selectedIndustryFilter : true)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Get industry name helper
+  const getIndustryName = (industryId: string) => {
+    const industry = industries.find(i => i.id === industryId);
+    return industry ? industry.name : 'Không xác định';
+  };
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6 max-w-6xl">
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">Lỗi khi tải dữ liệu</p>
+              <Button 
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/industries'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+                }}
+                variant="outline"
+              >
+                Thử lại
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -216,16 +317,31 @@ export default function CategoryManager() {
             Quản lý danh mục sản phẩm và thứ tự hiển thị
           </p>
         </div>
-        <Button onClick={handleCreate} data-testid="button-add-category">
-          <Plus className="h-4 w-4 mr-2" />
-          Thêm danh mục
-        </Button>
+        <div className="flex items-center gap-4">
+          <Select value={selectedIndustryFilter} onValueChange={setSelectedIndustryFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Lọc theo ngành hàng" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả ngành hàng</SelectItem>
+              {industries.map((industry) => (
+                <SelectItem key={industry.id} value={industry.id}>
+                  {industry.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={handleCreate} data-testid="button-add-category">
+            <Plus className="h-4 w-4 mr-2" />
+            Thêm danh mục
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Categories List */}
         <div className="lg:col-span-2">
-          {sortedCategories.length === 0 ? (
+          {filteredCategories.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <div className="mb-4">
@@ -245,7 +361,7 @@ export default function CategoryManager() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {sortedCategories.map((category, index) => (
+              {filteredCategories.map((category, index) => (
                 <Card key={category.id} className="hover-elevate" data-testid={`card-category-${category.id}`}>
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
@@ -254,6 +370,9 @@ export default function CategoryManager() {
                           <CardTitle className="text-lg">{category.name}</CardTitle>
                           <Badge variant={category.isActive ? "default" : "secondary"}>
                             {category.isActive ? "Hoạt động" : "Tạm dừng"}
+                          </Badge>
+                          <Badge variant="outline">
+                            {getIndustryName(category.industryId)}
                           </Badge>
                         </div>
                         {category.description && (
@@ -276,7 +395,7 @@ export default function CategoryManager() {
                           variant="ghost"
                           size="sm"
                           onClick={() => moveCategoryDown(category, index)}
-                          disabled={index === sortedCategories.length - 1 || updateSortMutation.isPending}
+                          disabled={index === filteredCategories.length - 1 || updateSortMutation.isPending}
                           data-testid={`button-move-down-${category.id}`}
                         >
                           <ArrowDown className="h-4 w-4" />
@@ -333,6 +452,25 @@ export default function CategoryManager() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="categoryIndustry">Ngành hàng *</Label>
+                    <Select 
+                      value={formData.industryId} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, industryId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn ngành hàng" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {industries.map((industry) => (
+                          <SelectItem key={industry.id} value={industry.id}>
+                            {industry.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div>
                     <Label htmlFor="categoryName">Tên danh mục *</Label>
                     <Input
