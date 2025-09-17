@@ -976,9 +976,19 @@ export function setupRasaRoutes(app: Express) {
 
     // Intent detection based on message content
     if (msgLower.includes("tìm") || msgLower.includes("sản phẩm") || msgLower.includes("có gì")) {
-      // Product search intent
+      // Enhanced product search with category detection
+      const category = detectCategory(message);
       const searchTerm = extractSearchTerm(message);
-      if (searchTerm) {
+      
+      if (category) {
+        // Category-specific search
+        const categoryResults = await searchProductsByCategory(category, context);
+        responses.push({
+          text: categoryResults.text,
+          custom: categoryResults.custom
+        });
+      } else if (searchTerm) {
+        // General product search
         const searchResults = await searchProductsForChat(searchTerm, context);
         responses.push({
           text: searchResults.text,
@@ -986,11 +996,12 @@ export function setupRasaRoutes(app: Express) {
         });
       } else {
         responses.push({
-          text: "Bạn muốn tìm sản phẩm gì? Hãy cho tôi biết tên hoặc loại sản phẩm bạn quan tâm.",
+          text: "Bạn muốn tìm sản phẩm gì? Hãy cho tôi biết tên hoặc danh mục sản phẩm.",
           buttons: [
-            { title: "Rau củ tươi", payload: "/search_vegetables" },
-            { title: "Thịt sạch", payload: "/search_meat" },
-            { title: "Trái cây", payload: "/search_fruits" },
+            { title: "📱 Điện thoại", payload: "/search_smartphone" },
+            { title: "💻 Laptop", payload: "/search_laptop" },  
+            { title: "🎧 Tai nghe", payload: "/search_headphone" },
+            { title: "📺 TV", payload: "/search_tv" },
             { title: "Xem tất cả", payload: "/search_all" }
           ]
         });
@@ -1075,6 +1086,26 @@ export function setupRasaRoutes(app: Express) {
         ]
       });
     }
+    else if (msgLower.includes("quá đắt") || msgLower.includes("đắt quá") || msgLower.includes("rẻ hơn") || msgLower.includes("có gì rẻ") || msgLower.includes("thay thế") || msgLower.includes("tương tự")) {
+      // NEW: Similar product suggestion intent
+      const productName = extractProductName(message);
+      if (productName) {
+        const similarProducts = await getSimilarProductsForChat(productName);
+        responses.push({
+          text: similarProducts.text,
+          custom: similarProducts.custom
+        });
+      } else {
+        responses.push({
+          text: "💰 Tôi hiểu bạn muốn tìm sản phẩm với giá tốt hơn. Bạn đang quan tâm đến sản phẩm nào để tôi gợi ý những lựa chọn phù hợp?",
+          buttons: [
+            { title: "Sản phẩm giá rẻ", payload: "/budget_products" },
+            { title: "Khuyến mãi hot", payload: "/promotions" },
+            { title: "So sánh giá", payload: "/price_comparison" }
+          ]
+        });
+      }
+    }
     else if (msgLower.includes("xin chào") || msgLower.includes("hello") || msgLower.includes("hi")) {
       // Greeting intent
       responses.push({
@@ -1131,6 +1162,188 @@ export function setupRasaRoutes(app: Express) {
       }
     }
     return null;
+  }
+
+  // NEW: Category detection function
+  function detectCategory(message: string): string | null {
+    const msgLower = message.toLowerCase();
+    const categoryMap = {
+      'smartphone': ['điện thoại', 'smartphone', 'phone', 'di động', 'iphone', 'samsung', 'xiaomi'],
+      'laptop': ['laptop', 'máy tính', 'macbook', 'dell', 'hp', 'asus'],
+      'headphone': ['tai nghe', 'headphone', 'airpods', 'earphone'], 
+      'tablet': ['máy tính bảng', 'tablet', 'ipad'],
+      'tv': ['tivi', 'tv', 'smart tv', 'television'],
+      'camera': ['máy ảnh', 'camera'],
+      'watch': ['đồng hồ', 'smart watch', 'apple watch'],
+      'speaker': ['loa', 'speaker', 'bluetooth']
+    };
+
+    for (const [category, keywords] of Object.entries(categoryMap)) {
+      for (const keyword of keywords) {
+        if (msgLower.includes(keyword)) {
+          return category;
+        }
+      }
+    }
+    return null;
+  }
+
+  // NEW: Search products by category
+  async function searchProductsByCategory(category: string, context: any) {
+    try {
+      const allProducts = await storage.getProducts(50);
+      const filteredProducts = allProducts.filter(product => {
+        const productName = product.name.toLowerCase();
+        const categoryKeywords: Record<string, string[]> = {
+          'smartphone': ['điện thoại', 'phone', 'iphone', 'samsung', 'xiaomi', 'oppo', 'vivo'],
+          'laptop': ['laptop', 'macbook', 'dell', 'hp', 'asus', 'acer', 'lenovo'],
+          'headphone': ['tai nghe', 'headphone', 'airpods', 'earphone'],
+          'tablet': ['ipad', 'tablet'],
+          'tv': ['tv', 'tivi', 'smart tv'],
+          'camera': ['camera', 'máy ảnh'],  
+          'watch': ['watch', 'đồng hồ'],
+          'speaker': ['loa', 'speaker']
+        };
+
+        const keywords = categoryKeywords[category] || [];
+        return keywords.some((keyword: string) => productName.includes(keyword));
+      });
+
+      if (filteredProducts.length === 0) {
+        return {
+          text: `Hiện tại chưa có sản phẩm nào trong danh mục "${category}". Bạn có thể xem các danh mục khác?`,
+          custom: null
+        };
+      }
+
+      // Show top 3 products in category
+      const topProducts = filteredProducts.slice(0, 3);
+      const productsWithStock = await Promise.all(
+        topProducts.map(async (product) => {
+          const inventory = await getInventory(product.id);
+          return {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            stock: inventory.currentStock
+          };
+        })
+      );
+
+      const categoryNames: Record<string, string> = {
+        'smartphone': 'Điện thoại',
+        'laptop': 'Laptop', 
+        'headphone': 'Tai nghe',
+        'tablet': 'Máy tính bảng',
+        'tv': 'TV',
+        'camera': 'Máy ảnh',
+        'watch': 'Đồng hồ',
+        'speaker': 'Loa'
+      };
+
+      return {
+        text: `📱 Tìm thấy ${filteredProducts.length} sản phẩm trong danh mục ${categoryNames[category] || category}. Đây là những sản phẩm nổi bật:`,
+        custom: {
+          products: productsWithStock,
+          category: category,
+          totalCount: filteredProducts.length
+        }
+      };
+    } catch (error) {
+      return {
+        text: "Có lỗi khi tìm kiếm theo danh mục. Vui lòng thử lại.",
+        custom: null
+      };
+    }
+  }
+
+  // NEW: Get similar/cheaper product suggestions
+  async function getSimilarProductsForChat(productName: string) {
+    try {
+      const allProducts = await storage.getProducts(50);
+      const targetProduct = allProducts.find(p => 
+        p.name.toLowerCase().includes(productName.toLowerCase())
+      );
+
+      if (!targetProduct) {
+        return {
+          text: `Không tìm thấy sản phẩm "${productName}". Bạn có thể cho tôi biết tên sản phẩm chính xác hơn?`,
+          custom: null
+        };
+      }
+
+      const targetPrice = parseFloat(targetProduct.price);
+      
+      // Find similar products in same category but cheaper
+      const category = detectCategory(targetProduct.name);
+      let similarProducts = allProducts.filter(p => {
+        const productPrice = parseFloat(p.price);
+        const isCheaper = productPrice < targetPrice;
+        const isDifferentProduct = p.id !== targetProduct.id;
+        
+        if (category) {
+          // Same category, cheaper price
+          const productCategory = detectCategory(p.name);
+          return productCategory === category && isCheaper && isDifferentProduct;
+        } else {
+          // Just cheaper products (fallback)
+          return isCheaper && isDifferentProduct;
+        }
+      });
+
+      // Sort by price ascending and get top 3
+      similarProducts = similarProducts
+        .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
+        .slice(0, 3);
+
+      if (similarProducts.length === 0) {
+        return {
+          text: `${targetProduct.name} (${parseInt(targetProduct.price).toLocaleString()}đ) đã là sản phẩm có giá tốt trong danh mục này. Bạn có thể xem các khuyến mãi đặc biệt?`,
+          custom: {
+            originalProduct: {
+              id: targetProduct.id,
+              name: targetProduct.name,
+              price: targetProduct.price,
+              image: targetProduct.image
+            }
+          }
+        };
+      }
+
+      // Get stock info for similar products
+      const productsWithStock = await Promise.all(
+        similarProducts.map(async (product) => {
+          const inventory = await getInventory(product.id);
+          const savings = targetPrice - parseFloat(product.price);
+          return {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            stock: inventory.currentStock,
+            savings: Math.round(savings)
+          };
+        })
+      );
+
+      return {
+        text: `💡 Tôi tìm thấy ${similarProducts.length} sản phẩm tương tự với giá tốt hơn so với ${targetProduct.name}:`,
+        custom: {
+          originalProduct: {
+            id: targetProduct.id,
+            name: targetProduct.name,
+            price: targetProduct.price
+          },
+          similarProducts: productsWithStock
+        }
+      };
+    } catch (error) {
+      return {
+        text: "Có lỗi khi tìm sản phẩm tương tự. Vui lòng thử lại.",
+        custom: null
+      };
+    }
   }
 
   async function searchProductsForChat(searchTerm: string, context: any) {

@@ -91,29 +91,29 @@ const mainMenuItems = [
   },
 ];
 
-// Chatbot management menu items
+// Chatbot management menu items (temporarily pointing to existing route)
 const chatbotMenuItems = [
   {
     title: "Test Bot",
-    url: "/chatbot/test",
+    url: "/chatbot",
     icon: MessageSquare,
     description: "Chat và test bot trực tiếp"
   },
   {
     title: "Cài đặt Bot",
-    url: "/chatbot/settings",
+    url: "/chatbot",
     icon: Settings,
     description: "Cấu hình bot, tên, avatar, ngôn ngữ"
   },
   {
     title: "Quản lý Câu trả lời",
-    url: "/chatbot/responses",
+    url: "/chatbot",
     icon: FileText,
     description: "Chỉnh sửa intents và responses"
   },
   {
     title: "Thống kê Bot",
-    url: "/chatbot/analytics",
+    url: "/chatbot",
     icon: BarChart3,
     description: "Analytics cuộc hội thoại và hiệu suất"
   },
