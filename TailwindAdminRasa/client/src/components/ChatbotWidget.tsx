@@ -79,13 +79,12 @@ export default function ChatbotWidget({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
 
-  // Clear any restored/cached input values on mount
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.value = "";
-      setInputValue("");
-    }
-  }, []);
+  // REMOVED: Clear input on mount - This wiped user text during HMR reconnections  
+  // Input is controlled via inputValue state, no need to manually clear
+  // useEffect(() => {
+  //   // REMOVED - This cleared user's typing during Vite HMR 
+  //   // Controlled inputs don't need manual clearing
+  // }, []);
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
