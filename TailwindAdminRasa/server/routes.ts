@@ -1166,20 +1166,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/public-landing/:slug", async (req, res) => {
     try {
       const landingPage = await firebaseStorage.getProductLandingPageWithDetails(req.params.slug);
-      if (!landingPage || !landingPage.isActive) {
-        return res.status(404).json({ error: "Landing page not found or inactive" });
+      if (landingPage && landingPage.isActive) {
+        // Increment view count
+        if (landingPage.id) {
+          await firebaseStorage.incrementLandingPageView(landingPage.id);
+        }
+        return res.json(landingPage);
       }
-      
-      // Increment view count
-      if (landingPage.id) {
-        await firebaseStorage.incrementLandingPageView(landingPage.id);
-      }
-      
-      res.json(landingPage);
     } catch (error) {
-      console.error("Error fetching public landing page:", error);
-      res.status(500).json({ error: "Failed to fetch landing page" });
+      console.error("Error fetching public landing page from Firebase:", error);
     }
+    
+    // Fallback: Check demo landing pages from memory
+    try {
+      const demoPages = global.demoLandingPages || [];
+      const demoPage = demoPages.find(page => page.slug === req.params.slug);
+      
+      if (demoPage && demoPage.isActive) {
+        // Increment view count for demo page
+        demoPage.viewCount = (demoPage.viewCount || 0) + 1;
+        
+        // Add product details if needed
+        if (demoPage.productId) {
+          const product = await storage.getProduct(demoPage.productId);
+          if (product) {
+            demoPage.product = product;
+          }
+        }
+        
+        return res.json(demoPage);
+      }
+    } catch (demoError) {
+      console.error("Error fetching demo landing page:", demoError);
+    }
+    
+    // Neither Firebase nor demo found
+    res.status(404).json({ error: "Landing page not found or inactive" });
   });
 
   // Order from landing page
