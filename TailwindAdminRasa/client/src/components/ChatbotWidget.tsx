@@ -171,13 +171,14 @@ export default function ChatbotWidget({
     };
   }, [pageType, pageContext]);
 
-  // Welcome message initialization
+  // Welcome message initialization  
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       const welcomeMessage = getWelcomeMessage();
       setMessages([welcomeMessage]);
     }
-  }, [isOpen, messages.length, getWelcomeMessage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, messages.length]); // Removed getWelcomeMessage to prevent infinite loop
 
   // Enhanced unread message tracking with better counting
   useEffect(() => {
