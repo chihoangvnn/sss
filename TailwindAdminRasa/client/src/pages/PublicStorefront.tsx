@@ -576,9 +576,13 @@ export default function PublicStorefront() {
                   <Label htmlFor="customerPhone">Số điện thoại *</Label>
                   <Input
                     id="customerPhone"
+                    name="customerPhone"
                     value={customerInfo.phone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     placeholder="Nhập số điện thoại (3 số cuối để tìm member)"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     data-testid="input-customer-phone"
                   />
                   {isSearching && (
@@ -671,9 +675,13 @@ export default function PublicStorefront() {
                       <Label htmlFor="customerName">Họ và tên *</Label>
                       <Input
                         id="customerName"
+                        name="customerName"
                         value={customerInfo.name}
                         onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
                         placeholder="Nhập họ và tên"
+                        autoComplete="name"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data-testid="input-customer-name"
                       />
                     </div>
@@ -681,11 +689,15 @@ export default function PublicStorefront() {
                     <div>
                       <Label htmlFor="customerPhone">Số điện thoại *</Label>
                       <Input
-                        id="customerPhone"
+                        id="customerPhoneFull"
+                        name="customerPhoneFull"
                         type="tel"
                         value={customerInfo.phone}
                         onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
                         placeholder="Nhập số điện thoại đầy đủ"
+                        autoComplete="tel"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data-testid="input-customer-phone-full"
                       />
                     </div>
@@ -701,10 +713,14 @@ export default function PublicStorefront() {
                     </Label>
                     <Textarea
                       id="customerAddress"
+                      name="customerAddress"
                       value={customerInfo.address}
                       onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
                       placeholder={selectedMember ? "Nhập địa chỉ giao hàng mới" : "Nhập địa chỉ giao hàng"}
                       rows={2}
+                      autoComplete="street-address"
+                      autoCorrect="off"
+                      spellCheck={false}
                       data-testid="input-customer-address"
                     />
                     {selectedMember && isEditingAddress && (
@@ -719,10 +735,14 @@ export default function PublicStorefront() {
                   <Label htmlFor="notes">Ghi chú (tùy chọn)</Label>
                   <Textarea
                     id="notes"
+                    name="orderNotes"
                     value={customerInfo.notes}
                     onChange={(e) => setCustomerInfo({...customerInfo, notes: e.target.value})}
                     placeholder="Ghi chú đặc biệt..."
                     rows={2}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     data-testid="input-order-notes"
                   />
                 </div>
