@@ -74,6 +74,7 @@ export function ChatbotInterface({
   const [message, setMessage] = useState("");
   const [testMessages, setTestMessages] = useState(messages);
   const [tab, setTab] = useState("chat");
+  const [conversationId] = useState(() => `admin_${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
   const handleToggleChatbot = () => {
     const newStatus = !isOnline;
@@ -81,7 +82,7 @@ export function ChatbotInterface({
     onToggleChatbot?.(newStatus);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!message.trim()) return;
     
     const newMessage: ChatMessage = {
@@ -94,18 +95,65 @@ export function ChatbotInterface({
     setTestMessages(prev => [...prev, newMessage]);
     console.log('Message sent:', message);
     onSendMessage?.(message);
+    const userMessage = message;
     setMessage("");
 
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse: ChatMessage = {
+    try {
+      // Call real RASA API
+      const response = await fetch('/api/rasa/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.trim(),
+          sender: conversationId,
+          context: {
+            page_type: 'admin_dashboard',
+            admin_test: true
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`RASA API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('RASA response:', data);
+      
+      // Process RASA responses
+      if (data.responses && data.responses.length > 0) {
+        for (const rasaResponse of data.responses) {
+          const botResponse: ChatMessage = {
+            id: (Date.now() + Math.random()).toString(),
+            type: "bot",
+            content: rasaResponse.text || "Xin lỗi, tôi không hiểu rõ. Bạn có thể hỏi lại không?",
+            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          };
+          setTestMessages(prev => [...prev, botResponse]);
+        }
+      } else {
+        // Fallback response
+        const botResponse: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: "bot",
+          content: "Xin lỗi, tôi gặp sự cố khi xử lý tin nhắn của bạn. Vui lòng thử lại.",
+          timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        };
+        setTestMessages(prev => [...prev, botResponse]);
+      }
+    } catch (error) {
+      console.error('Error calling RASA API:', error);
+      // Error fallback response
+      const errorResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        content: "Cảm ơn bạn đã liên hệ! Tôi đang xử lý yêu cầu của bạn...",
+        content: "Xin lỗi, không thể kết nối đến chatbot. Vui lòng kiểm tra kết nối mạng và thử lại.",
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       };
-      setTestMessages(prev => [...prev, botResponse]);
-    }, 1000);
+      setTestMessages(prev => [...prev, errorResponse]);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
