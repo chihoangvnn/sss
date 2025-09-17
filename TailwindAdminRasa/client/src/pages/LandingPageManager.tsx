@@ -87,12 +87,15 @@ export default function LandingPageManager() {
 
   // Fetch landing page settings
   const { data: settings, isLoading: settingsLoading } = useQuery<LandingPageSettings>({
-    queryKey: ['/api/landing/settings'],
+    queryKey: ['/api/product-landing-pages', 'settings'],
+    queryFn: () => fetch('/api/product-landing-pages').then(res => res.json()).then(data => data[0] || {}),
+    enabled: false, // Disable for now since this page seems to be for different purpose
   });
 
   // Fetch landing page products
   const { data: landingProducts = [], isLoading: productsLoading } = useQuery<LandingPageProduct[]>({
-    queryKey: ['/api/landing/products'],
+    queryKey: ['/api/product-landing-pages', 'products'],
+    queryFn: () => fetch('/api/product-landing-pages').then(res => res.json()),
   });
 
   // Fetch all available products for selection
@@ -124,7 +127,7 @@ export default function LandingPageManager() {
   // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: LandingPageSettings) => {
-      const response = await fetch("/api/landing/settings", {
+      const response = await fetch("/api/product-landing-pages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -137,7 +140,7 @@ export default function LandingPageManager() {
         title: "Thành công",
         description: "Cài đặt Landing Page đã được cập nhật",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/landing/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/product-landing-pages', 'settings'] });
       setIsEditSettingsDialogOpen(false);
     },
     onError: () => {
@@ -152,7 +155,7 @@ export default function LandingPageManager() {
   // Add product mutation
   const addProductMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/landing/products", {
+      const response = await fetch("/api/product-landing-pages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -165,7 +168,7 @@ export default function LandingPageManager() {
         title: "Thành công",
         description: "Sản phẩm đã được thêm vào Landing Page",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/landing/products'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/product-landing-pages', 'products'] });
       setIsAddProductDialogOpen(false);
       setNewProductForm({
         productId: "",
@@ -200,7 +203,7 @@ export default function LandingPageManager() {
         title: "Thành công",
         description: "Sản phẩm đã được xóa khỏi Landing Page",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/landing/products'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/product-landing-pages', 'products'] });
     },
     onError: () => {
       toast({

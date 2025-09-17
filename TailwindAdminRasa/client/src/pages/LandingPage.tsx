@@ -86,12 +86,15 @@ export default function LandingPage() {
 
   // Fetch landing page settings
   const { data: settings } = useQuery<LandingPageSettings>({
-    queryKey: ['/api/landing/settings'],
+    queryKey: ['/api/product-landing-pages', 'settings'],
+    queryFn: () => fetch('/api/product-landing-pages').then(res => res.json()).then(data => data[0] || {}),
+    enabled: false, // Disable for now since this page is for public view
   });
 
   // Fetch landing page products
   const { data: products = [], isLoading } = useQuery<LandingPageProduct[]>({
-    queryKey: ['/api/landing/products'],
+    queryKey: ['/api/product-landing-pages', 'products'],
+    queryFn: () => fetch('/api/product-landing-pages').then(res => res.json()),
   });
 
   // Cart functions
