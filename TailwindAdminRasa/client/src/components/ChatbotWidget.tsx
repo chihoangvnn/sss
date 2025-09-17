@@ -78,6 +78,14 @@ export default function ChatbotWidget({
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+
+  // Clear any restored/cached input values on mount
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      setInputValue("");
+    }
+  }, []);
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
@@ -620,6 +628,10 @@ export default function ChatbotWidget({
             name="mobile-chat-input"
             ref={inputRef}
             value={inputValue}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="text"
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {
@@ -724,6 +736,10 @@ export default function ChatbotWidget({
                 name="desktop-chat-input"
                 ref={inputRef}
                 value={inputValue}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {

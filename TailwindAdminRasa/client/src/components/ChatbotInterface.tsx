@@ -75,6 +75,15 @@ export function ChatbotInterface({
   onSendMessage 
 }: ChatbotInterfaceProps) {
   const [message, setMessage] = useState("");
+
+  // Clear any restored/cached input values on mount
+  useEffect(() => {
+    const input = document.getElementById('admin-chat-input') as HTMLInputElement;
+    if (input) {
+      input.value = "";
+      setMessage("");
+    }
+  }, []);
   const [testMessages, setTestMessages] = useState(messages);
   const [currentView, setCurrentView] = useState<"chat" | "dashboard" | "settings">("chat");
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -354,6 +363,10 @@ export function ChatbotInterface({
               name="admin-chat-input"
               placeholder="Nhập tin nhắn để test chatbot..."
               value={message}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               onKeyDownCapture={(e) => e.stopPropagation()}
