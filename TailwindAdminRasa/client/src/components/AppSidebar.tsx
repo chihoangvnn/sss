@@ -17,7 +17,8 @@ import {
   Globe,
   Palette,
   Tags,
-  Building2
+  Building2,
+  FileText
 } from "lucide-react";
 
 import {
@@ -90,13 +91,35 @@ const mainMenuItems = [
   },
 ];
 
-const integrationItems = [
+// Chatbot management menu items
+const chatbotMenuItems = [
   {
-    title: "Chatbot RASA",
-    url: "/chatbot",
-    icon: Bot,
-    status: "online",
+    title: "Test Bot",
+    url: "/chatbot/test",
+    icon: MessageSquare,
+    description: "Chat và test bot trực tiếp"
   },
+  {
+    title: "Cài đặt Bot",
+    url: "/chatbot/settings",
+    icon: Settings,
+    description: "Cấu hình bot, tên, avatar, ngôn ngữ"
+  },
+  {
+    title: "Quản lý Câu trả lời",
+    url: "/chatbot/responses",
+    icon: FileText,
+    description: "Chỉnh sửa intents và responses"
+  },
+  {
+    title: "Thống kê Bot",
+    url: "/chatbot/analytics",
+    icon: BarChart3,
+    description: "Analytics cuộc hội thoại và hiệu suất"
+  },
+];
+
+const integrationItems = [
   {
     title: "Facebook",
     url: "/facebook",
@@ -162,6 +185,28 @@ export function AppSidebar() {
                           {item.badge}
                         </Badge>
                       )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Quản lý Chatbot</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {chatbotMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === item.url}
+                    data-testid={`chatbot-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
