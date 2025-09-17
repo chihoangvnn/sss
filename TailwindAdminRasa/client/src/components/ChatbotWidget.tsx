@@ -773,7 +773,7 @@ export default function ChatbotWidget({
                 Tóm tắt đơn hàng
               </h4>
               {message.orderData.items.map((item, index) => (
-                <div key={index} className="flex justify-between text-sm text-gray-600">
+                <div key={`${item.productId || item.name}-${item.quantity}`} className="flex justify-between text-sm text-gray-600">
                   <span>{item.name} x {item.quantity}</span>
                   <span>{item.price.toLocaleString('vi-VN')}đ</span>
                 </div>
@@ -790,7 +790,7 @@ export default function ChatbotWidget({
             <div className="mt-2 flex flex-wrap gap-1">
               {message.suggestions.map((suggestion, index) => (
                 <Button
-                  key={index}
+                  key={`${message.id}-${suggestion}`}
                   size="sm"
                   variant="outline"
                   className="text-xs bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
