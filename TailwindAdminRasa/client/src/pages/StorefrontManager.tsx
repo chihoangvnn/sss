@@ -9,18 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Store, Settings, Eye, Users, ShoppingCart } from "lucide-react";
+import { Plus, Store, Settings, Eye, Users, ShoppingCart, Package2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertStorefrontConfigSchema, type StorefrontConfig as StorefrontConfigType, type StorefrontOrder as StorefrontOrderType } from "@shared/schema";
+import { insertStorefrontConfigSchema, type StorefrontConfig as StorefrontConfigType, type StorefrontOrder as StorefrontOrderType, type Product } from "@shared/schema";
 import { z } from "zod";
 
 // Use shared schema with form-specific validation
 const storefrontConfigFormSchema = insertStorefrontConfigSchema.extend({
   name: z.string().min(1, "Tên storefront là bắt buộc").regex(/^[a-z0-9-]+$/, "Chỉ cho phép chữ thường, số và dấu gạch ngang"),
   topProductsCount: z.coerce.number().min(1, "Số sản phẩm phải ít nhất là 1").max(50, "Tối đa 50 sản phẩm"),
+  displayMode: z.enum(["auto", "manual"]).default("auto"),
+  selectedProductIds: z.array(z.string()).optional(),
   contactInfo: z.object({
     phone: z.string().min(1, "Số điện thoại là bắt buộc"),
     email: z.string().email("Email không hợp lệ"),
@@ -46,6 +50,11 @@ export default function StorefrontManager() {
   const { data: orders = [], isLoading: ordersLoading } = useQuery<StorefrontOrderType[]>({
     queryKey: ['/api/storefront/orders', selectedConfig],
     enabled: !!selectedConfig,
+  });
+
+  // Fetch available products for manual selection
+  const { data: availableProducts = [], isLoading: productsLoading } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
   });
 
   // Create storefront config mutation
@@ -76,6 +85,7 @@ export default function StorefrontManager() {
       name: "",
       topProductsCount: 10,
       displayMode: "auto",
+      selectedProductIds: [],
       isActive: true,
       theme: "organic",
       primaryColor: "#4ade80",
@@ -87,6 +97,9 @@ export default function StorefrontManager() {
       }
     },
   });
+
+  // Watch displayMode to show/hide product selection
+  const watchDisplayMode = form.watch("displayMode");
 
   const onSubmit = (data: StorefrontConfigForm) => {
     createConfigMutation.mutate(data);
@@ -164,10 +177,40 @@ export default function StorefrontManager() {
 
                 <FormField
                   control={form.control}
+                  name="displayMode"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Chế độ hiển thị sản phẩm</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          className="flex flex-col space-y-1"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="auto" id="auto" />
+                            <Label htmlFor="auto">Tự động - Hiển thị sản phẩm top theo stock</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="manual" id="manual" />
+                            <Label htmlFor="manual">Thủ công - Chọn sản phẩm cụ thể</Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormDescription>
+                        Chọn cách hiển thị sản phẩm trên storefront
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="topProductsCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Số lượng sản phẩm hiển thị</FormLabel>
+                      <FormLabel>Số sản phẩm hiển thị</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
@@ -179,7 +222,10 @@ export default function StorefrontManager() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Số lượng sản phẩm top sẽ hiển thị trên storefront (1-50)
+                        {watchDisplayMode === 'manual' 
+                          ? 'Giới hạn số sản phẩm được chọn (1-50)' 
+                          : 'Số lượng sản phẩm top sẽ hiển thị trên storefront (1-50)'
+                        }
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -233,6 +279,77 @@ export default function StorefrontManager() {
                     </FormItem>
                   )}
                 />
+
+                {/* Product Selection for Manual Mode */}
+                {watchDisplayMode === 'manual' && (
+                  <FormField
+                    control={form.control}
+                    name="selectedProductIds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Chọn sản phẩm cho storefront</FormLabel>
+                        <FormDescription>
+                          Chọn tối đa {form.watch("topProductsCount")} sản phẩm để hiển thị trên storefront
+                        </FormDescription>
+                        <FormControl>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto border rounded-lg p-3">
+                            {productsLoading ? (
+                              <div className="col-span-full text-center py-4">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                                <p className="text-sm text-muted-foreground mt-2">Đang tải sản phẩm...</p>
+                              </div>
+                            ) : availableProducts.length === 0 ? (
+                              <div className="col-span-full text-center py-4">
+                                <Package2 className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                                <p className="text-sm text-muted-foreground">Chưa có sản phẩm nào</p>
+                              </div>
+                            ) : (
+                              availableProducts.map((product) => (
+                                <div
+                                  key={product.id}
+                                  className="flex items-start space-x-3 p-2 border rounded-lg hover:bg-muted/50"
+                                >
+                                  <Checkbox
+                                    checked={field.value?.includes(product.id) || false}
+                                    onCheckedChange={(checked) => {
+                                      const currentIds = field.value || [];
+                                      const maxProducts = form.watch("topProductsCount");
+                                      
+                                      if (checked) {
+                                        if (currentIds.length < maxProducts) {
+                                          field.onChange([...currentIds, product.id]);
+                                        }
+                                      } else {
+                                        field.onChange(currentIds.filter(id => id !== product.id));
+                                      }
+                                    }}
+                                    disabled={(field.value?.length || 0) >= form.watch("topProductsCount") && !field.value?.includes(product.id)}
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium leading-none">{product.name}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.description}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Badge variant="outline" className="text-xs">
+                                        {parseInt(product.price).toLocaleString('vi-VN')}đ
+                                      </Badge>
+                                      <Badge variant="secondary" className="text-xs">
+                                        Stock: {product.stock}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Đã chọn: {field.value?.length || 0} / {form.watch("topProductsCount")} sản phẩm
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Thông tin liên hệ</h3>
@@ -467,7 +584,7 @@ export default function StorefrontManager() {
                           <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
                         </div>
                         <Badge variant="outline">
-                          {order.paymentMethod}
+                          {order.deliveryType === 'local_delivery' ? 'Giao hàng tận nơi' : 'COD Shipping'}
                         </Badge>
                       </div>
                       <div className="text-sm">

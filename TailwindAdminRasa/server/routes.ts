@@ -1308,6 +1308,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update storefront config by ID (admin)
+  app.put("/api/storefront/config/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ error: 'Config ID is required' });
+      }
+
+      const updatedConfig = await storage.updateStorefrontConfig(id, req.body);
+      
+      if (!updatedConfig) {
+        return res.status(404).json({ error: 'Storefront config not found' });
+      }
+      
+      res.json({ 
+        success: true,
+        config: updatedConfig,
+        message: 'Storefront config updated successfully' 
+      });
+    } catch (error) {
+      console.error("Error updating storefront config:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Get public storefront data (for customers)
   app.get("/api/storefront/public/:name", async (req, res) => {
     try {
