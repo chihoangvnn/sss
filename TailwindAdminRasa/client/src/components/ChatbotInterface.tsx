@@ -73,6 +73,7 @@ export function ChatbotInterface({
 }: ChatbotInterfaceProps) {
   const [message, setMessage] = useState("");
   const [testMessages, setTestMessages] = useState(messages);
+  const [tab, setTab] = useState("chat");
 
   const handleToggleChatbot = () => {
     const newStatus = !isOnline;
@@ -158,7 +159,7 @@ export function ChatbotInterface({
         </div>
       </div>
 
-      <Tabs defaultValue="dashboard" className="w-full">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList>
           <TabsTrigger value="dashboard">Tổng quan</TabsTrigger>
           <TabsTrigger value="chat">Trò chuyện</TabsTrigger>
@@ -256,7 +257,7 @@ export function ChatbotInterface({
           </Card>
         </TabsContent>
 
-        <TabsContent value="chat" className="space-y-6">
+        <TabsContent value="chat" className="space-y-6" forceMount>
           <Card className="h-96">
             <CardHeader>
               <CardTitle>Thử nghiệm Chatbot</CardTitle>
