@@ -81,7 +81,8 @@ export default function LandingPageEditor() {
 
   // Fetch existing landing page if editing
   const { data: existingLandingPage, isLoading } = useQuery<any>({
-    queryKey: ['/api/products', 'landing', id],
+    queryKey: ['/api/product-landing-pages', id],
+    queryFn: () => isEditing ? fetch(`/api/product-landing-pages/${id}`).then(res => res.json()) : null,
     enabled: isEditing,
   });
 
@@ -131,7 +132,7 @@ export default function LandingPageEditor() {
   // Save landing page mutation
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const url = isEditing ? `/api/products?landing=true&id=${id}` : '/api/products?landing=true';
+      const url = isEditing ? `/api/product-landing-pages/${id}` : '/api/product-landing-pages';
       const method = isEditing ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
