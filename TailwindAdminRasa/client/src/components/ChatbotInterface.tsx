@@ -98,14 +98,18 @@ export function ChatbotInterface({
     }
   };
 
+  // Scroll with debounce to prevent focus interference
   useEffect(() => {
-    // Delay scroll to avoid interfering with typing
+    // Only scroll if not actively typing and significant delay after message change
     const scrollTimer = setTimeout(() => {
-      scrollToBottom();
-    }, 100);
+      // Double-check input is not focused before scrolling
+      if (document.activeElement?.id !== "admin-chat-input") {
+        scrollToBottom();
+      }
+    }, 300); // Longer delay to avoid race conditions
     
     return () => clearTimeout(scrollTimer);
-  }, [testMessages]);
+  }, [testMessages.length]); // Use .length instead of full array to reduce triggers
 
   const handleToggleChatbot = () => {
     const newStatus = !isOnline;

@@ -238,10 +238,27 @@ export default function ChatbotWidget({
     };
   }, []);
 
-  // Auto scroll to bottom (ONLY if not typing)
+  // Auto scroll with enhanced guards against input focus interference
   useEffect(() => {
-    if (!isTyping && document.activeElement !== inputRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Multiple conditions to prevent focus stealing
+    const shouldScroll = (
+      !isTyping && 
+      document.activeElement !== inputRef.current &&
+      document.activeElement?.tagName !== 'INPUT' && // Avoid interfering with any input
+      document.activeElement?.tagName !== 'TEXTAREA' &&
+      messages.length > 0
+    );
+    
+    if (shouldScroll) {
+      // Add small delay to avoid race conditions with user typing
+      const scrollTimer = setTimeout(() => {
+        // Recheck focus before actual scroll
+        if (document.activeElement !== inputRef.current) {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 200);
+      
+      return () => clearTimeout(scrollTimer);
     }
   }, [messages.length, isTyping]);
 
