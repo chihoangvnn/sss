@@ -1,11 +1,26 @@
-import { useState } from "react";
-import { Bot, Send, Settings, MessageSquare, Users, Zap, Play, Pause } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { 
+  Bot, 
+  Send, 
+  Settings as SettingsIcon, 
+  MessageSquare, 
+  Users, 
+  Zap, 
+  Play, 
+  Pause,
+  Moon,
+  Sun,
+  Sparkles,
+  MoreVertical,
+  Plus,
+  ChevronLeft
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 export interface ChatMessage {
   id: string;
@@ -29,7 +44,7 @@ interface ChatbotInterfaceProps {
   onSendMessage?: (message: string) => void;
 }
 
-// TODO: remove mock data
+// Mock data (to be replaced with real data)
 const mockStats: ChatbotStats = {
   totalConversations: 1247,
   activeUsers: 23,
@@ -49,19 +64,7 @@ const mockMessages: ChatMessage[] = [
     type: "bot", 
     content: "Xin chào! Tôi có thể giúp bạn tìm hiểu về iPhone 15. Hiện tại chúng tôi có iPhone 15 Pro Max với giá 29.999.000 VNĐ. Bạn có muốn xem thông tin chi tiết không?",
     timestamp: "14:31",
-  },
-  {
-    id: "3",
-    type: "user",
-    content: "Có những màu gì?",
-    timestamp: "14:32",
-  },
-  {
-    id: "4",
-    type: "bot",
-    content: "iPhone 15 Pro Max có 4 màu: Natural Titanium, Blue Titanium, White Titanium và Black Titanium. Bạn thích màu nào nhất?",
-    timestamp: "14:32",
-  },
+  }
 ];
 
 export function ChatbotInterface({ 
@@ -73,8 +76,19 @@ export function ChatbotInterface({
 }: ChatbotInterfaceProps) {
   const [message, setMessage] = useState("");
   const [testMessages, setTestMessages] = useState(messages);
-  const [tab, setTab] = useState("chat");
+  const [currentView, setCurrentView] = useState<"chat" | "dashboard" | "settings">("chat");
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [conversationId] = useState(() => `admin_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [testMessages]);
 
   const handleToggleChatbot = () => {
     const newStatus = !isOnline;
@@ -163,216 +177,305 @@ export function ChatbotInterface({
     }
   };
 
-  return (
-    <div className="space-y-6" data-testid="chatbot-interface">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Bot className="h-6 w-6" />
-            Chatbot RASA
-          </h2>
-          <p className="text-muted-foreground">Quản lý trợ lý ảo thông minh</p>
+  // LobeChat-style Sidebar
+  const Sidebar = () => (
+    <div className={`w-80 h-full border-r flex flex-col ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+      {/* Header */}
+      <div className="p-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-blue-600' : 'bg-blue-500'}`}>
+            <Bot className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              RASA Assistant
+            </h2>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              AI Chatbot Admin
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Badge variant={isOnline ? "default" : "secondary"} className="px-3 py-1">
-            {isOnline ? (
-              <>
-                <div className="h-2 w-2 bg-green-500 rounded-full mr-2" />
-                Đang hoạt động
-              </>
-            ) : (
-              <>
-                <div className="h-2 w-2 bg-gray-400 rounded-full mr-2" />
-                Tạm dừng
-              </>
-            )}
-          </Badge>
-          <Button
-            variant={isOnline ? "outline" : "default"}
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className={`p-2 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+        >
+          {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {/* Status */}
+      <div className="px-6 pb-4">
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
+          <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            {isOnline ? 'Đang hoạt động' : 'Tạm dừng'}
+          </span>
+          <Button 
+            variant="ghost" 
+            size="sm"
             onClick={handleToggleChatbot}
-            data-testid="button-toggle-chatbot"
+            className={`ml-auto p-1 h-6 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
           >
-            {isOnline ? (
-              <>
-                <Pause className="h-4 w-4 mr-2" />
-                Tạm dừng
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Khởi động
-              </>
-            )}
+            {isOnline ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </Button>
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="dashboard">Tổng quan</TabsTrigger>
-          <TabsTrigger value="chat">Trò chuyện</TabsTrigger>
-          <TabsTrigger value="settings">Cài đặt</TabsTrigger>
-        </TabsList>
+      <div className={`h-px ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
 
-        <TabsContent value="dashboard" className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Cuộc trò chuyện</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-conversations">
-                  {stats.totalConversations.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  +12% từ tháng trước
-                </p>
-              </CardContent>
-            </Card>
+      {/* Navigation */}
+      <div className="p-4 flex-1">
+        <nav className="space-y-2">
+          <Button 
+            variant={currentView === "chat" ? "secondary" : "ghost"}
+            className={`w-full justify-start gap-3 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+            onClick={() => setCurrentView("chat")}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Trò chuyện
+          </Button>
+          <Button 
+            variant={currentView === "dashboard" ? "secondary" : "ghost"}
+            className={`w-full justify-start gap-3 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+            onClick={() => setCurrentView("dashboard")}
+          >
+            <Users className="h-4 w-4" />
+            Thống kê
+          </Button>
+          <Button 
+            variant={currentView === "settings" ? "secondary" : "ghost"}
+            className={`w-full justify-start gap-3 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+            onClick={() => setCurrentView("settings")}
+          >
+            <SettingsIcon className="h-4 w-4" />
+            Cài đặt
+          </Button>
+        </nav>
+      </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Người dùng đang hoạt động</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-active-users">
-                  {stats.activeUsers}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Đang trực tuyến
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Thời gian phản hồi</CardTitle>
-                <Zap className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-response-time">
-                  {stats.responseTime}s
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Trung bình
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tỷ lệ hài lòng</CardTitle>
-                <Bot className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600" data-testid="stat-satisfaction">
-                  {stats.satisfactionRate}%
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Đánh giá tích cực
-                </p>
-              </CardContent>
-            </Card>
+      {/* Stats Preview */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Hoạt động hôm nay
+            </span>
+            <Sparkles className={`h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />
           </div>
+          <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {stats.activeUsers}
+          </div>
+          <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            người dùng đang trực tuyến
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Hoạt động gần đây</CardTitle>
+  // Chat Interface
+  const ChatInterface = () => (
+    <div className="flex-1 flex flex-col h-full">
+      {/* Chat Header */}
+      <div className={`p-4 border-b ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Test Conversation
+            </h3>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Thử nghiệm chatbot với RASA API
+            </p>
+          </div>
+          <Button variant="ghost" size="sm">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4 max-w-3xl mx-auto">
+          {testMessages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              data-testid={`message-${msg.id}`}
+            >
+              <div className={`flex gap-3 max-w-[80%] ${msg.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                {/* Avatar */}
+                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                  msg.type === 'user' 
+                    ? isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
+                    : isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                }`}>
+                  {msg.type === 'user' ? (
+                    <Users className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-white'}`} />
+                  ) : (
+                    <Bot className={`h-4 w-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+                  )}
+                </div>
+                
+                {/* Message Bubble */}
+                <div className={`rounded-2xl px-4 py-3 ${
+                  msg.type === 'user'
+                    ? isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                    : isDarkMode ? 'bg-gray-800 text-gray-100 border border-gray-700' : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
+                }`}>
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <p className={`text-xs mt-2 opacity-70`}>
+                    {msg.timestamp}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+
+      {/* Input Area */}
+      <div className={`p-4 border-t ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className="max-w-3xl mx-auto">
+          <div className="flex gap-3">
+            <Input
+              placeholder="Nhập tin nhắn để test chatbot..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onKeyDownCapture={(e) => e.stopPropagation()}
+              onKeyUpCapture={(e) => e.stopPropagation()}
+              className={`flex-1 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-400' : 'bg-white border-gray-300'}`}
+              data-testid="input-test-message"
+            />
+            <Button 
+              onClick={handleSendMessage}
+              disabled={!message.trim()}
+              className={isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'}
+              data-testid="button-send-message"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Dashboard View
+  const Dashboard = () => (
+    <div className="flex-1 p-6 overflow-auto">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div>
+          <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Thống kê Chatbot
+          </h3>
+          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Theo dõi hiệu suất và hoạt động của chatbot
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card className={isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Cuộc trò chuyện
+              </CardTitle>
+              <MessageSquare className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 bg-green-500 rounded-full" />
-                  <span className="text-sm">Khách hàng hỏi về sản phẩm iPhone 15</span>
-                  <span className="text-xs text-muted-foreground ml-auto">2 phút trước</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 bg-blue-500 rounded-full" />
-                  <span className="text-sm">Đã cập nhật kho dữ liệu sản phẩm</span>
-                  <span className="text-xs text-muted-foreground ml-auto">15 phút trước</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 bg-yellow-500 rounded-full" />
-                  <span className="text-sm">Huấn luyện mô hình với 50 câu hỏi mới</span>
-                  <span className="text-xs text-muted-foreground ml-auto">1 giờ trước</span>
-                </div>
+              <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`} data-testid="stat-conversations">
+                {stats.totalConversations.toLocaleString()}
               </div>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                +12% từ tháng trước
+              </p>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="chat" className="space-y-6" forceMount>
-          <Card className="h-96">
-            <CardHeader>
-              <CardTitle>Thử nghiệm Chatbot</CardTitle>
+          <Card className={isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Người dùng hoạt động
+              </CardTitle>
+              <Users className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             </CardHeader>
-            <CardContent className="flex flex-col h-full">
-              <ScrollArea className="flex-1 pr-4 mb-4">
-                <div className="space-y-4">
-                  {testMessages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                      data-testid={`message-${msg.id}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                          msg.type === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        <p className="text-sm">{msg.content}</p>
-                        <p className="text-xs opacity-70 mt-1">{msg.timestamp}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nhập tin nhắn để thử nghiệm..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onKeyDownCapture={(e) => e.stopPropagation()}
-                  onKeyUpCapture={(e) => e.stopPropagation()}
-                  className="flex-1"
-                  data-testid="input-test-message"
-                />
-                <Button 
-                  onClick={handleSendMessage}
-                  disabled={!message.trim()}
-                  data-testid="button-send-message"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+            <CardContent>
+              <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`} data-testid="stat-active-users">
+                {stats.activeUsers}
               </div>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Đang trực tuyến
+              </p>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cài đặt Chatbot</CardTitle>
+          <Card className={isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Thời gian phản hồi
+              </CardTitle>
+              <Zap className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center py-8">
-                <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Cài đặt chi tiết sẽ được phát triển trong phiên bản tiếp theo
-                </p>
+            <CardContent>
+              <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`} data-testid="stat-response-time">
+                {stats.responseTime}s
               </div>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Trung bình
+              </p>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+
+          <Card className={isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Tỷ lệ hài lòng
+              </CardTitle>
+              <Bot className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold text-green-600`} data-testid="stat-satisfaction">
+                {stats.satisfactionRate}%
+              </div>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Đánh giá tích cực
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Settings View
+  const Settings = () => (
+    <div className="flex-1 p-6 overflow-auto">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center py-12">
+          <SettingsIcon className={`h-16 w-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`} />
+          <h3 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Cài đặt Chatbot
+          </h3>
+          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Các tùy chọn cài đặt sẽ được phát triển trong phiên bản tiếp theo
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`h-screen flex ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`} data-testid="chatbot-interface">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        {currentView === "chat" && <ChatInterface />}
+        {currentView === "dashboard" && <Dashboard />}
+        {currentView === "settings" && <Settings />}
+      </div>
     </div>
   );
 }
