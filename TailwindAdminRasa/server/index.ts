@@ -6,6 +6,12 @@ import { setupVite, serveStatic, log } from "./vite";
 import { pool } from "./db";
 
 const app = express();
+
+// Trust proxy for secure cookies behind reverse proxy in production
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -18,7 +24,12 @@ app.use(session({
     tableName: 'user_sessions',
     createTableIfMissing: true
   }),
-  secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
+  secret: (() => {
+    if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+      throw new Error('SESSION_SECRET environment variable must be set in production');
+    }
+    return process.env.SESSION_SECRET || 'dev-session-secret-change-in-production';
+  })(),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -62,12 +73,18 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Log the error with request context for debugging
+    log(`Error ${status}: ${message} - ${req.method} ${req.path}`, "error");
+    if (status >= 500) {
+      console.error(err.stack); // Log full stack trace for server errors
+    }
+
     res.status(status).json({ message });
-    throw err;
+    // Don't throw - just log and respond to prevent process crash
   });
 
   // importantly only setup vite in development and after
