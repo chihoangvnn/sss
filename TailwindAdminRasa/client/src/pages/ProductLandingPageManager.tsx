@@ -40,13 +40,13 @@ export default function ProductLandingPageManager() {
 
   // Fetch all product landing pages
   const { data: landingPages = [], isLoading, refetch } = useQuery<ProductLandingPage[]>({
-    queryKey: ['/api/products', 'landing'],
+    queryKey: ['/api/product-landing-pages'],
   });
 
   // Delete landing page mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/products?landing=true&id=${id}`, {
+      const response = await fetch(`/api/product-landing-pages/${id}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete");
@@ -57,7 +57,7 @@ export default function ProductLandingPageManager() {
         title: "Thành công",
         description: "Landing page đã được xóa",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/products', 'landing'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/product-landing-pages'] });
     },
     onError: () => {
       toast({
