@@ -325,6 +325,8 @@ function SidebarInput({
 }: React.ComponentProps<typeof Input>) {
   return (
     <Input
+      id="sidebar-input"
+      name="sidebar-input"
       data-slot="sidebar-input"
       data-sidebar="input"
       className={cn("bg-background h-8 w-full shadow-none", className)}

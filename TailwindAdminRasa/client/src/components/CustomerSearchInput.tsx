@@ -145,6 +145,8 @@ export function CustomerSearchInput({
     <div className={`relative ${className}`}>
       <div className="relative">
         <Input
+          id="customer-search-input"
+          name="customer-search-input"
           ref={inputRef}
           type="text"
           value={displayValue}

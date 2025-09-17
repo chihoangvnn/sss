@@ -183,6 +183,8 @@ export function CustomerForm({
                 <FormLabel>Tên khách hàng <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
                   <Input
+                    id="customer-name"
+                    name="customer-name"
                     placeholder="Nhập tên đầy đủ"
                     data-testid="input-customer-name"
                     {...field}
@@ -202,6 +204,8 @@ export function CustomerForm({
                 <FormLabel>Email <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
                   <Input
+                    id="customer-email"
+                    name="customer-email"
                     type="email"
                     placeholder="example@email.com"
                     data-testid="input-customer-email"
@@ -222,6 +226,8 @@ export function CustomerForm({
                 <FormLabel>Số điện thoại</FormLabel>
                 <FormControl>
                   <Input
+                    id="customer-phone"
+                    name="customer-phone"
                     placeholder="0901234567"
                     data-testid="input-customer-phone"
                     {...field}

@@ -138,6 +138,8 @@ export function ProductSearchInput({
     <div className={`relative ${className}`}>
       <div className="relative">
         <Input
+          id="product-search-input"
+          name="product-search-input"
           ref={inputRef}
           type="text"
           value={searchTerm}
