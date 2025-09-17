@@ -1191,6 +1191,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const product = await storage.getProduct(demoPage.productId);
           if (product) {
             demoPage.product = product;
+            
+            // Calculate pricing from product
+            const productPrice = parseFloat(product.price);
+            demoPage.finalPrice = demoPage.customPrice || productPrice;
+            demoPage.originalPrice = productPrice;
+            
+            // Set display data from product if not already set
+            demoPage.displayName = demoPage.displayName || product.name;
+            demoPage.displayImage = demoPage.displayImage || product.image;
+            demoPage.displayDescription = demoPage.displayDescription || product.description;
           }
         }
         
