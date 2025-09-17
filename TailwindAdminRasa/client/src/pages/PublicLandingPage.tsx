@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,15 @@ import {
   ShoppingCart, 
   Shield,
   Truck,
-  CreditCard
+  CreditCard,
+  Clock,
+  Users,
+  Heart,
+  Zap,
+  Award,
+  Lock,
+  Eye,
+  TrendingUp
 } from "lucide-react";
 import ChatbotWidget from "@/components/ChatbotWidget";
 
@@ -49,6 +57,20 @@ export default function PublicLandingPage() {
   });
 
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [viewersCount, setViewersCount] = useState(Math.floor(Math.random() * 20) + 5);
+  const [recentPurchases, setRecentPurchases] = useState([
+    "Anh Minh vừa mua 2 phút trước",
+    "Chị Hương vừa mua 5 phút trước",
+    "Anh Nam vừa mua 8 phút trước"
+  ]);
+  
+  // Simulate dynamic viewers count
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setViewersCount(prev => Math.max(3, prev + Math.floor(Math.random() * 3) - 1));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch landing page data
   const { data: landingPage, isLoading, error } = useQuery<any>({
@@ -158,8 +180,8 @@ export default function PublicLandingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
+      {/* Mobile-First Sticky Header */}
+      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -167,11 +189,18 @@ export default function PublicLandingPage() {
                 <h1 className="text-xl font-bold">{landingPage.contactInfo.businessName}</h1>
               )}
             </div>
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2 md:gap-4 text-sm">
+              {/* Live Viewers Count */}
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Eye className="h-3 w-3 text-green-500 animate-pulse" />
+                <span className="font-medium text-green-600">{viewersCount}</span>
+                <span className="hidden sm:inline">đang xem</span>
+              </div>
               {landingPage.contactInfo?.phone && (
                 <a href={`tel:${landingPage.contactInfo.phone}`} className="flex items-center gap-2 hover:text-primary">
                   <Phone className="h-4 w-4" />
-                  {landingPage.contactInfo.phone}
+                  <span className="hidden sm:inline">{landingPage.contactInfo.phone}</span>
+                  <span className="sm:hidden">Gọi</span>
                 </a>
               )}
             </div>
@@ -236,6 +265,32 @@ export default function PublicLandingPage() {
                   className="w-full h-auto rounded-lg shadow-lg"
                 />
               )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof & Urgency Strip */}
+      <section className="py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-y border-green-200">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            {/* Recent Purchases */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm font-semibold text-green-800">🔥 Hoạt động gần đây:</span>
+              <div className="flex flex-col md:flex-row gap-1 md:gap-2 text-xs text-green-700">
+                {recentPurchases.slice(0, 2).map((purchase, i) => (
+                  <span key={i} className="flex items-center gap-1">
+                    • {purchase} <Badge variant="outline" className="text-xs ml-1">✅</Badge>
+                  </span>
+                ))}
+              </div>
+            </div>
+            
+            {/* Urgency Timer */}
+            <div className="flex items-center gap-2 text-orange-600">
+              <Clock className="h-4 w-4 animate-pulse" />
+              <span className="text-sm font-medium">⏰ Còn {Math.floor(Math.random() * 12) + 1}h!</span>
             </div>
           </div>
         </div>
@@ -579,6 +634,32 @@ export default function PublicLandingPage() {
           </Card>
         </div>
       )}
+
+      {/* Sticky Mobile Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t p-4 md:hidden">
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => landingPage.contactInfo?.phone && window.open(`tel:${landingPage.contactInfo.phone}`)}
+          >
+            <Phone className="h-4 w-4 mr-1" />
+            Gọi
+          </Button>
+          <Button 
+            size="sm" 
+            className="flex-1 basis-2/3 bg-gradient-to-r from-primary to-primary/80"
+            onClick={() => setShowOrderForm(true)}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Đặt hàng - {finalPrice.toLocaleString('vi-VN')}đ
+          </Button>
+        </div>
+      </div>
+      
+      {/* Add bottom padding for mobile sticky bar */}
+      <div className="h-20 md:h-0" />
 
       {/* Chatbot Widget */}
       <ChatbotWidget 
