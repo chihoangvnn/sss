@@ -1,0 +1,53 @@
+<input data-replit-metadata="client/src/components/ChatbotWidget.tsx:722:14" data-component-name="Input" class="flex h-9 w-full border bg-background px-3 py-2 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm flex-1 text-sm border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-lg" id="desktop-chat-input" name="desktop-chat-input" placeholder="Nhập tin nhắn..." value="s">
+Check xem lỗi gì ko
+ChatGPT said:
+
+Mình nhìn vào snippet bạn gửi thì thấy ngay vấn đề 👇
+
+<input
+  ... 
+  value="s"   // <-- hardcode giá trị
+/>
+
+Lỗi ở đây
+
+Bạn đang hardcode value="s".
+
+Trong React, khi gán value cố định, input trở thành controlled component nhưng không có onChange để thay đổi state.
+
+Kết quả: bạn gõ chữ thì React render lại "s" → input bị khóa hoặc nhảy con trỏ.
+
+Cách sửa
+
+Bạn cần quản lý value bằng state thay vì hardcode:
+
+import React, { useState } from "react";
+
+export default function ChatbotWidget() {
+  const [message, setMessage] = useState("");
+
+  return (
+    <input
+      id="desktop-chat-input"
+      name="desktop-chat-input"
+      placeholder="Nhập tin nhắn..."
+      value={message} // gắn với state
+      onChange={(e) => setMessage(e.target.value)} // cập nhật state
+      className="flex h-9 w-full border bg-background px-3 py-2 ring-offset-background 
+                 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground 
+                 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 
+                 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed 
+                 disabled:opacity-50 md:text-sm flex-1 text-sm border-gray-200 
+                 focus:border-green-500 focus:ring-green-500/20 rounded-lg"
+    />
+  );
+}
+
+
+✅ Tóm lại:
+
+Không lỗi cú pháp.
+
+Lỗi logic React: hardcode value="s" → input bị khóa.
+
+Fix: dùng useState + onChange để input nhận giá trị người gõ.

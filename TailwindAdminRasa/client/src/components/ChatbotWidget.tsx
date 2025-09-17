@@ -267,8 +267,8 @@ export default function ChatbotWidget({
     };
 
     setMessages(prev => [...prev, userMessage]);
-    // DELAY clearing input để tránh "nhảy"
-    setTimeout(() => setInputValue(""), 0);
+    // CLEAR input immediately after capturing message
+    setInputValue("");
     setIsTyping(true);
 
     try {
