@@ -7,6 +7,11 @@ import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
 
+// Global type extensions for demo data
+declare global {
+  var demoLandingPages: any[] | undefined;
+}
+
 // Payment status validation schema
 const paymentStatusSchema = z.object({
   status: z.enum(["pending", "completed", "failed", "cancelled"], {
