@@ -81,13 +81,21 @@ export function ChatbotInterface({
   const [conversationId] = useState(() => `admin_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto scroll to bottom when new messages arrive
+  // Auto scroll to bottom (ONLY if not actively typing)
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Only scroll if input is not focused (not typing)
+    if (document.activeElement?.id !== "admin-chat-input") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    // Delay scroll to avoid interfering with typing
+    const scrollTimer = setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+    
+    return () => clearTimeout(scrollTimer);
   }, [testMessages]);
 
   const handleToggleChatbot = () => {

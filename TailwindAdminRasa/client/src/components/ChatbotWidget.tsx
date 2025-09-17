@@ -230,25 +230,28 @@ export default function ChatbotWidget({
     };
   }, []);
 
-  // Auto scroll to bottom
+  // Auto scroll to bottom (ONLY if not typing)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-  }, [messages.length]);
+    if (!isTyping && document.activeElement !== inputRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length, isTyping]);
 
-  // Enhanced auto-focus with better timing and accessibility  
+  // Enhanced auto-focus DISABLED to prevent input jumping
   useEffect(() => {
-    if (isOpen && !isMinimized && inputValue === "") {
-      // Only auto-focus when chat opens AND input is empty (not during typing)
+    // REMOVED auto-focus to prevent input jumping issues
+    // Only focus when explicitly opening chat, not during typing
+    if (isOpen && !isMinimized && inputValue === "" && messages.length <= 1) {
       const focusTimer = setTimeout(() => {
         const isMobile = window.innerWidth < 768;
         if (!isMobile && inputRef.current && document.activeElement !== inputRef.current) {
           inputRef.current.focus();
         }
-      }, 200);
+      }, 500); // Longer delay
       
       return () => clearTimeout(focusTimer);
     }
-  }, [isOpen, isMinimized]);
+  }, [isOpen]); // Removed isMinimized dependency
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
