@@ -51,10 +51,12 @@ export function CustomerSearchInput({
     setIsLoading(true);
     try {
       // Search by phone (existing API)
-      const phoneResults = await apiRequest('GET', `/api/customers/search?phone=${encodeURIComponent(query)}`) as unknown as CustomerWithAddress[];
+      const phoneResponse = await apiRequest('GET', `/api/customers/search?phone=${encodeURIComponent(query)}`);
+      const phoneResults = await phoneResponse.json() as CustomerWithAddress[];
       
       // Search by name (using general search)  
-      const nameResults = await apiRequest('GET', `/api/customers/search?q=${encodeURIComponent(query)}`) as unknown as CustomerWithAddress[];
+      const nameResponse = await apiRequest('GET', `/api/customers/search?q=${encodeURIComponent(query)}`);
+      const nameResults = await nameResponse.json() as CustomerWithAddress[];
       
       // Combine and deduplicate results
       const allResults = [...(phoneResults || []), ...(nameResults || [])];

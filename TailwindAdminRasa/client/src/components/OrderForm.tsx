@@ -162,12 +162,31 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     mutationFn: async (data: any) => {
       // Same logic as save but return order for printing
       if (isEditing) {
+        // Update order header
         await apiRequest('PUT', `/api/orders/${order?.id}`, {
           customerId: data.customerId,
           total: data.total,
           status: data.status,
           items: data.items,
         });
+        
+        // Delete existing order items
+        for (const existingItem of order?.orderItems || []) {
+          await apiRequest('DELETE', `/api/order-items/${existingItem.id}`);
+        }
+        
+        // Create new order items
+        for (const item of orderItems) {
+          if (item.productId) {
+            await apiRequest('POST', '/api/order-items', {
+              orderId: order?.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price.toString(),
+            });
+          }
+        }
+        
         return order;
       } else {
         const orderData = {
@@ -221,7 +240,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       if (isEditing) {
-        // Update existing order
+        // Update order header
         await apiRequest('PUT', `/api/orders/${order?.id}`, {
           customerId: data.customerId,
           total: data.total,
@@ -229,8 +248,22 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
           items: data.items,
         });
         
-        // Handle order items separately (simplified approach)
-        // In a real implementation, you might want to handle order items updates more elegantly
+        // Delete existing order items
+        for (const existingItem of order?.orderItems || []) {
+          await apiRequest('DELETE', `/api/order-items/${existingItem.id}`);
+        }
+        
+        // Create new order items
+        for (const item of orderItems) {
+          if (item.productId) {
+            await apiRequest('POST', '/api/order-items', {
+              orderId: order?.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price.toString(),
+            });
+          }
+        }
       } else {
         // Create new order
         const orderData = {
