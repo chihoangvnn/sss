@@ -561,6 +561,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Order Items API
+  app.get("/api/order-items", async (req, res) => {
+    try {
+      const { orderId } = req.query;
+      if (!orderId || typeof orderId !== 'string') {
+        return res.status(400).json({ error: "Order ID is required" });
+      }
+      
+      const orderItems = await storage.getOrderItems(orderId);
+      res.json(orderItems);
+    } catch (error) {
+      console.error("Error fetching order items:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/order-items", async (req, res) => {
+    try {
+      const { orderId, productId, quantity, price } = req.body;
+      
+      if (!orderId || !productId || !quantity || !price) {
+        return res.status(400).json({ 
+          error: "Missing required fields: orderId, productId, quantity, price" 
+        });
+      }
+      
+      const orderItem = await storage.createOrderItem({
+        orderId,
+        productId, 
+        quantity: parseFloat(quantity),
+        price: price.toString()
+      });
+      
+      res.status(201).json(orderItem);
+    } catch (error) {
+      console.error("Error creating order item:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Payments API - Session-authenticated for frontend users
   app.get("/api/orders/:id/payment", requireSessionAuth, rateLimitMiddleware, async (req, res) => {
     try {
