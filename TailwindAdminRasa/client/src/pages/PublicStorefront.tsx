@@ -529,9 +529,6 @@ export default function PublicStorefront() {
               <CardTitle className="text-green-800" data-testid="text-checkout-title">
                 Thông tin đặt hàng
               </CardTitle>
-              <p className="text-sm text-gray-600">
-                Vui lòng điền thông tin để hoàn tất đặt hàng
-              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Order Summary */}
@@ -589,7 +586,7 @@ export default function PublicStorefront() {
                           
                           <div className="space-y-1">
                             <p className="text-xs text-blue-700">
-                              <span className="font-medium">SĐT:</span> {selectedMember.phone.replace(/(\d{5})(\d+)/, '*****$2')}
+                              <span className="font-medium">SĐT:</span> {selectedMember.phone}
                             </p>
                             
                             {selectedMember.recentAddress && (
