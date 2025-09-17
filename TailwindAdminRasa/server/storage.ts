@@ -90,6 +90,10 @@ export interface IStorage {
   createStorefrontOrder(order: InsertStorefrontOrder): Promise<StorefrontOrder>;
   updateStorefrontOrderStatus(id: string, status: string): Promise<StorefrontOrder | undefined>;
 
+  // Inventory methods for RASA API
+  getProductStock(productId: string): Promise<number>;
+  updateProductStock(productId: string, newStock: number): Promise<void>;
+
   // Payment methods
   getPayment(orderId: string): Promise<Payment | undefined>;
   createPayment(payment: InsertPayment): Promise<Payment>;
@@ -734,6 +738,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payments.id, id))
       .returning();
     return payment || undefined;
+  }
+
+  // Inventory methods for RASA API
+  async getProductStock(productId: string): Promise<number> {
+    const product = await this.getProduct(productId);
+    return product?.stock || 0;
+  }
+
+  async updateProductStock(productId: string, newStock: number): Promise<void> {
+    await db
+      .update(products)
+      .set({ stock: newStock, updatedAt: new Date() })
+      .where(eq(products.id, productId));
   }
 }
 

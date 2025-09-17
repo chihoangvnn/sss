@@ -2,11 +2,25 @@ import { Express } from 'express';
 import { storage } from './storage';
 import { firebaseStorage } from './firebase-storage';
 
-// Helper function for inventory demo data
-const getInventory = async (productId: string, variantId?: string) => ({ 
-  currentStock: 1_000_000, 
-  soldQuantity: 0 
-});
+// Helper function for real inventory data
+const getInventory = async (productId: string, variantId?: string) => {
+  try {
+    // Get real product stock from database
+    const product = await storage.getProduct(productId);
+    if (!product) {
+      return { currentStock: 0, soldQuantity: 0 };
+    }
+    
+    // Use real stock data from products table
+    return {
+      currentStock: product.stock || 0,
+      soldQuantity: 0 // Could be calculated from order_items if needed
+    };
+  } catch (error) {
+    console.error('Error getting inventory for product:', productId, error);
+    return { currentStock: 0, soldQuantity: 0 };
+  }
+};
 
 // RASA-specific API routes for chatbot integration
 export function setupRasaRoutes(app: Express) {
@@ -229,7 +243,9 @@ export function setupRasaRoutes(app: Express) {
           subCatalogId: null,
           images: product.image ? [product.image] : [],
           tags: [],
-          sku: product.id
+          sku: product.id,
+          stock: product.stock || 0,
+          currentStock: product.stock || 0
         }))
       });
     } catch (error) {
