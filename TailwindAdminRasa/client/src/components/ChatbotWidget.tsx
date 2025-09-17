@@ -262,21 +262,12 @@ export default function ChatbotWidget({
     }
   }, [messages.length, isTyping]);
 
-  // Enhanced auto-focus DISABLED to prevent input jumping
-  useEffect(() => {
-    // REMOVED auto-focus to prevent input jumping issues
-    // Only focus when explicitly opening chat, not during typing
-    if (isOpen && !isMinimized && inputValue === "" && messages.length <= 1) {
-      const focusTimer = setTimeout(() => {
-        const isMobile = window.innerWidth < 768;
-        if (!isMobile && inputRef.current && document.activeElement !== inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 500); // Longer delay
-      
-      return () => clearTimeout(focusTimer);
-    }
-  }, [isOpen]); // Removed isMinimized dependency
+  // AUTO-FOCUS COMPLETELY DISABLED to prevent input jumping during HMR
+  // useEffect(() => {
+  //   // COMPLETELY REMOVED - This was causing input jumping during Vite HMR reconnections
+  //   // The [isOpen] dependency triggered focus stealing when components re-render
+  //   // during development hot reloading
+  // }, []); // Disabled completely
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
