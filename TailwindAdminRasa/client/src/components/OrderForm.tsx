@@ -50,7 +50,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
   const isEditing = Boolean(order);
 
   const [formData, setFormData] = useState({
-    customerId: "",
+    customerId: "retail", // Default to retail customer
     status: "pending" as "pending" | "processing" | "shipped" | "delivered" | "cancelled",
   });
 
@@ -94,7 +94,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     setOrderItems([...orderItems, {
       productId: "",
       productName: "",
-      quantity: 0.01,
+      quantity: 1, // Default quantity is 1
       price: 0,
       total: 0,
     }]);
@@ -119,7 +119,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
         item.total = item.quantity * item.price;
       }
     } else if (field === 'quantity') {
-      item.quantity = parseFloat(value) || 0.01;
+      item.quantity = parseFloat(value) || 1;
       item.total = item.quantity * item.price;
     } else if (field === 'price') {
       item.price = parseFloat(value) || 0;
@@ -189,14 +189,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.customerId) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng chọn khách hàng",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Customer is optional now - defaults to retail customer
 
     if (orderItems.length === 0 || !orderItems.some(item => item.productId)) {
       toast({
@@ -244,15 +237,16 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Customer Selection */}
             <div className="space-y-2">
-              <Label htmlFor="customer">Khách hàng *</Label>
+              <Label htmlFor="customer">Khách hàng</Label>
               <Select
                 value={formData.customerId}
                 onValueChange={(value) => setFormData({ ...formData, customerId: value })}
               >
                 <SelectTrigger data-testid="select-customer">
-                  <SelectValue placeholder="Chọn khách hàng" />
+                  <SelectValue placeholder="Khách lẻ" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="retail">Khách lẻ</SelectItem>
                   {customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name} ({customer.email})
