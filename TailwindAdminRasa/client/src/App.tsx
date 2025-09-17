@@ -25,6 +25,7 @@ import PublicStorefront from "@/pages/PublicStorefront";
 import StorefrontManager from "@/pages/StorefrontManager";
 import CategoryManager from "@/pages/CategoryManager";
 import IndustryManager from "@/pages/IndustryManager";
+import ShopSettings from "@/pages/ShopSettings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/customers/:id" component={CustomerDetails} />
       <Route path="/categories" component={CategoryManager} />
       <Route path="/industries" component={IndustryManager} />
+      <Route path="/shop-settings" component={ShopSettings} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/chatbot" component={Chatbot} />
       <Route path="/facebook" component={SocialMedia} />

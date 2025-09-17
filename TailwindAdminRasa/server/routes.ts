@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { firebaseStorage } from "./firebase-storage";
-import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema } from "@shared/schema";
+import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema, insertShopSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
@@ -1469,6 +1469,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Có lỗi xảy ra khi xử lý đơn hàng. Vui lòng thử lại sau.',
         success: false 
       });
+    }
+  });
+
+  // Shop Settings API
+  app.get("/api/shop-settings", async (req, res) => {
+    try {
+      const { id } = req.query;
+
+      if (id === 'default') {
+        // GET /api/shop-settings?id=default - Get default shop settings
+        const defaultSettings = await storage.getDefaultShopSettings();
+        res.json(defaultSettings || null);
+      } else if (id && typeof id === 'string') {
+        // GET /api/shop-settings?id=<id> - Get specific shop settings
+        const foundSettings = await storage.getShopSettingsById(id);
+        
+        if (!foundSettings) {
+          return res.status(404).json({ error: 'Shop settings not found' });
+        }
+        
+        res.json(foundSettings);
+      } else {
+        // GET /api/shop-settings - Get all shop settings
+        const settings = await storage.getShopSettings();
+        res.json(settings);
+      }
+    } catch (error) {
+      console.error('Shop settings API error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post("/api/shop-settings", async (req, res) => {
+    try {
+      const validation = insertShopSettingsSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: 'Invalid data format',
+          details: validation.error.errors 
+        });
+      }
+
+      const settings = await storage.createShopSettings(validation.data);
+      res.json({ 
+        success: true, 
+        settings,
+        message: 'Shop settings created successfully' 
+      });
+    } catch (error) {
+      console.error('Shop settings API error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put("/api/shop-settings", async (req, res) => {
+    try {
+      const { id } = req.query;
+
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ error: 'Settings ID is required for update' });
+      }
+
+      if (id === 'set-default') {
+        // PUT /api/shop-settings?id=set-default - Set default shop settings
+        const { settingsId } = req.body;
+        
+        if (!settingsId) {
+          return res.status(400).json({ error: 'Settings ID is required' });
+        }
+
+        const updatedSettings = await storage.setDefaultShopSettings(settingsId);
+        
+        if (!updatedSettings) {
+          return res.status(404).json({ error: 'Shop settings not found' });
+        }
+        
+        res.json({ 
+          success: true,
+          settings: updatedSettings,
+          message: 'Default shop settings updated successfully' 
+        });
+      } else {
+        // PUT /api/shop-settings?id=<id> - Update specific shop settings
+        const validation = insertShopSettingsSchema.partial().safeParse(req.body);
+        
+        if (!validation.success) {
+          return res.status(400).json({ 
+            error: 'Invalid data format',
+            details: validation.error.errors 
+          });
+        }
+
+        const updatedSettings = await storage.updateShopSettings(id, validation.data);
+        
+        if (!updatedSettings) {
+          return res.status(404).json({ error: 'Shop settings not found' });
+        }
+        
+        res.json({ 
+          success: true,
+          settings: updatedSettings,
+          message: 'Shop settings updated successfully' 
+        });
+      }
+    } catch (error) {
+      console.error('Shop settings API error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete("/api/shop-settings", async (req, res) => {
+    try {
+      const { id } = req.query;
+
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ error: 'Settings ID is required for deletion' });
+      }
+
+      const success = await storage.deleteShopSettings(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Shop settings not found' });
+      }
+      
+      res.json({ 
+        success: true,
+        message: 'Shop settings deleted successfully' 
+      });
+    } catch (error) {
+      console.error('Shop settings API error:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

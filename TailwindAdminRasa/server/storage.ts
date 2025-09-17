@@ -1,6 +1,6 @@
 import { 
   users, products, customers, orders, orderItems, socialAccounts, chatbotConversations,
-  storefrontConfig, storefrontOrders, categories, industries, payments,
+  storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -8,7 +8,7 @@ import {
   type StorefrontConfig, type InsertStorefrontConfig,
   type StorefrontOrder, type InsertStorefrontOrder,
   type Category, type InsertCategory, type Industry, type InsertIndustry,
-  type Payment, type InsertPayment
+  type Payment, type InsertPayment, type ShopSettings, type InsertShopSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, isNull } from "drizzle-orm";
@@ -98,6 +98,15 @@ export interface IStorage {
   getPayment(orderId: string): Promise<Payment | undefined>;
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePaymentStatus(id: string, status: string, transactionId?: string): Promise<Payment | undefined>;
+
+  // Shop settings methods
+  getShopSettings(): Promise<ShopSettings[]>;
+  getShopSettingsById(id: string): Promise<ShopSettings | undefined>;
+  getDefaultShopSettings(): Promise<ShopSettings | undefined>;
+  createShopSettings(settings: InsertShopSettings): Promise<ShopSettings>;
+  updateShopSettings(id: string, settings: Partial<InsertShopSettings>): Promise<ShopSettings | undefined>;
+  deleteShopSettings(id: string): Promise<boolean>;
+  setDefaultShopSettings(id: string): Promise<ShopSettings | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -751,6 +760,84 @@ export class DatabaseStorage implements IStorage {
       .update(products)
       .set({ stock: newStock, updatedAt: new Date() })
       .where(eq(products.id, productId));
+  }
+
+  // Shop settings methods
+  async getShopSettings(): Promise<ShopSettings[]> {
+    return await db.select().from(shopSettings).orderBy(desc(shopSettings.isDefault), desc(shopSettings.updatedAt));
+  }
+
+  async getShopSettingsById(id: string): Promise<ShopSettings | undefined> {
+    const [settings] = await db.select().from(shopSettings).where(eq(shopSettings.id, id));
+    return settings || undefined;
+  }
+
+  async getDefaultShopSettings(): Promise<ShopSettings | undefined> {
+    const [settings] = await db.select().from(shopSettings).where(eq(shopSettings.isDefault, true));
+    return settings || undefined;
+  }
+
+  async createShopSettings(insertSettings: InsertShopSettings): Promise<ShopSettings> {
+    // If this is set as default, use transaction to ensure atomicity
+    if (insertSettings.isDefault) {
+      return await db.transaction(async (tx) => {
+        // Unset all other defaults first
+        await tx.update(shopSettings).set({ isDefault: false, updatedAt: new Date() });
+        
+        // Then create the new default settings
+        const [settings] = await tx.insert(shopSettings).values(insertSettings).returning();
+        return settings;
+      });
+    }
+    
+    const [settings] = await db.insert(shopSettings).values(insertSettings).returning();
+    return settings;
+  }
+
+  async updateShopSettings(id: string, updateSettings: Partial<InsertShopSettings>): Promise<ShopSettings | undefined> {
+    // If this is being set as default, use transaction to ensure atomicity
+    if (updateSettings.isDefault) {
+      return await db.transaction(async (tx) => {
+        // Unset all other defaults first
+        await tx.update(shopSettings).set({ isDefault: false, updatedAt: new Date() });
+        
+        // Then update the specified settings as default
+        const [settings] = await tx
+          .update(shopSettings)
+          .set({ ...updateSettings, updatedAt: new Date() })
+          .where(eq(shopSettings.id, id))
+          .returning();
+        return settings || undefined;
+      });
+    }
+    
+    const [settings] = await db
+      .update(shopSettings)
+      .set({ ...updateSettings, updatedAt: new Date() })
+      .where(eq(shopSettings.id, id))
+      .returning();
+    return settings || undefined;
+  }
+
+  async deleteShopSettings(id: string): Promise<boolean> {
+    const result = await db.delete(shopSettings).where(eq(shopSettings.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async setDefaultShopSettings(id: string): Promise<ShopSettings | undefined> {
+    // Use transaction to ensure atomic operation
+    return await db.transaction(async (tx) => {
+      // First, unset all defaults
+      await tx.update(shopSettings).set({ isDefault: false, updatedAt: new Date() });
+      
+      // Then set the specified one as default
+      const [settings] = await tx
+        .update(shopSettings)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(eq(shopSettings.id, id))
+        .returning();
+      return settings || undefined;
+    });
   }
 }
 

@@ -83,6 +83,11 @@ const mainMenuItems = [
     url: "/storefront-manager",
     icon: Store,
   },
+  {
+    title: "Cài đặt Shop",
+    url: "/shop-settings",
+    icon: Settings,
+  },
 ];
 
 const integrationItems = [
