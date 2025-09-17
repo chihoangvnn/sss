@@ -19,6 +19,24 @@ import {
   AlertCircle
 } from "lucide-react";
 
+// 🔥 ARCHITECTURAL FIX: Extract components OUTSIDE to prevent re-creation
+// This fixes the input jumping issue identified by React expert
+interface ChatComponentProps {
+  messages: Message[];
+  isTyping: boolean;
+  inputValue: string;
+  setInputValue: (value: string) => void;
+  sendMessage: (text: string) => void;
+  inputRef: React.RefObject<HTMLInputElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+  renderMessage: (message: Message) => JSX.Element;
+  setIsOpen: (open: boolean) => void;
+  isMinimized: boolean;
+  setIsMinimized: (minimized: boolean) => void;
+  positioning: any;
+  pageType: string;
+}
+
 interface Message {
   id: string;
   text: string;
@@ -67,6 +85,231 @@ interface ChatbotWidgetProps {
   onAddToCart?: (productId: string, quantity: number) => void;
   onCreateOrder?: (orderData: any) => void;
 }
+
+// 🔥 EXTRACTED COMPONENT: MobileChat - No longer re-created on every render!
+const MobileChat = ({ 
+  messages, 
+  isTyping, 
+  inputValue, 
+  setInputValue, 
+  sendMessage, 
+  inputRef, 
+  messagesEndRef, 
+  renderMessage, 
+  setIsOpen, 
+  positioning, 
+  pageType 
+}: ChatComponentProps) => {
+  const isLandingPage = pageType === "landing_page";
+  
+  return (
+    <div 
+      className="fixed inset-0 bg-white flex flex-col"
+      style={{ zIndex: positioning.zIndexValue }}
+    >
+      {/* Enhanced Header with gradient */}
+      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+            <Bot className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Trợ lý mua sắm</h3>
+            <p className="text-xs text-green-100">Trực tuyến</p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setIsOpen(false)}
+          className="text-white hover:bg-white/20 transition-colors duration-200"
+        >
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* Enhanced Messages with better spacing */}
+      <ScrollArea className="flex-1 p-4 bg-gray-50/30">
+        {messages.map(renderMessage)}
+        {isTyping && (
+          <div className="flex items-center space-x-3 text-gray-500 mb-4">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                <span className="text-xs text-gray-500 ml-2">Đang soạn...</span>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </ScrollArea>
+
+      {/* Enhanced Input with better visual hierarchy */}
+      <div className="p-4 border-t bg-white shadow-lg">
+        <div className="flex space-x-3">
+          <Input
+            id="mobile-chat-input"
+            name="mobile-chat-input"
+            ref={inputRef}
+            value={inputValue}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="text"
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {
+                e.preventDefault();
+                e.stopPropagation();
+                sendMessage(inputValue);
+              }
+            }}
+            placeholder="Nhập tin nhắn..."
+            className="flex-1 border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-xl"
+          />
+          <Button 
+            onClick={() => sendMessage(inputValue)}
+            disabled={!inputValue.trim() || isTyping}
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl px-4"
+          >
+            {isTyping ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 🔥 EXTRACTED COMPONENT: DesktopChat - No longer re-created on every render!
+const DesktopChat = ({ 
+  messages, 
+  isTyping, 
+  inputValue, 
+  setInputValue, 
+  sendMessage, 
+  inputRef, 
+  messagesEndRef, 
+  renderMessage, 
+  setIsOpen, 
+  isMinimized, 
+  setIsMinimized, 
+  positioning 
+}: ChatComponentProps) => (
+  <Card 
+    className="fixed right-4 w-96 h-96 shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300 border-0 overflow-hidden"
+    style={{
+      bottom: positioning.desktopBottomOffset,
+      zIndex: positioning.zIndexValue
+    }}
+  >
+    {/* Enhanced Header with status indicator */}
+    <CardHeader className="pb-3 bg-gradient-to-r from-green-500 to-green-600 text-white">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+            <Bot className="w-3 h-3 text-white" />
+          </div>
+          <div>
+            <CardTitle className="text-sm font-medium">Trợ lý mua sắm</CardTitle>
+            <p className="text-xs text-green-100">Trực tuyến • Phản hồi nhanh</p>
+          </div>
+        </div>
+        <div className="flex space-x-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="text-white hover:bg-white/20 p-1 h-6 w-6 transition-colors duration-200"
+          >
+            {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsOpen(false)}
+            className="text-white hover:bg-white/20 p-1 h-6 w-6 transition-colors duration-200"
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    </CardHeader>
+
+    {!isMinimized && (
+      <>
+        {/* Enhanced Messages for desktop */}
+        <CardContent className="flex-1 p-4 overflow-hidden bg-gray-50/30">
+          <ScrollArea className="h-full">
+            {messages.map(renderMessage)}
+            {isTyping && (
+              <div className="flex items-center space-x-3 text-gray-500 mb-4">
+                <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-3 h-3 text-white" />
+                </div>
+                <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-100">
+                  <div className="flex items-center space-x-1">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                    <span className="text-xs text-gray-500 ml-2">Đang soạn...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </ScrollArea>
+        </CardContent>
+
+        {/* Enhanced Input for desktop */}
+        <div className="p-4 border-t bg-white">
+          <div className="flex space-x-2">
+            <Input
+              id="desktop-chat-input"
+              name="desktop-chat-input"
+              ref={inputRef}
+              value={inputValue}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  sendMessage(inputValue);
+                }
+              }}
+              placeholder="Nhập tin nhắn..."
+              className="flex-1 text-sm border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-lg"
+            />
+            <Button 
+              size="sm"
+              onClick={() => sendMessage(inputValue)}
+              disabled={!inputValue.trim() || isTyping}
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-md hover:shadow-lg transition-all duration-200 rounded-lg"
+            >
+              {isTyping ? (
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send className="w-3 h-3" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </>
+    )}
+  </Card>
+);
 
 export default function ChatbotWidget({
   pageType,
@@ -576,207 +819,6 @@ export default function ChatbotWidget({
     );
   };
 
-  // Enhanced Mobile full-screen overlay with smart positioning
-  const MobileChat = () => {
-    const isLandingPage = pageType === "landing_page";
-    
-    return (
-      <div 
-        className="fixed inset-0 bg-white flex flex-col"
-        style={{ zIndex: positioning.zIndexValue }}
-      >
-      {/* Enhanced Header with gradient */}
-      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            <Bot className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h3 className="font-semibold">Trợ lý mua sắm</h3>
-            <p className="text-xs text-green-100">Trực tuyến</p>
-          </div>
-        </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setIsOpen(false)}
-          className="text-white hover:bg-white/20 transition-colors duration-200"
-        >
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Enhanced Messages with better spacing */}
-      <ScrollArea className="flex-1 p-4 bg-gray-50/30">
-        {messages.map(renderMessage)}
-        {isTyping && (
-          <div className="flex items-center space-x-3 text-gray-500 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
-            </div>
-            <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-                <span className="text-xs text-gray-500 ml-2">Đang soạn...</span>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </ScrollArea>
-
-      {/* Enhanced Input with better visual hierarchy */}
-      <div className="p-4 border-t bg-white shadow-lg">
-        <div className="flex space-x-3">
-          <Input
-            id="mobile-chat-input"
-            name="mobile-chat-input"
-            ref={inputRef}
-            value={inputValue}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            inputMode="text"
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {
-                e.preventDefault();
-                e.stopPropagation();
-                sendMessage(inputValue);
-              }
-            }}
-            placeholder="Nhập tin nhắn..."
-            className="flex-1 border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-xl"
-
-          />
-          <Button 
-            onClick={() => sendMessage(inputValue)}
-            disabled={!inputValue.trim() || isTyping}
-            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl px-4"
-          >
-            {isTyping ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-  };
-
-  // Enhanced Desktop popup with smart positioning
-  const DesktopChat = () => (
-    <Card 
-      className="fixed right-4 w-96 h-96 shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300 border-0 overflow-hidden"
-      style={{
-        bottom: positioning.desktopBottomOffset,
-        zIndex: positioning.zIndexValue
-      }}
-    >
-      {/* Enhanced Header with status indicator */}
-      <CardHeader className="pb-3 bg-gradient-to-r from-green-500 to-green-600 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-              <Bot className="w-3 h-3 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-sm font-medium">Trợ lý mua sắm</CardTitle>
-              <p className="text-xs text-green-100">Trực tuyến • Phản hồi nhanh</p>
-            </div>
-          </div>
-          <div className="flex space-x-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="text-white hover:bg-white/20 p-1 h-6 w-6 transition-colors duration-200"
-            >
-              {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setIsOpen(false)}
-              className="text-white hover:bg-white/20 p-1 h-6 w-6 transition-colors duration-200"
-            >
-              <X className="w-3 h-3" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-
-      {!isMinimized && (
-        <>
-          {/* Enhanced Messages for desktop */}
-          <CardContent className="flex-1 p-4 overflow-hidden bg-gray-50/30">
-            <ScrollArea className="h-full">
-              {messages.map(renderMessage)}
-              {isTyping && (
-                <div className="flex items-center space-x-3 text-gray-500 mb-4">
-                  <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-3 h-3 text-white" />
-                  </div>
-                  <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-100">
-                    <div className="flex items-center space-x-1">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce"></div>
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-                      <span className="text-xs text-gray-500 ml-2">Đang soạn...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </ScrollArea>
-          </CardContent>
-
-          {/* Enhanced Input for desktop */}
-          <div className="p-4 border-t bg-white">
-            <div className="flex space-x-2">
-              <Input
-                id="desktop-chat-input"
-                name="desktop-chat-input"
-                ref={inputRef}
-                value={inputValue}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                inputMode="text"
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !(e as any).nativeEvent?.isComposing && e.keyCode !== 229) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    sendMessage(inputValue);
-                  }
-                }}
-                placeholder="Nhập tin nhắn..."
-                className="flex-1 text-sm border-gray-200 focus:border-green-500 focus:ring-green-500/20 rounded-lg"
-    
-              />
-              <Button 
-                size="sm"
-                onClick={() => sendMessage(inputValue)}
-                disabled={!inputValue.trim() || isTyping}
-                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-md hover:shadow-lg transition-all duration-200 rounded-lg"
-              >
-                {isTyping ? (
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Send className="w-3 h-3" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-    </Card>
-  );
 
   return (
     <>
@@ -841,12 +883,40 @@ export default function ChatbotWidget({
         <>
           {/* Mobile: Full screen overlay */}
           <div className="md:hidden">
-            <MobileChat />
+            <MobileChat 
+              messages={messages}
+              isTyping={isTyping}
+              inputValue={inputValue}
+              setInputValue={setInputValue}
+              sendMessage={sendMessage}
+              inputRef={inputRef}
+              messagesEndRef={messagesEndRef}
+              renderMessage={renderMessage}
+              setIsOpen={setIsOpen}
+              positioning={positioning}
+              pageType={pageType}
+              isMinimized={isMinimized}
+              setIsMinimized={setIsMinimized}
+            />
           </div>
           
           {/* Desktop: Popup window with smart positioning */}
           <div className="hidden md:block">
-            <DesktopChat />
+            <DesktopChat 
+              messages={messages}
+              isTyping={isTyping}
+              inputValue={inputValue}
+              setInputValue={setInputValue}
+              sendMessage={sendMessage}
+              inputRef={inputRef}
+              messagesEndRef={messagesEndRef}
+              renderMessage={renderMessage}
+              setIsOpen={setIsOpen}
+              positioning={positioning}
+              pageType={pageType}
+              isMinimized={isMinimized}
+              setIsMinimized={setIsMinimized}
+            />
           </div>
         </>
       )}

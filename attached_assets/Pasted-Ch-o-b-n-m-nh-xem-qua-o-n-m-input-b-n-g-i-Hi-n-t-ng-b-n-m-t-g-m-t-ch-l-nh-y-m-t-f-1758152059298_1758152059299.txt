@@ -1,0 +1,111 @@
+Chào bạn, mình đã xem qua đoạn mã input bạn gửi.
+
+Hiện tượng bạn mô tả (gõ một chữ là "nhảy" - mất focus) là một lỗi rất kinh điển khi làm việc với các thư viện JavaScript front-end như React, Vue, hoặc Svelte.
+
+Nguyên nhân chính (99% khả năng)
+Nguyên nhân là do component bị re-render (vẽ lại) một cách không cần thiết hoặc không đúng cách sau mỗi lần bạn gõ phím.
+
+Hãy hình dung thế này:
+
+Bạn click vào ô input và bắt đầu gõ.
+
+Khi bạn gõ một chữ, bạn thường sẽ cập nhật một state (trạng thái) để lưu giá trị mới của ô input.
+
+Việc cập nhật state này khiến component chứa ô input phải "vẽ lại" (re-render) trên màn hình.
+
+Nếu việc "vẽ lại" này khiến cho chính thẻ <input> bị hủy đi và tạo lại từ đầu, trình duyệt sẽ không còn biết bạn đang focus vào phần tử nào nữa. Kết quả là bạn bị mất focus.
+
+Các trường hợp cụ thể và cách khắc phục
+Dựa trên đoạn code bạn cung cấp (có data-component-name), rất có thể bạn đang dùng React hoặc một framework tương tự. Dưới đây là các lỗi thường gặp nhất:
+
+1. Quản lý state và props không đúng cách
+Đây là trường hợp phổ biến nhất. Bạn cần đảm bảo bạn đang sử dụng "Controlled Component" một cách chính xác.
+
+Code có thể đang bị lỗi:
+
+JavaScript
+
+// Một component cha nào đó
+function ParentComponent() {
+  // Mỗi lần render, một component Input MỚI được tạo ra
+  const MyInput = () => <input onChange={...} />;
+  
+  return (
+    <div>
+      <h1>Chat</h1>
+      <MyInput />
+    </div>
+  );
+}
+Trong ví dụ trên, MyInput được định nghĩa bên trong ParentComponent, nên mỗi lần ParentComponent re-render, một MyInput hoàn toàn mới sẽ được tạo ra, gây mất focus.
+
+Cách sửa đúng:
+Luôn định nghĩa component ở bên ngoài và quản lý value và onChange qua state.
+
+JavaScript
+
+import React, { useState } from 'react';
+
+// Định nghĩa component Input ở ngoài
+const MyChatInput = ({ value, onChange }) => {
+  return (
+    <input
+      className="..." // Giữ các class của bạn
+      placeholder="Nhập tin nhắn..."
+      value={value}
+      onChange={onChange}
+    />
+  );
+};
+
+// Component chính
+function ChatWidget() {
+  const [message, setMessage] = useState('');
+
+  const handleInputChange = (event) => {
+    setMessage(event.target.value);
+  };
+
+  return (
+    <div>
+      {/* ... */}
+      <MyChatInput value={message} onChange={handleInputChange} />
+      {/* ... */}
+    </div>
+  );
+}
+2. Sử dụng key không ổn định trong một danh sách
+Nếu ô input của bạn nằm trong một danh sách (được tạo bằng hàm .map()), việc cung cấp một key không ổn định (ví dụ: dùng index hoặc giá trị ngẫu nhiên) sẽ khiến React phá hủy và tạo lại phần tử đó.
+
+Code lỗi:
+
+JavaScript
+
+{items.map((item, index) => (
+  <div key={index}> {/* Dùng index làm key là không tốt nếu danh sách thay đổi */}
+    <input />
+  </div>
+))}
+Cách sửa đúng:
+Luôn dùng một ID duy nhất và ổn định cho key.
+
+JavaScript
+
+{items.map((item) => (
+  <div key={item.id}> {/* Dùng ID ổn định */}
+    <input />
+  </div>
+))}
+3. Component cha re-render không cần thiết
+Một state nào đó ở component cha thay đổi liên tục, khiến component chứa ô input của bạn bị re-render theo.
+
+Cách khắc phục: Sử dụng React.memo để bọc component input của bạn lại, nó sẽ ngăn việc re-render nếu các props truyền vào không thay đổi.
+
+Tóm lại, bạn hãy kiểm tra:
+Kiểm tra State: Bạn đang quản lý giá trị của ô input bằng useState và cập nhật nó qua onChange đúng cách chưa?
+
+Vị trí định nghĩa Component: Component chứa thẻ <input> có bị định nghĩa lồng bên trong một component khác không? Hãy đưa nó ra ngoài.
+
+Kiểm tra key: Nếu input nằm trong vòng lặp .map(), hãy chắc chắn key là một chuỗi hoặc số duy nhất và ổn định, không phải là index hay Math.random().
+
+Kiểm tra các useEffect: Có useEffect nào đang chạy sau mỗi lần gõ phím và vô tình làm thay đổi DOM hoặc state gây re-render không?
