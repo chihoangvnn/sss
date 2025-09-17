@@ -447,9 +447,7 @@ export default function ChatbotWidget({
     return (
       <div
         key={message.id}
-        className={`flex ${message.isBot ? "justify-start" : "justify-end"} mb-4 ${
-          isNewMessage ? "animate-in slide-in-from-bottom-2 duration-500" : ""
-        }`}
+        className={`flex ${message.isBot ? "justify-start" : "justify-end"} mb-4`}
       >
         <div className={`flex items-start space-x-2 max-w-[85%] ${message.isBot ? "" : "flex-row-reverse space-x-reverse"}`}>
           {/* Enhanced Avatar with status indicator */}
@@ -567,7 +565,7 @@ export default function ChatbotWidget({
     
     return (
       <div 
-        className="fixed inset-0 bg-white flex flex-col animate-in slide-in-from-bottom duration-300"
+        className="fixed inset-0 bg-white flex flex-col"
         style={{ zIndex: positioning.zIndexValue }}
       >
       {/* Enhanced Header with gradient */}
@@ -595,7 +593,7 @@ export default function ChatbotWidget({
       <ScrollArea className="flex-1 p-4 bg-gray-50/30">
         {messages.map(renderMessage)}
         {isTyping && (
-          <div className="flex items-center space-x-3 text-gray-500 mb-4 animate-in fade-in duration-300">
+          <div className="flex items-center space-x-3 text-gray-500 mb-4">
             <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
@@ -690,7 +688,7 @@ export default function ChatbotWidget({
             <ScrollArea className="h-full">
               {messages.map(renderMessage)}
               {isTyping && (
-                <div className="flex items-center space-x-3 text-gray-500 mb-4 animate-in fade-in duration-300">
+                <div className="flex items-center space-x-3 text-gray-500 mb-4">
                   <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <Bot className="w-3 h-3 text-white" />
                   </div>
