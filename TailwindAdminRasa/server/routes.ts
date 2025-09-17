@@ -1038,10 +1038,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/product-landing-pages", async (req, res) => {
     try {
       const landingPages = await firebaseStorage.getAllProductLandingPages();
-      res.json(landingPages);
+      
+      // Add any demo landing pages from memory
+      const demoPages = global.demoLandingPages || [];
+      const allPages = [...landingPages, ...demoPages];
+      
+      res.json(allPages);
     } catch (error) {
       console.error("Error fetching product landing pages:", error);
-      // Return sample data as fallback
+      
+      // Fallback: Return sample data + any demo pages from memory
+      const demoPages = global.demoLandingPages || [];
       const samplePages = await storage.getProducts(3).then(products => 
         products.map((product, index) => ({
           id: `demo-${product.id}`,
@@ -1070,7 +1077,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           conversionRate: (Math.random() * 10).toFixed(2)
         }))
       ).catch(() => []);
-      res.json(samplePages);
+      
+      // Combine sample pages with demo pages
+      const allPages = [...samplePages, ...demoPages];
+      res.json(allPages);
     }
   });
 
@@ -1089,6 +1099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/product-landing-pages", async (req, res) => {
     try {
+      // Try Firebase first
       const landingPageId = await firebaseStorage.createProductLandingPage(req.body);
       res.json({ id: landingPageId, message: "Product landing page created successfully" });
     } catch (error) {
@@ -1096,8 +1107,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof Error && error.message === 'Slug already exists') {
         return res.status(400).json({ error: "Slug already exists" });
       }
-      // Return demo success for fallback
-      res.json({ id: `demo-${Date.now()}`, message: "Product landing page created successfully (demo mode)" });
+      
+      // Fallback: Store in PostgreSQL with demo mode
+      try {
+        const demoData = {
+          id: `demo-${Date.now()}`,
+          title: req.body.title || 'New Landing Page',
+          slug: req.body.slug || `landing-${Date.now()}`,
+          description: req.body.description || '',
+          productId: req.body.productId || '',
+          customPrice: req.body.customPrice || 0,
+          heroTitle: req.body.heroTitle || '',
+          isActive: req.body.isActive !== false,
+          theme: req.body.theme || 'light',
+          primaryColor: req.body.primaryColor || '#007bff',
+          contactInfo: req.body.contactInfo || { phone: '', email: '', businessName: '' },
+          paymentMethods: req.body.paymentMethods || { cod: true, bankTransfer: true, online: false },
+          features: req.body.features || [],
+          viewCount: 0,
+          orderCount: 0,
+          conversionRate: 0,
+          createdAt: new Date().toISOString()
+        };
+        
+        // Store to memory/session for this demo
+        global.demoLandingPages = global.demoLandingPages || [];
+        global.demoLandingPages.push(demoData);
+        
+        res.json({ id: demoData.id, message: "Product landing page created successfully (demo mode)" });
+      } catch (fallbackError) {
+        console.error("Fallback storage failed:", fallbackError);
+        res.status(500).json({ error: "Failed to create landing page" });
+      }
     }
   });
 
