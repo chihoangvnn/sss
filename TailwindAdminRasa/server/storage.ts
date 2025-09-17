@@ -11,7 +11,7 @@ import {
   type Payment, type InsertPayment
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, count, sum, sql, ilike, or } from "drizzle-orm";
+import { eq, desc, and, count, sum, sql, ilike, or, gte, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -271,6 +271,61 @@ export class DatabaseStorage implements IStorage {
       ...row,
       categoryName: row.categoryName || undefined
     }));
+  }
+
+  // Get popular products based on order items count
+  async getPopularProducts(limit = 10): Promise<Product[]> {
+    try {
+      // Get products ordered most frequently today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const popularProducts = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          description: products.description,
+          price: products.price,
+          image: products.image,
+          categoryId: products.categoryId,
+          status: products.status,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+          orderCount: sql<number>`COUNT(${orderItems.productId})::int`,
+        })
+        .from(products)
+        .leftJoin(orderItems, eq(products.id, orderItems.productId))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(
+          and(
+            eq(products.status, 'active'),
+            or(
+              gte(orders.createdAt, today),
+              isNull(orders.createdAt) // Include products with no orders
+            )
+          )
+        )
+        .groupBy(products.id)
+        .orderBy(desc(sql`COUNT(${orderItems.productId})`), desc(products.createdAt))
+        .limit(limit);
+
+      return popularProducts.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        image: p.image,
+        categoryId: p.categoryId,
+        status: p.status,
+        stock: 0, // Default stock value for popular products
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      }));
+    } catch (error) {
+      console.error("Error fetching popular products:", error);
+      // Fallback to latest products if query fails
+      return await this.getProducts(limit);
+    }
   }
 
   async getProduct(id: string): Promise<Product | undefined> {

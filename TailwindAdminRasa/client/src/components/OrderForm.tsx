@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save, Plus, Trash2 } from "lucide-react";
+import { X, Save, Plus, Trash2, Printer } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { Order, Customer, Product } from "@shared/schema";
 
@@ -85,6 +85,11 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     queryKey: ['/api/products'],
   });
 
+  // Fetch popular products for quick add
+  const { data: popularProducts = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products/popular'],
+  });
+
   // Calculate totals
   const totalAmount = orderItems.reduce((sum, item) => sum + item.total, 0);
   const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -128,6 +133,66 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     
     setOrderItems(newItems);
   };
+
+  // Save and print order mutation  
+  const saveAndPrintMutation = useMutation({
+    mutationFn: async (data: any) => {
+      // Same logic as save but return order for printing
+      if (isEditing) {
+        await apiRequest('PUT', `/api/orders/${order?.id}`, {
+          customerId: data.customerId,
+          total: data.total,
+          status: data.status,
+          items: data.items,
+        });
+        return order;
+      } else {
+        const orderData = {
+          customerId: data.customerId,
+          total: data.total,
+          status: data.status,
+          items: data.items,
+        };
+        
+        const newOrderResponse = await apiRequest('POST', '/api/orders', orderData);
+        const newOrder = await newOrderResponse.json();
+        
+        // Create order items
+        for (const item of orderItems) {
+          if (item.productId) {
+            await apiRequest('POST', '/api/order-items', {
+              orderId: newOrder.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price.toString(),
+            });
+          }
+        }
+        
+        return { ...newOrder, orderItems };
+      }
+    },
+    onSuccess: (orderData: any) => {
+      toast({
+        title: "Thành công",
+        description: `Đơn hàng đã được ${isEditing ? 'cập nhật' : 'tạo'} và sẽ được in`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      
+      // Print receipt
+      printReceipt(orderData);
+      
+      onSuccess?.();
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Save order mutation
   const saveMutation = useMutation({
@@ -218,6 +283,98 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     });
   };
 
+  // Quick add popular product
+  const quickAddProduct = (product: Product) => {
+    const newItem = {
+      productId: product.id,
+      productName: product.name,
+      quantity: 1, // Default quantity
+      price: parseFloat(product.price),
+      total: parseFloat(product.price), // quantity * price
+    };
+    setOrderItems([...orderItems, newItem]);
+  };
+
+  // Print receipt function
+  const printReceipt = (orderData: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    const customerName = formData.customerId === 'retail' ? 'Khách lẻ' : 
+      customers.find(c => c.id === formData.customerId)?.name || 'Khách hàng';
+    
+    const receiptHtml = `
+      <html>
+        <head>
+          <title>Hóa đơn - ${orderData.id}</title>
+          <style>
+            body { 
+              font-family: 'Courier New', monospace; 
+              font-size: 12px; 
+              margin: 0; 
+              padding: 10px;
+              width: 80mm;
+              line-height: 1.2;
+            }
+            .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+            .item { display: flex; justify-content: space-between; margin: 2px 0; }
+            .total { border-top: 1px dashed #000; padding-top: 5px; margin-top: 10px; font-weight: bold; }
+            .center { text-align: center; }
+            .small { font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div><strong>CỬA HÀNG ABC</strong></div>
+            <div class="small">123 Đường ABC, Quận XYZ</div>
+            <div class="small">ĐT: 0123456789</div>
+            <div class="small">==================</div>
+          </div>
+          
+          <div>
+            <div>Mã ĐH: ${orderData.id.slice(-8)}</div>
+            <div>Khách hàng: ${customerName}</div>
+            <div>Ngày: ${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}</div>
+          </div>
+          
+          <div style="margin: 10px 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0;">
+            ${orderItems.map(item => `
+              <div class="item">
+                <div>${item.productName}</div>
+              </div>
+              <div class="item">
+                <div>${item.quantity}kg x ${parseInt(item.price.toString()).toLocaleString('vi-VN')}đ</div>
+                <div><strong>${formatPrice(item.total)}</strong></div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="total">
+            <div class="item">
+              <div>TỔNG CỘNG:</div>
+              <div><strong>${formatPrice(totalAmount)}</strong></div>
+            </div>
+          </div>
+          
+          <div class="center small" style="margin-top: 20px;">
+            <div>Cảm ơn quý khách!</div>
+            <div>Hẹn gặp lại!</div>
+          </div>
+          
+          <script>
+            window.onload = () => {
+              window.print();
+              window.onafterprint = () => window.close();
+            }
+          </script>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
@@ -275,6 +432,29 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Popular Products */}
+            {popularProducts.length > 0 && (
+              <div className="space-y-3">
+                <Label>Sản phẩm hay bán trong ngày</Label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  {popularProducts.slice(0, 10).map((product) => (
+                    <Button
+                      key={product.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-auto p-2 flex flex-col text-xs"
+                      onClick={() => quickAddProduct(product)}
+                      data-testid={`quick-add-${product.id}`}
+                    >
+                      <span className="font-medium truncate w-full">{product.name}</span>
+                      <span className="text-green-600">{parseInt(product.price).toLocaleString('vi-VN')}đ</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Order Items */}
             <div className="space-y-4">
@@ -387,6 +567,46 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
               >
                 <Save className="h-4 w-4 mr-2" />
                 {saveMutation.isPending ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Tạo đơn hàng')}
+              </Button>
+              <Button 
+                type="button" 
+                variant="default"
+                className="bg-green-600 hover:bg-green-700"
+                disabled={saveAndPrintMutation.isPending}
+                onClick={() => {
+                  const event = { preventDefault: () => {} } as React.FormEvent;
+                  
+                  // Customer is optional now - defaults to retail customer
+                  if (orderItems.length === 0 || !orderItems.some(item => item.productId)) {
+                    toast({
+                      title: "Lỗi",
+                      description: "Vui lòng thêm ít nhất một sản phẩm",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  const validItems = orderItems.filter(item => item.productId && item.quantity > 0);
+                  if (validItems.length === 0) {
+                    toast({
+                      title: "Lỗi",
+                      description: "Vui lòng nhập số lượng hợp lệ cho các sản phẩm",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  saveAndPrintMutation.mutate({
+                    customerId: formData.customerId,
+                    total: totalAmount.toString(),
+                    status: formData.status,
+                    items: totalItems,
+                  });
+                }}
+                data-testid="button-save-and-print"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                {saveAndPrintMutation.isPending ? 'Đang tạo...' : 'Tạo + In Hóa đơn'}
               </Button>
             </div>
           </form>

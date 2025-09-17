@@ -130,6 +130,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Popular products API
+  app.get("/api/products/popular", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const popularProducts = await storage.getPopularProducts(limit);
+      res.json(popularProducts);
+    } catch (error) {
+      console.error("Error fetching popular products:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.get("/api/products/:id", async (req, res) => {
     try {
       const product = await storage.getProduct(req.params.id);
