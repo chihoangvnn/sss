@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Minus, Plus, ShoppingCart, Phone, Mail, MapPin, Star, Heart, X, Trash2, Truck, Package, Clock } from "lucide-react";
+import ChatbotWidget from "@/components/ChatbotWidget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -880,6 +881,45 @@ export default function PublicStorefront() {
           </div>
         </div>
       </section>
+
+      {/* Chatbot Widget */}
+      <ChatbotWidget 
+        pageType="storefront"
+        pageContext={{
+          storefrontName: (storefrontData as StorefrontData).name,
+          products: (storefrontData as StorefrontData).products.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            category: p.category
+          })),
+          cartItems: cart.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity
+          }))
+        }}
+        onAddToCart={(productId, quantity) => {
+          const product = (storefrontData as StorefrontData).products.find(p => p.id === productId);
+          if (product) {
+            addToCart(product);
+          }
+        }}
+        onCreateOrder={(orderData) => {
+          // Convert chatbot order to storefront order format
+          setCustomerInfo({
+            name: orderData.customerName || '',
+            phone: orderData.customerPhone || '',
+            email: orderData.customerEmail || '',
+            address: orderData.customerAddress || '',
+            notes: orderData.notes || '',
+            deliveryType: orderData.deliveryType || 'local_delivery'
+          });
+          
+          // Open checkout modal
+          setIsCheckoutOpen(true);
+        }}
+      />
     </div>
   );
 }

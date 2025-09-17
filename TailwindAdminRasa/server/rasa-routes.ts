@@ -932,6 +932,333 @@ export function setupRasaRoutes(app: Express) {
       });
     }
   });
+
+  // === CHAT CONVERSATION API ===
+
+  /**
+   * POST /api/rasa/chat
+   * Main chat endpoint for conversational interaction
+   */
+  app.post("/api/rasa/chat", async (req, res) => {
+    try {
+      const { message, sender, context } = req.body;
+      
+      if (!message || !sender) {
+        return res.status(400).json({
+          status: "error",
+          message: "Thiếu thông tin tin nhắn hoặc người gửi"
+        });
+      }
+
+      // Process message through RASA-like logic with context awareness
+      const responses = await processConversationalMessage(message, sender, context);
+      
+      res.json({
+        status: "success",
+        responses,
+        sender
+      });
+    } catch (error) {
+      console.error("RASA Chat API Error:", error);
+      res.status(500).json({ 
+        status: "error", 
+        message: "Có lỗi xảy ra trong quá trình xử lý" 
+      });
+    }
+  });
+
+  /**
+   * Process conversational message with intelligent routing
+   */
+  async function processConversationalMessage(message: string, sender: string, context: any) {
+    const msgLower = message.toLowerCase();
+    const responses = [];
+
+    // Intent detection based on message content
+    if (msgLower.includes("tìm") || msgLower.includes("sản phẩm") || msgLower.includes("có gì")) {
+      // Product search intent
+      const searchTerm = extractSearchTerm(message);
+      if (searchTerm) {
+        const searchResults = await searchProductsForChat(searchTerm, context);
+        responses.push({
+          text: searchResults.text,
+          custom: searchResults.custom
+        });
+      } else {
+        responses.push({
+          text: "Bạn muốn tìm sản phẩm gì? Hãy cho tôi biết tên hoặc loại sản phẩm bạn quan tâm.",
+          buttons: [
+            { title: "Rau củ tươi", payload: "/search_vegetables" },
+            { title: "Thịt sạch", payload: "/search_meat" },
+            { title: "Trái cây", payload: "/search_fruits" },
+            { title: "Xem tất cả", payload: "/search_all" }
+          ]
+        });
+      }
+    }
+    else if (msgLower.includes("còn hàng") || msgLower.includes("tồn kho") || msgLower.includes("có sẵn")) {
+      // Stock check intent
+      const productName = extractProductName(message);
+      if (productName) {
+        const stockInfo = await checkStockForChat(productName);
+        responses.push({
+          text: stockInfo.text,
+          custom: stockInfo.custom
+        });
+      } else {
+        responses.push({
+          text: "Bạn muốn kiểm tra tồn kho sản phẩm nào? Vui lòng cho tôi biết tên sản phẩm.",
+          buttons: [
+            { title: "Kiểm tra sản phẩm cụ thể", payload: "/check_specific_product" }
+          ]
+        });
+      }
+    }
+    else if (msgLower.includes("đặt hàng") || msgLower.includes("mua") || msgLower.includes("order")) {
+      // Order intent
+      if (context?.cartItems && context.cartItems.length > 0) {
+        const orderSummary = await createOrderSummaryForChat(context.cartItems);
+        responses.push({
+          text: "Tôi thấy bạn đã có sản phẩm trong giỏ hàng. Bạn có muốn tiếp tục đặt hàng không?",
+          custom: { order: orderSummary },
+          buttons: [
+            { title: "Xác nhận đặt hàng", payload: "/confirm_order" },
+            { title: "Thêm sản phẩm khác", payload: "/add_more_products" },
+            { title: "Xem chi tiết", payload: "/view_cart_details" }
+          ]
+        });
+      } else {
+        responses.push({
+          text: "Bạn muốn đặt hàng sản phẩm nào? Tôi có thể giúp bạn tìm và thêm vào giỏ hàng.",
+          buttons: [
+            { title: "Xem sản phẩm hot", payload: "/show_trending" },
+            { title: "Tìm theo danh mục", payload: "/browse_categories" }
+          ]
+        });
+      }
+    }
+    else if (msgLower.includes("giá") || msgLower.includes("bao nhiêu") || msgLower.includes("price")) {
+      // Price inquiry intent
+      const productName = extractProductName(message);
+      if (productName) {
+        const priceInfo = await getPriceInfoForChat(productName);
+        responses.push({
+          text: priceInfo.text,
+          custom: priceInfo.custom
+        });
+      } else {
+        responses.push({
+          text: "Bạn muốn hỏi giá sản phẩm nào? Hãy cho tôi biết tên sản phẩm.",
+          buttons: [
+            { title: "Xem bảng giá", payload: "/show_price_list" }
+          ]
+        });
+      }
+    }
+    else if (msgLower.includes("giao hàng") || msgLower.includes("ship") || msgLower.includes("delivery")) {
+      // Delivery info intent
+      responses.push({
+        text: "🚚 Thông tin giao hàng:\n\n• Giao hàng quanh thị trấn: 2-4 giờ\n• Ship COD toàn quốc: 1-3 ngày\n• FREE SHIP vào 11:00 và 17:00 hàng ngày\n• Phí ship theo khoảng cách\n\nBạn cần hỗ trợ gì thêm về giao hàng?",
+        buttons: [
+          { title: "Kiểm tra phí ship", payload: "/check_shipping_fee" },
+          { title: "Thời gian giao hàng", payload: "/delivery_time" }
+        ]
+      });
+    }
+    else if (msgLower.includes("thanh toán") || msgLower.includes("payment") || msgLower.includes("trả tiền")) {
+      // Payment info intent
+      responses.push({
+        text: "💳 Các hình thức thanh toán:\n\n• COD (Thanh toán khi nhận hàng)\n• Chuyển khoản ngân hàng\n• Ví điện tử\n\nTất cả đều an toàn và bảo mật. Bạn muốn biết thêm chi tiết nào?",
+        buttons: [
+          { title: "Hướng dẫn chuyển khoản", payload: "/bank_transfer_guide" },
+          { title: "Chính sách bảo mật", payload: "/security_policy" }
+        ]
+      });
+    }
+    else if (msgLower.includes("xin chào") || msgLower.includes("hello") || msgLower.includes("hi")) {
+      // Greeting intent
+      responses.push({
+        text: `Xin chào! Tôi là trợ lý mua sắm. Tôi có thể giúp bạn:\n\n🔍 Tìm kiếm sản phẩm\n📦 Kiểm tra tồn kho\n🛒 Hỗ trợ đặt hàng\n💰 Tư vấn giá cả\n🚚 Thông tin giao hàng\n\nBạn cần hỗ trợ gì?`,
+        buttons: [
+          { title: "Tìm sản phẩm", payload: "/search_products" },
+          { title: "Sản phẩm hot", payload: "/trending_products" },
+          { title: "Khuyến mãi", payload: "/promotions" }
+        ]
+      });
+    }
+    else {
+      // Default/fallback intent
+      responses.push({
+        text: "Tôi hiểu bạn đang cần hỗ trợ. Có thể bạn muốn:",
+        buttons: [
+          { title: "Tìm sản phẩm", payload: "/search_products" },
+          { title: "Kiểm tra tồn kho", payload: "/check_stock" },
+          { title: "Hỗ trợ đặt hàng", payload: "/help_order" },
+          { title: "Thông tin giao hàng", payload: "/delivery_info" }
+        ]
+      });
+    }
+
+    return responses;
+  }
+
+  /**
+   * Helper functions for conversation processing
+   */
+  function extractSearchTerm(message: string): string | null {
+    const searchPatterns = [
+      /tìm\s+(.+)/i,
+      /có\s+(.+)\s+không/i,
+      /(.+)\s+ở\s+đâu/i,
+      /muốn\s+mua\s+(.+)/i
+    ];
+    
+    for (const pattern of searchPatterns) {
+      const match = message.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    return null;
+  }
+
+  function extractProductName(message: string): string | null {
+    // Simple extraction - in production, use NER
+    const words = message.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      if (words[i].length > 2) {
+        return words[i];
+      }
+    }
+    return null;
+  }
+
+  async function searchProductsForChat(searchTerm: string, context: any) {
+    try {
+      const allProducts = await storage.getProducts(20);
+      const filteredProducts = allProducts.filter(product => 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+
+      if (filteredProducts.length === 0) {
+        return {
+          text: `Không tìm thấy sản phẩm nào với từ khóa "${searchTerm}". Bạn có thể thử tìm với từ khóa khác?`,
+          custom: null
+        };
+      }
+
+      const topProduct = filteredProducts[0];
+      const inventory = await getInventory(topProduct.id);
+      
+      return {
+        text: `Tìm thấy ${filteredProducts.length} sản phẩm cho "${searchTerm}". Đây là sản phẩm phù hợp nhất:`,
+        custom: {
+          product: {
+            id: topProduct.id,
+            name: topProduct.name,
+            price: topProduct.price,
+            image: topProduct.image,
+            stock: inventory.currentStock
+          }
+        }
+      };
+    } catch (error) {
+      return {
+        text: "Có lỗi khi tìm kiếm sản phẩm. Vui lòng thử lại.",
+        custom: null
+      };
+    }
+  }
+
+  async function checkStockForChat(productName: string) {
+    try {
+      const allProducts = await storage.getProducts(50);
+      const product = allProducts.find(p => 
+        p.name.toLowerCase().includes(productName.toLowerCase())
+      );
+
+      if (!product) {
+        return {
+          text: `Không tìm thấy sản phẩm "${productName}". Bạn có thể kiểm tra tên sản phẩm khác?`,
+          custom: null
+        };
+      }
+
+      const inventory = await getInventory(product.id);
+      const stockStatus = inventory.currentStock > 0 ? "còn hàng" : "hết hàng";
+      
+      return {
+        text: `${product.name} hiện tại ${stockStatus}. Còn lại ${inventory.currentStock} sản phẩm.`,
+        custom: {
+          product: {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            stock: inventory.currentStock
+          }
+        }
+      };
+    } catch (error) {
+      return {
+        text: "Có lỗi khi kiểm tra tồn kho. Vui lòng thử lại.",
+        custom: null
+      };
+    }
+  }
+
+  async function getPriceInfoForChat(productName: string) {
+    try {
+      const allProducts = await storage.getProducts(50);
+      const product = allProducts.find(p => 
+        p.name.toLowerCase().includes(productName.toLowerCase())
+      );
+
+      if (!product) {
+        return {
+          text: `Không tìm thấy thông tin giá cho "${productName}".`,
+          custom: null
+        };
+      }
+
+      const price = parseInt(product.price);
+      return {
+        text: `${product.name}: ${price.toLocaleString('vi-VN')}đ/kg`,
+        custom: {
+          product: {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image
+          }
+        }
+      };
+    } catch (error) {
+      return {
+        text: "Có lỗi khi lấy thông tin giá. Vui lòng thử lại.",
+        custom: null
+      };
+    }
+  }
+
+  async function createOrderSummaryForChat(cartItems: any[]) {
+    let total = 0;
+    const items = cartItems.map(item => {
+      const itemTotal = parseFloat(item.price || 0) * parseFloat(item.quantity || 0);
+      total += itemTotal;
+      return {
+        name: item.name,
+        quantity: item.quantity,
+        price: itemTotal
+      };
+    });
+
+    return {
+      items,
+      total
+    };
+  }
 }
 
 // Helper function to get product unit
