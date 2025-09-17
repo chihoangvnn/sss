@@ -842,6 +842,7 @@ export default function PublicLandingPage() {
                       </Label>
                       <Input
                         id="orderName"
+                        name="orderName"
                         value={orderForm.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
                         onBlur={() => setTouchedFields(prev => new Set(prev).add('name'))}
@@ -850,6 +851,8 @@ export default function PublicLandingPage() {
                           validationErrors.name && touchedFields.has('name') ? 'border-destructive focus-visible:ring-destructive' : ''
                         }`}
                         autoComplete="name"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data-testid="input-order-name"
                       />
                       {validationErrors.name && touchedFields.has('name') && (
@@ -867,6 +870,7 @@ export default function PublicLandingPage() {
                       </Label>
                       <Input
                         id="orderPhone"
+                        name="orderPhone"
                         type="tel"
                         value={orderForm.phone}
                         onChange={(e) => handleFieldChange('phone', e.target.value)}
@@ -876,6 +880,8 @@ export default function PublicLandingPage() {
                           validationErrors.phone && touchedFields.has('phone') ? 'border-destructive focus-visible:ring-destructive' : ''
                         }`}
                         autoComplete="tel"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data-testid="input-order-phone"
                       />
                       {validationErrors.phone && touchedFields.has('phone') && (
@@ -891,6 +897,7 @@ export default function PublicLandingPage() {
                       <Label htmlFor="orderEmail" className="text-base font-medium">Email</Label>
                       <Input
                         id="orderEmail"
+                        name="orderEmail"
                         type="email"
                         value={orderForm.email}
                         onChange={(e) => handleFieldChange('email', e.target.value)}
@@ -900,6 +907,8 @@ export default function PublicLandingPage() {
                           validationErrors.email && touchedFields.has('email') ? 'border-destructive focus-visible:ring-destructive' : ''
                         }`}
                         autoComplete="email"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data-testid="input-order-email"
                       />
                       {validationErrors.email && touchedFields.has('email') && (
@@ -917,6 +926,7 @@ export default function PublicLandingPage() {
                       </Label>
                       <Textarea
                         id="orderAddress"
+                        name="orderAddress"
                         value={orderForm.address}
                         onChange={(e) => handleFieldChange('address', e.target.value)}
                         onBlur={() => setTouchedFields(prev => new Set(prev).add('address'))}
@@ -926,6 +936,8 @@ export default function PublicLandingPage() {
                           validationErrors.address && touchedFields.has('address') ? 'border-destructive focus-visible:ring-destructive' : ''
                         }`}
                         autoComplete="street-address"
+                        autoCorrect="off"
+                        spellCheck={false}
                         data-testid="input-order-address"
                       />
                       {validationErrors.address && touchedFields.has('address') && (
@@ -1041,11 +1053,15 @@ export default function PublicLandingPage() {
                     <Label htmlFor="orderNotes" className="text-base font-medium">Ghi chú</Label>
                     <Textarea
                       id="orderNotes"
+                      name="orderNotes"
                       value={orderForm.notes}
                       onChange={(e) => setOrderForm(prev => ({ ...prev, notes: e.target.value }))}
                       placeholder="Ghi chú thêm cho đơn hàng (không bắt buộc)..."
                       rows={3}
                       className="text-base resize-none"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                       data-testid="input-order-notes"
                     />
                   </div>
