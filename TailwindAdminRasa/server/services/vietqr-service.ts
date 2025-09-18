@@ -4,8 +4,8 @@
  * This service handles automatic QR code generation using VietQR.io API
  * for seamless payment integration with Vietnamese banks.
  * 
- * Bank: SHB (SaigonBank) - 970431
- * Account: 4555567777
+ * Bank: SHB (Ngân hàng TMCP Sài Gòn - Hà Nội) - 970443
+ * Uses official VietQR quicklink format with URL parameters
  */
 
 export interface BankInfo {
@@ -27,7 +27,8 @@ export interface QRResult {
   qrCodeUrl: string;
   bankInfo: BankInfo;
   amount: number;
-  orderId: string;
+  orderId: string; // ✅ Original order ID
+  standardReference: string; // ✅ Separate standardized reference for QR memo
   expiresAt: Date;
 }
 
@@ -74,18 +75,19 @@ export class VietQRService {
 
     const { amount, orderId, description, template = 'compact' } = options;
     
-    // 🏦 Build VietQR URL format: /image/{BANK}-{ACCOUNT}-{TEMPLATE}.jpg
+    // 🏦 Build VietQR URL format: /image/{BANK}-{ACCOUNT}-{TEMPLATE}.jpg 
+    // ✅ Using official VietQR quicklink format as shown by user
     const baseUrl = `${this.BASE_URL}/${this.SHB_BANK_INFO.bank.toLowerCase()}-${this.SHB_BANK_INFO.accountNumber}-${template}.jpg`;
     
-    // 📋 Generate standardized reference for consistency
+    // 📋 Generate standardized reference for invoice ID (addInfo = id hóa đơn)
     const standardRef = this.generateStandardReference(orderId);
     
-    // 💰 Add query parameters với standardized reference
-    const roundedAmount = Math.ceil(amount); // Ensure integer VND
+    // 💰 Add query parameters với proper VietQR format
+    const roundedAmount = Math.round(amount); // ✅ Use Math.round for proper VND rounding
     const params = new URLSearchParams({
       amount: roundedAmount.toString(),
-      addInfo: standardRef, // ✅ Use standardized reference consistently
-      ...(description && { description })
+      addInfo: standardRef, // ✅ addInfo = id hóa đơn (invoice ID)
+      accountName: this.SHB_BANK_INFO.accountName // ✅ No double-encoding (URLSearchParams encodes automatically)
     });
     
     const qrCodeUrl = `${baseUrl}?${params.toString()}`;
@@ -98,7 +100,8 @@ export class VietQRService {
       qrCodeUrl,
       bankInfo: this.SHB_BANK_INFO,
       amount: roundedAmount,
-      orderId: standardRef, // ✅ Return standardized reference
+      orderId, // ✅ Return original orderId, not standardized reference
+      standardReference: standardRef, // ✅ Add separate field for memo
       expiresAt
     };
   }
@@ -178,13 +181,22 @@ export class VietQRService {
 
   /**
    * 🔄 Generate Deep Link for Banking Apps
-   * Automatically opens customer's banking app for payment
+   * ✅ Uses standardized reference for consistency with QR code
    */
   static generateDeepLink(amount: number, orderId: string): string {
-    const { bankCode, accountNumber } = this.SHB_BANK_INFO;
+    const standardRef = this.generateStandardReference(orderId); // ✅ Use standard reference
+    const roundedAmount = Math.round(amount); // ✅ Consistent rounding
+    const { bankCode, accountNumber, accountName } = this.SHB_BANK_INFO;
     
-    // Universal banking deep link format
-    return `vietqr://pay?bank=${bankCode}&account=${accountNumber}&amount=${amount}&memo=${orderId}`;
+    const params = new URLSearchParams({
+      bank: bankCode,
+      account: accountNumber,
+      amount: roundedAmount.toString(),
+      memo: standardRef, // ✅ Consistent with QR addInfo
+      accountName: accountName
+    });
+    
+    return `vietqr://pay?${params.toString()}`;
   }
 }
 

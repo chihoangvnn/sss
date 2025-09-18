@@ -29,29 +29,45 @@ const formatTime = (seconds: number) => {
 
 export function QRPayment({ order, payment, onPaymentCreated }: QRPaymentProps) {
   const { toast } = useToast();
-  const [timeRemaining, setTimeRemaining] = useState(15 * 60); // 15 minutes in seconds
-
-  // Bank info - use SHB bank details as specified by user
-  const bankInfo = (() => {
-    // Try to get bank info from payment if available and properly structured
-    if (payment?.bankInfo && typeof payment.bankInfo === 'object' && payment.bankInfo !== null) {
-      const info = payment.bankInfo as Record<string, any>;
-      return {
-        bank: info.bank || "SHB",
-        bankCode: info.bankCode || "970431", 
-        accountNumber: info.accountNumber || "4555567777",
-        accountName: info.accountName || "CONG TY TNHH ABC TECH",
-      };
-    }
+  
+  // ✅ Calculate actual remaining time from server-provided expiry
+  const calculateTimeRemaining = () => {
+    if (!payment?.createdAt) return 15 * 60; // fallback to 15 minutes
     
-    // Fallback to SHB bank info (Ngân hàng TMCP Sài Gòn - Hà Nội)
-    return {
-      bank: "SHB",
-      bankCode: "970431", // SaigonBank official code
-      accountNumber: "4555567777",
-      accountName: "CONG TY TNHH ABC TECH",
-    };
-  })();
+    const createdAt = new Date(payment.createdAt);
+    const expiryTime = new Date(createdAt);
+    expiryTime.setMinutes(expiryTime.getMinutes() + 15); // VietQR expiry: 15 minutes
+    
+    const now = new Date();
+    const remainingMs = expiryTime.getTime() - now.getTime();
+    
+    return Math.max(0, Math.floor(remainingMs / 1000)); // seconds remaining, minimum 0
+  };
+  
+  const [timeRemaining, setTimeRemaining] = useState(calculateTimeRemaining);
+
+  // 🏦 Bank info - MUST come from backend payment.bankInfo (no fallbacks for production safety)
+  const bankInfo = payment?.bankInfo as {
+    bank: string;
+    bankCode: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  } | undefined;
+  
+  // ⚠️ If no bank info, payment creation failed - should not render QR
+  if (!bankInfo) {
+    return (
+      <Card className="p-6">
+        <div className="text-center text-muted-foreground">
+          <div className="text-amber-600 mb-2">
+            ⚠️ Chưa có thông tin ngân hàng
+          </div>
+          <p className="text-sm">Vui lòng tạo lại phiếu thanh toán</p>
+        </div>
+      </Card>
+    );
+  }
 
   // Use QR code URL from backend payment object instead of generating client-side
   const qrCodeUrl = payment?.qrCode || "";
@@ -230,12 +246,12 @@ export function QRPayment({ order, payment, onPaymentCreated }: QRPaymentProps) 
                 <span className="text-sm text-muted-foreground">Nội dung:</span>
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-medium" data-testid="payment-content">
-                    DH{order.id.slice(-8)}
+                    DH-{order.id.slice(-8).toUpperCase()}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(`DH${order.id.slice(-8)}`, "Nội dung chuyển khoản")}
+                    onClick={() => copyToClipboard(`DH-${order.id.slice(-8).toUpperCase()}`, "Nội dung chuyển khoản")}
                     data-testid="copy-payment-content"
                   >
                     <Copy className="h-3 w-3" />

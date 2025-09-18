@@ -3,6 +3,15 @@ import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, un
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// VietQR Bank Info Type (shared between client/server)
+export interface BankInfo {
+  bank: string;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+}
+
 // Cloudinary Media Types
 export interface CloudinaryBase {
   public_id: string;
@@ -574,7 +583,7 @@ export const payments = pgTable("payments", {
   qrCode: text("qr_code"), // VietQR URL
   status: text("status", { enum: ["pending", "completed", "failed", "cancelled"] }).notNull().default("pending"),
   transactionId: text("transaction_id"),
-  bankInfo: jsonb("bank_info"), // { bank, accountNumber, accountName }
+  bankInfo: jsonb("bank_info").$type<BankInfo>(), // ✅ Typed bank information
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
