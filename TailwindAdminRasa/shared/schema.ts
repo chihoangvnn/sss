@@ -3,6 +3,66 @@ import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Cloudinary Media Types
+export interface CloudinaryBase {
+  public_id: string;
+  asset_id?: string;
+  secure_url: string;
+  resource_type: 'image' | 'video';
+  format: string;
+  bytes?: number;
+  width?: number;
+  height?: number;
+  folder?: string;
+  version?: number;
+  created_at?: string;
+  tags?: string[];
+  alt?: string;
+}
+
+export interface CloudinaryImage extends CloudinaryBase {
+  resource_type: 'image';
+  width: number;
+  height: number;
+}
+
+export interface CloudinaryVideo extends CloudinaryBase {
+  resource_type: 'video';
+  duration: number;
+  thumbnail_url?: string;
+}
+
+export type CloudinaryMedia = CloudinaryImage | CloudinaryVideo;
+
+// Zod schemas for runtime validation
+export const CloudinaryBaseZ = z.object({
+  public_id: z.string(),
+  asset_id: z.string().optional(),
+  secure_url: z.string().url(),
+  resource_type: z.enum(['image', 'video']),
+  format: z.string(),
+  bytes: z.number().int().nonnegative().optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  folder: z.string().optional(),
+  version: z.number().int().optional(),
+  created_at: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  alt: z.string().optional(),
+});
+
+export const CloudinaryImageZ = CloudinaryBaseZ.extend({
+  resource_type: z.literal('image'),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
+export const CloudinaryVideoZ = CloudinaryBaseZ.extend({
+  resource_type: z.literal('video'),
+  duration: z.number().positive(),
+  thumbnail_url: z.string().url().optional(),
+});
+
 // Users table for admin authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -43,7 +103,9 @@ export const products = pgTable("products", {
   stock: integer("stock").notNull().default(0),
   categoryId: varchar("category_id").references(() => categories.id),
   status: text("status", { enum: ["active", "inactive", "out-of-stock"] }).notNull().default("active"),
-  image: text("image"),
+  image: text("image"), // Deprecated - kept for backward compatibility
+  images: jsonb("images").$type<CloudinaryImage[]>().default(sql`'[]'::jsonb`), // Array of Cloudinary image URLs with metadata
+  videos: jsonb("videos").$type<CloudinaryVideo[]>().default(sql`'[]'::jsonb`), // Array of Cloudinary video URLs with metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -331,7 +393,10 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 });
 
-export const insertProductSchema = createInsertSchema(products).omit({
+export const insertProductSchema = createInsertSchema(products, {
+  images: z.array(CloudinaryImageZ).default([]),
+  videos: z.array(CloudinaryVideoZ).default([]),
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
