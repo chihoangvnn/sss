@@ -209,22 +209,41 @@ export default function Products() {
             <Card key={product.id} className="hover-elevate" data-testid={`card-product-${product.id}`}>
               <CardHeader className="pb-3">
                 <div className="aspect-square bg-muted rounded-lg mb-3 overflow-hidden">
-                  {/* Prioritize Cloudinary images, fallback to legacy image */}
+                  {/* Prioritize Cloudinary images, fallback to video thumbnail, then legacy image */}
                   {product.images && product.images.length > 0 ? (
                     <img 
                       src={product.images[0].secure_url} 
                       alt={product.images[0].alt || product.name}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
+                  ) : product.videos && product.videos.length > 0 && product.videos[0].thumbnail_url ? (
+                    <div className="relative w-full h-full">
+                      <img 
+                        src={product.videos[0].thumbnail_url} 
+                        alt={product.videos[0].alt || `${product.name} - Video thumbnail`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      {/* Video play icon overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
+                        <div className="w-12 h-12 rounded-full bg-white bg-opacity-80 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-gray-800 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
                   ) : product.image && product.image !== 'https://via.placeholder.com/300x300' ? (
                     <img 
                       src={product.image} 
                       alt={product.name}
                       className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-muted-foreground">Không có ảnh</span>
+                      <span className="text-muted-foreground">Không có media</span>
                     </div>
                   )}
                 </div>
