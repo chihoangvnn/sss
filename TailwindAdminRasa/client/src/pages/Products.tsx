@@ -14,6 +14,7 @@ interface Product {
   id: string;
   name: string;
   description?: string;
+  sku?: string; // Auto-generated SKU
   price: string;
   stock: number;
   categoryId?: string;
@@ -234,6 +235,12 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-1 text-sm">
+                  {product.sku && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">SKU:</span>
+                      <span className="font-mono text-primary">{product.sku}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tồn kho:</span>
                     <span>{product.stock}</span>

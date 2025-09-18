@@ -95,6 +95,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       setFormData({
         name: product.name,
         description: product.description || "",
+        sku: product.sku || "", // Load existing SKU
         price: product.price,
         stock: product.stock.toString(),
         industryId: "",
@@ -252,6 +253,23 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 data-testid="input-product-name"
                 required
               />
+            </div>
+
+            {/* SKU Display */}
+            <div>
+              <Label htmlFor="sku">Mã SKU</Label>
+              <Input
+                id="sku"
+                value={formData.sku || (isEditing ? "Chưa có SKU" : "Sẽ tự động tạo khi lưu")}
+                readOnly
+                disabled
+                placeholder="Auto-generated SKU"
+                className="bg-muted text-muted-foreground"
+                data-testid="input-product-sku"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {isEditing ? "SKU đã được tạo" : "SKU sẽ được tạo tự động: 2 chữ đầu ngành hàng + 4 số"}
+              </p>
             </div>
 
             {/* Description */}
