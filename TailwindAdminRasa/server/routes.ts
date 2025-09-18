@@ -1451,6 +1451,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tag Management API (Admin-only Protected)
+  app.get("/api/tags", requireAdminAuth, async (req, res) => {
+    try {
+      const tags = await storage.getPageTags();
+      res.json(tags);
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+      res.status(500).json({ error: "Failed to fetch tags" });
+    }
+  });
+
+  app.post("/api/tags", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { name, color, description } = req.body;
+      
+      if (!name || !color) {
+        return res.status(400).json({ error: "Missing required fields: name and color" });
+      }
+
+      const tag = await storage.createPageTag({
+        name: name.trim(),
+        color: color,
+        description: description?.trim() || null,
+        isDefault: false
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Tag created successfully",
+        tag 
+      });
+    } catch (error) {
+      console.error("Error creating tag:", error);
+      res.status(500).json({ error: "Failed to create tag" });
+    }
+  });
+
+  app.patch("/api/tags/:tagId", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { tagId } = req.params;
+      const { name, color, description } = req.body;
+      
+      const updates: any = {};
+      if (name !== undefined) updates.name = name.trim();
+      if (color !== undefined) updates.color = color;
+      if (description !== undefined) updates.description = description?.trim() || null;
+      updates.updatedAt = new Date();
+
+      const tag = await storage.updatePageTag(tagId, updates);
+      
+      if (!tag) {
+        return res.status(404).json({ error: "Tag not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Tag updated successfully",
+        tag 
+      });
+    } catch (error) {
+      console.error("Error updating tag:", error);
+      res.status(500).json({ error: "Failed to update tag" });
+    }
+  });
+
+  app.delete("/api/tags/:tagId", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { tagId } = req.params;
+      
+      const success = await storage.deletePageTag(tagId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Tag not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Tag deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting tag:", error);
+      res.status(500).json({ error: "Failed to delete tag" });
+    }
+  });
+
+  // Tag assignment to social accounts
+  app.patch("/api/social-accounts/:accountId/tags", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { accountId } = req.params;
+      const { tags } = req.body;
+      
+      if (!Array.isArray(tags)) {
+        return res.status(400).json({ error: "Tags must be an array" });
+      }
+
+      const updatedAccount = await storage.updateSocialAccount(accountId, { tags });
+      
+      if (!updatedAccount) {
+        return res.status(404).json({ error: "Social account not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Tags updated successfully",
+        account: updatedAccount 
+      });
+    } catch (error) {
+      console.error("Error updating account tags:", error);
+      res.status(500).json({ error: "Failed to update account tags" });
+    }
+  });
+
   app.post("/api/facebook/webhook-config", requireAdminAuth, requireCSRFToken, async (req, res) => {
     try {
       const { verifyToken, webhookUrl } = req.body;

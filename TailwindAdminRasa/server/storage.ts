@@ -74,6 +74,13 @@ export interface IStorage {
   getSocialAccounts(): Promise<SocialAccount[]>;
   getSocialAccountByPlatform(platform: string): Promise<SocialAccount | undefined>;
   createSocialAccount(account: InsertSocialAccount): Promise<SocialAccount>;
+
+  // Page tag methods
+  getPageTags(): Promise<PageTag[]>;
+  getPageTag(id: string): Promise<PageTag | undefined>;
+  createPageTag(tag: InsertPageTag): Promise<PageTag>;
+  updatePageTag(id: string, tag: Partial<InsertPageTag>): Promise<PageTag | undefined>;
+  deletePageTag(id: string): Promise<boolean>;
   updateSocialAccount(id: string, account: Partial<InsertSocialAccount>): Promise<SocialAccount | undefined>;
   getSocialAccountByPageId(pageId: string): Promise<SocialAccount | undefined>;
 
@@ -643,6 +650,35 @@ export class DatabaseStorage implements IStorage {
   async getSocialAccountByPlatform(platform: string): Promise<SocialAccount | undefined> {
     const [account] = await db.select().from(socialAccounts).where(eq(socialAccounts.platform, platform as any));
     return account || undefined;
+  }
+
+  // Page tag methods implementation
+  async getPageTags(): Promise<PageTag[]> {
+    return await db.select().from(pageTags).orderBy(desc(pageTags.createdAt));
+  }
+
+  async getPageTag(id: string): Promise<PageTag | undefined> {
+    const [tag] = await db.select().from(pageTags).where(eq(pageTags.id, id));
+    return tag || undefined;
+  }
+
+  async createPageTag(tag: InsertPageTag): Promise<PageTag> {
+    const [newTag] = await db.insert(pageTags).values([tag as any]).returning();
+    return newTag;
+  }
+
+  async updatePageTag(id: string, tag: Partial<InsertPageTag>): Promise<PageTag | undefined> {
+    const [updatedTag] = await db
+      .update(pageTags)
+      .set({ ...tag, updatedAt: new Date() } as any)
+      .where(eq(pageTags.id, id))
+      .returning();
+    return updatedTag || undefined;
+  }
+
+  async deletePageTag(id: string): Promise<boolean> {
+    const result = await db.delete(pageTags).where(eq(pageTags.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   async createSocialAccount(account: InsertSocialAccount): Promise<SocialAccount> {

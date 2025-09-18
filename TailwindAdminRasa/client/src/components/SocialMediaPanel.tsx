@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink, Tag, Palette, BarChart3, Users, Filter, Search, Grid, List } from "lucide-react";
 import { FacebookChatManager } from "./FacebookChatManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { SocialAccount } from "@shared/schema";
+import type { SocialAccount, PageTag } from "@shared/schema";
 
 interface SocialMediaPanelProps {
   onConnectAccount?: (platform: string) => void;
@@ -58,18 +58,101 @@ const formatFollowers = (count: number) => {
   return count.toString();
 };
 
+// Beautiful color palette for tags
+const tagColors = [
+  { name: 'Xanh lá', value: '#10B981', bg: 'bg-emerald-500', text: 'text-white', hover: 'hover:bg-emerald-600' },
+  { name: 'Xanh dương', value: '#3B82F6', bg: 'bg-blue-500', text: 'text-white', hover: 'hover:bg-blue-600' },
+  { name: 'Tím', value: '#8B5CF6', bg: 'bg-violet-500', text: 'text-white', hover: 'hover:bg-violet-600' },
+  { name: 'Hồng', value: '#EC4899', bg: 'bg-pink-500', text: 'text-white', hover: 'hover:bg-pink-600' },
+  { name: 'Cam', value: '#F59E0B', bg: 'bg-amber-500', text: 'text-white', hover: 'hover:bg-amber-600' },
+  { name: 'Đỏ', value: '#EF4444', bg: 'bg-red-500', text: 'text-white', hover: 'hover:bg-red-600' },
+  { name: 'Xám', value: '#6B7280', bg: 'bg-gray-500', text: 'text-white', hover: 'hover:bg-gray-600' },
+  { name: 'Xanh mint', value: '#06B6D4', bg: 'bg-cyan-500', text: 'text-white', hover: 'hover:bg-cyan-600' },
+];
+
+// Priority levels with colors
+const priorityLevels = [
+  { name: 'Cao', value: 'high', color: '#EF4444', bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
+  { name: 'Trung bình', value: 'medium', color: '#F59E0B', bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-200' },
+  { name: 'Thấp', value: 'low', color: '#10B981', bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200' },
+];
+
 export function SocialMediaPanel({ 
   onConnectAccount, 
   onToggleAccount 
 }: SocialMediaPanelProps) {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("accounts");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [webhookVerifyToken, setWebhookVerifyToken] = useState<string>("");
   const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [newTagName, setNewTagName] = useState<string>("");
+  const [newTagColor, setNewTagColor] = useState<string>("#3B82F6");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Load existing tags
+  const { data: existingTags = [], isLoading: tagsLoading } = useQuery({
+    queryKey: ['page-tags'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/tags');
+      const data = await response.json();
+      return data as PageTag[];
+    },
+    refetchInterval: 30000 // Refresh every 30s
+  });
+
+  // Tag management mutations
+  const createTagMutation = useMutation({
+    mutationFn: async (tagData: { name: string; color: string; description?: string }) => {
+      const response = await apiRequest('POST', '/api/tags', tagData);
+      const data = await response.json();
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['page-tags'] });
+      toast({
+        title: "✅ Tag được tạo thành công",
+        description: `Tag "${newTagName}" với màu ${tagColors.find(c => c.value === newTagColor)?.name} đã được tạo.`,
+      });
+      setNewTagName("");
+      setNewTagColor("#3B82F6");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Lỗi tạo tag",
+        description: error.message || "Không thể tạo tag. Vui lòng thử lại.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteTagMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      const response = await apiRequest('DELETE', `/api/tags/${tagId}`);
+      const data = await response.json();
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['page-tags'] });
+      toast({
+        title: "✅ Tag đã được xóa",
+        description: "Tag đã được xóa thành công khỏi hệ thống.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Lỗi xóa tag",
+        description: error.message || "Không thể xóa tag. Vui lòng thử lại.",
+        variant: "destructive"
+      });
+    }
+  });
 
   // Load webhook configuration on mount
   const { data: webhookConfig } = useQuery({
@@ -332,7 +415,11 @@ export function SocialMediaPanel({
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-100">
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Dashboard
+          </TabsTrigger>
           <TabsTrigger value="accounts" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
             Tài khoản
@@ -341,9 +428,9 @@ export function SocialMediaPanel({
             <MessageSquare className="w-4 h-4" />
             Tin nhắn
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Thống kê
+          <TabsTrigger value="tags" className="flex items-center gap-2">
+            <Tag className="w-4 h-4" />
+            Quản lý Tags
           </TabsTrigger>
         </TabsList>
 
@@ -592,6 +679,338 @@ export function SocialMediaPanel({
         {/* Chat Tab Content */}
         <TabsContent value="chat" className="mt-6">
           <FacebookChatManager />
+        </TabsContent>
+
+        {/* Dashboard Tab Content */}
+        <TabsContent value="dashboard" className="space-y-6 mt-6">
+          {/* Dashboard Overview */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm">Tổng tài khoản</p>
+                    <p className="text-2xl font-bold">{accounts.length}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-200" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-emerald-100 text-sm">Đã kết nối</p>
+                    <p className="text-2xl font-bold">{accounts.filter(acc => acc.connected).length}</p>
+                  </div>
+                  <Settings className="h-8 w-8 text-emerald-200" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-violet-500 to-violet-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-violet-100 text-sm">Tin nhắn</p>
+                    <p className="text-2xl font-bold">--</p>
+                  </div>
+                  <MessageSquare className="h-8 w-8 text-violet-200" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-amber-100 text-sm">Tags hoạt động</p>
+                    <p className="text-2xl font-bold">{existingTags.length}</p>
+                  </div>
+                  <Tag className="h-8 w-8 text-amber-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Thao tác nhanh
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex-col gap-2 border-blue-200 hover:bg-blue-50"
+                  onClick={() => setActiveTab("accounts")}
+                >
+                  <Settings className="h-6 w-6 text-blue-600" />
+                  <span className="text-sm">Quản lý tài khoản</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex-col gap-2 border-green-200 hover:bg-green-50"
+                  onClick={() => setActiveTab("chat")}
+                >
+                  <MessageSquare className="h-6 w-6 text-green-600" />
+                  <span className="text-sm">Xem tin nhắn</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex-col gap-2 border-violet-200 hover:bg-violet-50"
+                  onClick={() => setActiveTab("tags")}
+                >
+                  <Tag className="h-6 w-6 text-violet-600" />
+                  <span className="text-sm">Quản lý tags</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex-col gap-2 border-orange-200 hover:bg-orange-50"
+                  onClick={() => window.open('https://developers.facebook.com/apps', '_blank')}
+                >
+                  <ExternalLink className="h-6 w-6 text-orange-600" />
+                  <span className="text-sm">Facebook Dev</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tags Management Tab Content */}
+        <TabsContent value="tags" className="space-y-6 mt-6">
+          {/* Tag Assignment to Accounts */}
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-600">
+                <Users className="h-5 w-5" />
+                Gán tags cho tài khoản
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Chọn accounts và gán tags để tổ chức quản lý
+              </p>
+            </CardHeader>
+            <CardContent>
+              {accounts.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Chưa có tài khoản social media nào</p>
+                  <p className="text-sm">Kết nối Facebook account trước để sử dụng tags</p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {accounts.map((account) => (
+                    <div key={account.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-full ${platformColors[account.platform]}`}>
+                          <div className="w-4 h-4">
+                            {React.createElement(platformIcons[account.platform])}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-medium">{account.name}</p>
+                          <p className="text-sm text-muted-foreground">{account.platform}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-wrap">
+                        {existingTags.map((tag) => {
+                          const isAssigned = account.tags?.includes(tag.id) || false;
+                          return (
+                            <button
+                              key={tag.id}
+                              onClick={async () => {
+                                try {
+                                  const currentTags = account.tags || [];
+                                  const newTags = isAssigned 
+                                    ? currentTags.filter(t => t !== tag.id)
+                                    : [...currentTags, tag.id];
+                                  
+                                  const response = await apiRequest('PATCH', `/api/social-accounts/${account.id}/tags`, { tags: newTags });
+                                  
+                                  // Refresh account data
+                                  queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
+                                  
+                                  toast({
+                                    title: `✅ Tag ${isAssigned ? 'gỡ bỏ' : 'gán'} thành công`,
+                                    description: `Tag "${tag.name}" đã được ${isAssigned ? 'gỡ bỏ khỏi' : 'gán cho'} ${account.name}`,
+                                  });
+                                } catch (error: any) {
+                                  toast({
+                                    title: "❌ Lỗi cập nhật tag",
+                                    description: error.message || "Không thể cập nhật tag. Vui lòng thử lại.",
+                                    variant: "destructive"
+                                  });
+                                }
+                              }}
+                              className={`px-2 py-1 rounded-full text-xs border transition-all ${
+                                isAssigned
+                                  ? 'text-white border-transparent'
+                                  : 'text-gray-600 border-gray-300 hover:border-gray-400'
+                              }`}
+                              style={{
+                                backgroundColor: isAssigned ? tag.color : 'transparent'
+                              }}
+                            >
+                              {tag.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tag Creation */}
+          <Card className="border-l-4 border-l-violet-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-violet-600">
+                <Plus className="h-5 w-5" />
+                Tạo tag mới
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Tạo tags màu sắc để tổ chức conversations và accounts
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="tag-name">Tên tag</Label>
+                  <Input
+                    id="tag-name"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Nhập tên tag..."
+                    className="font-medium"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Màu sắc</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {tagColors.map((color) => (
+                      <button
+                        key={color.value}
+                        onClick={() => setNewTagColor(color.value)}
+                        className={`w-8 h-8 rounded-full border-2 transition-all ${
+                          newTagColor === color.value ? 'border-gray-800 scale-110' : 'border-gray-300'
+                        }`}
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <Button 
+                className="bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700"
+                disabled={!newTagName.trim() || createTagMutation.isPending}
+                onClick={() => {
+                  createTagMutation.mutate({
+                    name: newTagName,
+                    color: newTagColor,
+                    description: ""
+                  });
+                }}
+              >
+                {createTagMutation.isPending ? (
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                {createTagMutation.isPending ? "Đang tạo..." : "Tạo tag"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Existing Tags */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                Tags hiện có
+              </CardTitle>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Tìm kiếm tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
+                <Button variant="outline" size="sm">
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {tagsLoading ? (
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : existingTags.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Tag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Chưa có tags nào</p>
+                  <p className="text-sm">Tạo tag đầu tiên để bắt đầu tổ chức conversations</p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {existingTags
+                    .filter(tag => !searchQuery || tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((tag) => (
+                      <div
+                        key={tag.id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full border border-gray-300"
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          <div>
+                            <p className="font-medium text-sm">{tag.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {tag.description || `Tạo ${new Date(tag.createdAt).toLocaleDateString('vi-VN')}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => {
+                              if (window.confirm(`Xác nhận xóa tag "${tag.name}"?`)) {
+                                deleteTagMutation.mutate(tag.id);
+                              }
+                            }}
+                            disabled={deleteTagMutation.isPending}
+                          >
+                            {deleteTagMutation.isPending ? (
+                              <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
+                            ) : (
+                              <Settings className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Analytics Tab Content */}
