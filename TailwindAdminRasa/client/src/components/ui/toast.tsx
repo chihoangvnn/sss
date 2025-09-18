@@ -30,6 +30,13 @@ const toastVariants = cva(
         default: "border bg-background text-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
+        // 🌿 Gentle Green Notification Variants
+        "gentle-success": 
+          "bg-gradient-to-r from-gentle-cream to-gentle-whisper border-gentle-outline border-2 text-gentle-deep shadow-xl shadow-gentle-shadow backdrop-blur-sm animate-slide-in-gentle hover:animate-gentle-glow",
+        "gentle-sparkle":
+          "bg-gradient-to-br from-gentle-sparkle/10 to-gentle-mint/5 border-gentle-sparkle border text-gentle-deep shadow-lg shadow-gentle-sparkle/20 animate-sparkle hover:shadow-gentle-sparkle/30 transition-all duration-300",
+        "gentle-glow":
+          "bg-gentle-cream/80 border-gentle-mint border-2 text-gentle-deep shadow-2xl shadow-gentle-glow animate-gentle-glow backdrop-blur-md hover:scale-105 transition-transform"
       },
     },
     defaultVariants: {

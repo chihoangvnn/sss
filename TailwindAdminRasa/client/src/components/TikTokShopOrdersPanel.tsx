@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
+import { useNewOrderNotification, TestNewOrderNotification } from './NewOrderNotification';
 
 const statusColors = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', badge: 'bg-yellow-500' },
@@ -101,6 +102,10 @@ export function TikTokShopOrdersPanel({ businessAccountId }: { businessAccountId
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // 🌿 Gentle Green Notifications
+  const { triggerNewOrderNotification, NewOrderNotificationComponent } = useNewOrderNotification();
+  const previousOrdersRef = useRef<Set<string>>(new Set());
 
   // Fetch orders
   const { data: ordersData, isLoading, error } = useQuery({
@@ -139,6 +144,46 @@ export function TikTokShopOrdersPanel({ businessAccountId }: { businessAccountId
     },
     enabled: !!businessAccountId
   });
+
+  // 🌿 New Order Detection & Gentle Notification Logic
+  useEffect(() => {
+    if (ordersData?.orders && businessAccountId) {
+      const currentOrders = new Set<string>(ordersData.orders.map((order: TikTokShopOrder) => order.id));
+      
+      // Check for new orders (orders that exist now but weren't in the previous fetch)
+      ordersData.orders.forEach((order: TikTokShopOrder) => {
+        // Only notify for truly new orders (not on first load)
+        if (!previousOrdersRef.current.has(order.id) && previousOrdersRef.current.size > 0) {
+          // Calculate time ago
+          const orderDate = new Date(order.orderDate);
+          const now = new Date();
+          const diffInMinutes = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60));
+          
+          let timeAgo = 'Vừa xong';
+          if (diffInMinutes >= 1 && diffInMinutes < 60) {
+            timeAgo = `${diffInMinutes} phút trước`;
+          } else if (diffInMinutes >= 60) {
+            const hours = Math.floor(diffInMinutes / 60);
+            timeAgo = `${hours} giờ trước`;
+          }
+          
+          // Trigger gentle green notification
+          triggerNewOrderNotification({
+            id: order.id,
+            orderNumber: order.orderNumber || `TTS-${order.id.slice(0, 8)}`,
+            customerName: order.customerInfo.name,
+            totalAmount: order.totalAmount,
+            currency: order.currency || 'VND',
+            itemCount: order.items.length,
+            timeAgo
+          });
+        }
+      });
+      
+      // Update previous orders for next comparison
+      previousOrdersRef.current = currentOrders;
+    }
+  }, [ordersData, businessAccountId, triggerNewOrderNotification]);
 
   // Update order status mutation
   const updateOrderMutation = useMutation({
@@ -246,6 +291,14 @@ export function TikTokShopOrdersPanel({ businessAccountId }: { businessAccountId
 
   return (
     <div className="space-y-6">
+      {/* 🌿 Gentle Green Notifications */}
+      <NewOrderNotificationComponent />
+      
+      {/* 🧪 Test Notification (Dev Only) */}
+      <div className="flex justify-end">
+        <TestNewOrderNotification />
+      </div>
+      
       {/* Analytics Overview */}
       {analytics && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
