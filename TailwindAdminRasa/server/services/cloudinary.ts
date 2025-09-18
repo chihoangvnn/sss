@@ -2,12 +2,10 @@ import { v2 as cloudinary } from 'cloudinary';
 import type { CloudinaryImage, CloudinaryVideo } from '@shared/schema';
 
 // Configure Cloudinary
-console.log('Cloudinary Config - Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME || 'NOT SET');
-console.log('Cloudinary Config - API Key:', process.env.CLOUDINARY_API_KEY ? 'SET' : 'NOT SET');
-console.log('Cloudinary Config - API Secret:', process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET');
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME === 'Untitled' ? 'dnqfvqnsg' : process.env.CLOUDINARY_CLOUD_NAME;
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  cloud_name: cloudName,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
