@@ -478,16 +478,41 @@ export default function PublicLandingPage() {
     const cleanUrl = window.location.origin + window.location.pathname;
     canonical.setAttribute('href', cleanUrl);
     
+    // Get valid image URLs FIRST (before using in resource hints)
+    const productImages = [];
+    if (landingPage.displayImage) productImages.push(landingPage.displayImage);
+    if (product?.image && product.image !== landingPage.displayImage) productImages.push(product.image);
+    
+    // Add critical resource hints for performance
+    const addResourceHint = (rel: string, href: string, as?: string) => {
+      const existing = document.querySelector(`link[rel="${rel}"][href="${href}"]`);
+      if (!existing) {
+        const link = document.createElement('link');
+        link.setAttribute('rel', rel);
+        link.setAttribute('href', href);
+        if (as) {
+          link.setAttribute('as', as); // Use the actual 'as' parameter
+          if (as === 'font') {
+            link.setAttribute('crossorigin', 'anonymous');
+          }
+        }
+        // Critical: Add crossorigin for fonts.gstatic.com preconnect regardless of 'as'
+        if (rel === 'preconnect' && href.includes('fonts.gstatic.com')) {
+          link.setAttribute('crossorigin', 'anonymous');
+        }
+        document.head.appendChild(link);
+      }
+    };
+    
+    // Preconnect to Google Fonts for faster font loading
+    addResourceHint('preconnect', 'https://fonts.googleapis.com');
+    addResourceHint('preconnect', 'https://fonts.gstatic.com');
+    
     // JSON-LD Structured Data for Google Rich Snippets
     const existingJsonLd = document.querySelector('script[type="application/ld+json"][data-seo="true"]');
     if (existingJsonLd) {
       existingJsonLd.remove();
     }
-    
-    // Get valid image URLs
-    const productImages = [];
-    if (landingPage.displayImage) productImages.push(landingPage.displayImage);
-    if (product?.image && product.image !== landingPage.displayImage) productImages.push(product.image);
     
     const structuredData = {
       "@context": "https://schema.org",
@@ -804,11 +829,18 @@ export default function PublicLandingPage() {
 
             <div>
               {landingPage.displayImage && (
-                <img
-                  src={landingPage.displayImage}
-                  alt={landingPage.displayName}
-                  className="w-full h-auto rounded-lg shadow-lg"
-                />
+                <div className="w-full aspect-video bg-gray-100 rounded-lg overflow-hidden shadow-lg">
+                  <img
+                    src={landingPage.displayImage}
+                    alt={landingPage.displayName}
+                    className="w-full h-full object-cover"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    width="600"
+                    height="337"
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -925,6 +957,10 @@ export default function PublicLandingPage() {
                           src={review.customerAvatar}
                           alt={review.customerName}
                           className="w-12 h-12 rounded-full border-3 border-orange-200 shadow-sm"
+                          loading="lazy"
+                          decoding="async"
+                          width="48"
+                          height="48"
                         />
                       ) : (
                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center text-white font-semibold text-lg">
@@ -1146,6 +1182,10 @@ export default function PublicLandingPage() {
                           src={landingPage.displayImage}
                           alt={landingPage.displayName}
                           className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                          loading="lazy"
+                          decoding="async"
+                          width="80"
+                          height="80"
                         />
                       )}
                       <div className="flex-1 min-w-0">
