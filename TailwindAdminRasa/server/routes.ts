@@ -6,6 +6,8 @@ import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
 import { generateSKU } from "./utils/sku-generator";
+import multer from 'multer';
+import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } from './services/cloudinary';
 
 
 // Payment status validation schema
@@ -78,6 +80,23 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000); // Clean up every 5 minutes
 
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+    files: 10, // Maximum 10 files per request
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images and videos only
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and video files are allowed'));
+    }
+  },
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
@@ -108,6 +127,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Cloudinary Media Upload API
+  app.post("/api/media/upload", upload.array('files', 10) as any, async (req: any, res: any) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      
+      if (!files || files.length === 0) {
+        return res.status(400).json({
+          error: "No files provided",
+          message: "Please select at least one file to upload"
+        });
+      }
+
+      const uploadPromises = files.map(async (file) => {
+        const folder = req.body.folder || 'products';
+        const alt = req.body.alt || '';
+        const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
+
+        const result = await uploadToCloudinary(file.buffer, file.mimetype, {
+          folder,
+          tags,
+        });
+
+        return convertToCloudinaryMedia(result, alt);
+      });
+
+      const uploadedMedia = await Promise.all(uploadPromises);
+
+      res.json({
+        success: true,
+        message: `Successfully uploaded ${uploadedMedia.length} file(s)`,
+        media: uploadedMedia,
+      });
+
+    } catch (error) {
+      console.error("Media upload error:", error);
+      res.status(500).json({
+        error: "Upload failed",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // Delete media from Cloudinary
+  app.delete("/api/media/:publicId", async (req, res) => {
+    try {
+      const { publicId } = req.params;
+      const { resourceType } = req.query;
+
+      if (!publicId) {
+        return res.status(400).json({
+          error: "Missing public_id",
+          message: "Public ID is required to delete media"
+        });
+      }
+
+      await deleteFromCloudinary(publicId, resourceType as 'image' | 'video');
+
+      res.json({
+        success: true,
+        message: "Media deleted successfully",
+        publicId
+      });
+
+    } catch (error) {
+      console.error("Media deletion error:", error);
+      res.status(500).json({
+        error: "Deletion failed",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     }
   });
 
