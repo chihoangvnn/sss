@@ -183,6 +183,54 @@ const requireSessionAuth = (req: any, res: any, next: any) => {
   next();
 };
 
+// Admin-only access for webhook configuration (production security)
+const requireAdminAuth = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  // Check session first
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Authentication required", 
+      message: "Please log in to access this resource" 
+    });
+  }
+  
+  // Check admin role (customize based on your user role system)
+  if (!req.session.isAdmin && req.session.role !== 'admin') {
+    return res.status(403).json({ 
+      error: "Admin access required", 
+      message: "Only administrators can access webhook configuration" 
+    });
+  }
+  
+  next();
+};
+
+// CSRF protection for state-changing operations
+const requireCSRFToken = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  const csrfToken = req.headers['x-csrf-token'] || req.body.csrfToken;
+  const sessionCSRF = req.session.csrfToken;
+  
+  if (!csrfToken || !sessionCSRF || csrfToken !== sessionCSRF) {
+    return res.status(403).json({ 
+      error: "CSRF token invalid", 
+      message: "Invalid or missing CSRF token" 
+    });
+  }
+  
+  next();
+};
+
 // Rate limiting for payment endpoints
 const paymentRateLimit = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
@@ -1284,7 +1332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { content } = req.body;
       
       // Get conversation details
-      const conversation = await storage.getFacebookConversationById(conversationId);
+      const conversation = await storage.getFacebookConversation(conversationId);
       if (!conversation) {
         return res.status(404).json({ error: "Conversation not found" });
       }
@@ -1366,11 +1414,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/facebook/conversations/:conversationId/read", async (req, res) => {
     try {
       const { conversationId } = req.params;
-      const success = await storage.markConversationAsRead(conversationId);
-      res.json({ success });
+      
+      // Mark conversation as read
+      await storage.updateFacebookConversation(conversationId, { isRead: true });
+      
+      res.json({ success: true });
     } catch (error) {
       console.error("Error marking conversation as read:", error);
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Failed to mark conversation as read" });
+    }
+  });
+
+  // Webhook Configuration API (Admin-only Protected)
+  app.get("/api/facebook/webhook-config", requireAdminAuth, async (req, res) => {
+    try {
+      const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
+      if (!facebookAccount) {
+        return res.json({ 
+          webhookUrl: `${req.protocol}://${req.get('host')}/api/webhooks/facebook`,
+          verifyToken: "",
+          status: 'not_configured'
+        });
+      }
+
+      const webhookConfig = facebookAccount.webhookSubscriptions?.[0];
+      res.json({
+        webhookUrl: webhookConfig?.webhookUrl || `${req.protocol}://${req.get('host')}/api/webhooks/facebook`,
+        verifyToken: webhookConfig?.verifyToken ? `${webhookConfig.verifyToken.substring(0, 6)}****` : "",
+        verifyTokenSet: !!webhookConfig?.verifyToken,
+        status: webhookConfig?.status || 'not_configured',
+        lastEvent: webhookConfig?.lastEvent
+      });
+    } catch (error) {
+      console.error("Error fetching webhook config:", error);
+      res.status(500).json({ error: "Failed to fetch webhook configuration" });
+    }
+  });
+
+  app.post("/api/facebook/webhook-config", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { verifyToken, webhookUrl } = req.body;
+      
+      if (!verifyToken || !webhookUrl) {
+        return res.status(400).json({ error: "Missing required fields: verifyToken and webhookUrl" });
+      }
+
+      // Get or create Facebook account
+      let facebookAccount = await storage.getSocialAccountByPlatform('facebook');
+      
+      if (!facebookAccount) {
+        // Create new Facebook account entry for webhook config
+        facebookAccount = await storage.createSocialAccount({
+          platform: 'facebook',
+          name: 'Facebook Webhook',
+          accountId: 'webhook_config',
+          accessToken: null,
+          refreshToken: null,
+          tokenExpiresAt: null,
+          pageAccessTokens: [],
+          webhookSubscriptions: [],
+          tags: [],
+          followers: 0,
+          connected: false,
+          lastPost: null,
+          engagement: "0",
+          lastSync: null,
+          isActive: true
+        });
+      }
+
+      // Update webhook configuration
+      const webhookConfig = {
+        objectType: 'page' as const,
+        objectId: facebookAccount.id,
+        subscriptionId: undefined,
+        fields: ['messages', 'messaging_postbacks', 'messaging_reads'],
+        webhookUrl,
+        verifyToken,
+        status: 'active' as const,
+        lastEvent: new Date().toISOString()
+      };
+
+      // Update or add webhook subscription
+      const existingSubscriptions = facebookAccount.webhookSubscriptions || [];
+      const updatedSubscriptions = existingSubscriptions.length > 0 
+        ? [webhookConfig, ...existingSubscriptions.slice(1)]
+        : [webhookConfig];
+
+      await storage.updateSocialAccount(facebookAccount.id, {
+        webhookSubscriptions: updatedSubscriptions
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Webhook configuration saved successfully",
+        config: webhookConfig 
+      });
+    } catch (error) {
+      console.error("Error saving webhook config:", error);
+      res.status(500).json({ error: "Failed to save webhook configuration" });
     }
   });
 
@@ -1416,23 +1558,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Facebook Webhook Verification (GET) and Event Processing (POST)
-  app.get("/api/webhooks/facebook", (req, res) => {
-    // Facebook webhook verification
-    const VERIFY_TOKEN = process.env.FACEBOOK_VERIFY_TOKEN || "your_verify_token_here";
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
+  app.get("/api/webhooks/facebook", async (req, res) => {
+    try {
+      // Get verify token from database (prioritize database over environment)
+      const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
+      const webhookConfig = facebookAccount?.webhookSubscriptions?.[0];
+      const VERIFY_TOKEN = webhookConfig?.verifyToken || process.env.FACEBOOK_VERIFY_TOKEN || "your_verify_token_here";
+      
+      const mode = req.query['hub.mode'];
+      const token = req.query['hub.verify_token'];
+      const challenge = req.query['hub.challenge'];
+      
+      console.log('Webhook verification attempt:', { 
+        mode, 
+        token, 
+        dbToken: webhookConfig?.verifyToken ? 'found' : 'missing',
+        envToken: process.env.FACEBOOK_VERIFY_TOKEN ? 'found' : 'missing'
+      });
 
-    if (mode && token) {
-      if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-        console.log('Facebook webhook verified');
-        res.status(200).send(challenge);
+      if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+          console.log('Facebook webhook verified with token:', token);
+          res.status(200).send(challenge);
+        } else {
+          console.error('Facebook webhook verification failed. Expected:', VERIFY_TOKEN, 'Got:', token);
+          res.sendStatus(403);
+        }
       } else {
-        console.error('Facebook webhook verification failed');
-        res.sendStatus(403);
+        console.error('Missing webhook verification parameters');
+        res.sendStatus(400);
       }
-    } else {
-      res.sendStatus(400);
+    } catch (error) {
+      console.error('Error during webhook verification:', error);
+      res.sendStatus(500);
     }
   });
 

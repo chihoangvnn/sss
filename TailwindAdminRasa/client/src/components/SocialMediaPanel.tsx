@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp } from "lucide-react";
+import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink } from "lucide-react";
 import { FacebookChatManager } from "./FacebookChatManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -62,12 +65,93 @@ export function SocialMediaPanel({
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("accounts");
+  const [webhookVerifyToken, setWebhookVerifyToken] = useState<string>("");
+  const [webhookUrl, setWebhookUrl] = useState<string>("");
+  const [copied, setCopied] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Load webhook configuration on mount
+  const { data: webhookConfig } = useQuery({
+    queryKey: ['facebook-webhook-config'],
+    queryFn: async () => {
+      const response = await fetch('/api/facebook/webhook-config');
+      if (!response.ok) throw new Error('Failed to fetch webhook config');
+      return response.json();
+    },
+  });
+
+  // Update state when webhook config loads  
+  useEffect(() => {
+    if (webhookConfig) {
+      // Only set token if it's not masked (i.e., empty or full token)
+      if (webhookConfig.verifyToken && !webhookConfig.verifyToken.includes('****')) {
+        setWebhookVerifyToken(webhookConfig.verifyToken);
+      } else if (!webhookConfig.verifyTokenSet) {
+        setWebhookVerifyToken(""); // Clear if no token set
+      }
+      // Keep existing token in input if masked (don't overwrite user input)
+      
+      setWebhookUrl(webhookConfig.webhookUrl || "");
+    }
+  }, [webhookConfig]);
+
+  // Save webhook configuration mutation
+  const saveWebhookMutation = useMutation({
+    mutationFn: async (config: { verifyToken: string; webhookUrl: string }) => {
+      const response = await fetch('/api/facebook/webhook-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save webhook config');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facebook-webhook-config'] });
+      toast({
+        title: "Webhook cấu hình thành công",
+        description: "Verification token đã được lưu và sẵn sàng xác thực.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi cấu hình webhook",
+        description: error.message || "Không thể lưu cấu hình webhook.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: accounts = [], isLoading, error } = useQuery<SocialAccount[]>({
     queryKey: ["/api/social-accounts"],
   });
+
+  // Handler functions
+  const handleSaveWebhookConfig = () => {
+    if (!webhookVerifyToken.trim()) {
+      toast({
+        title: "Thiếu thông tin",
+        description: "Vui lòng nhập verify token.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const finalWebhookUrl = webhookUrl || `${window.location.origin}/api/webhooks/facebook`;
+    
+    saveWebhookMutation.mutate({
+      verifyToken: webhookVerifyToken,
+      webhookUrl: finalWebhookUrl,
+    });
+  };
 
   // Check for OAuth success/error on page load
   useEffect(() => {
@@ -388,6 +472,121 @@ export function SocialMediaPanel({
         })
         )}
           </div>
+
+          {/* Webhook Configuration Section */}
+          <Separator className="my-8" />
+          
+          <Card className="border-l-4 border-l-blue-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-600">
+                <Webhook className="h-5 w-5" />
+                Cấu hình Webhook Facebook
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Thiết lập webhook để nhận tin nhắn và cập nhật real-time từ Facebook
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Webhook URL */}
+              <div className="space-y-2">
+                <Label htmlFor="webhook-url">URL Webhook</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="webhook-url"
+                    value={webhookUrl || `${window.location.origin}/api/webhooks/facebook`}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    placeholder="https://your-domain.com/api/webhooks/facebook"
+                    className="font-mono text-xs"
+                    readOnly
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const url = webhookUrl || `${window.location.origin}/api/webhooks/facebook`;
+                      navigator.clipboard.writeText(url);
+                      setCopied('url');
+                      setTimeout(() => setCopied(null), 2000);
+                    }}
+                    className="shrink-0"
+                  >
+                    {copied === 'url' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Copy URL này vào Facebook App Settings → Webhooks
+                </p>
+              </div>
+
+              {/* Verify Token */}
+              <div className="space-y-2">
+                <Label htmlFor="verify-token">Verify Token</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="verify-token"
+                    value={webhookVerifyToken}
+                    onChange={(e) => setWebhookVerifyToken(e.target.value)}
+                    placeholder={webhookConfig?.verifyTokenSet 
+                      ? "Token đã được cấu hình (nhập token mới để thay đổi)" 
+                      : "Nhập verification token từ Facebook"
+                    }
+                    className="font-mono"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (webhookVerifyToken) {
+                        navigator.clipboard.writeText(webhookVerifyToken);
+                        setCopied('token');
+                        setTimeout(() => setCopied(null), 2000);
+                      }
+                    }}
+                    disabled={!webhookVerifyToken}
+                    className="shrink-0"
+                  >
+                    {copied === 'token' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Token này phải giống trong Facebook App Settings
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                  disabled={!webhookVerifyToken.trim()}
+                  onClick={handleSaveWebhookConfig}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Lưu cấu hình
+                </Button>
+                
+                <Button variant="outline" onClick={() => {
+                  window.open('https://developers.facebook.com/apps', '_blank');
+                }}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Mở Facebook Developers
+                </Button>
+              </div>
+
+              {/* Status indicator */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 text-blue-700 font-medium text-sm">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  Trạng thái: {(webhookConfig?.verifyTokenSet || webhookVerifyToken) ? 'Đã cấu hình' : 'Chưa cấu hình'}
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  {(webhookConfig?.verifyTokenSet || webhookVerifyToken)
+                    ? 'Webhook sẵn sàng nhận tin nhắn từ Facebook'
+                    : 'Cần nhập verify token để hoạt động'
+                  }
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Chat Tab Content */}
