@@ -6,6 +6,18 @@ import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
 import { tiktokAuth } from "./tiktok-auth";
+
+// 🔒 Authentication Middleware for Sync Operations
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Unauthorized. Please log in to perform sync operations.",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  next();
+};
+
 import { tiktokShopOrdersService } from './tiktok-shop-orders';
 import { tiktokShopSellerService } from './tiktok-shop-seller';
 import { tiktokShopFulfillmentService } from './tiktok-shop-fulfillment';
@@ -887,7 +899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual sync from storefront orders
-  app.post("/api/orders/sync/storefront", async (req, res) => {
+  app.post("/api/orders/sync/storefront", requireAuth, requireCSRFToken, async (req, res) => {
     try {
       console.log('🏪 Manual storefront sync initiated...');
       const result = await orderSyncService.syncStorefrontOrders();
@@ -907,7 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual sync from TikTok Shop orders  
-  app.post("/api/orders/sync/tiktok-shop", async (req, res) => {
+  app.post("/api/orders/sync/tiktok-shop", requireAuth, requireCSRFToken, async (req, res) => {
     try {
       console.log('🎵 Manual TikTok Shop sync initiated...');
       const result = await orderSyncService.syncTikTokShopOrders();
@@ -927,7 +939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual sync all sources
-  app.post("/api/orders/sync/all", async (req, res) => {
+  app.post("/api/orders/sync/all", requireAuth, requireCSRFToken, async (req, res) => {
     try {
       console.log('🚀 Manual unified sync initiated...');
       const result = await orderSyncService.syncAllOrders();

@@ -592,7 +592,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
-    const [newOrder] = await db.insert(orders).values(order).returning();
+    // Set defaults for new fields if not provided
+    const orderData = {
+      ...order,
+      source: order.source || 'admin',
+      syncStatus: order.syncStatus || 'manual'
+    };
+    
+    const [newOrder] = await db.insert(orders).values(orderData).returning();
     return newOrder;
   }
 

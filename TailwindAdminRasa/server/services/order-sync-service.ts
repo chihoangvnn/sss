@@ -1,4 +1,7 @@
 import { storage } from '../storage';
+import { db } from '../db';
+import { orders, orderItems } from '../../shared/schema';
+import { eq, and } from 'drizzle-orm';
 import type { StorefrontOrder, TikTokShopOrder, InsertOrder, Order } from '../../shared/schema';
 
 /**
@@ -79,8 +82,8 @@ export class OrderSyncService {
             }
           };
 
-          // Create main order
-          const newOrder = await storage.createOrder(mainOrderData);
+          // 🔒 CRITICAL: Use transactional upsert to handle unique constraint
+          const newOrder = await this.upsertOrderWithTransaction(mainOrderData);
           
           // Create order items if product exists
           if (storefrontOrder.productId) {
@@ -193,8 +196,8 @@ export class OrderSyncService {
             }
           };
 
-          // Create main order
-          const newOrder = await storage.createOrder(mainOrderData);
+          // 🔒 CRITICAL: Use transactional upsert to handle unique constraint
+          const newOrder = await this.upsertOrderWithTransaction(mainOrderData);
           
           // Create order items for TikTok products
           if (tiktokOrder.items && tiktokOrder.items.length > 0) {
@@ -363,6 +366,55 @@ export class OrderSyncService {
       console.warn('Could not fetch TikTok shop orders:', error);
       return [];
     }
+  }
+
+  /**
+   * 🔒 CRITICAL: Proper Upsert with onConflictDoUpdate (Architect-recommended)
+   * Uses Postgres native ON CONFLICT for atomic upsert operations
+   */
+  private async upsertOrderWithTransaction(orderData: InsertOrder): Promise<Order> {
+    return await db.transaction(async (tx) => {
+      // Prepare clean insert data with explicit typing
+      const insertData = {
+        customerId: orderData.customerId,
+        total: orderData.total,
+        status: orderData.status || 'pending',
+        items: orderData.items,
+        source: orderData.source || 'admin',
+        sourceOrderId: orderData.sourceOrderId,
+        sourceReference: orderData.sourceReference,
+        syncStatus: orderData.syncStatus || 'synced',
+        syncData: orderData.syncData as any || null,
+        sourceCustomerInfo: orderData.sourceCustomerInfo as any || null
+      };
+
+      // Use onConflictDoUpdate for proper atomic upsert
+      const [upsertedOrder] = await tx
+        .insert(orders)
+        .values([insertData])
+        .onConflictDoUpdate({
+          target: [orders.source, orders.sourceOrderId],
+          set: {
+            customerId: insertData.customerId,
+            total: insertData.total,
+            status: insertData.status,
+            items: insertData.items,
+            sourceReference: insertData.sourceReference,
+            syncStatus: 'synced',
+            syncData: insertData.syncData as any,
+            sourceCustomerInfo: insertData.sourceCustomerInfo as any,
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+        
+      if (!upsertedOrder) {
+        throw new Error(`Failed to upsert order: ${orderData.source}/${orderData.sourceOrderId}`);
+      }
+      
+      console.log(`✅ Order upserted: ${upsertedOrder.source}/${upsertedOrder.sourceOrderId} (${upsertedOrder.id})`);
+      return upsertedOrder;
+    });
   }
 
   /**

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -189,7 +189,10 @@ export const orders = pgTable("orders", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // 🔒 CRITICAL: Unique constraint to prevent duplicate syncs
+  uniqueSourceOrder: unique().on(table.source, table.sourceOrderId),
+}));
 
 // Order items table
 export const orderItems = pgTable("order_items", {
