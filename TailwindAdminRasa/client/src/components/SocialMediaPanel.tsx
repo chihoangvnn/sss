@@ -497,15 +497,44 @@ export function SocialMediaPanel({
           <p className="text-gray-600">Kết nối và quản lý các tài khoản mạng xã hội của bạn</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            data-testid="button-connect-facebook" 
-            onClick={() => handleConnectAccount('facebook')}
-            disabled={connectingPlatform === 'facebook' || connectFacebookMutation.isPending}
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-          >
-            <Facebook className="h-4 w-4 mr-2" />
-            {connectingPlatform === 'facebook' ? 'Đang kết nối...' : 'Kết nối Facebook'}
-          </Button>
+          {/* Facebook Connect Button - Only show on Facebook page */}
+          {currentPlatform === 'facebook' && (
+            <Button 
+              data-testid="button-connect-facebook" 
+              onClick={() => handleConnectAccount('facebook')}
+              disabled={connectingPlatform === 'facebook' || connectFacebookMutation.isPending}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+            >
+              <Facebook className="h-4 w-4 mr-2" />
+              {connectingPlatform === 'facebook' ? 'Đang kết nối...' : 'Kết nối Facebook'}
+            </Button>
+          )}
+          
+          {/* TikTok Business Connect Button - Only show on TikTok Business page */}
+          {currentPlatform === 'tiktok-business' && (
+            <Button 
+              data-testid="button-connect-tiktok-business" 
+              onClick={() => handleConnectAccount('tiktok-business')}
+              disabled={connectingPlatform === 'tiktok-business' || connectTikTokBusinessMutation.isPending}
+              className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700"
+            >
+              <TikTokIcon className="h-4 w-4 mr-2" />
+              {connectingPlatform === 'tiktok-business' ? 'Đang kết nối...' : 'Kết nối TikTok Business'}
+            </Button>
+          )}
+          
+          {/* TikTok Shop Connect Button - Only show on TikTok Shop page */}
+          {currentPlatform === 'tiktok-shop' && (
+            <Button 
+              data-testid="button-connect-tiktok-shop" 
+              onClick={() => handleConnectAccount('tiktok-shop')}
+              disabled={connectingPlatform === 'tiktok-shop' || connectTikTokShopMutation.isPending}
+              className="bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800"
+            >
+              <TikTokIcon className="h-4 w-4 mr-2" />
+              {connectingPlatform === 'tiktok-shop' ? 'Đang kết nối...' : 'Kết nối TikTok Shop'}
+            </Button>
+          )}
           <Button 
             data-testid="button-add-social-account" 
             onClick={() => console.log('Add other social account triggered')}
