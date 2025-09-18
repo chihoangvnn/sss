@@ -209,6 +209,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
       status: formData.status,
       image: formData.image.trim() || undefined,
+      images: formData.images || [],
+      videos: formData.videos || [],
     };
 
     saveMutation.mutate(saveData);
