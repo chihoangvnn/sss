@@ -34,6 +34,38 @@ export interface CloudinaryVideo extends CloudinaryBase {
 
 export type CloudinaryMedia = CloudinaryImage | CloudinaryVideo;
 
+// Facebook Management Types
+export interface FacebookPageToken {
+  pageId: string;
+  pageName: string;
+  accessToken: string;
+  permissions: string[];
+  expiresAt?: string;
+  status: 'active' | 'expired' | 'revoked';
+}
+
+export interface WebhookSubscription {
+  objectType: 'page' | 'user';
+  objectId: string;
+  subscriptionId?: string;
+  fields: string[]; // fields subscribed to
+  webhookUrl: string;
+  verifyToken: string;
+  status: 'active' | 'inactive' | 'pending';
+  lastEvent?: string;
+}
+
+export interface FacebookAttachment {
+  type: 'image' | 'video' | 'audio' | 'file' | 'template' | 'fallback';
+  url: string;
+  filename?: string;
+  filesize?: number;
+  preview_url?: string;
+  media_url?: string;
+  template_type?: string; // For template messages
+  payload?: Record<string, any>; // Additional attachment data
+}
+
 // Zod schemas for runtime validation
 export const CloudinaryBaseZ = z.object({
   public_id: z.string(),
@@ -141,17 +173,98 @@ export const orderItems = pgTable("order_items", {
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
 });
 
-// Social media accounts table
+// Enhanced Social media accounts table with Facebook page support
 export const socialAccounts = pgTable("social_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   platform: text("platform", { enum: ["facebook", "instagram", "twitter"] }).notNull(),
   name: text("name").notNull(),
   accountId: text("account_id").notNull(),
   accessToken: text("access_token"),
+  refreshToken: text("refresh_token"), // For token refresh
+  tokenExpiresAt: timestamp("token_expires_at"), // Track token expiration
+  
+  // Facebook Page Support
+  pageAccessTokens: jsonb("page_access_tokens").$type<FacebookPageToken[]>().default(sql`'[]'::jsonb`), // Array of page tokens
+  webhookSubscriptions: jsonb("webhook_subscriptions").$type<WebhookSubscription[]>().default(sql`'[]'::jsonb`), // Active webhooks
+  
+  // Organization
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Tag IDs for organization
+  
+  // Analytics
   followers: integer("followers").default(0),
   connected: boolean("connected").default(false),
   lastPost: timestamp("last_post"),
   engagement: decimal("engagement", { precision: 5, scale: 2 }).default("0"),
+  lastSync: timestamp("last_sync"), // Last time we synced with platform
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Page Tags Management
+export const pageTags = pgTable("page_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#3B82F6"), // Default blue
+  description: text("description"),
+  isDefault: boolean("is_default").default(false), // System default tags
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Facebook Conversations for chat management
+export const facebookConversations = pgTable("facebook_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pageId: text("page_id").notNull(), // Facebook page ID
+  pageName: text("page_name").notNull(), // Page display name
+  participantId: text("participant_id").notNull(), // Facebook user ID
+  participantName: text("participant_name").notNull(), // User display name
+  participantAvatar: text("participant_avatar"), // User profile picture
+  
+  // Conversation management
+  status: text("status", { enum: ["active", "resolved", "pending", "archived"] }).notNull().default("active"),
+  priority: text("priority", { enum: ["low", "normal", "high", "urgent"] }).notNull().default("normal"),
+  assignedTo: varchar("assigned_to"), // Admin user handling this conversation
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Conversation tags
+  
+  // Analytics
+  messageCount: integer("message_count").notNull().default(0),
+  lastMessageAt: timestamp("last_message_at"),
+  lastMessagePreview: text("last_message_preview"), // Preview of last message
+  isRead: boolean("is_read").default(false), // Admin read status
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Facebook Messages storage
+export const facebookMessages = pgTable("facebook_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => facebookConversations.id, { onDelete: 'cascade' }),
+  facebookMessageId: text("facebook_message_id").notNull().unique(), // Facebook's message ID
+  
+  // Message content
+  senderId: text("sender_id").notNull(), // Facebook user/page ID
+  senderName: text("sender_name").notNull(), // Display name
+  senderType: text("sender_type", { enum: ["page", "user"] }).notNull(),
+  
+  // Message data
+  content: text("content"), // Text content
+  messageType: text("message_type", { enum: ["text", "image", "video", "audio", "file", "sticker", "emoji"] }).notNull().default("text"),
+  attachments: jsonb("attachments").$type<FacebookAttachment[]>().default(sql`'[]'::jsonb`), // Media/files
+  
+  // Metadata
+  timestamp: timestamp("timestamp").notNull(), // When message was sent on Facebook
+  isEcho: boolean("is_echo").default(false), // Message sent by page (echo)
+  replyToMessageId: text("reply_to_message_id"), // If replying to another message
+  
+  // Status
+  isRead: boolean("is_read").default(false),
+  isDelivered: boolean("is_delivered").default(true),
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -420,6 +533,24 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
 export const insertSocialAccountSchema = createInsertSchema(socialAccounts).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPageTagSchema = createInsertSchema(pageTags).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFacebookConversationSchema = createInsertSchema(facebookConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFacebookMessageSchema = createInsertSchema(facebookMessages).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertChatbotConversationSchema = createInsertSchema(chatbotConversations).omit({
@@ -493,6 +624,15 @@ export type OrderItem = typeof orderItems.$inferSelect;
 
 export type InsertSocialAccount = z.infer<typeof insertSocialAccountSchema>;
 export type SocialAccount = typeof socialAccounts.$inferSelect;
+
+export type InsertPageTag = z.infer<typeof insertPageTagSchema>;
+export type PageTag = typeof pageTags.$inferSelect;
+
+export type InsertFacebookConversation = z.infer<typeof insertFacebookConversationSchema>;
+export type FacebookConversation = typeof facebookConversations.$inferSelect;
+
+export type InsertFacebookMessage = z.infer<typeof insertFacebookMessageSchema>;
+export type FacebookMessage = typeof facebookMessages.$inferSelect;
 
 export type InsertChatbotConversation = z.infer<typeof insertChatbotConversationSchema>;
 export type ChatbotConversation = typeof chatbotConversations.$inferSelect;
