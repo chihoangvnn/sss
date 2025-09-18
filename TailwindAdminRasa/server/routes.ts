@@ -27,6 +27,7 @@ import multer from 'multer';
 import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } from './services/cloudinary';
 import crypto from 'crypto';
 import express from 'express';
+import { postScheduler } from './services/post-scheduler';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any) {
@@ -309,16 +310,23 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Start post scheduler for automated social media posting
+  console.log('🚀 Starting Facebook post scheduler...');
+  postScheduler.start();
+  
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
     try {
+      const schedulerStatus = postScheduler.getStatus();
+      
       // Simple health check - return basic status
       res.json({
         status: "healthy",
         timestamp: new Date().toISOString(),
         services: {
           server: "running",
-          database: "connected" // Will enhance with actual Firebase check later
+          database: "connected", // Will enhance with actual Firebase check later
+          postScheduler: schedulerStatus.running ? "running" : "stopped"
         }
       });
     } catch (error) {
@@ -3220,6 +3228,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate shipping labels" });
     }
   });
+
+  // ==========================================
+  // CONTENT MANAGEMENT API ROUTES
+  // ==========================================
+  const contentRoutes = await import("./api/content");
+  app.use("/api/content", contentRoutes.default);
 
   // ==========================================
   // API FALLBACK - Catch unmatched API routes and return JSON 404
