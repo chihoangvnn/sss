@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { X, Save } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { ImageUploader } from "./ImageUploader";
+import type { CloudinaryImage, CloudinaryVideo } from "@shared/schema";
 
 interface Industry {
   id: string;
@@ -28,8 +30,10 @@ interface Product {
   price: string;
   stock: number;
   categoryId?: string;
-  status: "active" | "inactive" | "out_of_stock";
-  image?: string;
+  status: "active" | "inactive" | "out-of-stock";
+  image?: string; // Deprecated - kept for backward compatibility
+  images?: CloudinaryImage[];
+  videos?: CloudinaryVideo[];
 }
 
 interface Category {
@@ -62,8 +66,10 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     stock: "0",
     industryId: "",
     categoryId: "",
-    status: "active" as "active" | "inactive" | "out_of_stock",
-    image: "",
+    status: "active" as "active" | "inactive" | "out-of-stock",
+    image: "", // Deprecated - kept for backward compatibility
+    images: [] as CloudinaryImage[],
+    videos: [] as CloudinaryVideo[],
   });
 
   // Fetch industries for dropdown
@@ -102,6 +108,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         categoryId: product.categoryId || "",
         status: product.status,
         image: product.image || "",
+        images: product.images || [],
+        videos: product.videos || [],
       });
     }
   }, [product]);
@@ -365,7 +373,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 <Label htmlFor="status">Trạng thái</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: "active" | "inactive" | "out_of_stock") => 
+                  onValueChange={(value: "active" | "inactive" | "out-of-stock") => 
                     setFormData(prev => ({ ...prev, status: value }))
                   }
                 >
@@ -375,36 +383,51 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   <SelectContent>
                     <SelectItem value="active">Hoạt động</SelectItem>
                     <SelectItem value="inactive">Tạm dừng</SelectItem>
-                    <SelectItem value="out_of_stock">Hết hàng</SelectItem>
+                    <SelectItem value="out-of-stock">Hết hàng</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Image URL */}
+            {/* Media Upload - Images and Videos */}
             <div>
-              <Label htmlFor="image">URL hình ảnh</Label>
-              <Input
-                id="image"
-                type="url"
-                value={formData.image}
-                onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
-                placeholder="https://example.com/image.jpg"
-                data-testid="input-product-image"
+              <Label>Hình ảnh & Video sản phẩm</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Upload hình ảnh và video để giới thiệu sản phẩm một cách sinh động
+              </p>
+              <ImageUploader
+                value={[...formData.images, ...formData.videos]}
+                onChange={(media) => {
+                  const images = media.filter((m): m is CloudinaryImage => m.resource_type === 'image');
+                  const videos = media.filter((m): m is CloudinaryVideo => m.resource_type === 'video');
+                  setFormData(prev => ({ ...prev, images, videos }));
+                }}
+                maxFiles={8}
+                maxFileSize={50}
+                acceptImages={true}
+                acceptVideos={true}
+                folder="products"
+                className="mt-2"
               />
-              {formData.image && (
-                <div className="mt-2">
-                  <img
-                    src={formData.image}
-                    alt="Preview"
-                    className="w-20 h-20 object-cover rounded border"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
             </div>
+
+            {/* Backward compatibility - Legacy Image URL */}
+            {formData.image && (
+              <div>
+                <Label htmlFor="image">URL hình ảnh (legacy)</Label>
+                <Input
+                  id="image"
+                  type="url"
+                  value={formData.image}
+                  onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                  placeholder="https://example.com/image.jpg"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Chỉ hiển thị nếu có dữ liệu cũ. Khuyến nghị sử dụng upload ở trên.
+                </p>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
