@@ -496,9 +496,66 @@ export default function PublicLandingPage() {
                 )}
               </div>
 
+              {/* Trust Badges & Guarantees */}
+              <div className="mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <Shield className="h-4 w-4 text-green-600" />
+                    </div>
+                    <span className={`${themeClasses.textMuted} text-xs`}>Bảo hành<br/>chính hãng</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Truck className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <span className={`${themeClasses.textMuted} text-xs`}>Giao hàng<br/>miễn phí</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                      <Award className="h-4 w-4 text-yellow-600" />
+                    </div>
+                    <span className={`${themeClasses.textMuted} text-xs`}>Đổi trả<br/>30 ngày</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Lock className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <span className={`${themeClasses.textMuted} text-xs`}>Thanh toán<br/>bảo mật</span>
+                  </div>
+                </div>
+                
+                {/* Review Summary Badge */}
+                {landingPage.reviewsData && landingPage.reviewsData.totalReviews > 0 && (
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < Math.round(landingPage.reviewsData.averageRating) 
+                              ? 'text-yellow-400 fill-current' 
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                      <span className="font-semibold text-amber-700 ml-1">
+                        {landingPage.reviewsData.averageRating.toFixed(1)}
+                      </span>
+                    </div>
+                    <span className="text-sm text-amber-600">
+                      ({landingPage.reviewsData.totalReviews} đánh giá)
+                    </span>
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-xs">
+                      Được tin tưởng
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
               <Button 
                 size="lg" 
-                className="text-lg px-8 py-4 transition-colors duration-300"
+                className="text-lg px-8 py-4 transition-colors duration-300 w-full md:w-auto"
                 style={{backgroundColor: 'var(--theme-primary)', borderColor: 'var(--theme-primary)'}}
                 onClick={() => setShowOrderForm(true)}
                 data-testid="button-order-now"
@@ -506,6 +563,22 @@ export default function PublicLandingPage() {
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 {landingPage.callToAction || "Đặt hàng ngay"}
               </Button>
+              
+              {/* Additional Trust Info */}
+              <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  Còn {landingPage.availableStock} sản phẩm
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3 text-blue-500" />
+                  {landingPage.viewCount}+ lượt xem
+                </span>
+                <span className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-purple-500" />
+                  {landingPage.orderCount} đã bán
+                </span>
+              </div>
             </div>
 
             <div>
@@ -568,37 +641,111 @@ export default function PublicLandingPage() {
         </section>
       )}
 
-      {/* Testimonials */}
-      {landingPage.testimonials && landingPage.testimonials.length > 0 && (
+      {/* Customer Reviews - Real Data */}
+      {landingPage.reviewsData && landingPage.reviewsData.reviews.length > 0 && (
         <section className="py-16">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-12">Khách hàng nói gì</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {landingPage.testimonials.map((testimonial: any, index: number) => (
-                <Card key={index} className={`transition-colors duration-300 ${themeClasses.card}`}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < testimonial.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                          }`}
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Khách hàng nói gì về sản phẩm</h2>
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-6 w-6 ${
+                        i < Math.round(landingPage.reviewsData.averageRating) 
+                          ? 'text-yellow-400 fill-current' 
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                  <span className="text-2xl font-bold" style={{color: 'var(--theme-primary)'}}>
+                    {landingPage.reviewsData.averageRating.toFixed(1)}
+                  </span>
+                </div>
+                <div className={`text-lg ${themeClasses.textMuted}`}>
+                  ({landingPage.reviewsData.totalReviews} đánh giá)
+                </div>
+              </div>
+              
+              {/* Rating Distribution */}
+              <div className="max-w-md mx-auto mb-8">
+                {[5, 4, 3, 2, 1].map((rating) => {
+                  const count = landingPage.reviewsData.ratingCounts[rating] || 0;
+                  const percentage = landingPage.reviewsData.totalReviews > 0 
+                    ? Math.round((count / landingPage.reviewsData.totalReviews) * 100) 
+                    : 0;
+                  return (
+                    <div key={rating} className="flex items-center gap-2 mb-1">
+                      <span className="text-sm w-3">{rating}</span>
+                      <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-yellow-400 transition-all duration-500"
+                          style={{width: `${percentage}%`}}
                         />
-                      ))}
-                    </div>
-                    <p className={`mb-4 transition-colors duration-300 ${themeClasses.textMuted}`}>"{testimonial.content}"</p>
-                    <div className="flex items-center gap-3">
-                      {testimonial.avatar && (
-                        <img
-                          src={testimonial.avatar}
-                          alt={testimonial.customerName}
-                          className="w-10 h-10 rounded-full"
-                        />
-                      )}
-                      <div>
-                        <p className="font-semibold">{testimonial.customerName}</p>
                       </div>
+                      <span className="text-xs text-muted-foreground w-8">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {landingPage.reviewsData.reviews.map((review: any, index: number) => (
+                <Card key={review.id} className={`transition-all duration-300 hover:shadow-lg ${themeClasses.card}`}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      {review.isVerified && (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Đã mua
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {review.title && (
+                      <h4 className="font-semibold mb-2">{review.title}</h4>
+                    )}
+                    
+                    <p className={`mb-4 transition-colors duration-300 ${themeClasses.textMuted} line-clamp-3`}>
+                      "{review.content}"
+                    </p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {review.customerAvatar && (
+                          <img
+                            src={review.customerAvatar}
+                            alt={review.customerName}
+                            className="w-10 h-10 rounded-full border-2 border-gray-200"
+                          />
+                        )}
+                        <div>
+                          <p className="font-semibold text-sm">{review.customerName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {review.helpfulCount > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Heart className="h-3 w-3" />
+                          <span>{review.helpfulCount}</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

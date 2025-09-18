@@ -104,6 +104,24 @@ export const chatbotConversations = pgTable("chatbot_conversations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Product reviews table - separate from landing page testimonials
+export const productReviews = pgTable("product_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  customerId: varchar("customer_id").references(() => customers.id), // Optional - can be anonymous
+  customerName: text("customer_name").notNull(), // Display name
+  customerAvatar: text("customer_avatar"), // Avatar URL
+  rating: integer("rating").notNull(), // 1-5 stars
+  title: text("title"), // Review title/summary
+  content: text("content").notNull(), // Review content
+  isVerified: boolean("is_verified").notNull().default(false), // Verified purchase
+  isApproved: boolean("is_approved").notNull().default(true), // Admin approval
+  helpfulCount: integer("helpful_count").notNull().default(0), // How many found helpful
+  images: jsonb("images").default('[]'), // Array of image URLs
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Storefront configuration table
 export const storefrontConfig = pgTable("storefront_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -291,6 +309,12 @@ export const insertProductLandingPageSchema = createInsertSchema(productLandingP
   updatedAt: true,
 });
 
+export const insertProductReviewSchema = createInsertSchema(productReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -333,3 +357,6 @@ export type ShopSettings = typeof shopSettings.$inferSelect;
 
 export type InsertProductLandingPage = z.infer<typeof insertProductLandingPageSchema>;
 export type ProductLandingPage = typeof productLandingPages.$inferSelect;
+
+export type InsertProductReview = z.infer<typeof insertProductReviewSchema>;
+export type ProductReview = typeof productReviews.$inferSelect;

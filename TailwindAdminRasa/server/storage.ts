@@ -1,7 +1,7 @@
 import { 
   users, products, customers, orders, orderItems, socialAccounts, chatbotConversations,
   storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
-  productLandingPages,
+  productLandingPages, productReviews,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -10,7 +10,8 @@ import {
   type StorefrontOrder, type InsertStorefrontOrder,
   type Category, type InsertCategory, type Industry, type InsertIndustry,
   type Payment, type InsertPayment, type ShopSettings, type InsertShopSettings,
-  type ProductLandingPage, type InsertProductLandingPage
+  type ProductLandingPage, type InsertProductLandingPage,
+  type ProductReview, type InsertProductReview
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, isNull } from "drizzle-orm";
@@ -120,6 +121,14 @@ export interface IStorage {
   incrementLandingPageView(id: string): Promise<void>;
   incrementLandingPageOrder(id: string): Promise<void>;
   getProductLandingPageWithDetails(idOrSlug: string): Promise<any>;
+
+  // Product Review methods
+  getProductReviews(productId: string, limit?: number): Promise<ProductReview[]>;
+  getProductReviewsWithStats(productId: string): Promise<{ reviews: ProductReview[]; averageRating: number; totalReviews: number; ratingCounts: { [key: number]: number } }>;
+  createProductReview(review: InsertProductReview): Promise<ProductReview>;
+  updateProductReview(id: string, review: Partial<InsertProductReview>): Promise<ProductReview | undefined>;
+  deleteProductReview(id: string): Promise<boolean>;
+  incrementHelpfulCount(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -977,6 +986,98 @@ export class DatabaseStorage implements IStorage {
       displayDescription: landingPage.description || product.description,
       availableStock: product.stock || 0
     };
+  }
+
+  // Product Review methods
+  async getProductReviews(productId: string, limit = 20): Promise<ProductReview[]> {
+    return await db
+      .select()
+      .from(productReviews)
+      .where(and(
+        eq(productReviews.productId, productId),
+        eq(productReviews.isApproved, true)
+      ))
+      .orderBy(desc(productReviews.createdAt))
+      .limit(limit);
+  }
+
+  async getProductReviewsWithStats(productId: string): Promise<{ 
+    reviews: ProductReview[]; 
+    averageRating: number; 
+    totalReviews: number; 
+    ratingCounts: { [key: number]: number } 
+  }> {
+    // Get reviews
+    const reviews = await this.getProductReviews(productId);
+    
+    // Get rating statistics
+    const stats = await db
+      .select({
+        rating: productReviews.rating,
+        count: count()
+      })
+      .from(productReviews)
+      .where(and(
+        eq(productReviews.productId, productId),
+        eq(productReviews.isApproved, true)
+      ))
+      .groupBy(productReviews.rating);
+
+    // Calculate averages and counts
+    let totalReviews = 0;
+    let totalRating = 0;
+    const ratingCounts: { [key: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+    stats.forEach(stat => {
+      const rating = stat.rating;
+      const count = stat.count;
+      totalReviews += count;
+      totalRating += rating * count;
+      ratingCounts[rating] = count;
+    });
+
+    const averageRating = totalReviews > 0 ? Math.round((totalRating / totalReviews) * 10) / 10 : 0;
+
+    return {
+      reviews,
+      averageRating,
+      totalReviews,
+      ratingCounts
+    };
+  }
+
+  async createProductReview(review: InsertProductReview): Promise<ProductReview> {
+    const [newReview] = await db.insert(productReviews).values(review).returning();
+    return newReview;
+  }
+
+  async updateProductReview(id: string, review: Partial<InsertProductReview>): Promise<ProductReview | undefined> {
+    const [updatedReview] = await db
+      .update(productReviews)
+      .set({ ...review, updatedAt: new Date() })
+      .where(eq(productReviews.id, id))
+      .returning();
+    return updatedReview || undefined;
+  }
+
+  async deleteProductReview(id: string): Promise<boolean> {
+    const result = await db.delete(productReviews).where(eq(productReviews.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async incrementHelpfulCount(id: string): Promise<boolean> {
+    try {
+      await db
+        .update(productReviews)
+        .set({
+          helpfulCount: sql`${productReviews.helpfulCount} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(productReviews.id, id));
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

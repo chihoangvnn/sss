@@ -1107,7 +1107,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (landingPage.id) {
           await storage.incrementLandingPageView(landingPage.id);
         }
-        return res.json(landingPage);
+        
+        // Get product reviews for this landing page  
+        const reviewsData = landingPage.product ? 
+          await storage.getProductReviewsWithStats(landingPage.product.id) :
+          { reviews: [], averageRating: 0, totalReviews: 0, ratingCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+
+        return res.json({
+          ...landingPage,
+          reviewsData
+        });
       }
     } catch (error) {
       console.error("Error fetching public landing page:", error);
@@ -1154,6 +1163,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating landing page order:", error);
       res.status(500).json({ error: "Failed to create order" });
+    }
+  });
+
+  // ==========================================
+  // PRODUCT REVIEWS API ROUTES
+  // ==========================================
+
+  // Get product reviews with stats
+  app.get('/api/product-reviews/:productId', async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const reviewsData = await storage.getProductReviewsWithStats(productId);
+      res.json(reviewsData);
+    } catch (error) {
+      console.error('Error fetching product reviews:', error);
+      res.status(500).json({ error: 'Failed to load reviews' });
+    }
+  });
+
+  // Create new product review (with validation and moderation)
+  app.post('/api/product-reviews', async (req, res) => {
+    try {
+      // Basic validation
+      const { productId, customerName, rating, content } = req.body;
+      
+      if (!productId || !customerName || !rating || !content) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: productId, customerName, rating, content' 
+        });
+      }
+      
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ 
+          error: 'Rating must be between 1 and 5' 
+        });
+      }
+      
+      if (content.length < 10 || content.length > 1000) {
+        return res.status(400).json({ 
+          error: 'Review content must be between 10 and 1000 characters' 
+        });
+      }
+      
+      // Verify product exists
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      
+      // Create review with moderation (requires admin approval)
+      const reviewData = {
+        ...req.body,
+        isApproved: false, // Require admin approval
+        helpfulCount: 0,
+        images: req.body.images || []
+      };
+      
+      const review = await storage.createProductReview(reviewData);
+      
+      res.json({ 
+        success: true, 
+        review: {
+          ...review,
+          message: 'Review submitted successfully. It will be visible after admin approval.'
+        }
+      });
+    } catch (error) {
+      console.error('Error creating review:', error);
+      res.status(500).json({ error: 'Failed to create review' });
     }
   });
 
