@@ -31,23 +31,23 @@ export function QRPayment({ order, payment, onPaymentCreated }: QRPaymentProps) 
   const { toast } = useToast();
   const [timeRemaining, setTimeRemaining] = useState(15 * 60); // 15 minutes in seconds
 
-  // Bank info - use hardcoded ACB bank details as specified
+  // Bank info - use SHB bank details as specified by user
   const bankInfo = (() => {
     // Try to get bank info from payment if available and properly structured
     if (payment?.bankInfo && typeof payment.bankInfo === 'object' && payment.bankInfo !== null) {
       const info = payment.bankInfo as Record<string, any>;
       return {
-        bank: info.bank || "ACB",
-        bankCode: info.bankCode || "970416", 
+        bank: info.bank || "SHB",
+        bankCode: info.bankCode || "970431", 
         accountNumber: info.accountNumber || "4555567777",
         accountName: info.accountName || "CONG TY TNHH ABC TECH",
       };
     }
     
-    // Fallback to hardcoded ACB bank info
+    // Fallback to SHB bank info (Ngân hàng TMCP Sài Gòn - Hà Nội)
     return {
-      bank: "ACB",
-      bankCode: "970416",
+      bank: "SHB",
+      bankCode: "970431", // SaigonBank official code
       accountNumber: "4555567777",
       accountName: "CONG TY TNHH ABC TECH",
     };
