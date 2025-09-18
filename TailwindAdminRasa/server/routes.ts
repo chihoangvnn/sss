@@ -5,6 +5,7 @@ import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCat
 import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
+import { generateSKU } from "./utils/sku-generator";
 
 
 // Payment status validation schema
@@ -158,7 +159,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/products", async (req, res) => {
     try {
       const validatedData = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(validatedData);
+      
+      // Generate SKU automatically
+      let industryName = "Khác"; // Default industry name if no category
+      if (validatedData.categoryId) {
+        try {
+          const category = await storage.getCategory(validatedData.categoryId);
+          if (category && category.industryId) {
+            const industry = await storage.getIndustry(category.industryId);
+            if (industry) {
+              industryName = industry.name;
+            }
+          }
+        } catch (err) {
+          console.warn("Could not fetch industry for SKU generation, using default:", err);
+        }
+      }
+      
+      const generatedSKU = await generateSKU(industryName);
+      const productData = {
+        ...validatedData,
+        sku: generatedSKU
+      };
+      
+      const product = await storage.createProduct(productData);
       res.status(201).json(product);
     } catch (error) {
       if (error instanceof z.ZodError) {
