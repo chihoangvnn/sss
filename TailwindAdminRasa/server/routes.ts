@@ -5,6 +5,7 @@ import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCat
 import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
+import { tiktokAuth } from "./tiktok-auth";
 import { generateSKU } from "./utils/sku-generator";
 import multer from 'multer';
 import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } from './services/cloudinary';
@@ -260,7 +261,7 @@ const rateLimitMiddleware = (req: any, res: any, next: any) => {
 };
 
 // OAuth state storage for CSRF protection
-const oauthStates = new Map<string, { timestamp: number; redirectUrl?: string }>();
+const oauthStates = new Map<string, { timestamp: number; redirectUrl?: string; platform?: string }>();
 const OAUTH_STATE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
 // Clean up expired OAuth states
@@ -1252,6 +1253,234 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error disconnecting Facebook account:", error);
       res.status(500).json({ 
         error: "Failed to disconnect Facebook account",
+        message: "Please try again later"
+      });
+    }
+  });
+
+  // TikTok Business Connect
+  app.post("/api/tiktok-business/connect", async (req, res) => {
+    try {
+      // This endpoint initiates the TikTok Business OAuth flow from the frontend
+      const state = tiktokAuth.generateState();
+      const redirectUrl = req.body.redirectUrl || '/tiktok-business';
+      
+      // Store state for verification
+      oauthStates.set(state, { 
+        timestamp: Date.now(),
+        redirectUrl,
+        platform: 'tiktok-business'
+      });
+      
+      // Return authorization URL to frontend
+      const authUrl = tiktokAuth.getBusinessAuthorizationUrl(state);
+      
+      res.json({ authUrl, state });
+    } catch (error) {
+      console.error("Error generating TikTok Business OAuth URL:", error);
+      res.status(500).json({ 
+        error: "Failed to generate authentication URL",
+        message: "Please try again later"
+      });
+    }
+  });
+
+  // TikTok Shop Connect
+  app.post("/api/tiktok-shop/connect", async (req, res) => {
+    try {
+      // This endpoint initiates the TikTok Shop OAuth flow from the frontend
+      const state = tiktokAuth.generateState();
+      const redirectUrl = req.body.redirectUrl || '/tiktok-shop';
+      
+      // Store state for verification
+      oauthStates.set(state, { 
+        timestamp: Date.now(),
+        redirectUrl,
+        platform: 'tiktok-shop'
+      });
+      
+      // Return authorization URL to frontend
+      const authUrl = tiktokAuth.getShopAuthorizationUrl(state);
+      
+      res.json({ authUrl, state });
+    } catch (error) {
+      console.error("Error generating TikTok Shop OAuth URL:", error);
+      res.status(500).json({ 
+        error: "Failed to generate authentication URL",
+        message: "Please try again later"
+      });
+    }
+  });
+
+  // TikTok Business OAuth Callback
+  app.get("/auth/tiktok-business/callback", async (req, res) => {
+    try {
+      const { code, state, error } = req.query;
+      
+      if (error) {
+        console.error('TikTok Business OAuth error:', error);
+        return res.redirect('/tiktok-business?error=access_denied');
+      }
+      
+      if (!code || !state || typeof code !== 'string' || typeof state !== 'string') {
+        return res.redirect('/tiktok-business?error=invalid_request');
+      }
+      
+      // Verify state parameter
+      const storedState = oauthStates.get(state);
+      if (!storedState || storedState.platform !== 'tiktok-business') {
+        return res.redirect('/tiktok-business?error=invalid_state');
+      }
+      
+      // Clean up state
+      oauthStates.delete(state);
+      
+      // Exchange code for token
+      const tokens = await tiktokAuth.exchangeBusinessCodeForToken(code);
+      
+      // Get user profile
+      const userProfile = await tiktokAuth.getUserProfile(tokens.access_token);
+      
+      // Try to get business profile
+      let businessProfiles: any[] = [];
+      try {
+        businessProfiles = await tiktokAuth.getBusinessProfile(tokens.access_token);
+      } catch (businessError) {
+        console.warn('Could not fetch business profile:', businessError);
+      }
+      
+      // Create or update social account
+      const accountName = businessProfiles.length > 0 
+        ? businessProfiles[0]?.advertiser_name || userProfile.display_name
+        : userProfile.display_name;
+      
+      const accountId = businessProfiles.length > 0 
+        ? businessProfiles[0]?.advertiser_id || userProfile.open_id
+        : userProfile.open_id;
+      
+      const socialAccountData = {
+        platform: 'tiktok-business' as const,
+        name: accountName || 'TikTok Business Account',
+        accountId: accountId || userProfile.open_id,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        tokenExpiresAt: tokens.expires_in 
+          ? new Date(Date.now() + (tokens.expires_in * 1000)) 
+          : undefined,
+        pageAccessTokens: [],
+        webhookSubscriptions: [],
+        tags: [],
+        followers: 0, // Will be updated via API
+        connected: true,
+        lastSync: new Date(),
+        isActive: true
+      };
+      
+      await storage.createSocialAccount(socialAccountData);
+      
+      // Use stored redirectUrl with whitelist for security
+      const allowedPaths = ['/facebook', '/tiktok-business', '/tiktok-shop', '/social-media'];
+      const redirectPath = (storedState.redirectUrl && allowedPaths.includes(storedState.redirectUrl)) 
+        ? storedState.redirectUrl 
+        : '/tiktok-business';
+      
+      res.redirect(`${redirectPath}?success=tiktok_business_connected`);
+    } catch (error) {
+      console.error("Error in TikTok Business OAuth callback:", error);
+      res.redirect('/tiktok-business?error=authentication_failed');
+    }
+  });
+
+  // TikTok Shop OAuth Callback
+  app.get("/auth/tiktok-shop/callback", async (req, res) => {
+    try {
+      const { code, state, error } = req.query;
+      
+      if (error) {
+        console.error('TikTok Shop OAuth error:', error);
+        return res.redirect('/tiktok-shop?error=access_denied');
+      }
+      
+      if (!code || !state || typeof code !== 'string' || typeof state !== 'string') {
+        return res.redirect('/tiktok-shop?error=invalid_request');
+      }
+      
+      // Verify state parameter
+      const storedState = oauthStates.get(state);
+      if (!storedState || storedState.platform !== 'tiktok-shop') {
+        return res.redirect('/tiktok-shop?error=invalid_state');
+      }
+      
+      // Clean up state
+      oauthStates.delete(state);
+      
+      // Exchange code for token
+      const tokens = await tiktokAuth.exchangeShopCodeForToken(code);
+      
+      // Get user profile
+      const userProfile = await tiktokAuth.getUserProfile(tokens.access_token);
+      
+      // Create or update social account
+      const socialAccountData = {
+        platform: 'tiktok-shop' as const,
+        name: `${userProfile.display_name || 'TikTok'} Shop`,
+        accountId: userProfile.open_id || 'unknown_id',
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        tokenExpiresAt: tokens.expires_in 
+          ? new Date(Date.now() + (tokens.expires_in * 1000)) 
+          : undefined,
+        pageAccessTokens: [],
+        webhookSubscriptions: [],
+        tags: [],
+        followers: 0, // Will be updated via API
+        connected: true,
+        lastSync: new Date(),
+        isActive: true
+      };
+      
+      await storage.createSocialAccount(socialAccountData);
+      
+      // Use stored redirectUrl with whitelist for security
+      const allowedPaths = ['/facebook', '/tiktok-business', '/tiktok-shop', '/social-media'];
+      const redirectPath = (storedState.redirectUrl && allowedPaths.includes(storedState.redirectUrl)) 
+        ? storedState.redirectUrl 
+        : '/tiktok-shop';
+      
+      res.redirect(`${redirectPath}?success=tiktok_shop_connected`);
+    } catch (error) {
+      console.error("Error in TikTok Shop OAuth callback:", error);
+      res.redirect('/tiktok-shop?error=authentication_failed');
+    }
+  });
+
+  // TikTok Disconnect endpoints
+  app.delete("/api/tiktok/disconnect/:accountId", async (req, res) => {
+    try {
+      const { accountId } = req.params;
+      
+      // Find the social account
+      const accounts = await storage.getSocialAccounts();
+      const tiktokAccount = accounts.find(
+        account => account.id === accountId && 
+                  (account.platform === 'tiktok-business' || account.platform === 'tiktok-shop')
+      );
+      
+      if (!tiktokAccount) {
+        return res.status(404).json({ error: "TikTok account not found" });
+      }
+      
+      // Update account to disconnected state
+      await storage.updateSocialAccount(accountId, {
+        connected: false,
+        accessToken: null
+      });
+      
+      res.json({ success: true, message: "TikTok account disconnected" });
+    } catch (error) {
+      console.error("Error disconnecting TikTok account:", error);
+      res.status(500).json({ 
+        error: "Failed to disconnect TikTok account",
         message: "Please try again later"
       });
     }

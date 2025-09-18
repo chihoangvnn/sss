@@ -266,6 +266,16 @@ export function SocialMediaPanel({
         title: "Facebook Connected!",
         description: "Your Facebook account has been successfully connected.",
       });
+    } else if (success === 'tiktok_business_connected') {
+      toast({
+        title: "TikTok Business Connected!",
+        description: "Your TikTok Business account has been successfully connected.",
+      });
+    } else if (success === 'tiktok_shop_connected') {
+      toast({
+        title: "TikTok Shop Connected!",
+        description: "Your TikTok Shop has been successfully connected.",
+      });
       // Clean URL
       window.history.replaceState({}, '', window.location.pathname);
       // Refresh accounts
@@ -333,10 +343,81 @@ export function SocialMediaPanel({
     },
   });
 
+  // Connect TikTok Business mutation
+  const connectTikTokBusinessMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/tiktok-business/connect', { redirectUrl: '/tiktok-business' });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to TikTok Business OAuth
+      window.location.href = data.authUrl;
+    },
+    onError: (error: any) => {
+      console.error('TikTok Business connect error:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: "Failed to initiate TikTok Business connection. Please try again.",
+      });
+      setConnectingPlatform(null);
+    },
+  });
+
+  // Connect TikTok Shop mutation
+  const connectTikTokShopMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/tiktok-shop/connect', { redirectUrl: '/tiktok-shop' });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to TikTok Shop OAuth
+      window.location.href = data.authUrl;
+    },
+    onError: (error: any) => {
+      console.error('TikTok Shop connect error:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: "Failed to initiate TikTok Shop connection. Please try again.",
+      });
+      setConnectingPlatform(null);
+    },
+  });
+
+  // Disconnect TikTok mutation
+  const disconnectTikTokMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      const response = await apiRequest('DELETE', `/api/tiktok/disconnect/${accountId}`);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "TikTok Disconnected",
+        description: "Your TikTok account has been disconnected.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/social-accounts"] });
+    },
+    onError: (error: any) => {
+      console.error('TikTok disconnect error:', error);
+      toast({
+        variant: "destructive",
+        title: "Disconnection Failed",
+        description: "Failed to disconnect TikTok account. Please try again.",
+      });
+    },
+  });
+
   const handleConnectAccount = (platform: string) => {
     if (platform === 'facebook') {
       setConnectingPlatform('facebook');
       connectFacebookMutation.mutate();
+    } else if (platform === 'tiktok-business') {
+      setConnectingPlatform('tiktok-business');
+      connectTikTokBusinessMutation.mutate();
+    } else if (platform === 'tiktok-shop') {
+      setConnectingPlatform('tiktok-shop');
+      connectTikTokShopMutation.mutate();
     } else {
       console.log(`Connect ${platform} triggered`);
       onConnectAccount?.(platform);
@@ -345,6 +426,10 @@ export function SocialMediaPanel({
 
   const handleDisconnectFacebook = (accountId: string) => {
     disconnectFacebookMutation.mutate(accountId);
+  };
+
+  const handleDisconnectTikTok = (accountId: string) => {
+    disconnectTikTokMutation.mutate(accountId);
   };
 
   const handleToggleAccount = (accountId: string, enabled: boolean) => {
@@ -562,6 +647,17 @@ export function SocialMediaPanel({
                           <Settings className="h-3 w-3 mr-1" />
                           {disconnectFacebookMutation.isPending ? 'Đang ngắt...' : 'Ngắt'}
                         </Button>
+                      ) : (account.platform === 'tiktok-business' || account.platform === 'tiktok-shop') ? (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDisconnectTikTok(account.id)}
+                          disabled={disconnectTikTokMutation.isPending}
+                          data-testid={`button-disconnect-${account.id}`}
+                        >
+                          <Settings className="h-3 w-3 mr-1" />
+                          {disconnectTikTokMutation.isPending ? 'Đang ngắt...' : 'Ngắt TikTok'}
+                        </Button>
                       ) : (
                         <Button 
                           size="sm" 
@@ -582,7 +678,10 @@ export function SocialMediaPanel({
                     <Button 
                       size="sm" 
                       onClick={() => handleConnectAccount(account.platform)}
-                      disabled={connectingPlatform === account.platform || (account.platform === 'facebook' && connectFacebookMutation.isPending)}
+                      disabled={connectingPlatform === account.platform || 
+                               (account.platform === 'facebook' && connectFacebookMutation.isPending) ||
+                               (account.platform === 'tiktok-business' && connectTikTokBusinessMutation.isPending) ||
+                               (account.platform === 'tiktok-shop' && connectTikTokShopMutation.isPending)}
                       data-testid={`button-connect-${account.id}`}
                     >
                       {connectingPlatform === account.platform ? 'Đang kết nối...' : 'Kết nối ngay'}
