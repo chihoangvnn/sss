@@ -161,22 +161,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertProductSchema.parse(req.body);
       
       // Generate SKU automatically
-      let industryName = "Khác"; // Default industry name if no category
+      let generatedSKU: string = "";
+      
       if (validatedData.categoryId) {
-        try {
-          const category = await storage.getCategory(validatedData.categoryId);
-          if (category && category.industryId) {
-            const industry = await storage.getIndustry(category.industryId);
-            if (industry) {
-              industryName = industry.name;
-            }
+        // Use generateSKU for products with category
+        generatedSKU = await generateSKU(validatedData.categoryId);
+      } else {
+        // Generate SKU manually for products without category using "Khác" prefix
+        const prefix = "KH"; // "Khác" -> "KH" 
+        let attempts = 0;
+        let isUnique = false;
+        
+        while (!isUnique && attempts < 10) {
+          const randomNumber = Math.floor(1000 + Math.random() * 9000);
+          const sku = `${prefix}${randomNumber}`;
+          
+          // Check if SKU already exists
+          const existingProduct = await storage.getProductBySKU(sku);
+          if (!existingProduct) {
+            generatedSKU = sku;
+            isUnique = true;
+            break;
           }
-        } catch (err) {
-          console.warn("Could not fetch industry for SKU generation, using default:", err);
+          attempts++;
+        }
+        
+        if (!isUnique) {
+          throw new Error("Could not generate unique SKU after 10 attempts");
         }
       }
-      
-      const generatedSKU = await generateSKU(industryName);
       const productData = {
         ...validatedData,
         sku: generatedSKU
