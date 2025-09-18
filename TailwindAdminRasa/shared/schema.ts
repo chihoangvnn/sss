@@ -173,10 +173,10 @@ export const orderItems = pgTable("order_items", {
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
 });
 
-// Enhanced Social media accounts table with Facebook page support
+// Enhanced Social media accounts table with multi-platform support
 export const socialAccounts = pgTable("social_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  platform: text("platform", { enum: ["facebook", "instagram", "twitter"] }).notNull(),
+  platform: text("platform", { enum: ["facebook", "instagram", "twitter", "tiktok-business", "tiktok-shop"] }).notNull(),
   name: text("name").notNull(),
   accountId: text("account_id").notNull(),
   accessToken: text("access_token"),
@@ -211,6 +211,209 @@ export const pageTags = pgTable("page_tags", {
   color: text("color").notNull().default("#3B82F6"), // Default blue
   description: text("description"),
   isDefault: boolean("is_default").default(false), // System default tags
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TikTok Business Accounts Management
+export const tiktokBusinessAccounts = pgTable("tiktok_business_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: text("business_id").notNull().unique(), // TikTok Business ID
+  displayName: text("display_name").notNull(),
+  username: text("username").notNull(),
+  avatarUrl: text("avatar_url"),
+  
+  // Authentication
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  scope: jsonb("scope").$type<string[]>().default(sql`'[]'::jsonb`), // Granted permissions
+  
+  // Business Info
+  businessType: text("business_type"), // Individual, Business, etc
+  industry: text("industry"),
+  website: text("website"),
+  description: text("description"),
+  
+  // Shop Integration
+  shopEnabled: boolean("shop_enabled").default(false),
+  shopId: text("shop_id"), // TikTok Shop ID if enabled
+  shopStatus: text("shop_status", { enum: ["not_connected", "pending", "active", "suspended"] }).default("not_connected"),
+  
+  // Analytics Cache
+  followerCount: integer("follower_count").default(0),
+  followingCount: integer("following_count").default(0),
+  videoCount: integer("video_count").default(0),
+  likeCount: integer("like_count").default(0),
+  
+  // Performance Metrics
+  engagement: decimal("engagement", { precision: 5, scale: 2 }).default("0"),
+  avgViews: integer("avg_views").default(0),
+  lastPost: timestamp("last_post"),
+  lastSync: timestamp("last_sync"),
+  
+  // Organization
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Tag IDs for organization
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  connected: boolean("connected").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TikTok Shop Orders Management  
+export const tiktokShopOrders = pgTable("tiktok_shop_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tiktokOrderId: text("tiktok_order_id").notNull().unique(), // TikTok's order ID
+  shopId: text("shop_id").notNull(), // TikTok Shop ID
+  businessAccountId: varchar("business_account_id").references(() => tiktokBusinessAccounts.id),
+  
+  // Order Information
+  orderNumber: text("order_number").notNull(), // Human readable order number
+  status: text("status", { 
+    enum: ["pending", "processing", "shipped", "delivered", "cancelled", "refunded"] 
+  }).notNull().default("pending"),
+  
+  // Customer Information
+  customerInfo: jsonb("customer_info").$type<{
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    shippingAddress: {
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+  }>().notNull(),
+  
+  // Financial Details
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("VND"),
+  taxAmount: decimal("tax_amount", { precision: 15, scale: 2 }).default("0"),
+  shippingAmount: decimal("shipping_amount", { precision: 15, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 15, scale: 2 }).default("0"),
+  
+  // Order Items
+  items: jsonb("items").$type<Array<{
+    productId: string;
+    variantId?: string;
+    name: string;
+    sku: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    imageUrl?: string;
+  }>>().notNull(),
+  
+  // Fulfillment
+  fulfillmentStatus: text("fulfillment_status", {
+    enum: ["pending", "processing", "shipped", "delivered", "failed"]
+  }).default("pending"),
+  trackingNumber: text("tracking_number"),
+  shippingCarrier: text("shipping_carrier"),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  
+  // TikTok Specific
+  paymentMethod: text("payment_method"),
+  paymentStatus: text("payment_status"),
+  tiktokFees: decimal("tiktok_fees", { precision: 15, scale: 2 }).default("0"),
+  
+  // Organization
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  notes: text("notes"),
+  
+  // Timestamps
+  orderDate: timestamp("order_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TikTok Shop Products Sync
+export const tiktokShopProducts = pgTable("tiktok_shop_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").references(() => products.id), // Link to main products table
+  tiktokProductId: text("tiktok_product_id").notNull(), // TikTok's product ID
+  shopId: text("shop_id").notNull(),
+  businessAccountId: varchar("business_account_id").references(() => tiktokBusinessAccounts.id),
+  
+  // Sync Configuration
+  syncEnabled: boolean("sync_enabled").default(true),
+  autoSync: boolean("auto_sync").default(false), // Auto sync inventory/price changes
+  syncDirection: text("sync_direction", { 
+    enum: ["to_tiktok", "from_tiktok", "bidirectional"] 
+  }).default("to_tiktok"),
+  
+  // TikTok Specific Data
+  tiktokSku: text("tiktok_sku"),
+  tiktokTitle: text("tiktok_title"),
+  tiktokDescription: text("tiktok_description"),
+  tiktokPrice: decimal("tiktok_price", { precision: 15, scale: 2 }),
+  tiktokStock: integer("tiktok_stock"),
+  tiktokStatus: text("tiktok_status", {
+    enum: ["active", "inactive", "pending_review", "rejected"]
+  }).default("pending_review"),
+  
+  // Performance Metrics
+  views: integer("views").default(0),
+  orders: integer("orders").default(0),
+  revenue: decimal("revenue", { precision: 15, scale: 2 }).default("0"),
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0"),
+  
+  // Sync Status
+  lastSyncAt: timestamp("last_sync_at"),
+  syncStatus: text("sync_status", {
+    enum: ["pending", "syncing", "success", "failed"]
+  }).default("pending"),
+  syncError: text("sync_error"),
+  
+  // Organization
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TikTok Video Content Management
+export const tiktokVideos = pgTable("tiktok_videos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoId: text("video_id").notNull().unique(), // TikTok's video ID
+  businessAccountId: varchar("business_account_id").notNull().references(() => tiktokBusinessAccounts.id),
+  
+  // Content Information
+  caption: text("caption"),
+  description: text("description"),
+  thumbnailUrl: text("thumbnail_url"),
+  videoUrl: text("video_url"),
+  duration: integer("duration"), // Duration in seconds
+  
+  // Performance Metrics
+  views: integer("views").default(0),
+  likes: integer("likes").default(0),
+  comments: integer("comments").default(0),
+  shares: integer("shares").default(0),
+  engagementRate: decimal("engagement_rate", { precision: 5, scale: 2 }).default("0"),
+  
+  // E-commerce Integration
+  shopProductsTagged: jsonb("shop_products_tagged").$type<string[]>().default(sql`'[]'::jsonb`), // Product IDs tagged
+  salesFromVideo: decimal("sales_from_video", { precision: 15, scale: 2 }).default("0"),
+  clickthroughRate: decimal("clickthrough_rate", { precision: 5, scale: 2 }).default("0"),
+  
+  // Content Status
+  status: text("status", {
+    enum: ["draft", "pending_review", "published", "private", "removed"]
+  }).default("published"),
+  
+  // Organization
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  // Timestamps
+  publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -553,6 +756,31 @@ export const insertFacebookMessageSchema = createInsertSchema(facebookMessages).
   createdAt: true,
 });
 
+// TikTok Zod validation schemas
+export const insertTikTokBusinessAccountSchema = createInsertSchema(tiktokBusinessAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTikTokShopOrderSchema = createInsertSchema(tiktokShopOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTikTokShopProductSchema = createInsertSchema(tiktokShopProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTikTokVideoSchema = createInsertSchema(tiktokVideos).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertChatbotConversationSchema = createInsertSchema(chatbotConversations).omit({
   id: true,
   createdAt: true,
@@ -633,6 +861,19 @@ export type FacebookConversation = typeof facebookConversations.$inferSelect;
 
 export type InsertFacebookMessage = z.infer<typeof insertFacebookMessageSchema>;
 export type FacebookMessage = typeof facebookMessages.$inferSelect;
+
+// TikTok TypeScript types
+export type InsertTikTokBusinessAccount = z.infer<typeof insertTikTokBusinessAccountSchema>;
+export type TikTokBusinessAccount = typeof tiktokBusinessAccounts.$inferSelect;
+
+export type InsertTikTokShopOrder = z.infer<typeof insertTikTokShopOrderSchema>;
+export type TikTokShopOrder = typeof tiktokShopOrders.$inferSelect;
+
+export type InsertTikTokShopProduct = z.infer<typeof insertTikTokShopProductSchema>;
+export type TikTokShopProduct = typeof tiktokShopProducts.$inferSelect;
+
+export type InsertTikTokVideo = z.infer<typeof insertTikTokVideoSchema>;
+export type TikTokVideo = typeof tiktokVideos.$inferSelect;
 
 export type InsertChatbotConversation = z.infer<typeof insertChatbotConversationSchema>;
 export type ChatbotConversation = typeof chatbotConversations.$inferSelect;

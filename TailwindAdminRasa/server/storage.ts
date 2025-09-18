@@ -2,6 +2,7 @@ import {
   users, products, customers, orders, orderItems, socialAccounts, chatbotConversations,
   storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
   productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
+  tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -14,7 +15,11 @@ import {
   type ProductReview, type InsertProductReview,
   type FacebookConversation, type InsertFacebookConversation,
   type FacebookMessage, type InsertFacebookMessage,
-  type PageTag, type InsertPageTag
+  type PageTag, type InsertPageTag,
+  type TikTokBusinessAccount, type InsertTikTokBusinessAccount,
+  type TikTokShopOrder, type InsertTikTokShopOrder,
+  type TikTokShopProduct, type InsertTikTokShopProduct,
+  type TikTokVideo, type InsertTikTokVideo
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, isNull } from "drizzle-orm";
@@ -81,6 +86,38 @@ export interface IStorage {
   createPageTag(tag: InsertPageTag): Promise<PageTag>;
   updatePageTag(id: string, tag: Partial<InsertPageTag>): Promise<PageTag | undefined>;
   deletePageTag(id: string): Promise<boolean>;
+
+  // TikTok Business Account methods
+  getTikTokBusinessAccounts(): Promise<TikTokBusinessAccount[]>;
+  getTikTokBusinessAccount(id: string): Promise<TikTokBusinessAccount | undefined>;
+  getTikTokBusinessAccountByBusinessId(businessId: string): Promise<TikTokBusinessAccount | undefined>;
+  createTikTokBusinessAccount(account: InsertTikTokBusinessAccount): Promise<TikTokBusinessAccount>;
+  updateTikTokBusinessAccount(id: string, account: Partial<InsertTikTokBusinessAccount>): Promise<TikTokBusinessAccount | undefined>;
+  deleteTikTokBusinessAccount(id: string): Promise<boolean>;
+
+  // TikTok Shop Order methods
+  getTikTokShopOrders(limit?: number): Promise<TikTokShopOrder[]>;
+  getTikTokShopOrder(id: string): Promise<TikTokShopOrder | undefined>;
+  getTikTokShopOrderByTikTokId(tiktokOrderId: string): Promise<TikTokShopOrder | undefined>;
+  createTikTokShopOrder(order: InsertTikTokShopOrder): Promise<TikTokShopOrder>;
+  updateTikTokShopOrder(id: string, order: Partial<InsertTikTokShopOrder>): Promise<TikTokShopOrder | undefined>;
+  deleteTikTokShopOrder(id: string): Promise<boolean>;
+
+  // TikTok Shop Product methods
+  getTikTokShopProducts(): Promise<TikTokShopProduct[]>;
+  getTikTokShopProduct(id: string): Promise<TikTokShopProduct | undefined>;
+  getTikTokShopProductByTikTokId(tiktokProductId: string): Promise<TikTokShopProduct | undefined>;
+  createTikTokShopProduct(product: InsertTikTokShopProduct): Promise<TikTokShopProduct>;
+  updateTikTokShopProduct(id: string, product: Partial<InsertTikTokShopProduct>): Promise<TikTokShopProduct | undefined>;
+  deleteTikTokShopProduct(id: string): Promise<boolean>;
+
+  // TikTok Video methods
+  getTikTokVideos(businessAccountId?: string): Promise<TikTokVideo[]>;
+  getTikTokVideo(id: string): Promise<TikTokVideo | undefined>;
+  getTikTokVideoByVideoId(videoId: string): Promise<TikTokVideo | undefined>;
+  createTikTokVideo(video: InsertTikTokVideo): Promise<TikTokVideo>;
+  updateTikTokVideo(id: string, video: Partial<InsertTikTokVideo>): Promise<TikTokVideo | undefined>;
+  deleteTikTokVideo(id: string): Promise<boolean>;
   updateSocialAccount(id: string, account: Partial<InsertSocialAccount>): Promise<SocialAccount | undefined>;
   getSocialAccountByPageId(pageId: string): Promise<SocialAccount | undefined>;
 
@@ -1284,6 +1321,146 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return undefined;
+  }
+
+  // TikTok Business Account methods
+  async getTikTokBusinessAccounts(): Promise<TikTokBusinessAccount[]> {
+    return await db.select().from(tiktokBusinessAccounts).orderBy(desc(tiktokBusinessAccounts.createdAt));
+  }
+
+  async getTikTokBusinessAccount(id: string): Promise<TikTokBusinessAccount | undefined> {
+    const [account] = await db.select().from(tiktokBusinessAccounts).where(eq(tiktokBusinessAccounts.id, id));
+    return account;
+  }
+
+  async getTikTokBusinessAccountByBusinessId(businessId: string): Promise<TikTokBusinessAccount | undefined> {
+    const [account] = await db.select().from(tiktokBusinessAccounts).where(eq(tiktokBusinessAccounts.businessId, businessId));
+    return account;
+  }
+
+  async createTikTokBusinessAccount(account: InsertTikTokBusinessAccount): Promise<TikTokBusinessAccount> {
+    const [newAccount] = await db.insert(tiktokBusinessAccounts).values(account).returning();
+    return newAccount;
+  }
+
+  async updateTikTokBusinessAccount(id: string, account: Partial<InsertTikTokBusinessAccount>): Promise<TikTokBusinessAccount | undefined> {
+    const [updatedAccount] = await db.update(tiktokBusinessAccounts)
+      .set({ ...account, updatedAt: new Date() })
+      .where(eq(tiktokBusinessAccounts.id, id))
+      .returning();
+    return updatedAccount;
+  }
+
+  async deleteTikTokBusinessAccount(id: string): Promise<boolean> {
+    const result = await db.delete(tiktokBusinessAccounts).where(eq(tiktokBusinessAccounts.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // TikTok Shop Order methods
+  async getTikTokShopOrders(limit?: number): Promise<TikTokShopOrder[]> {
+    let query = db.select().from(tiktokShopOrders).orderBy(desc(tiktokShopOrders.createdAt));
+    if (limit) {
+      query = query.limit(limit);
+    }
+    return await query;
+  }
+
+  async getTikTokShopOrder(id: string): Promise<TikTokShopOrder | undefined> {
+    const [order] = await db.select().from(tiktokShopOrders).where(eq(tiktokShopOrders.id, id));
+    return order;
+  }
+
+  async getTikTokShopOrderByTikTokId(tiktokOrderId: string): Promise<TikTokShopOrder | undefined> {
+    const [order] = await db.select().from(tiktokShopOrders).where(eq(tiktokShopOrders.tiktokOrderId, tiktokOrderId));
+    return order;
+  }
+
+  async createTikTokShopOrder(order: InsertTikTokShopOrder): Promise<TikTokShopOrder> {
+    const [newOrder] = await db.insert(tiktokShopOrders).values(order).returning();
+    return newOrder;
+  }
+
+  async updateTikTokShopOrder(id: string, order: Partial<InsertTikTokShopOrder>): Promise<TikTokShopOrder | undefined> {
+    const [updatedOrder] = await db.update(tiktokShopOrders)
+      .set({ ...order, updatedAt: new Date() })
+      .where(eq(tiktokShopOrders.id, id))
+      .returning();
+    return updatedOrder;
+  }
+
+  async deleteTikTokShopOrder(id: string): Promise<boolean> {
+    const result = await db.delete(tiktokShopOrders).where(eq(tiktokShopOrders.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // TikTok Shop Product methods
+  async getTikTokShopProducts(): Promise<TikTokShopProduct[]> {
+    return await db.select().from(tiktokShopProducts).orderBy(desc(tiktokShopProducts.createdAt));
+  }
+
+  async getTikTokShopProduct(id: string): Promise<TikTokShopProduct | undefined> {
+    const [product] = await db.select().from(tiktokShopProducts).where(eq(tiktokShopProducts.id, id));
+    return product;
+  }
+
+  async getTikTokShopProductByTikTokId(tiktokProductId: string): Promise<TikTokShopProduct | undefined> {
+    const [product] = await db.select().from(tiktokShopProducts).where(eq(tiktokShopProducts.tiktokProductId, tiktokProductId));
+    return product;
+  }
+
+  async createTikTokShopProduct(product: InsertTikTokShopProduct): Promise<TikTokShopProduct> {
+    const [newProduct] = await db.insert(tiktokShopProducts).values(product).returning();
+    return newProduct;
+  }
+
+  async updateTikTokShopProduct(id: string, product: Partial<InsertTikTokShopProduct>): Promise<TikTokShopProduct | undefined> {
+    const [updatedProduct] = await db.update(tiktokShopProducts)
+      .set({ ...product, updatedAt: new Date() })
+      .where(eq(tiktokShopProducts.id, id))
+      .returning();
+    return updatedProduct;
+  }
+
+  async deleteTikTokShopProduct(id: string): Promise<boolean> {
+    const result = await db.delete(tiktokShopProducts).where(eq(tiktokShopProducts.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // TikTok Video methods
+  async getTikTokVideos(businessAccountId?: string): Promise<TikTokVideo[]> {
+    let query = db.select().from(tiktokVideos).orderBy(desc(tiktokVideos.createdAt));
+    if (businessAccountId) {
+      query = query.where(eq(tiktokVideos.businessAccountId, businessAccountId));
+    }
+    return await query;
+  }
+
+  async getTikTokVideo(id: string): Promise<TikTokVideo | undefined> {
+    const [video] = await db.select().from(tiktokVideos).where(eq(tiktokVideos.id, id));
+    return video;
+  }
+
+  async getTikTokVideoByVideoId(videoId: string): Promise<TikTokVideo | undefined> {
+    const [video] = await db.select().from(tiktokVideos).where(eq(tiktokVideos.videoId, videoId));
+    return video;
+  }
+
+  async createTikTokVideo(video: InsertTikTokVideo): Promise<TikTokVideo> {
+    const [newVideo] = await db.insert(tiktokVideos).values(video).returning();
+    return newVideo;
+  }
+
+  async updateTikTokVideo(id: string, video: Partial<InsertTikTokVideo>): Promise<TikTokVideo | undefined> {
+    const [updatedVideo] = await db.update(tiktokVideos)
+      .set({ ...video, updatedAt: new Date() })
+      .where(eq(tiktokVideos.id, id))
+      .returning();
+    return updatedVideo;
+  }
+
+  async deleteTikTokVideo(id: string): Promise<boolean> {
+    const result = await db.delete(tiktokVideos).where(eq(tiktokVideos.id, id));
+    return result.rowCount! > 0;
   }
 }
 
