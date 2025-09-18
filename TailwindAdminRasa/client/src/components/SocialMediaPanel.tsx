@@ -9,6 +9,9 @@ const TikTokIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 import { FacebookChatManager } from "./FacebookChatManager";
+import { TikTokShopOrdersPanel } from "./TikTokShopOrdersPanel";
+import { TikTokShopSellerDashboard } from "./TikTokShopSellerDashboard";
+import { TikTokShopFulfillmentPanel } from "./TikTokShopFulfillmentPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -113,6 +116,7 @@ export function SocialMediaPanel({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
 
   // Load existing tags
   const { data: existingTags = [], isLoading: tagsLoading } = useQuery({
@@ -235,6 +239,10 @@ export function SocialMediaPanel({
   const { data: accounts = [], isLoading, error } = useQuery<SocialAccount[]>({
     queryKey: ["/api/social-accounts"],
   });
+
+  // Get business account ID for TikTok Shop from the accounts
+  const tikTokShopAccount = accounts.find(acc => acc.platform === 'tiktok-shop' && acc.connected);
+  const businessAccountId = tikTokShopAccount?.accountId;
 
   // Handler functions
   const handleSaveWebhookConfig = () => {
@@ -921,67 +929,142 @@ export function SocialMediaPanel({
         {/* TikTok Shop Tab Content */}
         {currentPlatform === 'tiktok-shop' && (
           <TabsContent value="shop" className="space-y-6 mt-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className="border-l-4 border-l-pink-600 bg-gradient-to-br from-pink-50 to-pink-100">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-pink-700">
-                    <ShoppingBag className="h-5 w-5" />
-                    TikTok Shop Configuration
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-pink-100 border border-pink-300 rounded-lg p-4">
-                    <h3 className="font-medium text-pink-800 mb-2">🛒 Cấu hình Shop API</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Shop ID:</span>
-                        <Badge variant="outline">Chưa cấu hình</Badge>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Access Token:</span>
-                        <Badge variant="outline">Chưa có</Badge>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Webhook:</span>
-                        <Badge variant="outline">Chưa cấu hình</Badge>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Button className="w-full bg-pink-600 hover:bg-pink-700">
-                    <Store className="h-4 w-4 mr-2" />
-                    Kết nối TikTok Shop
-                  </Button>
-                  
-                  <Button variant="outline" className="w-full" onClick={() => {
-                    window.open('https://partner.tiktokshop.com/', '_blank');
-                  }}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Mở TikTok Shop Partner
-                  </Button>
-                </CardContent>
-              </Card>
+            <Tabs defaultValue="orders" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="fulfillment">Fulfillment</TabsTrigger>
+                <TabsTrigger value="settings">Cài đặt</TabsTrigger>
+              </TabsList>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-pink-600" />
-                    Quản lý Sản phẩm
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center py-8">
-                      <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-pink-400" />
-                      <h3 className="font-medium mb-2">Chưa có sản phẩm nào</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Kết nối TikTok Shop để đồng bộ sản phẩm
+              {/* Orders Management */}
+              <TabsContent value="orders" className="space-y-4">
+                <TikTokShopOrdersPanel businessAccountId={businessAccountId} />
+              </TabsContent>
+
+              {/* Seller Analytics Dashboard */}
+              <TabsContent value="analytics" className="space-y-4">
+                <TikTokShopSellerDashboard businessAccountId={businessAccountId} />
+              </TabsContent>
+
+              {/* Fulfillment Workflow */}
+              <TabsContent value="fulfillment" className="space-y-4">
+                <TikTokShopFulfillmentPanel businessAccountId={businessAccountId} />
+              </TabsContent>
+
+              {/* Settings */}
+              <TabsContent value="settings" className="space-y-4">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Card className="border-l-4 border-l-pink-600 bg-gradient-to-br from-pink-50 to-pink-100">
+                    <CardHeader>
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-pink-600 rounded-lg">
+                          <Store className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-pink-900">TikTok Shop Connection</CardTitle>
+                          <p className="text-sm text-pink-700">Quản lý kết nối shop</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-pink-800">
+                        Kết nối và quản lý cửa hàng TikTok Shop. Đồng bộ sản phẩm, theo dõi đơn hàng và phân tích hiệu suất.
                       </p>
+                      
+                      <Button className="w-full bg-pink-600 hover:bg-pink-700">
+                        <Store className="h-4 w-4 mr-2" />
+                        Kết nối TikTok Shop
+                      </Button>
+                      
+                      <Button variant="outline" className="w-full" onClick={() => {
+                        window.open('https://partner.tiktokshop.com/', '_blank');
+                      }}>
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        TikTok Shop Partner Center
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-purple-600">
+                    <CardHeader>
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-purple-600 rounded-lg">
+                          <Settings className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle>Cài đặt Shop</CardTitle>
+                          <p className="text-sm text-gray-600">Cấu hình và đồng bộ</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Đồng bộ tự động</Label>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Đồng bộ sản phẩm</span>
+                          <Switch />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Đồng bộ đơn hàng</span>
+                          <Switch />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Tự động fulfillment</span>
+                          <Switch />
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="space-y-2">
+                        <Label>Thông báo</Label>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Email thông báo</span>
+                          <Switch />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Push notifications</span>
+                          <Switch />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Additional Shop Settings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cấu hình Shop</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shop-name">Tên Shop</Label>
+                        <Input id="shop-name" placeholder="Nhập tên shop..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shop-category">Danh mục chính</Label>
+                        <Input id="shop-category" placeholder="Nhập danh mục..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fulfillment-time">Thời gian xử lý (giờ)</Label>
+                        <Input id="fulfillment-time" type="number" defaultValue="24" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shipping-carrier">Đối tác vận chuyển</Label>
+                        <Input id="shipping-carrier" placeholder="GHN, GHTK, J&T..." />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                    
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button variant="outline">Hủy</Button>
+                      <Button>Lưu cài đặt</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         )}
 

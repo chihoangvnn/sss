@@ -6,6 +6,9 @@ import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
 import { tiktokAuth } from "./tiktok-auth";
+import { tiktokShopOrdersService } from './tiktok-shop-orders';
+import { tiktokShopSellerService } from './tiktok-shop-seller';
+import { tiktokShopFulfillmentService } from './tiktok-shop-fulfillment';
 import { generateSKU } from "./utils/sku-generator";
 import multer from 'multer';
 import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } from './services/cloudinary';
@@ -2923,6 +2926,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup RASA-specific API routes for chatbot integration
   setupRasaRoutes(app);
+
+  // ==========================================
+  // TikTok Shop Management API Routes
+  // ==========================================
+
+  // TikTok Shop Orders API
+  app.get("/api/tiktok-shop/orders", async (req, res) => {
+    try {
+      const filters = {
+        status: req.query.status as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+        search: req.query.search as string,
+        shopId: req.query.shopId as string,
+        limit: parseInt(req.query.limit as string) || 50,
+        offset: parseInt(req.query.offset as string) || 0,
+        sortBy: req.query.sortBy as 'orderDate' | 'totalAmount' | 'updatedAt' || 'orderDate',
+        sortOrder: req.query.sortOrder as 'asc' | 'desc' || 'desc'
+      };
+
+      const result = await tiktokShopOrdersService.getOrders(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching TikTok Shop orders:", error);
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/tiktok-shop/orders/:orderId", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const order = await tiktokShopOrdersService.getOrderById(orderId);
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+      res.status(404).json({ error: "Order not found" });
+    }
+  });
+
+  app.put("/api/tiktok-shop/orders/:orderId/status", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status, trackingNumber, shippingCarrier, fulfillmentStatus, notes } = req.body;
+
+      const updatedOrder = await tiktokShopOrdersService.updateOrderStatus(orderId, status, {
+        trackingNumber,
+        shippingCarrier,
+        fulfillmentStatus,
+        notes
+      });
+
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      res.status(500).json({ error: "Failed to update order status" });
+    }
+  });
+
+  app.put("/api/tiktok-shop/orders/bulk-update", async (req, res) => {
+    try {
+      const { orderIds, updates } = req.body;
+      const result = await tiktokShopOrdersService.bulkUpdateOrders(orderIds, updates);
+      res.json(result);
+    } catch (error) {
+      console.error("Error bulk updating orders:", error);
+      res.status(500).json({ error: "Failed to bulk update orders" });
+    }
+  });
+
+  app.get("/api/tiktok-shop/analytics/orders", async (req, res) => {
+    try {
+      const { shopId, days } = req.query;
+      const analytics = await tiktokShopOrdersService.getOrderAnalytics(
+        shopId as string, 
+        parseInt(days as string) || 30
+      );
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching order analytics:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  // TikTok Shop Seller API
+  app.get("/api/tiktok-shop/seller/:businessAccountId/dashboard", async (req, res) => {
+    try {
+      const { businessAccountId } = req.params;
+      const dashboard = await tiktokShopSellerService.getSellerDashboard(businessAccountId);
+      res.json(dashboard);
+    } catch (error) {
+      console.error("Error fetching seller dashboard:", error);
+      res.status(500).json({ error: "Failed to fetch seller dashboard" });
+    }
+  });
+
+  app.get("/api/tiktok-shop/seller/:businessAccountId/analytics", async (req, res) => {
+    try {
+      const { businessAccountId } = req.params;
+      const analytics = await tiktokShopSellerService.getPerformanceMetrics(businessAccountId);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching seller analytics:", error);
+      res.status(500).json({ error: "Failed to fetch seller analytics" });
+    }
+  });
+
+  // TikTok Shop Fulfillment API
+  app.get("/api/tiktok-shop/fulfillment/:businessAccountId/queue", async (req, res) => {
+    try {
+      const { businessAccountId } = req.params;
+      const filters = {
+        status: req.query.status as string,
+        priority: req.query.priority as string,
+        urgent: req.query.urgent === 'true'
+      };
+      
+      const queue = await tiktokShopFulfillmentService.getFulfillmentQueue(businessAccountId, filters);
+      res.json(queue);
+    } catch (error) {
+      console.error("Error fetching fulfillment queue:", error);
+      res.status(500).json({ error: "Failed to fetch fulfillment queue" });
+    }
+  });
+
+  app.put("/api/tiktok-shop/fulfillment/orders/:orderId", async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const updates = req.body;
+      const result = await tiktokShopFulfillmentService.processOrderFulfillment(orderId, updates);
+      res.json(result);
+    } catch (error) {
+      console.error("Error processing fulfillment:", error);
+      res.status(500).json({ error: "Failed to process order fulfillment" });
+    }
+  });
+
+  app.post("/api/tiktok-shop/fulfillment/shipping-labels", async (req, res) => {
+    try {
+      const { orderIds, carrier } = req.body;
+      const labels = await tiktokShopFulfillmentService.generateShippingLabels(orderIds, carrier);
+      res.json(labels);
+    } catch (error) {
+      console.error("Error generating shipping labels:", error);
+      res.status(500).json({ error: "Failed to generate shipping labels" });
+    }
+  });
 
   // ==========================================
   // API FALLBACK - Catch unmatched API routes and return JSON 404
