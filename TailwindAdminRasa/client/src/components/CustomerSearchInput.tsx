@@ -41,30 +41,28 @@ export function CustomerSearchInput({
     }
   }, [value]);
 
-  // Debounced search function
+  // ✅ Smart unified search function
   const searchCustomers = async (query: string) => {
-    if (query.length < 2) {
+    if (query.length < 1) { // ✅ Reduced from 2 to 1 character
       setSuggestions([]);
       return;
     }
     
     setIsLoading(true);
     try {
-      // Search by phone (existing API)
-      const phoneResponse = await apiRequest('GET', `/api/customers/search?phone=${encodeURIComponent(query)}`);
-      const phoneResults = await phoneResponse.json() as CustomerWithAddress[];
+      // 🧠 Smart detection: if query has digits, search by phone, otherwise by name
+      const hasDigits = /\d/.test(query);
+      const searchParam = hasDigits ? `phone=${encodeURIComponent(query)}` : `q=${encodeURIComponent(query)}`;
       
-      // Search by name (using general search)  
-      const nameResponse = await apiRequest('GET', `/api/customers/search?q=${encodeURIComponent(query)}`);
-      const nameResults = await nameResponse.json() as CustomerWithAddress[];
+      // ✅ Single API call instead of two
+      const response = await apiRequest('GET', `/api/customers/search?${searchParam}`);
       
-      // Combine and deduplicate results
-      const allResults = [...(phoneResults || []), ...(nameResults || [])];
-      const uniqueResults = allResults.filter((customer, index, arr) => 
-        arr.findIndex(c => c.id === customer.id) === index
-      );
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
       
-      setSuggestions(uniqueResults.slice(0, 8)); // Limit to 8 results
+      const results = await response.json() as CustomerWithAddress[];
+      setSuggestions((results || []).slice(0, 8)); // Limit to 8 results
     } catch (error) {
       console.error('Customer search error:', error);
       setSuggestions([]);
@@ -85,10 +83,10 @@ export function CustomerSearchInput({
       clearTimeout(debounceRef.current);
     }
 
-    // Debounce search
+    // ⚡ Faster debounce for better UX
     debounceRef.current = setTimeout(() => {
       searchCustomers(query);
-    }, 300);
+    }, 100); // ✅ Reduced from 300ms to 100ms
   };
 
   // Handle customer selection
