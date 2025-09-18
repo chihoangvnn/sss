@@ -8,6 +8,152 @@ import { facebookAuth } from "./facebook-auth";
 import { generateSKU } from "./utils/sku-generator";
 import multer from 'multer';
 import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } from './services/cloudinary';
+import crypto from 'crypto';
+import express from 'express';
+
+// Facebook webhook event processing functions
+async function processFacebookMessage(event: any) {
+  try {
+    console.log('Processing Facebook message event:', event);
+    
+    const senderId = event.sender?.id;
+    const recipientId = event.recipient?.id; // Page ID
+    const messageData = event.message;
+    const timestamp = event.timestamp;
+
+    if (!senderId || !recipientId || !messageData) {
+      console.log('Invalid message event structure');
+      return;
+    }
+
+    // Find the social account for this page
+    const socialAccount = await storage.getSocialAccountByPageId(recipientId);
+    if (!socialAccount) {
+      console.log(`No social account found for page ID: ${recipientId}`);
+      return;
+    }
+
+    // Find or create conversation
+    let conversation = await storage.getFacebookConversationByParticipant(recipientId, senderId);
+    
+    if (!conversation) {
+      // Create new conversation
+      const userData = await fetchFacebookUserData(senderId, socialAccount, recipientId);
+      conversation = await storage.createFacebookConversation({
+        pageId: recipientId,
+        pageName: socialAccount.name,
+        participantId: senderId,
+        participantName: userData.name || 'Unknown User',
+        participantAvatar: userData.picture?.data?.url,
+        status: 'active',
+        priority: 'normal',
+        tags: [],
+        messageCount: 0,
+        lastMessageAt: new Date(timestamp),
+        lastMessagePreview: messageData.text?.substring(0, 100) || '[Media]',
+        isRead: false
+      });
+    }
+
+    // Create message record
+    const attachments = [];
+    if (messageData.attachments) {
+      for (const attachment of messageData.attachments) {
+        attachments.push({
+          type: attachment.type,
+          url: attachment.payload?.url,
+          title: attachment.title,
+          payload: attachment.payload
+        });
+      }
+    }
+
+    await storage.createFacebookMessage({
+      conversationId: conversation.id,
+      facebookMessageId: messageData.mid,
+      senderId: senderId,
+      senderName: event.message?.is_echo ? socialAccount.name : conversation.participantName,
+      senderType: event.message?.is_echo ? 'page' : 'user',
+      content: messageData.text || null,
+      messageType: messageData.attachments?.[0]?.type || 'text',
+      attachments: attachments,
+      timestamp: new Date(timestamp),
+      isEcho: event.message?.is_echo || false,
+      replyToMessageId: messageData.reply_to?.mid,
+      isRead: false,
+      isDelivered: true
+    });
+
+    console.log(`Facebook message processed for conversation: ${conversation.id}`);
+  } catch (error) {
+    console.error('Error processing Facebook message:', error);
+  }
+}
+
+async function processFacebookFeedEvent(change: any) {
+  try {
+    console.log('Processing Facebook feed event:', change);
+    
+    // Handle different feed event types
+    const field = change.field;
+    const value = change.value;
+
+    switch (field) {
+      case 'posts':
+        console.log('Post event:', value);
+        // Handle post creation, updates, deletions
+        break;
+      case 'comments':
+        console.log('Comment event:', value);
+        // Handle comment creation, updates, deletions
+        break;
+      case 'reactions':
+        console.log('Reaction event:', value);
+        // Handle likes, reactions
+        break;
+      default:
+        console.log(`Unhandled feed event type: ${field}`);
+    }
+  } catch (error) {
+    console.error('Error processing Facebook feed event:', error);
+  }
+}
+
+async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?: string) {
+  try {
+    // Get page access token for this page
+    const pageTokens = socialAccount.pageAccessTokens as any[];
+    if (!pageTokens || pageTokens.length === 0) {
+      console.log('No page tokens available');
+      return { name: 'Unknown User' };
+    }
+
+    // Find the correct page token for the specific page ID
+    let pageToken = pageTokens.find((token: any) => token.pageId === pageId)?.accessToken;
+    
+    // Fallback to first token if no specific match (for backwards compatibility)
+    if (!pageToken) {
+      pageToken = pageTokens[0]?.accessToken;
+      console.log(`No token found for pageId ${pageId}, using first available token`);
+    }
+    
+    if (!pageToken) {
+      console.log('No access token found');
+      return { name: 'Unknown User' };
+    }
+
+    const response = await fetch(`https://graph.facebook.com/v18.0/${userId}?fields=name,picture&access_token=${pageToken}`);
+    if (response.ok) {
+      return await response.json();
+    } else {
+      console.log('Failed to fetch user data:', response.status);
+      return { name: 'Unknown User' };
+    }
+  } catch (error) {
+    console.error('Error fetching Facebook user data:', error);
+    return { name: 'Unknown User' };
+  }
+}
 
 
 // Payment status validation schema
@@ -1109,6 +1255,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Facebook Chat API
+  app.get("/api/facebook/conversations", async (req, res) => {
+    try {
+      const conversations = await storage.getFacebookConversations();
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching Facebook conversations:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/facebook/conversations/:conversationId/messages", async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const messages = await storage.getFacebookMessages(conversationId, limit);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching Facebook messages:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/facebook/conversations/:conversationId/send", async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const { content } = req.body;
+      
+      // Get conversation details
+      const conversation = await storage.getFacebookConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+
+      // Get social account with page token
+      const socialAccount = await storage.getSocialAccountByPageId(conversation.pageId);
+      if (!socialAccount) {
+        return res.status(404).json({ error: "Social account not found" });
+      }
+
+      // Send message via Facebook API
+      const pageToken = socialAccount.pageAccessTokens?.find((token: any) => token.pageId === conversation.pageId)?.accessToken;
+      if (!pageToken) {
+        return res.status(400).json({ error: "Page access token not found" });
+      }
+
+      // Call Facebook Send API
+      const fbResponse = await fetch(`https://graph.facebook.com/v18.0/${conversation.pageId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${pageToken}`
+        },
+        body: JSON.stringify({
+          recipient: { id: conversation.participantId },
+          message: { text: content }
+        })
+      });
+
+      if (!fbResponse.ok) {
+        const error = await fbResponse.json();
+        console.error('Facebook API error:', error);
+        return res.status(400).json({ error: "Failed to send message" });
+      }
+
+      const fbResult = await fbResponse.json();
+
+      // Store message in database
+      const message = await storage.createFacebookMessage({
+        conversationId: conversationId,
+        facebookMessageId: fbResult.message_id,
+        senderId: conversation.pageId,
+        senderName: socialAccount.name,
+        senderType: 'page',
+        content: content,
+        messageType: 'text',
+        attachments: [],
+        timestamp: new Date(),
+        isEcho: false,
+        replyToMessageId: null,
+        isRead: true,
+        isDelivered: true
+      });
+
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error sending Facebook message:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/facebook/conversations/:conversationId", async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const updates = req.body;
+      
+      const conversation = await storage.updateFacebookConversation(conversationId, updates);
+      if (!conversation) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      
+      res.json(conversation);
+    } catch (error) {
+      console.error("Error updating Facebook conversation:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/facebook/conversations/:conversationId/read", async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const success = await storage.markConversationAsRead(conversationId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Error marking conversation as read:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Chatbot API
   app.get("/api/chatbot/conversations", async (req, res) => {
     try {
@@ -1150,11 +1415,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Placeholder for Facebook webhook
+  // Facebook Webhook Verification (GET) and Event Processing (POST)
+  app.get("/api/webhooks/facebook", (req, res) => {
+    // Facebook webhook verification
+    const VERIFY_TOKEN = process.env.FACEBOOK_VERIFY_TOKEN || "your_verify_token_here";
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+      if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+        console.log('Facebook webhook verified');
+        res.status(200).send(challenge);
+      } else {
+        console.error('Facebook webhook verification failed');
+        res.sendStatus(403);
+      }
+    } else {
+      res.sendStatus(400);
+    }
+  });
+
+  // Add express.raw middleware ONLY for webhook signature validation
+  app.use("/api/webhooks/facebook", (req, res, next) => {
+    if (req.method === 'POST') {
+      express.raw({ type: 'application/json' })(req, res, next);
+    } else {
+      next(); // Allow GET requests for verification to use regular JSON parsing
+    }
+  });
+
   app.post("/api/webhooks/facebook", async (req, res) => {
     try {
-      // TODO: Implement Facebook webhook processing
-      console.log("Facebook webhook received:", req.body);
+      // Verify webhook signature for security using raw body
+      const signature = req.headers['x-hub-signature-256'] as string;
+      const appSecret = process.env.FACEBOOK_APP_SECRET;
+      
+      if (appSecret && signature) {
+        const expectedSignature = 'sha256=' + crypto
+          .createHmac('sha256', appSecret)
+          .update(req.body) // Use raw Buffer for signature validation
+          .digest('hex');
+        
+        // Use timing-safe comparison to prevent timing attacks
+        if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+          console.error('Facebook webhook signature mismatch');
+          console.error('Expected:', expectedSignature);
+          console.error('Received:', signature);
+          return res.sendStatus(403);
+        }
+        console.log('Facebook webhook signature verified successfully');
+      } else if (appSecret) {
+        console.warn('Facebook webhook received without signature - ensure webhook is configured with app secret');
+        return res.sendStatus(400);
+      } else {
+        console.warn('FACEBOOK_APP_SECRET not configured - webhook security disabled');
+      }
+
+      // Parse the JSON body manually since we used express.raw
+      const body = JSON.parse(req.body.toString());
+      console.log('Facebook webhook received:', JSON.stringify(body, null, 2));
+
+      // Process webhook events
+      if (body.object === 'page') {
+        for (const entry of body.entry || []) {
+          // Handle messaging events
+          if (entry.messaging) {
+            for (const event of entry.messaging) {
+              await processFacebookMessage(event);
+            }
+          }
+          
+          // Handle feed events (posts, comments)
+          if (entry.changes) {
+            for (const change of entry.changes) {
+              await processFacebookFeedEvent(change);
+            }
+          }
+        }
+      }
+
       res.status(200).json({ status: "received" });
     } catch (error) {
       console.error("Error processing Facebook webhook:", error);

@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp } from "lucide-react";
+import { FacebookChatManager } from "./FacebookChatManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +61,7 @@ export function SocialMediaPanel({
 }: SocialMediaPanelProps) {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("accounts");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -216,29 +219,53 @@ export function SocialMediaPanel({
 
   return (
     <div className="space-y-6" data-testid="social-media-panel">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Mạng xã hội</h2>
-          <p className="text-muted-foreground">Quản lý kết nối và nội dung trên các nền tảng</p>
+          <h1 className="text-3xl font-bold text-gray-900">Quản lý mạng xã hội</h1>
+          <p className="text-gray-600">Kết nối và quản lý các tài khoản mạng xã hội của bạn</p>
         </div>
         <div className="flex gap-2">
           <Button 
             data-testid="button-connect-facebook" 
             onClick={() => handleConnectAccount('facebook')}
             disabled={connectingPlatform === 'facebook' || connectFacebookMutation.isPending}
-            variant="outline"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
           >
             <Facebook className="h-4 w-4 mr-2" />
             {connectingPlatform === 'facebook' ? 'Đang kết nối...' : 'Kết nối Facebook'}
           </Button>
-          <Button data-testid="button-add-social-account" onClick={() => console.log('Add other social account triggered')}>
+          <Button 
+            data-testid="button-add-social-account" 
+            onClick={() => console.log('Add other social account triggered')}
+            variant="outline"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Kết nối khác
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Main Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+          <TabsTrigger value="accounts" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Tài khoản
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Tin nhắn
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Thống kê
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Accounts Tab Content */}
+        <TabsContent value="accounts" className="space-y-6 mt-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {accounts.length === 0 ? (
           <Card className="col-span-full">
             <CardContent className="pt-6 text-center">
@@ -360,39 +387,102 @@ export function SocialMediaPanel({
           );
         })
         )}
-      </div>
-
-      {/* Summary Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Tổng quan hiệu suất
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="text-center">
-              <p className="text-2xl font-bold">
-                {formatFollowers(accounts.reduce((sum, acc) => sum + (acc.followers || 0), 0))}
-              </p>
-              <p className="text-sm text-muted-foreground">Tổng người theo dõi</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">
-                {accounts.filter(acc => acc.connected).length}/{accounts.length}
-              </p>
-              <p className="text-sm text-muted-foreground">Tài khoản đã kết nối</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
-                {accounts.length > 0 ? Math.round(accounts.reduce((sum, acc) => sum + Number(acc.engagement || 0), 0) / accounts.length) : 0}%
-              </p>
-              <p className="text-sm text-muted-foreground">Tương tác trung bình</p>
-            </div>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        {/* Chat Tab Content */}
+        <TabsContent value="chat" className="mt-6">
+          <FacebookChatManager />
+        </TabsContent>
+
+        {/* Analytics Tab Content */}
+        <TabsContent value="analytics" className="space-y-6 mt-6">
+          {/* Summary Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Tổng quan hiệu suất
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="text-center">
+                  <p className="text-2xl font-bold">
+                    {formatFollowers(accounts.reduce((sum, acc) => sum + (acc.followers || 0), 0))}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Tổng người theo dõi</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold">
+                    {accounts.filter(acc => acc.connected).length}/{accounts.length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Tài khoản đã kết nối</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {accounts.length > 0 ? Math.round(accounts.reduce((sum, acc) => sum + Number(acc.engagement || 0), 0) / accounts.length) : 0}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">Tương tác trung bình</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Additional Analytics Cards */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-blue-600" />
+                  Hoạt động tin nhắn
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Tin nhắn hôm nay</span>
+                    <span className="font-semibold">24</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Cuộc trò chuyện mới</span>
+                    <span className="font-semibold">8</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Thời gian phản hồi TB</span>
+                    <span className="font-semibold">12 phút</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Facebook className="h-5 w-5 text-blue-600" />
+                  Facebook Insights
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Lượt tiếp cận hôm nay</span>
+                    <span className="font-semibold">1.2K</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Tương tác</span>
+                    <span className="font-semibold">85</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Tỷ lệ tương tác</span>
+                    <span className="font-semibold text-green-600">7.1%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

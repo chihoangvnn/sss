@@ -1,7 +1,7 @@
 import { 
   users, products, customers, orders, orderItems, socialAccounts, chatbotConversations,
   storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
-  productLandingPages, productReviews,
+  productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -11,7 +11,10 @@ import {
   type Category, type InsertCategory, type Industry, type InsertIndustry,
   type Payment, type InsertPayment, type ShopSettings, type InsertShopSettings,
   type ProductLandingPage, type InsertProductLandingPage,
-  type ProductReview, type InsertProductReview
+  type ProductReview, type InsertProductReview,
+  type FacebookConversation, type InsertFacebookConversation,
+  type FacebookMessage, type InsertFacebookMessage,
+  type PageTag, type InsertPageTag
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, isNull } from "drizzle-orm";
@@ -71,6 +74,25 @@ export interface IStorage {
   getSocialAccounts(): Promise<SocialAccount[]>;
   createSocialAccount(account: InsertSocialAccount): Promise<SocialAccount>;
   updateSocialAccount(id: string, account: Partial<InsertSocialAccount>): Promise<SocialAccount | undefined>;
+  getSocialAccountByPageId(pageId: string): Promise<SocialAccount | undefined>;
+
+  // Facebook Management methods
+  getPageTags(): Promise<PageTag[]>;
+  createPageTag(tag: InsertPageTag): Promise<PageTag>;
+  updatePageTag(id: string, tag: Partial<InsertPageTag>): Promise<PageTag | undefined>;
+  deletePageTag(id: string): Promise<boolean>;
+
+  // Facebook Conversations
+  getFacebookConversations(pageId?: string, limit?: number): Promise<FacebookConversation[]>;
+  getFacebookConversation(id: string): Promise<FacebookConversation | undefined>;
+  getFacebookConversationByParticipant(pageId: string, participantId: string): Promise<FacebookConversation | undefined>;
+  createFacebookConversation(conversation: InsertFacebookConversation): Promise<FacebookConversation>;
+  updateFacebookConversation(id: string, conversation: Partial<InsertFacebookConversation>): Promise<FacebookConversation | undefined>;
+
+  // Facebook Messages
+  getFacebookMessages(conversationId: string, limit?: number): Promise<FacebookMessage[]>;
+  createFacebookMessage(message: InsertFacebookMessage): Promise<FacebookMessage>;
+  markConversationAsRead(conversationId: string): Promise<boolean>;
 
   // Chatbot methods
   getChatbotConversations(limit?: number): Promise<ChatbotConversation[]>;
@@ -618,14 +640,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSocialAccount(account: InsertSocialAccount): Promise<SocialAccount> {
-    const [newAccount] = await db.insert(socialAccounts).values(account).returning();
+    const [newAccount] = await db.insert(socialAccounts).values([account as any]).returning();
     return newAccount;
   }
 
   async updateSocialAccount(id: string, account: Partial<InsertSocialAccount>): Promise<SocialAccount | undefined> {
     const [updatedAccount] = await db
       .update(socialAccounts)
-      .set(account)
+      .set({ ...account, updatedAt: new Date() } as any)
       .where(eq(socialAccounts.id, id))
       .returning();
     return updatedAccount || undefined;
@@ -1099,6 +1121,127 @@ export class DatabaseStorage implements IStorage {
     } catch {
       return false;
     }
+  }
+
+  // Facebook Management Methods
+  async getPageTags(): Promise<PageTag[]> {
+    return await db.select().from(pageTags).orderBy(desc(pageTags.createdAt));
+  }
+
+  async createPageTag(tag: InsertPageTag): Promise<PageTag> {
+    const [newTag] = await db.insert(pageTags).values(tag).returning();
+    return newTag;
+  }
+
+  async updatePageTag(id: string, tag: Partial<InsertPageTag>): Promise<PageTag | undefined> {
+    const [updatedTag] = await db
+      .update(pageTags)
+      .set({ ...tag, updatedAt: new Date() })
+      .where(eq(pageTags.id, id))
+      .returning();
+    return updatedTag || undefined;
+  }
+
+  async deletePageTag(id: string): Promise<boolean> {
+    const result = await db.delete(pageTags).where(eq(pageTags.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Facebook Conversations
+  async getFacebookConversations(pageId?: string, limit = 50): Promise<FacebookConversation[]> {
+    const query = db.select().from(facebookConversations);
+    
+    if (pageId) {
+      return await query
+        .where(eq(facebookConversations.pageId, pageId))
+        .orderBy(desc(facebookConversations.lastMessageAt))
+        .limit(limit);
+    }
+    
+    return await query
+      .orderBy(desc(facebookConversations.lastMessageAt))
+      .limit(limit);
+  }
+
+  async getFacebookConversation(id: string): Promise<FacebookConversation | undefined> {
+    const [conversation] = await db.select().from(facebookConversations).where(eq(facebookConversations.id, id));
+    return conversation || undefined;
+  }
+
+  async getFacebookConversationByParticipant(pageId: string, participantId: string): Promise<FacebookConversation | undefined> {
+    const [conversation] = await db
+      .select()
+      .from(facebookConversations)
+      .where(and(
+        eq(facebookConversations.pageId, pageId),
+        eq(facebookConversations.participantId, participantId)
+      ));
+    return conversation || undefined;
+  }
+
+  async createFacebookConversation(conversation: InsertFacebookConversation): Promise<FacebookConversation> {
+    const [newConversation] = await db.insert(facebookConversations).values([conversation as any]).returning();
+    return newConversation;
+  }
+
+  async updateFacebookConversation(id: string, conversation: Partial<InsertFacebookConversation>): Promise<FacebookConversation | undefined> {
+    const [updatedConversation] = await db
+      .update(facebookConversations)
+      .set({ ...conversation, updatedAt: new Date() } as any)
+      .where(eq(facebookConversations.id, id))
+      .returning();
+    return updatedConversation || undefined;
+  }
+
+  // Facebook Messages
+  async getFacebookMessages(conversationId: string, limit = 50): Promise<FacebookMessage[]> {
+    return await db
+      .select()
+      .from(facebookMessages)
+      .where(eq(facebookMessages.conversationId, conversationId))
+      .orderBy(desc(facebookMessages.timestamp))
+      .limit(limit);
+  }
+
+  async createFacebookMessage(message: InsertFacebookMessage): Promise<FacebookMessage> {
+    // Update conversation's last message info
+    await db
+      .update(facebookConversations)
+      .set({
+        lastMessageAt: new Date(message.timestamp),
+        lastMessagePreview: message.content?.substring(0, 100) || '[Media]',
+        messageCount: sql`${facebookConversations.messageCount} + 1`,
+        isRead: message.senderType === 'page' ? true : false,
+        updatedAt: new Date()
+      })
+      .where(eq(facebookConversations.id, message.conversationId));
+
+    const [newMessage] = await db.insert(facebookMessages).values([message as any]).returning();
+    return newMessage;
+  }
+
+  async markConversationAsRead(conversationId: string): Promise<boolean> {
+    const result = await db
+      .update(facebookConversations)
+      .set({ 
+        isRead: true,
+        updatedAt: new Date()
+      })
+      .where(eq(facebookConversations.id, conversationId));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getSocialAccountByPageId(pageId: string): Promise<SocialAccount | undefined> {
+    const accounts = await db.select().from(socialAccounts).where(eq(socialAccounts.platform, "facebook"));
+    
+    // Search through pageAccessTokens jsonb field
+    for (const account of accounts) {
+      const pageTokens = account.pageAccessTokens as any[];
+      if (pageTokens?.some((token: any) => token.pageId === pageId)) {
+        return account;
+      }
+    }
+    return undefined;
   }
 }
 
