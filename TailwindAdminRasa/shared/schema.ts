@@ -153,13 +153,40 @@ export const customers = pgTable("customers", {
   joinDate: timestamp("join_date").defaultNow(),
 });
 
-// Orders table
+// Enhanced Orders table with unified source tracking
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerId: varchar("customer_id").notNull().references(() => customers.id),
   total: decimal("total", { precision: 15, scale: 2 }).notNull(),
   status: text("status", { enum: ["pending", "processing", "shipped", "delivered", "cancelled"] }).notNull().default("pending"),
   items: integer("items").notNull(),
+  
+  // 🚀 Unified Order Source Tracking
+  source: text("source", { 
+    enum: ["admin", "storefront", "tiktok-shop", "landing-page"] 
+  }).notNull().default("admin"),
+  sourceOrderId: text("source_order_id"), // Original order ID in source system
+  sourceReference: text("source_reference"), // Additional reference (storefront name, TikTok shop ID, etc.)
+  
+  // 🔄 Sync Metadata  
+  syncStatus: text("sync_status", { 
+    enum: ["synced", "pending", "failed", "manual"] 
+  }).notNull().default("manual"),
+  syncData: jsonb("sync_data").$type<{
+    lastSyncAt?: string;
+    syncErrors?: string[];
+    sourceData?: any; // Raw source order data for reference
+  }>(),
+  
+  // 📞 Source Customer Info (if different from our customer record)
+  sourceCustomerInfo: jsonb("source_customer_info").$type<{
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    originalCustomerId?: string;
+  }>(),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

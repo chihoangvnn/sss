@@ -9,6 +9,7 @@ import { tiktokAuth } from "./tiktok-auth";
 import { tiktokShopOrdersService } from './tiktok-shop-orders';
 import { tiktokShopSellerService } from './tiktok-shop-seller';
 import { tiktokShopFulfillmentService } from './tiktok-shop-fulfillment';
+import { orderSyncService } from './services/order-sync-service';
 import { generateSKU } from "./utils/sku-generator";
 import multer from 'multer';
 import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } from './services/cloudinary';
@@ -813,14 +814,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Orders API
+  // 🚀 Enhanced Orders API with Unified Source Filtering
   app.get("/api/orders", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const source = req.query.source as string; // Filter by source
+      const syncStatus = req.query.syncStatus as string; // Filter by sync status
+      
       const orders = await storage.getOrders(limit);
-      res.json(orders);
+      
+      // Apply filters if provided
+      let filteredOrders = orders;
+      
+      if (source && source !== 'all') {
+        filteredOrders = filteredOrders.filter(order => 
+          (order as any).source === source
+        );
+      }
+      
+      if (syncStatus && syncStatus !== 'all') {
+        filteredOrders = filteredOrders.filter(order => 
+          (order as any).syncStatus === syncStatus
+        );
+      }
+      
+      // Add source information to response for compatibility
+      const enhancedOrders = filteredOrders.map(order => ({
+        ...order,
+        sourceInfo: {
+          source: (order as any).source || 'admin',
+          sourceOrderId: (order as any).sourceOrderId || null,
+          sourceReference: (order as any).sourceReference || null,
+          syncStatus: (order as any).syncStatus || 'manual'
+        }
+      }));
+      
+      res.json(enhancedOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // 🔄 Unified Order Sync API Endpoints
+  
+  // Get order sync statistics
+  app.get("/api/orders/sync/stats", async (req, res) => {
+    try {
+      const orders = await storage.getOrders();
+      
+      const stats = {
+        total: orders.length,
+        bySource: {
+          admin: orders.filter(o => !(o as any).source || (o as any).source === 'admin').length,
+          storefront: orders.filter(o => (o as any).source === 'storefront').length,
+          'tiktok-shop': orders.filter(o => (o as any).source === 'tiktok-shop').length,
+          'landing-page': orders.filter(o => (o as any).source === 'landing-page').length
+        },
+        bySyncStatus: {
+          manual: orders.filter(o => !(o as any).syncStatus || (o as any).syncStatus === 'manual').length,
+          synced: orders.filter(o => (o as any).syncStatus === 'synced').length,
+          pending: orders.filter(o => (o as any).syncStatus === 'pending').length,
+          failed: orders.filter(o => (o as any).syncStatus === 'failed').length
+        }
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching sync stats:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Manual sync from storefront orders
+  app.post("/api/orders/sync/storefront", async (req, res) => {
+    try {
+      console.log('🏪 Manual storefront sync initiated...');
+      const result = await orderSyncService.syncStorefrontOrders();
+      
+      res.json({
+        success: true,
+        message: `Đã đồng bộ ${result.synced} đơn hàng từ storefront`,
+        data: result
+      });
+    } catch (error) {
+      console.error("Error syncing storefront orders:", error);
+      res.status(500).json({ 
+        error: "Lỗi đồng bộ đơn hàng storefront",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Manual sync from TikTok Shop orders  
+  app.post("/api/orders/sync/tiktok-shop", async (req, res) => {
+    try {
+      console.log('🎵 Manual TikTok Shop sync initiated...');
+      const result = await orderSyncService.syncTikTokShopOrders();
+      
+      res.json({
+        success: true,
+        message: `Đã đồng bộ ${result.synced} đơn hàng từ TikTok Shop`,
+        data: result
+      });
+    } catch (error) {
+      console.error("Error syncing TikTok Shop orders:", error);
+      res.status(500).json({ 
+        error: "Lỗi đồng bộ đơn hàng TikTok Shop",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Manual sync all sources
+  app.post("/api/orders/sync/all", async (req, res) => {
+    try {
+      console.log('🚀 Manual unified sync initiated...');
+      const result = await orderSyncService.syncAllOrders();
+      
+      res.json({
+        success: true,
+        message: `Đã đồng bộ tổng cộng ${result.synced} đơn hàng từ tất cả nguồn`,
+        data: result
+      });
+    } catch (error) {
+      console.error("Error syncing all orders:", error);
+      res.status(500).json({ 
+        error: "Lỗi đồng bộ đơn hàng",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Eye, MoreHorizontal, Search, Filter, Plus, Edit, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Search, Filter, Plus, Edit, Trash2, Store, ShoppingBag, Zap, UserPlus, RefreshCw } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -41,6 +41,12 @@ import type { Order } from "@shared/schema";
 interface OrderWithCustomerInfo extends Order {
   customerName: string;
   customerEmail: string;
+  sourceInfo?: {
+    source: 'admin' | 'storefront' | 'tiktok-shop' | 'landing-page';
+    sourceOrderId: string | null;
+    sourceReference: string | null;
+    syncStatus: 'synced' | 'pending' | 'failed' | 'manual';
+  };
 }
 
 interface OrderTableProps {
@@ -71,9 +77,74 @@ const getStatusBadge = (status: string) => {
   return <Badge variant={config.variant}>{config.label}</Badge>;
 };
 
+// 🚀 Source Badge Component with Icons
+const getSourceBadge = (sourceInfo: OrderWithCustomerInfo['sourceInfo']) => {
+  if (!sourceInfo) return <Badge variant="outline">Admin</Badge>;
+  
+  const sourceConfig = {
+    admin: { 
+      label: "Admin", 
+      variant: "outline" as const, 
+      icon: UserPlus,
+      color: "text-blue-600"
+    },
+    storefront: { 
+      label: "Storefront", 
+      variant: "default" as const, 
+      icon: Store,
+      color: "text-green-600"
+    },
+    'tiktok-shop': { 
+      label: "TikTok Shop", 
+      variant: "secondary" as const, 
+      icon: Zap,
+      color: "text-pink-600"
+    },
+    'landing-page': { 
+      label: "Landing Page", 
+      variant: "outline" as const, 
+      icon: ShoppingBag,
+      color: "text-orange-600"
+    }
+  };
+
+  const config = sourceConfig[sourceInfo.source];
+  const Icon = config.icon;
+  
+  return (
+    <Badge variant={config.variant} className="flex items-center gap-1">
+      <Icon className={`h-3 w-3 ${config.color}`} />
+      {config.label}
+    </Badge>
+  );
+};
+
+// 🔄 Sync Status Badge Component  
+const getSyncStatusBadge = (syncStatus?: string) => {
+  if (!syncStatus || syncStatus === 'manual') return null;
+  
+  const syncConfig = {
+    synced: { label: "Đã đồng bộ", variant: "default" as const, color: "text-green-600" },
+    pending: { label: "Đang đồng bộ", variant: "secondary" as const, color: "text-yellow-600" },
+    failed: { label: "Lỗi đồng bộ", variant: "destructive" as const, color: "text-red-600" }
+  };
+
+  const config = syncConfig[syncStatus as keyof typeof syncConfig];
+  if (!config) return null;
+  
+  return (
+    <Badge variant={config.variant} className="flex items-center gap-1 text-xs">
+      <RefreshCw className={`h-2 w-2 ${config.color}`} />
+      {config.label}
+    </Badge>
+  );
+};
+
 export function OrderTable({ onViewOrder }: OrderTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [syncStatusFilter, setSyncStatusFilter] = useState<string>("all");
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderWithCustomerInfo | null>(null);
   const [deletingOrder, setDeletingOrder] = useState<OrderWithCustomerInfo | null>(null);
@@ -85,8 +156,21 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
   // 🌿 Gentle Green Notifications for Main Orders
   const { triggerNewOrderNotification, NewOrderNotificationComponent } = useNewOrderNotification();
 
+  // 🚀 Enhanced Orders Query with Source Filtering
   const { data: orders = [], isLoading, error } = useQuery<OrderWithCustomerInfo[]>({
-    queryKey: ["/api/orders"],
+    queryKey: ["/api/orders", sourceFilter, syncStatusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (sourceFilter && sourceFilter !== 'all') {
+        params.set('source', sourceFilter);
+      }
+      if (syncStatusFilter && syncStatusFilter !== 'all') {
+        params.set('syncStatus', syncStatusFilter);
+      }
+      
+      const response = await apiRequest('GET', `/api/orders?${params.toString()}`);
+      return response.json();
+    },
     refetchInterval: 30000, // Check for new orders every 30 seconds
   });
 
@@ -200,12 +284,15 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
     }
   }, [orders, searchTerm, statusFilter, triggerNewOrderNotification, toast]);
 
+  // 🚀 Enhanced Filtering with Source & Sync Status
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesSource = sourceFilter === "all" || (order.sourceInfo?.source || 'admin') === sourceFilter;
+    const matchesSyncStatus = syncStatusFilter === "all" || (order.sourceInfo?.syncStatus || 'manual') === syncStatusFilter;
+    return matchesSearch && matchesStatus && matchesSource && matchesSyncStatus;
   });
 
   // Delete order mutation
@@ -321,6 +408,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                 data-testid="input-search-orders"
               />
             </div>
+            {/* Status Filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" data-testid="button-filter-status">
@@ -349,6 +437,80 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* 🚀 Source Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" data-testid="button-filter-source">
+                  <Store className="h-4 w-4 mr-2" />
+                  {sourceFilter === "all" ? "Tất cả nguồn" : (() => {
+                    const sourceLabels = {
+                      admin: "Admin", 
+                      storefront: "Storefront",
+                      'tiktok-shop': "TikTok Shop",
+                      'landing-page': "Landing Page"
+                    };
+                    return sourceLabels[sourceFilter as keyof typeof sourceLabels] || sourceFilter;
+                  })()}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setSourceFilter("all")}>
+                  Tất cả nguồn
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSourceFilter("admin")}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Admin
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSourceFilter("storefront")}>
+                  <Store className="h-4 w-4 mr-2" />
+                  Storefront
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSourceFilter("tiktok-shop")}>
+                  <Zap className="h-4 w-4 mr-2" />
+                  TikTok Shop
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSourceFilter("landing-page")}>
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                  Landing Page
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* 🔄 Sync Status Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" data-testid="button-filter-sync">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {syncStatusFilter === "all" ? "Tất cả sync" : (() => {
+                    const syncLabels = {
+                      manual: "Thủ công",
+                      synced: "Đã đồng bộ", 
+                      pending: "Đang đồng bộ",
+                      failed: "Lỗi đồng bộ"
+                    };
+                    return syncLabels[syncStatusFilter as keyof typeof syncLabels] || syncStatusFilter;
+                  })()}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setSyncStatusFilter("all")}>
+                  Tất cả sync
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSyncStatusFilter("manual")}>
+                  Thủ công
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSyncStatusFilter("synced")}>
+                  Đã đồng bộ
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSyncStatusFilter("pending")}>
+                  Đang đồng bộ
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSyncStatusFilter("failed")}>
+                  Lỗi đồng bộ
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardHeader>
@@ -358,6 +520,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
             <TableRow>
               <TableHead>Mã đơn hàng</TableHead>
               <TableHead>Khách hàng</TableHead>
+              <TableHead>Nguồn</TableHead>
               <TableHead>Ngày đặt</TableHead>
               <TableHead>Sản phẩm</TableHead>
               <TableHead>Tổng tiền</TableHead>
@@ -375,6 +538,12 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                   <div>
                     <div className="font-medium">{order.customerName}</div>
                     <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
+                  </div>
+                </TableCell>
+                <TableCell data-testid={`order-source-${order.id}`}>
+                  <div className="flex flex-col gap-1">
+                    {getSourceBadge(order.sourceInfo)}
+                    {getSyncStatusBadge(order.sourceInfo?.syncStatus)}
                   </div>
                 </TableCell>
                 <TableCell data-testid={`order-date-${order.id}`}>
