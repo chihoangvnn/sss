@@ -64,56 +64,73 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('vi-VN');
 };
 
+// 🎨 Enhanced Status Badge với colors và icons
 const getStatusBadge = (status: string) => {
   const statusConfig = {
-    pending: { label: "Chờ xử lý", variant: "secondary" as const },
-    processing: { label: "Đang xử lý", variant: "default" as const },
-    shipped: { label: "Đã gửi", variant: "secondary" as const },
-    delivered: { label: "Đã giao", variant: "default" as const },
-    cancelled: { label: "Đã hủy", variant: "destructive" as const },
+    pending: { 
+      label: "🟡 Chờ xử lý", 
+      variant: "outline" as const,
+      className: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+    },
+    processing: { 
+      label: "🔵 Đang xử lý", 
+      variant: "outline" as const,
+      className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+    },
+    shipped: { 
+      label: "🟢 Đã gửi", 
+      variant: "outline" as const,
+      className: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+    },
+    delivered: { 
+      label: "✅ Hoàn thành", 
+      variant: "outline" as const,
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+    },
+    cancelled: { 
+      label: "🔴 Đã hủy", 
+      variant: "outline" as const,
+      className: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+    },
   };
 
   const config = statusConfig[status as keyof typeof statusConfig];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
 };
 
-// 🚀 Source Badge Component with Icons
+// 🎨 Enhanced Source Badge Component với Brand Colors
 const getSourceBadge = (sourceInfo: OrderWithCustomerInfo['sourceInfo']) => {
-  if (!sourceInfo) return <Badge variant="outline">Admin</Badge>;
+  const defaultBadge = (
+    <Badge className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
+      ⚙️ Admin
+    </Badge>
+  );
+  
+  if (!sourceInfo) return defaultBadge;
   
   const sourceConfig = {
     admin: { 
-      label: "Admin", 
-      variant: "outline" as const, 
-      icon: UserPlus,
-      color: "text-blue-600"
+      label: "⚙️ Admin", 
+      className: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
     },
     storefront: { 
-      label: "Storefront", 
-      variant: "default" as const, 
-      icon: Store,
-      color: "text-green-600"
+      label: "🏪 Storefront", 
+      className: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
     },
     'tiktok-shop': { 
-      label: "TikTok Shop", 
-      variant: "secondary" as const, 
-      icon: Zap,
-      color: "text-pink-600"
+      label: "🎵 TikTok Shop", 
+      className: "bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200 font-semibold"
     },
     'landing-page': { 
-      label: "Landing Page", 
-      variant: "outline" as const, 
-      icon: ShoppingBag,
-      color: "text-orange-600"
+      label: "🔗 Landing Page", 
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
     }
   };
 
-  const config = sourceConfig[sourceInfo.source];
-  const Icon = config.icon;
+  const config = sourceConfig[sourceInfo.source] || sourceConfig.admin;
   
   return (
-    <Badge variant={config.variant} className="flex items-center gap-1">
-      <Icon className={`h-3 w-3 ${config.color}`} />
+    <Badge variant="outline" className={config.className}>
       {config.label}
     </Badge>
   );
@@ -194,7 +211,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
       
       // Initialize baseline on first load to prevent deadlock
       if (!lastSeen) {
-        const newestOrderDate = new Date(orders[0].createdAt);
+        const newestOrderDate = orders[0].createdAt ? new Date(orders[0].createdAt) : new Date();
         localStorage.setItem(lastSeenKey, newestOrderDate.toISOString());
         // Add all current order IDs to seen set to prevent immediate notifications
         orders.forEach((order: OrderWithCustomerInfo) => seenIds.add(order.id));
@@ -204,7 +221,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
       
       // Find truly new orders (after last seen time AND not in seen IDs)
       const newOrders = orders.filter((order: OrderWithCustomerInfo) => {
-        if (!lastSeen) return false; // Safety guard
+        if (!lastSeen || !order.createdAt) return false; // Safety guard
         const orderDate = new Date(order.createdAt);
         return orderDate > lastSeen && !seenIds.has(order.id);
       });
@@ -216,7 +233,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
       notifyOrders.forEach((order: OrderWithCustomerInfo, index: number) => {
         setTimeout(() => {
           // Calculate time ago
-          const orderDate = new Date(order.createdAt);
+          const orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
           const now = new Date();
           const diffInMinutes = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60));
           
@@ -235,7 +252,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
             customerName: order.customerName,
             totalAmount: Number(order.total),
             currency: 'VND',
-            itemCount: order.items ? JSON.parse(order.items as string).length : 1,
+            itemCount: typeof order.items === 'number' ? order.items : 1,
             timeAgo
           });
           
@@ -263,7 +280,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
         
         if (!potentialTruncation) {
           // Safe to advance lastSeen - all new orders are on this page
-          const maxNotifiedDate = Math.max(...notifyOrders.map(o => new Date(o.createdAt).getTime()));
+          const maxNotifiedDate = Math.max(...notifyOrders.map(o => o.createdAt ? new Date(o.createdAt).getTime() : 0));
           const currentLastSeen = lastSeen || new Date(0);
           const newLastSeen = new Date(Math.max(maxNotifiedDate, currentLastSeen.getTime()));
           localStorage.setItem(lastSeenKey, newLastSeen.toISOString());
@@ -558,37 +575,56 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                 <TableCell data-testid={`order-status-${order.id}`}>
                   {getStatusBadge(order.status)}
                 </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8"
-                        data-testid={`order-actions-${order.id}`}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewOrder(order)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Xem chi tiết
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEditOrder(order)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Chỉnh sửa
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteOrder(order)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Xóa đơn hàng
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="text-right">
+                  {/* 🎨 Inline Action Buttons - Primary actions visible */}
+                  <div className="flex items-center justify-end gap-2">
+                    {/* Primary Action - Xem chi tiết */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewOrder(order)}
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                      data-testid={`view-order-${order.id}`}
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Xem
+                    </Button>
+                    
+                    {/* Secondary Action - Chỉnh sửa */}
+                    <Button
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleEditOrder(order)}
+                      className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                      data-testid={`edit-order-${order.id}`}
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Sửa
+                    </Button>
+                    
+                    {/* More actions dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                          data-testid={`order-more-actions-${order.id}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteOrder(order)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Xóa đơn hàng
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
