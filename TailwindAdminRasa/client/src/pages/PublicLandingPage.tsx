@@ -484,6 +484,11 @@ export default function PublicLandingPage() {
       existingJsonLd.remove();
     }
     
+    // Get valid image URLs
+    const productImages = [];
+    if (landingPage.displayImage) productImages.push(landingPage.displayImage);
+    if (product?.image && product.image !== landingPage.displayImage) productImages.push(product.image);
+    
     const structuredData = {
       "@context": "https://schema.org",
       "@graph": [
@@ -493,7 +498,8 @@ export default function PublicLandingPage() {
           "@id": cleanUrl + "#product",
           "name": product?.name || landingPage.title,
           "description": product?.description || landingPage.description,
-          "image": landingPage.displayImage || product?.image || "",
+          // Only include image if we have valid URLs
+          ...(productImages.length > 0 && { "image": productImages }),
           "brand": {
             "@type": "Brand",
             "name": landingPage.contactInfo?.businessName || "Online Shop"
@@ -502,9 +508,12 @@ export default function PublicLandingPage() {
             "@type": "Offer",
             "url": cleanUrl,
             "priceCurrency": "VND",
-            "price": finalPrice,
+            "price": finalPrice.toString(), // Google prefers string format
             "priceValidUntil": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days
-            "availability": (landingPage.availableStock || stableStats.availableStock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            // Only include availability if we have real stock data
+            ...(typeof landingPage.availableStock === 'number' && {
+              "availability": landingPage.availableStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+            }),
             "seller": {
               "@type": "Organization",
               "name": landingPage.contactInfo?.businessName || "Online Shop"
@@ -524,7 +533,8 @@ export default function PublicLandingPage() {
           "@id": cleanUrl + "#organization", 
           "name": landingPage.contactInfo?.businessName || "Online Shop",
           "url": cleanUrl,
-          "logo": landingPage.displayImage || "",
+          // Only include logo if we have a valid image URL
+          ...(productImages.length > 0 && { "logo": productImages[0] }),
           "contactPoint": landingPage.contactInfo?.phone ? {
             "@type": "ContactPoint",
             "telephone": landingPage.contactInfo.phone,
