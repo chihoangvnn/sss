@@ -1,6 +1,7 @@
 import { 
   users, products, customers, orders, orderItems, socialAccounts, chatbotConversations,
   storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
+  productLandingPages,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -8,7 +9,8 @@ import {
   type StorefrontConfig, type InsertStorefrontConfig,
   type StorefrontOrder, type InsertStorefrontOrder,
   type Category, type InsertCategory, type Industry, type InsertIndustry,
-  type Payment, type InsertPayment, type ShopSettings, type InsertShopSettings
+  type Payment, type InsertPayment, type ShopSettings, type InsertShopSettings,
+  type ProductLandingPage, type InsertProductLandingPage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, isNull } from "drizzle-orm";
@@ -107,6 +109,17 @@ export interface IStorage {
   updateShopSettings(id: string, settings: Partial<InsertShopSettings>): Promise<ShopSettings | undefined>;
   deleteShopSettings(id: string): Promise<boolean>;
   setDefaultShopSettings(id: string): Promise<ShopSettings | undefined>;
+
+  // Product Landing Page methods
+  getAllProductLandingPages(): Promise<ProductLandingPage[]>;
+  getProductLandingPageById(id: string): Promise<ProductLandingPage | undefined>;
+  getProductLandingPageBySlug(slug: string): Promise<ProductLandingPage | undefined>;
+  createProductLandingPage(data: InsertProductLandingPage): Promise<ProductLandingPage>;
+  updateProductLandingPage(id: string, data: Partial<InsertProductLandingPage>): Promise<ProductLandingPage | undefined>;
+  deleteProductLandingPage(id: string): Promise<boolean>;
+  incrementLandingPageView(id: string): Promise<void>;
+  incrementLandingPageOrder(id: string): Promise<void>;
+  getProductLandingPageWithDetails(idOrSlug: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -838,6 +851,110 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return settings || undefined;
     });
+  }
+
+  // Product Landing Page methods
+  async getAllProductLandingPages(): Promise<ProductLandingPage[]> {
+    const result = await db
+      .select()
+      .from(productLandingPages)
+      .orderBy(desc(productLandingPages.createdAt));
+    return result;
+  }
+
+  async getProductLandingPageById(id: string): Promise<ProductLandingPage | undefined> {
+    const [landingPage] = await db
+      .select()
+      .from(productLandingPages)
+      .where(eq(productLandingPages.id, id));
+    return landingPage || undefined;
+  }
+
+  async getProductLandingPageBySlug(slug: string): Promise<ProductLandingPage | undefined> {
+    const [landingPage] = await db
+      .select()
+      .from(productLandingPages)
+      .where(eq(productLandingPages.slug, slug));
+    return landingPage || undefined;
+  }
+
+  async createProductLandingPage(data: InsertProductLandingPage): Promise<ProductLandingPage> {
+    // Check if slug already exists
+    const existing = await this.getProductLandingPageBySlug(data.slug);
+    if (existing) {
+      throw new Error('Slug already exists');
+    }
+
+    const [landingPage] = await db
+      .insert(productLandingPages)
+      .values({
+        ...data,
+        viewCount: 0,
+        orderCount: 0,
+        conversionRate: "0.00"
+      })
+      .returning();
+    return landingPage;
+  }
+
+  async updateProductLandingPage(id: string, data: Partial<InsertProductLandingPage>): Promise<ProductLandingPage | undefined> {
+    const [landingPage] = await db
+      .update(productLandingPages)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(productLandingPages.id, id))
+      .returning();
+    return landingPage || undefined;
+  }
+
+  async deleteProductLandingPage(id: string): Promise<boolean> {
+    const result = await db.delete(productLandingPages).where(eq(productLandingPages.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async incrementLandingPageView(id: string): Promise<void> {
+    await db
+      .update(productLandingPages)
+      .set({
+        viewCount: sql`${productLandingPages.viewCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(productLandingPages.id, id));
+  }
+
+  async incrementLandingPageOrder(id: string): Promise<void> {
+    await db
+      .update(productLandingPages)
+      .set({
+        orderCount: sql`${productLandingPages.orderCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(productLandingPages.id, id));
+  }
+
+  async getProductLandingPageWithDetails(idOrSlug: string): Promise<any> {
+    let landingPage: ProductLandingPage | undefined;
+    
+    // Try to get by slug first, then by ID
+    if (idOrSlug.includes('-') && idOrSlug.length > 36) {
+      landingPage = await this.getProductLandingPageBySlug(idOrSlug);
+    } else {
+      landingPage = await this.getProductLandingPageById(idOrSlug);
+    }
+    
+    if (!landingPage) return null;
+
+    // Get product details
+    const product = await this.getProduct(landingPage.productId);
+    if (!product) return null;
+
+    return {
+      ...landingPage,
+      product,
+      finalPrice: landingPage.customPrice || parseFloat(product.price),
+      displayName: landingPage.title || product.name,
+      displayDescription: landingPage.description || product.description,
+      availableStock: product.stock || 0
+    };
   }
 }
 
