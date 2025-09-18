@@ -146,7 +146,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   // Save product mutation
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
-      const url = isEditing ? `/api/products?id=${product?.id}` : '/api/products';
+      const url = isEditing ? `/api/products/${product?.id}` : '/api/products';
       const method = isEditing ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
