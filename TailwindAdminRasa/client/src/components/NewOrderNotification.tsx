@@ -29,11 +29,11 @@ export function NewOrderNotification({ order, onViewOrder }: NewOrderNotificatio
       title: "🎉 Đơn hàng mới!",
       description: (
         <div className="space-y-3">
-          {/* Header with sparkle effect */}
+          {/* Header with sparkle effect (Fixed Jumping) */}
           <div className="flex items-center gap-2 mb-2">
-            <div className="relative">
-              <Sparkles className="h-4 w-4 text-gentle-mint animate-sparkle" />
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-gentle-sparkle rounded-full animate-ping"></div>
+            <div className="relative flex-shrink-0">
+              <Sparkles className="h-4 w-4 text-gentle-mint animate-sparkle will-change-transform" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-gentle-sparkle rounded-full animate-pulse will-change-auto"></div>
             </div>
             <span className="text-gentle-mint font-medium">Đơn hàng mới nhận!</span>
           </div>
@@ -61,9 +61,9 @@ export function NewOrderNotification({ order, onViewOrder }: NewOrderNotificatio
             <span>{orderData.itemCount} sản phẩm</span>
           </div>
           
-          {/* Time */}
+          {/* Time (Fixed Smooth Animation) */}
           <div className="flex items-center gap-2 text-gentle-deep/70 text-sm">
-            <div className="w-2 h-2 bg-gentle-sparkle rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-gentle-sparkle rounded-full animate-pulse will-change-auto flex-shrink-0"></div>
             <span>{orderData.timeAgo}</span>
           </div>
           
@@ -72,7 +72,7 @@ export function NewOrderNotification({ order, onViewOrder }: NewOrderNotificatio
             <Button
               variant="ghost" 
               size="sm"
-              className="h-8 px-3 text-gentle-deep hover:bg-gentle-mint/10 hover:text-gentle-mint transition-colors"
+              className="h-8 px-3 text-gentle-deep hover:bg-gentle-mint/10 hover:text-gentle-mint transition-all duration-200 will-change-auto"
               onClick={() => onViewOrder?.(orderData.id)}
             >
               <Eye className="h-3 w-3 mr-1" />
