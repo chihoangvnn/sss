@@ -250,7 +250,6 @@ export function AppSidebar() {
                 >
                   <Link href="/store">
                     <Globe className="h-4 w-4" />
-                    <span>Xem Landing Page</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
