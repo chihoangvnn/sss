@@ -134,7 +134,7 @@ const CrossPlatformMetrics: React.FC<CrossPlatformMetricsProps> = ({ accounts })
           </div>
           <div className="mt-2">
             <Progress 
-              value={(connectedAccounts / totalAccounts) * 100} 
+              value={totalAccounts > 0 ? (connectedAccounts / totalAccounts) * 100 : 0} 
               className="h-2"
             />
           </div>
