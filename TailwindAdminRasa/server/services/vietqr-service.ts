@@ -32,31 +32,59 @@ export interface QRResult {
 }
 
 export class VietQRService {
+  /**
+   * 🔒 Get required environment variable (no fallbacks for production safety)
+   */
+  private static getRequiredEnvVar(varName: string): string {
+    const value = process.env[varName];
+    if (!value) {
+      throw new Error(`⚠️  CRITICAL: ${varName} environment variable is required for VietQR integration. Please set it in Replit Secrets.`);
+    }
+    return value;
+  }
+
   private static readonly SHB_BANK_INFO: BankInfo = {
     bank: "SHB",
-    bankCode: "970431", // SaigonBank official code
+    bankCode: "970443", // ✅ CORRECT SHB NAPAS BIN code (confirmed from official VietQR list)
     bankName: "Ngân hàng TMCP Sài Gòn - Hà Nội", 
-    accountNumber: process.env.SHB_BANK_ACCOUNT || "4555567777", // From Replit Secrets
-    accountName: process.env.SHB_ACCOUNT_NAME || "CONG TY TNHH ABC TECH" // From Replit Secrets
+    accountNumber: VietQRService.getRequiredEnvVar('SHB_BANK_ACCOUNT'), // MUST be from Replit Secrets
+    accountName: VietQRService.getRequiredEnvVar('SHB_ACCOUNT_NAME') // MUST be from Replit Secrets
   };
 
   private static readonly BASE_URL = "https://img.vietqr.io/image";
   private static readonly QR_EXPIRY_MINUTES = 15;
 
   /**
+   * 📋 Generate standardized reference for consistency between QR and UI
+   */
+  static generateStandardReference(orderId: string): string {
+    return `DH-${orderId.slice(-8).toUpperCase()}`;
+  }
+
+  /**
    * 🎯 Generate QR Code URL for Payment
-   * Uses VietQR.io Quicklink API (FREE tier)
+   * Uses VietQR.io Quicklink API (FREE tier) with validation
    */
   static generateQRCode(options: QRGenerationOptions): QRResult {
+    // ✅ Enforce validation first
+    const validation = this.validateParams(options);
+    if (!validation.isValid) {
+      throw new Error(`VietQR validation failed: ${validation.error}`);
+    }
+
     const { amount, orderId, description, template = 'compact' } = options;
     
     // 🏦 Build VietQR URL format: /image/{BANK}-{ACCOUNT}-{TEMPLATE}.jpg
     const baseUrl = `${this.BASE_URL}/${this.SHB_BANK_INFO.bank.toLowerCase()}-${this.SHB_BANK_INFO.accountNumber}-${template}.jpg`;
     
-    // 💰 Add query parameters for amount and order info
+    // 📋 Generate standardized reference for consistency
+    const standardRef = this.generateStandardReference(orderId);
+    
+    // 💰 Add query parameters với standardized reference
+    const roundedAmount = Math.ceil(amount); // Ensure integer VND
     const params = new URLSearchParams({
-      amount: amount.toString(),
-      addInfo: orderId,
+      amount: roundedAmount.toString(),
+      addInfo: standardRef, // ✅ Use standardized reference consistently
       ...(description && { description })
     });
     
@@ -69,8 +97,8 @@ export class VietQRService {
     return {
       qrCodeUrl,
       bankInfo: this.SHB_BANK_INFO,
-      amount,
-      orderId,
+      amount: roundedAmount,
+      orderId: standardRef, // ✅ Return standardized reference
       expiresAt
     };
   }
