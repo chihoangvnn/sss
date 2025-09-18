@@ -36,8 +36,8 @@ export class VietQRService {
     bank: "SHB",
     bankCode: "970431", // SaigonBank official code
     bankName: "Ngân hàng TMCP Sài Gòn - Hà Nội", 
-    accountNumber: "4555567777",
-    accountName: "CONG TY TNHH ABC TECH"
+    accountNumber: process.env.SHB_BANK_ACCOUNT || "4555567777", // From Replit Secrets
+    accountName: process.env.SHB_ACCOUNT_NAME || "CONG TY TNHH ABC TECH" // From Replit Secrets
   };
 
   private static readonly BASE_URL = "https://img.vietqr.io/image";
