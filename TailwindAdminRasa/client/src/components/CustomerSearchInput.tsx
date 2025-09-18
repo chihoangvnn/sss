@@ -111,10 +111,12 @@ export function CustomerSearchInput({
     onSelect(null);
   };
 
-  // Handle focus
+  // Handle focus - ✅ Clear "Khách lẻ" ngay khi click
   const handleFocus = () => {
     setShowSuggestions(true);
-    if (selectedCustomer) {
+    
+    // ✅ Clear "Khách lẻ" text ngay khi focus để user có thể type
+    if (displayValue === "Khách lẻ" || selectedCustomer) {
       setDisplayValue("");
       setSearchTerm("");
     }
