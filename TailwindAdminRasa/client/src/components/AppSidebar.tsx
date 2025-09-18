@@ -16,7 +16,8 @@ import {
   Bot,
   Tags,
   Building2,
-  FileText
+  FileText,
+  Palette
 } from "lucide-react";
 
 import {
@@ -236,6 +237,25 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        <SidebarGroup>
+          <SidebarGroupLabel>Landing Page</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={location === "/landing-page-manager"}
+                  data-testid="nav-landing-manager"
+                >
+                  <Link href="/landing-page-manager">
+                    <Palette className="h-4 w-4" />
+                    <span>Quản lý Landing Page</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel>Hệ thống</SidebarGroupLabel>
