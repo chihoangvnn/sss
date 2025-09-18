@@ -68,28 +68,29 @@ export class FacebookPostingService {
     message: string, 
     scheduledPublishTime?: number
   ): Promise<FacebookPostResult> {
-    const postData: any = {
-      message: message,
-      access_token: pageAccessToken,
-    };
+    // Facebook Graph API expects form-encoded data, not JSON
+    const formData = new URLSearchParams();
+    formData.append('message', message);
+    formData.append('access_token', pageAccessToken);
 
     // Add scheduling if specified
     if (scheduledPublishTime) {
-      postData.published = false;
-      postData.scheduled_publish_time = scheduledPublishTime;
+      formData.append('published', 'false');
+      formData.append('scheduled_publish_time', scheduledPublishTime.toString());
     }
 
     const response = await fetch(`${this.graphApiUrl}/${pageId}/feed`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(postData),
+      body: formData.toString(),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+      const errorMessage = this.parseGraphAPIError(errorData);
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
@@ -130,29 +131,30 @@ export class FacebookPostingService {
     imageUrl: string, 
     scheduledPublishTime?: number
   ): Promise<FacebookPostResult> {
-    const postData: any = {
-      url: imageUrl,
-      caption: message,
-      access_token: pageAccessToken,
-    };
+    // Facebook Graph API expects form-encoded data for photos
+    const formData = new URLSearchParams();
+    formData.append('url', imageUrl);
+    formData.append('caption', message);
+    formData.append('access_token', pageAccessToken);
 
     // Add scheduling if specified
     if (scheduledPublishTime) {
-      postData.published = false;
-      postData.scheduled_publish_time = scheduledPublishTime;
+      formData.append('published', 'false');
+      formData.append('scheduled_publish_time', scheduledPublishTime.toString());
     }
 
     const response = await fetch(`${this.graphApiUrl}/${pageId}/photos`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(postData),
+      body: formData.toString(),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+      const errorMessage = this.parseGraphAPIError(errorData);
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
@@ -179,53 +181,57 @@ export class FacebookPostingService {
       const photoIds: string[] = [];
       
       for (const imageUrl of imageUrls) {
-        const uploadData = {
-          url: imageUrl,
-          published: false, // Don't publish individual photos
-          access_token: pageAccessToken,
-        };
+        const uploadFormData = new URLSearchParams();
+        uploadFormData.append('url', imageUrl);
+        uploadFormData.append('published', 'false'); // Don't publish individual photos
+        uploadFormData.append('access_token', pageAccessToken);
 
         const uploadResponse = await fetch(`${this.graphApiUrl}/${pageId}/photos`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: JSON.stringify(uploadData),
+          body: uploadFormData.toString(),
         });
 
         if (!uploadResponse.ok) {
           const errorData = await uploadResponse.json().catch(() => ({}));
-          throw new Error(`Photo upload failed: ${errorData.error?.message || uploadResponse.statusText}`);
+          const errorMessage = this.parseGraphAPIError(errorData);
+          throw new Error(`Photo upload failed: ${errorMessage}`);
         }
 
         const uploadResult = await uploadResponse.json();
         photoIds.push(uploadResult.id);
       }
 
-      // Step 2: Create the album post with all photos
-      const albumData: any = {
-        message: message,
-        attached_media: photoIds.map(id => ({ media_fbid: id })),
-        access_token: pageAccessToken,
-      };
+      // Step 2: Create the album post with all photos using proper form encoding
+      const albumFormData = new URLSearchParams();
+      albumFormData.append('message', message);
+      albumFormData.append('access_token', pageAccessToken);
+      
+      // Attach each photo using the correct format for attached_media
+      photoIds.forEach((id, index) => {
+        albumFormData.append(`attached_media[${index}][media_fbid]`, id);
+      });
 
       // Add scheduling if specified
       if (scheduledPublishTime) {
-        albumData.published = false;
-        albumData.scheduled_publish_time = scheduledPublishTime;
+        albumFormData.append('published', 'false');
+        albumFormData.append('scheduled_publish_time', scheduledPublishTime.toString());
       }
 
       const albumResponse = await fetch(`${this.graphApiUrl}/${pageId}/feed`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify(albumData),
+        body: albumFormData.toString(),
       });
 
       if (!albumResponse.ok) {
         const errorData = await albumResponse.json().catch(() => ({}));
-        throw new Error(`Album creation failed: ${errorData.error?.message || albumResponse.statusText}`);
+        const errorMessage = this.parseGraphAPIError(errorData);
+        throw new Error(`Album creation failed: ${errorMessage}`);
       }
 
       const albumResult = await albumResponse.json();
@@ -334,6 +340,56 @@ export class FacebookPostingService {
     }
     
     return message;
+  }
+
+  /**
+   * Parse Graph API errors for better error handling
+   */
+  private parseGraphAPIError(errorData: any): string {
+    if (!errorData?.error) {
+      return 'Unknown Facebook API error occurred';
+    }
+
+    const error = errorData.error;
+    const code = error.code;
+    const subcode = error.error_subcode;
+    const message = error.message || 'Facebook API error';
+
+    // Handle specific Facebook error codes
+    switch (code) {
+      case 190: // Invalid access token
+        if (subcode === 463) {
+          return 'Facebook access token has expired. Please reconnect your Facebook account.';
+        } else if (subcode === 467) {
+          return 'Facebook access token is invalid. Please reconnect your Facebook account.';
+        }
+        return 'Facebook access token issue. Please reconnect your Facebook account.';
+
+      case 200: // Permission error
+        return 'Insufficient permissions to post to this Facebook page. Please check page permissions.';
+
+      case 613: // Rate limit exceeded
+        return 'Facebook posting rate limit exceeded. Please try again later.';
+
+      case 368: // Temporarily blocked
+        return 'Facebook has temporarily blocked this action. Please try again later.';
+
+      case 100: // Invalid parameter
+        return `Facebook API parameter error: ${message}`;
+
+      case 104: // Access token required
+        return 'Facebook access token is required. Please reconnect your Facebook account.';
+
+      case 341: // Reach limit
+        return 'Facebook posting limit reached. Please try again later.';
+
+      case 506: // Duplicate post
+        return 'This content has already been posted recently. Facebook prevents duplicate posts.';
+
+      default:
+        // Return the original message with error code for debugging
+        return `Facebook API Error (${code}${subcode ? `/${subcode}` : ''}): ${message}`;
+    }
   }
 }
 

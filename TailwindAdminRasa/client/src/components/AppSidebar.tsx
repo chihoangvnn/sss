@@ -17,7 +17,9 @@ import {
   Tags,
   Building2,
   FileText,
-  Palette
+  Palette,
+  Image,
+  Calendar
 } from "lucide-react";
 
 // TikTok Icon Component
@@ -84,6 +86,16 @@ const mainMenuItems = [
     title: "Báo cáo",
     url: "/analytics",
     icon: BarChart3,
+  },
+  {
+    title: "Thư viện Nội dung",
+    url: "/content-library",
+    icon: Image,
+  },
+  {
+    title: "Lịch Đăng Bài",
+    url: "/post-scheduler",
+    icon: Calendar,
   },
   {
     title: "Quản lý Storefront",

@@ -8,6 +8,31 @@ import { insertContentCategorySchema, insertContentAssetSchema, insertScheduledP
 
 const router = Router();
 
+// 🔒 Authentication middleware for content management
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Unauthorized. Please log in to access content management.",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  next();
+};
+
+// 🔒 Admin authentication middleware for sensitive operations
+const requireAdminAuth = (req: any, res: any, next: any) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Unauthorized. Please log in as an administrator.",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  
+  // Additional admin check could be added here if needed
+  // For now, any authenticated user is considered admin for content management
+  next();
+};
+
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -35,8 +60,8 @@ const upload = multer({
 // CONTENT CATEGORIES
 // ===========================================
 
-// Get all content categories
-router.get('/categories', async (req, res) => {
+// Get all content categories (read-only, requires basic auth)
+router.get('/categories', requireAuth, async (req, res) => {
   try {
     const categories = await storage.getContentCategories();
     res.json(categories);
@@ -46,8 +71,8 @@ router.get('/categories', async (req, res) => {
   }
 });
 
-// Create new content category
-router.post('/categories', async (req, res) => {
+// Create new content category (requires admin auth)
+router.post('/categories', requireAdminAuth, async (req, res) => {
   try {
     const validatedData = insertContentCategorySchema.parse(req.body);
     const category = await storage.createContentCategory(validatedData);
@@ -58,8 +83,8 @@ router.post('/categories', async (req, res) => {
   }
 });
 
-// Update content category
-router.put('/categories/:id', async (req, res) => {
+// Update content category (requires admin auth)
+router.put('/categories/:id', requireAdminAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const validatedData = insertContentCategorySchema.partial().parse(req.body);
@@ -76,8 +101,8 @@ router.put('/categories/:id', async (req, res) => {
   }
 });
 
-// Delete content category
-router.delete('/categories/:id', async (req, res) => {
+// Delete content category (requires admin auth)
+router.delete('/categories/:id', requireAdminAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const deleted = await storage.deleteContentCategory(id);
@@ -97,8 +122,8 @@ router.delete('/categories/:id', async (req, res) => {
 // CONTENT ASSETS
 // ===========================================
 
-// Get all content assets
-router.get('/assets', async (req, res) => {
+// Get all content assets (read-only, requires basic auth)
+router.get('/assets', requireAuth, async (req, res) => {
   try {
     const categoryId = req.query.category ? parseInt(req.query.category as string) : undefined;
     
@@ -116,8 +141,8 @@ router.get('/assets', async (req, res) => {
   }
 });
 
-// Get specific content asset
-router.get('/assets/:id', async (req, res) => {
+// Get specific content asset (read-only, requires basic auth)
+router.get('/assets/:id', requireAuth, async (req, res) => {
   try {
     const asset = await storage.getContentAsset(req.params.id);
     
@@ -132,8 +157,8 @@ router.get('/assets/:id', async (req, res) => {
   }
 });
 
-// Upload new content asset
-router.post('/assets/upload', upload.single('file'), async (req, res) => {
+// Upload new content asset (requires admin auth - sensitive operation)
+router.post('/assets/upload', requireAdminAuth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -196,8 +221,8 @@ router.post('/assets/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// Update content asset metadata
-router.put('/assets/:id', async (req, res) => {
+// Update content asset metadata (requires admin auth)
+router.put('/assets/:id', requireAdminAuth, async (req, res) => {
   try {
     const { altText, caption, tags, categoryId } = req.body;
     
@@ -220,8 +245,8 @@ router.put('/assets/:id', async (req, res) => {
   }
 });
 
-// Delete content asset
-router.delete('/assets/:id', async (req, res) => {
+// Delete content asset (requires admin auth - sensitive operation)
+router.delete('/assets/:id', requireAdminAuth, async (req, res) => {
   try {
     const asset = await storage.getContentAsset(req.params.id);
     
@@ -252,8 +277,8 @@ router.delete('/assets/:id', async (req, res) => {
 // SCHEDULED POSTS
 // ===========================================
 
-// Get all scheduled posts
-router.get('/scheduled-posts', async (req, res) => {
+// Get all scheduled posts (read-only, requires basic auth)
+router.get('/scheduled-posts', requireAuth, async (req, res) => {
   try {
     const socialAccountId = req.query.account as string;
     
@@ -271,8 +296,8 @@ router.get('/scheduled-posts', async (req, res) => {
   }
 });
 
-// Get upcoming scheduled posts
-router.get('/scheduled-posts/upcoming', async (req, res) => {
+// Get upcoming scheduled posts (read-only, requires basic auth)
+router.get('/scheduled-posts/upcoming', requireAuth, async (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
     const posts = await postScheduler.getUpcomingPosts(limit);
@@ -283,8 +308,8 @@ router.get('/scheduled-posts/upcoming', async (req, res) => {
   }
 });
 
-// Create new scheduled post
-router.post('/scheduled-posts', async (req, res) => {
+// Create new scheduled post (requires admin auth - sensitive operation)
+router.post('/scheduled-posts', requireAdminAuth, async (req, res) => {
   try {
     const validatedData = insertScheduledPostSchema.parse({
       ...req.body,
@@ -299,8 +324,8 @@ router.post('/scheduled-posts', async (req, res) => {
   }
 });
 
-// Update scheduled post
-router.put('/scheduled-posts/:id', async (req, res) => {
+// Update scheduled post (requires admin auth)
+router.put('/scheduled-posts/:id', requireAdminAuth, async (req, res) => {
   try {
     const updateData = { ...req.body };
     if (updateData.scheduledTime) {
@@ -320,8 +345,8 @@ router.put('/scheduled-posts/:id', async (req, res) => {
   }
 });
 
-// Delete scheduled post
-router.delete('/scheduled-posts/:id', async (req, res) => {
+// Delete scheduled post (requires admin auth - sensitive operation)
+router.delete('/scheduled-posts/:id', requireAdminAuth, async (req, res) => {
   try {
     const deleted = await storage.deleteScheduledPost(req.params.id);
     
@@ -336,8 +361,8 @@ router.delete('/scheduled-posts/:id', async (req, res) => {
   }
 });
 
-// Manually trigger a scheduled post
-router.post('/scheduled-posts/:id/trigger', async (req, res) => {
+// Manually trigger a scheduled post (requires admin auth - highly sensitive)
+router.post('/scheduled-posts/:id/trigger', requireAdminAuth, async (req, res) => {
   try {
     const result = await postScheduler.triggerPost(req.params.id);
     
@@ -352,8 +377,8 @@ router.post('/scheduled-posts/:id/trigger', async (req, res) => {
   }
 });
 
-// Get scheduler status
-router.get('/scheduler/status', async (req, res) => {
+// Get scheduler status (requires basic auth)
+router.get('/scheduler/status', requireAuth, async (req, res) => {
   try {
     const status = postScheduler.getStatus();
     res.json(status);
@@ -363,8 +388,8 @@ router.get('/scheduler/status', async (req, res) => {
   }
 });
 
-// Start/stop scheduler
-router.post('/scheduler/:action', async (req, res) => {
+// Start/stop scheduler (requires admin auth - highly sensitive system operation)
+router.post('/scheduler/:action', requireAdminAuth, async (req, res) => {
   try {
     const { action } = req.params;
     

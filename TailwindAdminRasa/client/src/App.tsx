@@ -26,6 +26,8 @@ import StorefrontManager from "@/pages/StorefrontManager";
 import CategoryManager from "@/pages/CategoryManager";
 import IndustryManager from "@/pages/IndustryManager";
 import ShopSettings from "@/pages/ShopSettings";
+import { ContentLibrary } from "@/pages/ContentLibrary";
+import { PostScheduler } from "@/pages/PostScheduler";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -49,6 +51,8 @@ function Router() {
       <Route path="/shop-settings" component={ShopSettings} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/chatbot" component={Chatbot} />
+      <Route path="/content-library" component={ContentLibrary} />
+      <Route path="/post-scheduler" component={PostScheduler} />
       <Route path="/facebook" component={SocialMedia} />
       <Route path="/instagram" component={SocialMedia} />
       <Route path="/twitter" component={SocialMedia} />
