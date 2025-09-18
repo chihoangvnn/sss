@@ -52,7 +52,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
   const isEditing = Boolean(order);
 
   const [formData, setFormData] = useState({
-    customerId: "retail", // Default to retail customer
+    customerId: "", // No default - customer selection required
     status: "pending" as "pending" | "processing" | "shipped" | "delivered" | "cancelled",
   });
 
@@ -310,7 +310,25 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Customer is optional now - defaults to retail customer
+    // Customer selection is now required and must be valid
+    if (!formData.customerId) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng chọn khách hàng",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Verify customer exists in the system
+    if (!customers.some(c => c.id === formData.customerId)) {
+      toast({
+        title: "Lỗi",
+        description: "Khách hàng được chọn không hợp lệ. Vui lòng chọn lại",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (orderItems.length === 0 || !orderItems.some(item => item.productId)) {
       toast({
@@ -363,8 +381,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     
-    const customerName = formData.customerId === 'retail' ? 'Khách lẻ' : 
-      customers.find(c => c.id === formData.customerId)?.name || 'Khách hàng';
+    const customerName = customers.find(c => c.id === formData.customerId)?.name || 'Khách hàng';
     
     // Safely format order ID
     const orderId = orderData?.id ? orderData.id.slice(-8) : 'N/A';
@@ -467,7 +484,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
                 onSelect={(customer) => {
                   setFormData({ 
                     ...formData, 
-                    customerId: customer ? customer.id : "retail" 
+                    customerId: customer ? customer.id : "" 
                   });
                 }}
                 placeholder="Gõ tên hoặc SĐT khách hàng..."
@@ -642,7 +659,26 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
                 onClick={() => {
                   const event = { preventDefault: () => {} } as React.FormEvent;
                   
-                  // Customer is optional now - defaults to retail customer
+                  // Customer selection is now required and must be valid
+                  if (!formData.customerId) {
+                    toast({
+                      title: "Lỗi",
+                      description: "Vui lòng chọn khách hàng",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  // Verify customer exists in the system
+                  if (!customers.some(c => c.id === formData.customerId)) {
+                    toast({
+                      title: "Lỗi",
+                      description: "Khách hàng được chọn không hợp lệ. Vui lòng chọn lại",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
                   if (orderItems.length === 0 || !orderItems.some(item => item.productId)) {
                     toast({
                       title: "Lỗi",
