@@ -1042,56 +1042,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product Landing Pages API
   app.get("/api/product-landing-pages", async (req, res) => {
     try {
-      const landingPages = await firebaseStorage.getAllProductLandingPages();
-      
-      // Add any demo landing pages from memory
-      const demoPages = global.demoLandingPages || [];
-      const allPages = [...landingPages, ...demoPages];
-      
-      res.json(allPages);
+      const landingPages = await storage.getAllProductLandingPages();
+      res.json(landingPages);
     } catch (error) {
       console.error("Error fetching product landing pages:", error);
-      
-      // Fallback: Return sample data + any demo pages from memory
-      const demoPages = global.demoLandingPages || [];
-      const samplePages = await storage.getProducts(3).then(products => 
-        products.map((product, index) => ({
-          id: `demo-${product.id}`,
-          title: `Landing Page - ${product.name}`,
-          slug: `product-${product.id}`,
-          description: product.description,
-          productId: product.id,
-          customPrice: parseFloat(product.price),
-          heroTitle: `Mua ngay ${product.name}`,
-          isActive: true,
-          theme: 'light',
-          primaryColor: '#007bff',
-          contactInfo: {
-            phone: '0123456789',
-            email: 'contact@store.com',
-            businessName: 'Cửa hàng Demo'
-          },
-          paymentMethods: {
-            cod: true,
-            bankTransfer: true,
-            online: false
-          },
-          features: [`Sản phẩm ${product.name} chất lượng cao`, 'Giao hàng tận nơi', 'Đổi trả dễ dàng'],
-          viewCount: Math.floor(Math.random() * 1000),
-          orderCount: Math.floor(Math.random() * 50),
-          conversionRate: (Math.random() * 10).toFixed(2)
-        }))
-      ).catch(() => []);
-      
-      // Combine sample pages with demo pages
-      const allPages = [...samplePages, ...demoPages];
-      res.json(allPages);
+      res.status(500).json({ error: "Failed to fetch landing pages" });
     }
   });
 
   app.get("/api/product-landing-pages/:id", async (req, res) => {
     try {
-      const landingPage = await firebaseStorage.getProductLandingPageWithDetails(req.params.id);
+      const landingPage = await storage.getProductLandingPageWithDetails(req.params.id);
       if (!landingPage) {
         return res.status(404).json({ error: "Landing page not found" });
       }
@@ -1104,77 +1065,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/product-landing-pages", async (req, res) => {
     try {
-      // Try Firebase first
-      const landingPageId = await firebaseStorage.createProductLandingPage(req.body);
-      res.json({ id: landingPageId, message: "Product landing page created successfully" });
+      const landingPage = await storage.createProductLandingPage(req.body);
+      res.json({ id: landingPage.id, message: "Product landing page created successfully" });
     } catch (error) {
       console.error("Error creating landing page:", error);
       if (error instanceof Error && error.message === 'Slug already exists') {
         return res.status(400).json({ error: "Slug already exists" });
       }
-      
-      // Fallback: Store in PostgreSQL with demo mode
-      try {
-        const demoData = {
-          id: `demo-${Date.now()}`,
-          title: req.body.title || 'New Landing Page',
-          slug: req.body.slug || `landing-${Date.now()}`,
-          description: req.body.description || '',
-          productId: req.body.productId || '',
-          customPrice: req.body.customPrice || 0,
-          heroTitle: req.body.heroTitle || '',
-          isActive: req.body.isActive !== false,
-          theme: req.body.theme || 'light',
-          primaryColor: req.body.primaryColor || '#007bff',
-          contactInfo: req.body.contactInfo || { phone: '', email: '', businessName: '' },
-          paymentMethods: req.body.paymentMethods || { cod: true, bankTransfer: true, online: false },
-          features: req.body.features || [],
-          viewCount: 0,
-          orderCount: 0,
-          conversionRate: 0,
-          createdAt: new Date().toISOString()
-        };
-        
-        // Store to memory/session for this demo
-        global.demoLandingPages = global.demoLandingPages || [];
-        global.demoLandingPages.push(demoData);
-        
-        res.json({ id: demoData.id, message: "Product landing page created successfully (demo mode)" });
-      } catch (fallbackError) {
-        console.error("Fallback storage failed:", fallbackError);
-        res.status(500).json({ error: "Failed to create landing page" });
-      }
+      res.status(500).json({ error: "Failed to create landing page" });
     }
   });
 
   app.put("/api/product-landing-pages/:id", async (req, res) => {
     try {
-      await firebaseStorage.updateProductLandingPage(req.params.id, req.body);
+      const landingPage = await storage.updateProductLandingPage(req.params.id, req.body);
+      if (!landingPage) {
+        return res.status(404).json({ error: "Landing page not found" });
+      }
       res.json({ message: "Product landing page updated successfully" });
     } catch (error) {
       console.error("Error updating landing page:", error);
-      res.json({ message: "Product landing page updated successfully (demo mode)" });
+      res.status(500).json({ error: "Failed to update landing page" });
     }
   });
 
   app.delete("/api/product-landing-pages/:id", async (req, res) => {
     try {
-      await firebaseStorage.deleteProductLandingPage(req.params.id);
+      const success = await storage.deleteProductLandingPage(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Landing page not found" });
+      }
       res.json({ message: "Product landing page deleted successfully" });
     } catch (error) {
       console.error("Error deleting landing page:", error);
-      res.json({ message: "Product landing page deleted successfully (demo mode)" });
+      res.status(500).json({ error: "Failed to delete landing page" });
     }
   });
 
   // Public landing page endpoint
   app.get("/api/public-landing/:slug", async (req, res) => {
     try {
-      const landingPage = await firebaseStorage.getProductLandingPageWithDetails(req.params.slug);
+      const landingPage = await storage.getProductLandingPageWithDetails(req.params.slug);
       if (landingPage && landingPage.isActive) {
         // Increment view count
         if (landingPage.id) {
-          await firebaseStorage.incrementLandingPageView(landingPage.id);
+          await storage.incrementLandingPageView(landingPage.id);
         }
         return res.json(landingPage);
       }
@@ -1244,7 +1179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Increment order count for landing page
       if (landingPageId) {
-        await firebaseStorage.incrementLandingPageOrder(landingPageId);
+        await storage.incrementLandingPageOrder(landingPageId);
       }
       
       res.json({ 
