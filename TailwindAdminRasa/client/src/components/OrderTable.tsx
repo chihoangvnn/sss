@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Eye, MoreHorizontal, Search, Filter, Plus, Edit, Trash2 } from "lucide-react";
 import {
@@ -35,6 +35,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OrderForm } from "./OrderForm";
+import { useNewOrderNotification, TestNewOrderNotification } from "./NewOrderNotification";
 import type { Order } from "@shared/schema";
 
 interface OrderWithCustomerInfo extends Order {
@@ -81,9 +82,123 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // 🌿 Gentle Green Notifications for Main Orders
+  const { triggerNewOrderNotification, NewOrderNotificationComponent } = useNewOrderNotification();
+
   const { data: orders = [], isLoading, error } = useQuery<OrderWithCustomerInfo[]>({
     queryKey: ["/api/orders"],
+    refetchInterval: 30000, // Check for new orders every 30 seconds
   });
+
+  // 🌿 New Order Detection for Main Orders (Robust)
+  useEffect(() => {
+    if (orders?.length > 0) {
+      // Only process notifications when no search/filter applied (clean state)
+      const isCleanState = searchTerm === "" && statusFilter === "all";
+      
+      if (!isCleanState) return;
+      
+      // Get persistent state for main orders
+      const lastSeenKey = `lastSeenMainOrder`;
+      const seenIdsKey = `seenMainOrderIds`;
+      
+      const lastSeenTimestamp = localStorage.getItem(lastSeenKey);
+      const lastSeen = lastSeenTimestamp ? new Date(lastSeenTimestamp) : null;
+      
+      const seenIdsJson = localStorage.getItem(seenIdsKey);
+      const seenIds = new Set<string>(seenIdsJson ? JSON.parse(seenIdsJson) : []);
+      
+      // Initialize baseline on first load to prevent deadlock
+      if (!lastSeen) {
+        const newestOrderDate = new Date(orders[0].createdAt);
+        localStorage.setItem(lastSeenKey, newestOrderDate.toISOString());
+        // Add all current order IDs to seen set to prevent immediate notifications
+        orders.forEach((order: OrderWithCustomerInfo) => seenIds.add(order.id));
+        localStorage.setItem(seenIdsKey, JSON.stringify(Array.from(seenIds)));
+        return; // Skip notifications on initialization
+      }
+      
+      // Find truly new orders (after last seen time AND not in seen IDs)
+      const newOrders = orders.filter((order: OrderWithCustomerInfo) => {
+        if (!lastSeen) return false; // Safety guard
+        const orderDate = new Date(order.createdAt);
+        return orderDate > lastSeen && !seenIds.has(order.id);
+      });
+      
+      // Process each new order sequentially with stagger (max 20 to avoid spam)
+      const notifyOrders = newOrders.slice(0, 20);
+      const remainingCount = newOrders.length - notifyOrders.length;
+      
+      notifyOrders.forEach((order: OrderWithCustomerInfo, index: number) => {
+        setTimeout(() => {
+          // Calculate time ago
+          const orderDate = new Date(order.createdAt);
+          const now = new Date();
+          const diffInMinutes = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60));
+          
+          let timeAgo = 'Vừa xong';
+          if (diffInMinutes >= 1 && diffInMinutes < 60) {
+            timeAgo = `${diffInMinutes} phút trước`;
+          } else if (diffInMinutes >= 60) {
+            const hours = Math.floor(diffInMinutes / 60);
+            timeAgo = `${hours} giờ trước`;
+          }
+          
+          // Trigger gentle green notification for main order
+          triggerNewOrderNotification({
+            id: order.id,
+            orderNumber: `DH-${order.id.slice(0, 8)}`,
+            customerName: order.customerName,
+            totalAmount: Number(order.total),
+            currency: 'VND',
+            itemCount: order.items ? JSON.parse(order.items as string).length : 1,
+            timeAgo
+          });
+          
+          // Add to seen IDs
+          seenIds.add(order.id);
+        }, index * 800); // Stagger by 800ms
+      });
+      
+      // Show summary notification if too many new orders
+      if (remainingCount > 0) {
+        setTimeout(() => {
+          toast({
+            variant: 'gentle-success',
+            title: `+${remainingCount} Đơn Hàng Mới Khác`,
+            description: 'Có nhiều đơn hàng mới vừa đến cùng lúc'
+          });
+        }, notifyOrders.length * 800 + 400);
+      }
+      
+      // Update persistent state (burst-safe lastSeen advancement)
+      if (newOrders.length > 0) {
+        // Only advance lastSeen if there's no potential truncation
+        const pageIsFull = orders.length >= 25; // Assuming pagination limit
+        const potentialTruncation = remainingCount > 0 || (pageIsFull && newOrders.length >= 25);
+        
+        if (!potentialTruncation) {
+          // Safe to advance lastSeen - all new orders are on this page
+          const maxNotifiedDate = Math.max(...notifyOrders.map(o => new Date(o.createdAt).getTime()));
+          const currentLastSeen = lastSeen || new Date(0);
+          const newLastSeen = new Date(Math.max(maxNotifiedDate, currentLastSeen.getTime()));
+          localStorage.setItem(lastSeenKey, newLastSeen.toISOString());
+        }
+        // If truncation detected, rely on seenIds for deduplication without advancing lastSeen
+      }
+      
+      // Always update seen IDs to maintain LRU cache
+      if (orders.length > 0) {
+        // Add all notified order IDs to seen set 
+        notifyOrders.forEach((order: OrderWithCustomerInfo) => seenIds.add(order.id));
+        
+        // Prune seenIds to maintain LRU with 500 limit
+        const seenIdsArray = Array.from(seenIds);
+        const prunedSeenIds = seenIdsArray.slice(-500);
+        localStorage.setItem(seenIdsKey, JSON.stringify(prunedSeenIds));
+      }
+    }
+  }, [orders, searchTerm, statusFilter, triggerNewOrderNotification, toast]);
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -172,10 +287,19 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
 
 
   return (
-    <Card data-testid="order-table">
-      <CardHeader>
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <CardTitle>Đơn hàng gần đây</CardTitle>
+    <div className="space-y-6">
+      {/* 🌿 Gentle Green Notifications for Main Orders */}
+      <NewOrderNotificationComponent />
+      
+      {/* 🧪 Test Notification (Dev Only) */}
+      <div className="flex justify-end">
+        <TestNewOrderNotification />
+      </div>
+
+      <Card data-testid="order-table">
+        <CardHeader>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <CardTitle>Đơn hàng gần đây</CardTitle>
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <Button 
               onClick={() => setIsCreateFormOpen(true)}
@@ -357,5 +481,6 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+    </div>
   );
 }
