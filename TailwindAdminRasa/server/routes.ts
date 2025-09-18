@@ -551,28 +551,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer search by phone (for member lookup) - MUST be before /:id route
+  // Customer search by phone OR name (for member lookup) - MUST be before /:id route
   app.get("/api/customers/search", async (req, res) => {
     try {
-      const { phone } = req.query;
+      const { phone, q } = req.query;
       
-      if (!phone || typeof phone !== 'string') {
-        return res.status(400).json({ error: "Phone parameter is required" });
+      // Must have either phone or q parameter
+      if (!phone && !q) {
+        return res.status(400).json({ error: "Phone or q parameter is required" });
       }
 
-      // Normalize to digits only and validate minimum length
-      const phoneDigits = phone.replace(/\D/g, '');
-      if (phoneDigits.length < 3) {
+      // Get all customers for filtering
+      const allCustomers = await storage.getCustomers(1000);
+      let matchingCustomers: any[] = [];
+
+      if (phone && typeof phone === 'string') {
+        // 📞 Search by phone (existing logic)
+        const phoneDigits = phone.replace(/\D/g, '');
+        if (phoneDigits.length >= 3) {
+          matchingCustomers = allCustomers.filter(customer => 
+            customer.phone && customer.phone.replace(/\D/g, '').endsWith(phoneDigits)
+          );
+        }
+      } else if (q && typeof q === 'string') {
+        // 👤 Search by name or email (new functionality)
+        const searchTerm = q.toLowerCase().trim();
+        if (searchTerm.length >= 2) {
+          matchingCustomers = allCustomers.filter(customer => 
+            (customer.name && customer.name.toLowerCase().includes(searchTerm)) ||
+            (customer.email && customer.email.toLowerCase().includes(searchTerm))
+          );
+        }
+      }
+
+      if (matchingCustomers.length === 0) {
         return res.json([]); // Return empty for better UX
       }
-
-      // Get all customers and filter by phone ending with the search digits
-      const allCustomers = await storage.getCustomers(1000);
-      
-      // Filter customers whose phone ends with the search digits
-      const matchingCustomers = allCustomers.filter(customer => 
-        customer.phone && customer.phone.replace(/\D/g, '').endsWith(phoneDigits)
-      );
       
       // Limit results to prevent UI overload
       const limitedResults = matchingCustomers.slice(0, 5);
