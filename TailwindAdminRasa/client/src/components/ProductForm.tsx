@@ -24,6 +24,7 @@ interface Product {
   id: string;
   name: string;
   description?: string;
+  sku?: string; // Auto-generated SKU
   price: string;
   stock: number;
   categoryId?: string;
@@ -56,6 +57,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    sku: "", // Will be auto-generated
     price: "",
     stock: "0",
     industryId: "",

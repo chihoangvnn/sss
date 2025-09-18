@@ -38,6 +38,7 @@ export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
+  sku: text("sku").unique(), // Auto-generated: 2 chữ đầu ngành hàng + 4 số random
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
   categoryId: varchar("category_id").references(() => categories.id),
