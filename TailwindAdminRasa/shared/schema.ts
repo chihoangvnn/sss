@@ -167,6 +167,51 @@ export const shopSettings = pgTable("shop_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Product Landing Pages table
+export const productLandingPages = pgTable("product_landing_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(), // URL slug for the landing page (unique)
+  description: text("description"),
+  
+  // Product connection
+  productId: varchar("product_id").notNull().references(() => products.id),
+  variantId: varchar("variant_id"), // Optional variant reference
+  
+  // Pricing (can override product price)
+  customPrice: decimal("custom_price", { precision: 15, scale: 2 }), // If null, use product's base price
+  originalPrice: decimal("original_price", { precision: 15, scale: 2 }), // For showing discount
+  
+  // Page customization
+  heroTitle: text("hero_title"),
+  heroSubtitle: text("hero_subtitle"),
+  heroImage: text("hero_image"),
+  callToAction: text("call_to_action").default("Đặt hàng ngay"), // Button text
+  
+  // Features & benefits
+  features: jsonb("features").notNull().default('[]'), // Array of strings
+  testimonials: jsonb("testimonials").default('[]'), // Array of testimonial objects
+  
+  // Settings
+  isActive: boolean("is_active").notNull().default(true),
+  theme: text("theme", { enum: ["light", "dark"] }).notNull().default("light"),
+  primaryColor: text("primary_color").notNull().default("#007bff"),
+  
+  // Contact info for this landing page
+  contactInfo: jsonb("contact_info").notNull().default('{"phone":"","email":"","businessName":""}'), // { phone, email, address, businessName }
+  
+  // Tracking & Analytics
+  viewCount: integer("view_count").notNull().default(0),
+  orderCount: integer("order_count").notNull().default(0),
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).notNull().default('0.00'),
+  
+  // Payment methods
+  paymentMethods: jsonb("payment_methods").notNull().default('{"cod":true,"bankTransfer":true,"online":false}'), // { cod, bankTransfer, online }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Schema for inserts
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -240,6 +285,12 @@ export const insertShopSettingsSchema = createInsertSchema(shopSettings).omit({
   updatedAt: true,
 });
 
+export const insertProductLandingPageSchema = createInsertSchema(productLandingPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -279,3 +330,6 @@ export type Payment = typeof payments.$inferSelect;
 
 export type InsertShopSettings = z.infer<typeof insertShopSettingsSchema>;
 export type ShopSettings = typeof shopSettings.$inferSelect;
+
+export type InsertProductLandingPage = z.infer<typeof insertProductLandingPageSchema>;
+export type ProductLandingPage = typeof productLandingPages.$inferSelect;
