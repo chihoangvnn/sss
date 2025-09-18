@@ -215,6 +215,9 @@ export const productLandingPages = pgTable("product_landing_pages", {
   theme: text("theme", { enum: ["light", "dark"] }).notNull().default("light"),
   primaryColor: text("primary_color").notNull().default("#007bff"),
   
+  // Advanced Theme Configuration (Optional - fallback to basic primaryColor if null)
+  themeConfigId: varchar("theme_config_id").references(() => themeConfigurations.id, { onDelete: 'set null' }),
+  
   // Contact info for this landing page
   contactInfo: jsonb("contact_info").notNull().default('{"phone":"","email":"","businessName":""}'), // { phone, email, address, businessName }
   
@@ -225,6 +228,94 @@ export const productLandingPages = pgTable("product_landing_pages", {
   
   // Payment methods
   paymentMethods: jsonb("payment_methods").notNull().default('{"cod":true,"bankTransfer":true,"online":false}'), // { cod, bankTransfer, online }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Advanced Theme Configurations table
+export const themeConfigurations = pgTable("theme_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // Theme name (e.g., "Shopee Orange", "Luxury Purple")
+  description: text("description"),
+  
+  // Color Palette
+  colorPalette: jsonb("color_palette").notNull().default('{}'), 
+  // {
+  //   primary: "#FF6B35",
+  //   secondary: "#F7931E", 
+  //   accent: "#FF8C42",
+  //   success: "#28A745",
+  //   warning: "#FFC107",
+  //   danger: "#DC3545",
+  //   background: "#FFFFFF",
+  //   surface: "#F8F9FA",
+  //   text: "#212529",
+  //   textMuted: "#6C757D"
+  // }
+  
+  // Typography Settings
+  typography: jsonb("typography").notNull().default('{}'),
+  // {
+  //   fontFamily: "Nunito Sans",
+  //   headingWeight: "700",
+  //   bodyWeight: "400",
+  //   fontSize: { base: "16px", mobile: "14px" }
+  // }
+  
+  // Spacing & Layout
+  spacing: jsonb("spacing").notNull().default('{}'),
+  // {
+  //   containerPadding: "1rem",
+  //   sectionSpacing: "3rem",
+  //   cardRadius: "8px",
+  //   buttonRadius: "6px"
+  // }
+  
+  // Component Styles
+  componentStyles: jsonb("component_styles").notNull().default('{}'),
+  // {
+  //   buttons: { style: "solid", shadow: true },
+  //   cards: { shadow: "medium", border: false },
+  //   reviews: { style: "shopee", avatarBorder: true }
+  // }
+  
+  // Brand Guidelines
+  brandGuidelines: jsonb("brand_guidelines").notNull().default('{}'),
+  // {
+  //   logo: "url",
+  //   brandColors: ["#FF6B35", "#F7931E"],
+  //   industry: "ecommerce",
+  //   personality: ["trustworthy", "energetic", "modern"]
+  // }
+  
+  // Accessibility Settings
+  accessibility: jsonb("accessibility").notNull().default('{}'),
+  // {
+  //   contrastRatio: 4.5,
+  //   focusVisible: true,
+  //   reducedMotion: false,
+  //   fontSize: { min: "14px", max: "24px" }
+  // }
+  
+  // Psychology & Conversion
+  psychology: jsonb("psychology").notNull().default('{}'),
+  // {
+  //   urgencyColor: "#DC3545", 
+  //   trustColor: "#28A745",
+  //   ctaColor: "#FF6B35",
+  //   conversionFocus: "high" | "medium" | "low"
+  // }
+  
+  // Template Settings
+  isTemplate: boolean("is_template").notNull().default(false), // Built-in templates vs custom
+  industry: text("industry"), // "ecommerce", "fashion", "tech", "food", etc.
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).$type<number>(), // Avg conversion for this theme (0-100%)
+  
+  // Meta
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }), // User ID who created this theme
+  isPublic: boolean("is_public").notNull().default(false), // Can other users use this theme?
+  usageCount: integer("usage_count").notNull().default(0), // How many landing pages use this
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
