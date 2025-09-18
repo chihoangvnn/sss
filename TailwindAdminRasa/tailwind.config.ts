@@ -99,6 +99,17 @@ export default {
             900: "#0F172A"
           }
         },
+        // Gentle Green Notification Colors
+        gentle: {
+          mint: "#10B981",        // Primary gentle mint green
+          sparkle: "#34D399",     // Lighter sparkle accent  
+          cream: "#ECFDF5",       // Soft mint cream background
+          outline: "#A7F3D0",     // Subtle green outline
+          shadow: "#10B98110",    // Gentle shadow with opacity
+          glow: "#10B98120",      // Soft glow effect
+          deep: "#047857",        // Deep green for text
+          whisper: "#F0FDF4"      // Ultra-light green wash
+        },
       },
       fontFamily: {
         sans: ["Inter", "var(--font-sans)"],
@@ -114,10 +125,33 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        // Gentle Green Notification Animations
+        "gentle-glow": {
+          "0%, 100%": { boxShadow: "0 0 20px rgba(16, 185, 129, 0.1)" },
+          "50%": { boxShadow: "0 0 30px rgba(16, 185, 129, 0.2), 0 0 40px rgba(16, 185, 129, 0.1)" }
+        },
+        "sparkle": {
+          "0%": { transform: "scale(0.8)", opacity: "0" },
+          "50%": { transform: "scale(1.1)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" }
+        },
+        "slide-in-gentle": {
+          "0%": { transform: "translateX(100%) translateY(-20px)", opacity: "0", scale: "0.95" },
+          "100%": { transform: "translateX(0) translateY(0)", opacity: "1", scale: "1" }
+        },
+        "bounce-gentle": {
+          "0%": { transform: "scale(0.95)" },
+          "50%": { transform: "scale(1.02)" },
+          "100%": { transform: "scale(1)" }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "gentle-glow": "gentle-glow 2s ease-in-out infinite",
+        "sparkle": "sparkle 0.6s ease-out",
+        "slide-in-gentle": "slide-in-gentle 0.5s ease-out",
+        "bounce-gentle": "bounce-gentle 0.3s ease-out"
       },
     },
   },
