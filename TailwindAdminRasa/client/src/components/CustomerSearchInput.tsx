@@ -33,15 +33,15 @@ export function CustomerSearchInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
 
-  // Handle external value changes
+  // Handle external value changes - ✅ No more "Khách lẻ" text display
   useEffect(() => {
     if (value === "retail" || !value) {
-      setDisplayValue("Khách lẻ");
+      setDisplayValue(""); // ✅ Empty instead of "Khách lẻ"  
       setSelectedCustomer(null);
     }
   }, [value]);
 
-  // ✅ Smart unified search function
+  // ✅ Smart unified search function với better detection
   const searchCustomers = async (query: string) => {
     if (query.length < 1) { // ✅ Reduced from 2 to 1 character
       setSuggestions([]);
@@ -50,18 +50,27 @@ export function CustomerSearchInput({
     
     setIsLoading(true);
     try {
-      // 🧠 Smart detection: if query has digits, search by phone, otherwise by name
-      const hasDigits = /\d/.test(query);
-      const searchParam = hasDigits ? `phone=${encodeURIComponent(query)}` : `q=${encodeURIComponent(query)}`;
+      // 🧠 Better detection: if query is mostly digits (phone-like), search by phone
+      const digitCount = (query.match(/\d/g) || []).length;
+      const isPhoneSearch = digitCount > 0 && digitCount >= query.length * 0.5; // 50%+ digits = phone search
       
-      // ✅ Single API call instead of two
+      const searchParam = isPhoneSearch 
+        ? `phone=${encodeURIComponent(query)}` 
+        : `q=${encodeURIComponent(query)}`;
+      
+      console.log(`🔍 Searching with: ${searchParam} (query: "${query}")`);
+      
+      // ✅ Single API call với proper error handling
       const response = await apiRequest('GET', `/api/customers/search?${searchParam}`);
       
       if (!response.ok) {
-        throw new Error(`Search failed: ${response.status}`);
+        console.error(`Search API failed: ${response.status} - ${searchParam}`);
+        setSuggestions([]);
+        return;
       }
       
       const results = await response.json() as CustomerWithAddress[];
+      console.log(`📊 Search results: ${results.length} customers found`);
       setSuggestions((results || []).slice(0, 8)); // Limit to 8 results
     } catch (error) {
       console.error('Customer search error:', error);
@@ -99,37 +108,36 @@ export function CustomerSearchInput({
     onSelect(customer);
   };
 
-  // Handle retail customer selection
+  // Handle retail customer selection - ✅ No more "Khách lẻ" display
   const handleRetailSelect = () => {
     setSelectedCustomer(null);
-    setDisplayValue("Khách lẻ");
+    setDisplayValue(""); // ✅ Empty instead of "Khách lẻ"
     setShowSuggestions(false);
     setSuggestions([]);
     setSearchTerm("");
     onSelect(null);
   };
 
-  // Handle focus - ✅ Clear "Khách lẻ" ngay khi click
+  // Handle focus - ✅ Clear any text khi click để ready for typing
   const handleFocus = () => {
     setShowSuggestions(true);
     
-    // ✅ Clear "Khách lẻ" text ngay khi focus để user có thể type
-    if (displayValue === "Khách lẻ" || selectedCustomer) {
+    // ✅ Clear any existing text for fresh typing experience
+    if (selectedCustomer) {
       setDisplayValue("");
       setSearchTerm("");
     }
   };
 
-  // Handle blur
+  // Handle blur - ✅ No more "Khách lẻ" fallback  
   const handleBlur = () => {
     // Delay hiding suggestions to allow click
     setTimeout(() => {
       setShowSuggestions(false);
       if (selectedCustomer) {
         setDisplayValue(`${selectedCustomer.name} - ${selectedCustomer.phone}`);
-      } else if (!displayValue) {
-        setDisplayValue("Khách lẻ");
-      }
+      } 
+      // ✅ If no customer selected, stay empty (defaults to retail internally)
     }, 200);
   };
 
