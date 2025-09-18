@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink, Tag, Palette, BarChart3, Users, Filter, Search, Grid, List } from "lucide-react";
+import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink, Tag, Palette, BarChart3, Users, Filter, Search, Grid, List, Store, Video, ShoppingBag } from "lucide-react";
+import { useLocation } from "wouter";
 
 // TikTok Icon Component (since Lucide doesn't have TikTok)
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -92,9 +93,15 @@ export function SocialMediaPanel({
   onConnectAccount, 
   onToggleAccount 
 }: SocialMediaPanelProps) {
+  const [location] = useLocation();
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  
+  // Detect current platform from URL
+  const currentPlatform = location.includes('/tiktok-business') ? 'tiktok-business'
+                        : location.includes('/tiktok-shop') ? 'tiktok-shop'
+                        : 'facebook';
   const [webhookVerifyToken, setWebhookVerifyToken] = useState<string>("");
   const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [copied, setCopied] = useState<string | null>(null);
@@ -165,7 +172,7 @@ export function SocialMediaPanel({
     }
   });
 
-  // Load webhook configuration on mount
+  // Load webhook configuration only for Facebook
   const { data: webhookConfig } = useQuery({
     queryKey: ['facebook-webhook-config'],
     queryFn: async () => {
@@ -173,6 +180,7 @@ export function SocialMediaPanel({
       if (!response.ok) throw new Error('Failed to fetch webhook config');
       return response.json();
     },
+    enabled: currentPlatform === 'facebook', // Only load for Facebook
   });
 
   // Update state when webhook config loads  
@@ -424,7 +432,7 @@ export function SocialMediaPanel({
         </div>
       </div>
 
-      {/* Main Tabs */}
+      {/* Main Tabs - Platform Specific */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 bg-gray-100">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
@@ -435,10 +443,27 @@ export function SocialMediaPanel({
             <Settings className="w-4 h-4" />
             Tài khoản
           </TabsTrigger>
-          <TabsTrigger value="chat" className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Tin nhắn
-          </TabsTrigger>
+          
+          {/* Platform-specific third tab */}
+          {currentPlatform === 'facebook' && (
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Tin nhắn
+            </TabsTrigger>
+          )}
+          {currentPlatform === 'tiktok-business' && (
+            <TabsTrigger value="business" className="flex items-center gap-2">
+              <Video className="w-4 h-4" />
+              Business API
+            </TabsTrigger>
+          )}
+          {currentPlatform === 'tiktok-shop' && (
+            <TabsTrigger value="shop" className="flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              Shop Management
+            </TabsTrigger>
+          )}
+          
           <TabsTrigger value="tags" className="flex items-center gap-2">
             <Tag className="w-4 h-4" />
             Quản lý Tags
@@ -571,10 +596,12 @@ export function SocialMediaPanel({
         )}
           </div>
 
-          {/* Webhook Configuration Section */}
-          <Separator className="my-8" />
-          
-          <Card className="border-l-4 border-l-blue-500">
+          {/* Facebook Webhook Configuration Section - Facebook Only */}
+          {currentPlatform === 'facebook' && (
+            <>
+              <Separator className="my-8" />
+              
+              <Card className="border-l-4 border-l-blue-500">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-600">
                 <Webhook className="h-5 w-5" />
@@ -685,12 +712,150 @@ export function SocialMediaPanel({
               </div>
             </CardContent>
           </Card>
+            </>
+          )}
         </TabsContent>
 
-        {/* Chat Tab Content */}
-        <TabsContent value="chat" className="mt-6">
-          <FacebookChatManager />
-        </TabsContent>
+        {/* Chat Tab Content - Facebook Only */}
+        {currentPlatform === 'facebook' && (
+          <TabsContent value="chat" className="mt-6">
+            <FacebookChatManager />
+          </TabsContent>
+        )}
+
+        {/* TikTok Business Tab Content */}
+        {currentPlatform === 'tiktok-business' && (
+          <TabsContent value="business" className="space-y-6 mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="border-l-4 border-l-pink-500 bg-gradient-to-br from-pink-50 to-pink-100">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-pink-700">
+                    <TikTokIcon className="h-5 w-5" />
+                    TikTok Business API Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-pink-100 border border-pink-300 rounded-lg p-4">
+                    <h3 className="font-medium text-pink-800 mb-2">🔧 Cấu hình Business API</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Client Key:</span>
+                        <Badge variant="outline">Chưa cấu hình</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Client Secret:</span>
+                        <Badge variant="outline">Chưa cấu hình</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Access Token:</span>
+                        <Badge variant="outline">Chưa có</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button className="w-full bg-pink-600 hover:bg-pink-700">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Kết nối TikTok Business
+                  </Button>
+                  
+                  <Button variant="outline" className="w-full" onClick={() => {
+                    window.open('https://developers.tiktok.com/apps', '_blank');
+                  }}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Mở TikTok Developers
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Video className="h-5 w-5 text-pink-600" />
+                    Video Analytics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-center py-8">
+                      <Video className="h-12 w-12 mx-auto mb-4 text-pink-400" />
+                      <h3 className="font-medium mb-2">Chưa có video nào</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Kết nối TikTok Business để xem analytics video
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
+
+        {/* TikTok Shop Tab Content */}
+        {currentPlatform === 'tiktok-shop' && (
+          <TabsContent value="shop" className="space-y-6 mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="border-l-4 border-l-pink-600 bg-gradient-to-br from-pink-50 to-pink-100">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-pink-700">
+                    <ShoppingBag className="h-5 w-5" />
+                    TikTok Shop Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-pink-100 border border-pink-300 rounded-lg p-4">
+                    <h3 className="font-medium text-pink-800 mb-2">🛒 Cấu hình Shop API</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Shop ID:</span>
+                        <Badge variant="outline">Chưa cấu hình</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Access Token:</span>
+                        <Badge variant="outline">Chưa có</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Webhook:</span>
+                        <Badge variant="outline">Chưa cấu hình</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button className="w-full bg-pink-600 hover:bg-pink-700">
+                    <Store className="h-4 w-4 mr-2" />
+                    Kết nối TikTok Shop
+                  </Button>
+                  
+                  <Button variant="outline" className="w-full" onClick={() => {
+                    window.open('https://partner.tiktokshop.com/', '_blank');
+                  }}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Mở TikTok Shop Partner
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5 text-pink-600" />
+                    Quản lý Sản phẩm
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-center py-8">
+                      <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-pink-400" />
+                      <h3 className="font-medium mb-2">Chưa có sản phẩm nào</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Kết nối TikTok Shop để đồng bộ sản phẩm
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
 
         {/* Dashboard Tab Content */}
         <TabsContent value="dashboard" className="space-y-6 mt-6">
