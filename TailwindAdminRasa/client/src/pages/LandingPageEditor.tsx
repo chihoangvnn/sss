@@ -55,13 +55,6 @@ export default function LandingPageEditor() {
   const [showAdvancedThemes, setShowAdvancedThemes] = useState(false);
   const [selectedThemeConfig, setSelectedThemeConfig] = useState<AdvancedThemeConfig | null>(null);
 
-  // Load existing theme config when landing page data is available
-  useEffect(() => {
-    if (existingLandingPage?.advancedThemeConfig && !selectedThemeConfig) {
-      setSelectedThemeConfig(existingLandingPage.advancedThemeConfig);
-    }
-  }, [existingLandingPage, selectedThemeConfig]);
-
   const [formData, setFormData] = useState<ProductLandingPageForm>({
     title: "",
     slug: "",
@@ -122,6 +115,13 @@ export default function LandingPageEditor() {
       });
     }
   }, [existingLandingPage, isEditing]);
+
+  // Load existing theme config when landing page data is available
+  useEffect(() => {
+    if (existingLandingPage?.advancedThemeConfig && !selectedThemeConfig) {
+      setSelectedThemeConfig(existingLandingPage.advancedThemeConfig);
+    }
+  }, [existingLandingPage, selectedThemeConfig]);
 
   // Auto-generate slug from title
   useEffect(() => {
