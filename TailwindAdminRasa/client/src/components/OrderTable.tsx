@@ -546,14 +546,21 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOrders.map((order) => (
-              <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
-                <TableCell className="font-medium" data-testid={`order-id-${order.id}`}>
-                  <div className="flex flex-col">
-                    <span className="font-mono text-sm">DH-{order.id.slice(0, 8)}</span>
-                    <span className="text-xs text-muted-foreground">...{order.id.slice(-4)}</span>
-                  </div>
-                </TableCell>
+            {filteredOrders.map((order, index) => {
+              // 🎯 Logic Order Number: Date + Sequential
+              const orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
+              const dateStr = orderDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+              const sequentialNum = (filteredOrders.length - index).toString().padStart(3, '0'); // Reverse index for newest first
+              const logicOrderId = `${dateStr}-${sequentialNum}`;
+              
+              return (
+                <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
+                  <TableCell className="font-medium" data-testid={`order-id-${order.id}`}>
+                    <div className="flex flex-col">
+                      <span className="font-mono text-sm font-semibold text-blue-600">#{logicOrderId}</span>
+                      <span className="text-xs text-muted-foreground">ID: {order.id.slice(-8)}</span>
+                    </div>
+                  </TableCell>
                 <TableCell>
                   <div>
                     <div className="font-medium">{order.customerName}</div>
@@ -630,7 +637,8 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            );
+            })}
           </TableBody>
         </Table>
 
