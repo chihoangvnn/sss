@@ -886,6 +886,41 @@ export class DatabaseStorage implements IStorage {
     return newPayment;
   }
 
+  /**
+   * 🚀 Create Payment with Automatic QR Generation
+   * Enhanced method that auto-generates VietQR codes for SHB bank
+   */
+  async createPaymentWithQR(orderId: string, amount: number, description?: string): Promise<Payment> {
+    // Import VietQRService dynamically để avoid circular dependencies
+    const { VietQRService } = await import('./services/vietqr-service');
+    
+    // 🎯 Generate logical order number for QR reference
+    const order = await this.getOrder(orderId);
+    const orderDate = order?.createdAt ? new Date(order.createdAt) : new Date();
+    const dateStr = orderDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+    const logicOrderId = `${dateStr}-${orderId.slice(-3).toUpperCase()}`; // Short reference
+    
+    // 🏦 Generate VietQR code automatically
+    const qrResult = VietQRService.generateMobileQR(
+      amount,
+      logicOrderId,
+      description || `Thanh toán đơn hàng ${logicOrderId}`
+    );
+    
+    // 💾 Create payment record với auto-generated QR
+    const paymentData: InsertPayment = {
+      orderId,
+      method: 'bank_transfer',
+      amount: amount.toString(),
+      qrCode: qrResult.qrCodeUrl,
+      status: 'pending',
+      bankInfo: qrResult.bankInfo,
+    };
+    
+    const [newPayment] = await db.insert(payments).values(paymentData).returning();
+    return newPayment;
+  }
+
   async updatePaymentStatus(id: string, status: string, transactionId?: string): Promise<Payment | undefined> {
     const updateData: any = { status, updatedAt: new Date() };
     if (transactionId) {
