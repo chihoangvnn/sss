@@ -119,26 +119,29 @@ export function NewOrderNotification({ order, onViewOrder }: NewOrderNotificatio
   return null; // This component only triggers notifications
 }
 
-// 🌟 Hook for easy usage
+// 🌟 Hook for easy usage (Fixed Double Toast Issue)
 export function useNewOrderNotification() {
   const [notificationTrigger, setNotificationTrigger] = useState<NewOrderData | undefined>();
   
-  const triggerNewOrderNotification = (orderData: NewOrderData) => {
+  const triggerNewOrderNotification = React.useCallback((orderData: NewOrderData) => {
     setNotificationTrigger(orderData);
     // Reset trigger after a small delay to allow for re-triggering
     setTimeout(() => setNotificationTrigger(undefined), 100);
-  };
+  }, []);
+  
+  // Memoize component to prevent recreation on every hook call
+  const NewOrderNotificationComponent = React.useCallback(() => (
+    <NewOrderNotification 
+      order={notificationTrigger} 
+      onViewOrder={(orderId) => {
+        // Default action - could be customized
+        console.log('Navigate to order:', orderId);
+      }} 
+    />
+  ), [notificationTrigger]);
   
   return {
-    NewOrderNotificationComponent: () => (
-      <NewOrderNotification 
-        order={notificationTrigger} 
-        onViewOrder={(orderId) => {
-          // Default action - could be customized
-          console.log('Navigate to order:', orderId);
-        }} 
-      />
-    ),
+    NewOrderNotificationComponent,
     triggerNewOrderNotification,
   };
 }
