@@ -33,7 +33,8 @@ import {
   ChevronRight,
   X,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Flame
 } from "lucide-react";
 import ChatbotWidget from "@/components/ChatbotWidget";
 
@@ -89,6 +90,13 @@ export default function PublicLandingPage() {
     "Anh Nam vừa mua 8 phút trước"
   ]);
   
+  // Stable social proof numbers (generated once per session)
+  const [stableStats, setStableStats] = useState(() => ({
+    bonusSales: Math.floor(Math.random() * 50) + 100,
+    availableStock: Math.floor(Math.random() * 20) + 5,
+    urgencyHours: Math.floor(Math.random() * 12) + 1
+  }));
+  
   // Simulate dynamic viewers count
   useEffect(() => {
     const interval = setInterval(() => {
@@ -96,6 +104,8 @@ export default function PublicLandingPage() {
     }, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  
 
   // Fetch landing page data
   const { data: landingPage, isLoading, error } = useQuery<any>({
@@ -399,6 +409,172 @@ export default function PublicLandingPage() {
     }
   }, [isDarkTheme, colorInfo.rgb]);
 
+  // SEO Meta Tags - Dynamic based on landing page data
+  useEffect(() => {
+    if (!landingPage) return;
+
+    const product = landingPage.product;
+    const reviews = landingPage.reviewsData;
+    
+    // Generate optimized title for SEO and social sharing
+    const seoTitle = `${product?.name || landingPage.title} - Giá chỉ ${finalPrice.toLocaleString('vi-VN')}đ | Mua ngay`;
+    const seoDescription = landingPage.description || product?.description || `Mua ${product?.name} chính hãng, giá tốt nhất thị trường. ⭐ ${reviews?.averageRating?.toFixed(1) || '4.8'}/5 từ ${reviews?.totalReviews || 0} đánh giá. Giao hàng miễn phí, đổi trả 30 ngày.`;
+    const seoKeywords = `${product?.name}, mua ${product?.name}, ${product?.name} giá tốt, ${product?.name} chính hãng, đặt hàng online, giao hàng miễn phí`;
+    
+    // Basic SEO meta tags
+    document.title = seoTitle;
+    
+    // Remove existing meta tags to avoid duplicates
+    const existingMetaTags = document.querySelectorAll('meta[data-seo="true"]');
+    existingMetaTags.forEach(tag => tag.remove());
+    
+    const metaTags = [
+      { name: 'description', content: seoDescription },
+      { name: 'keywords', content: seoKeywords },
+      { name: 'author', content: landingPage.contactInfo?.businessName || 'Shop Online' },
+      { name: 'robots', content: 'index, follow' },
+      { name: 'language', content: 'vi-VN' },
+      
+      // Open Graph tags for Facebook
+      { property: 'og:type', content: 'product' },
+      { property: 'og:title', content: seoTitle },
+      { property: 'og:description', content: seoDescription },
+      { property: 'og:image', content: landingPage.displayImage || product?.image || '' },
+      { property: 'og:url', content: window.location.href },
+      { property: 'og:site_name', content: landingPage.contactInfo?.businessName || 'Online Shop' },
+      { property: 'og:locale', content: 'vi_VN' },
+      { property: 'product:price:amount', content: finalPrice.toString() },
+      { property: 'product:price:currency', content: 'VND' },
+      
+      // Twitter Card tags
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: seoTitle },
+      { name: 'twitter:description', content: seoDescription },
+      { name: 'twitter:image', content: landingPage.displayImage || product?.image || '' },
+      
+      // Additional SEO tags
+      { name: 'theme-color', content: landingPage.primaryColor || '#007bff' },
+      { name: 'apple-mobile-web-app-capable', content: 'yes' },
+      { name: 'format-detection', content: 'telephone=yes' }
+    ];
+    
+    // Add meta tags to document head
+    metaTags.forEach(({ name, property, content }) => {
+      const meta = document.createElement('meta');
+      if (name) meta.setAttribute('name', name);
+      if (property) meta.setAttribute('property', property);
+      meta.setAttribute('content', content);
+      meta.setAttribute('data-seo', 'true'); // Mark for easy removal
+      document.head.appendChild(meta);
+    });
+    
+    // Add canonical URL (remove query parameters)
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    const cleanUrl = window.location.origin + window.location.pathname;
+    canonical.setAttribute('href', cleanUrl);
+    
+    // JSON-LD Structured Data for Google Rich Snippets
+    const existingJsonLd = document.querySelector('script[type="application/ld+json"][data-seo="true"]');
+    if (existingJsonLd) {
+      existingJsonLd.remove();
+    }
+    
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        // Product Schema
+        {
+          "@type": "Product",
+          "@id": cleanUrl + "#product",
+          "name": product?.name || landingPage.title,
+          "description": product?.description || landingPage.description,
+          "image": landingPage.displayImage || product?.image || "",
+          "brand": {
+            "@type": "Brand",
+            "name": landingPage.contactInfo?.businessName || "Online Shop"
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": cleanUrl,
+            "priceCurrency": "VND",
+            "price": finalPrice,
+            "priceValidUntil": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days
+            "availability": (landingPage.availableStock || stableStats.availableStock) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            "seller": {
+              "@type": "Organization",
+              "name": landingPage.contactInfo?.businessName || "Online Shop"
+            }
+          },
+          "aggregateRating": reviews && reviews.totalReviews > 0 ? {
+            "@type": "AggregateRating",
+            "ratingValue": reviews.averageRating,
+            "reviewCount": reviews.totalReviews,
+            "bestRating": 5,
+            "worstRating": 1
+          } : undefined
+        },
+        // Organization Schema
+        {
+          "@type": "Organization",
+          "@id": cleanUrl + "#organization", 
+          "name": landingPage.contactInfo?.businessName || "Online Shop",
+          "url": cleanUrl,
+          "logo": landingPage.displayImage || "",
+          "contactPoint": landingPage.contactInfo?.phone ? {
+            "@type": "ContactPoint",
+            "telephone": landingPage.contactInfo.phone,
+            "contactType": "Customer Service"
+          } : undefined,
+          "address": landingPage.contactInfo?.address ? {
+            "@type": "PostalAddress",
+            "streetAddress": landingPage.contactInfo.address
+          } : undefined
+        },
+        // WebPage Schema
+        {
+          "@type": "WebPage",
+          "@id": cleanUrl + "#webpage",
+          "url": cleanUrl,
+          "name": seoTitle,
+          "description": seoDescription,
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": landingPage.contactInfo?.businessName || "Online Shop",
+            "url": window.location.origin
+          },
+          "about": {
+            "@id": cleanUrl + "#product"
+          },
+          "potentialAction": {
+            "@type": "BuyAction",
+            "target": cleanUrl,
+            "object": {
+              "@id": cleanUrl + "#product"
+            }
+          }
+        }
+      ]
+    };
+    
+    // Remove undefined fields for cleaner JSON-LD
+    const cleanStructuredData = JSON.parse(JSON.stringify(structuredData, (key, value) => 
+      value === undefined ? undefined : value
+    ));
+    
+    // Add JSON-LD script to head
+    const jsonLdScript = document.createElement('script');
+    jsonLdScript.type = 'application/ld+json';
+    jsonLdScript.setAttribute('data-seo', 'true');
+    jsonLdScript.textContent = JSON.stringify(cleanStructuredData, null, 2);
+    document.head.appendChild(jsonLdScript);
+    
+  }, [landingPage, finalPrice, stableStats]);
+
   // Early returns for loading and error states (after all hooks are defined)
   if (isLoading) {
     return (
@@ -443,11 +619,12 @@ export default function PublicLandingPage() {
                 <span className="font-medium text-green-600">{viewersCount}</span>
                 <span className="hidden sm:inline">đang xem</span>
               </div>
+              {/* Phone number (clickable) */}
               {landingPage.contactInfo?.phone && (
-                <a href={`tel:${landingPage.contactInfo.phone}`} className="flex items-center gap-2 transition-colors duration-300" style={{color: 'var(--theme-primary)'}}>
+                <a href={`tel:${landingPage.contactInfo.phone}`} className="flex items-center gap-2 transition-colors duration-300 hover:text-primary">
                   <Phone className="h-4 w-4" />
-                  <span className="hidden sm:inline">{landingPage.contactInfo.phone}</span>
-                  <span className="sm:hidden">Gọi</span>
+                  <span className="hidden sm:inline text-sm">{landingPage.contactInfo.phone}</span>
+                  <span className="sm:hidden text-sm">Gọi</span>
                 </a>
               )}
             </div>
@@ -564,20 +741,54 @@ export default function PublicLandingPage() {
                 {landingPage.callToAction || "Đặt hàng ngay"}
               </Button>
               
-              {/* Additional Trust Info */}
-              <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  Còn {landingPage.availableStock} sản phẩm
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="h-3 w-3 text-blue-500" />
-                  {landingPage.viewCount}+ lượt xem
-                </span>
-                <span className="flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3 text-purple-500" />
-                  {landingPage.orderCount} đã bán
-                </span>
+              {/* Shopee-Style Social Proof */}
+              <div className="mt-6">
+                {/* Sales & Rating Stats */}
+                <div className="flex items-center gap-6 mb-4">
+                  <div className="flex items-center gap-2 bg-orange-50 px-3 py-2 rounded-lg border border-orange-200">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-orange-400 fill-orange-400" />
+                      <span className="font-bold text-orange-600 text-lg">
+                        {landingPage.reviewsData?.averageRating?.toFixed(1) || '4.8'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-orange-600">
+                      ({landingPage.reviewsData?.totalReviews || 0} đánh giá)
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-green-700">{(landingPage.orderCount || 0) + stableStats.bonusSales}</div>
+                      <div className="text-xs text-green-600">Đã bán</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <div className="text-sm">
+                      <div className="font-bold text-blue-700">{landingPage.viewCount || 0}+</div>
+                      <div className="text-xs text-blue-600">Lượt xem</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Trust Badges Row */}
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1 bg-red-50 text-red-600 px-2 py-1 rounded-full border border-red-200">
+                    <Flame className="h-3 w-3" />
+                    <span className="font-medium">Bán chạy nhất</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-purple-50 text-purple-600 px-2 py-1 rounded-full border border-purple-200">
+                    <Award className="h-3 w-3" />
+                    <span className="font-medium">Top đánh giá</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-green-50 text-green-600 px-2 py-1 rounded-full border border-green-200">
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span className="font-medium">Còn {landingPage.availableStock || stableStats.availableStock}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -614,7 +825,7 @@ export default function PublicLandingPage() {
             {/* Urgency Timer */}
             <div className={`flex items-center gap-2 transition-colors duration-300 ${isDarkTheme ? 'text-orange-400' : 'text-orange-600'}`}>
               <Clock className="h-4 w-4 animate-pulse" />
-              <span className="text-sm font-medium">⏰ Còn {Math.floor(Math.random() * 12) + 1}h!</span>
+              <span className="text-sm font-medium">⏰ Còn {stableStats.urgencyHours}h!</span>
             </div>
           </div>
         </div>
@@ -692,63 +903,85 @@ export default function PublicLandingPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Shopee-Style Review Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {landingPage.reviewsData.reviews.map((review: any, index: number) => (
-                <Card key={review.id} className={`transition-all duration-300 hover:shadow-lg ${themeClasses.card}`}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-1">
+                <div key={review.id} className="bg-white rounded-2xl border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 p-6">
+                  {/* Header with Avatar and Rating */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="flex-shrink-0">
+                      {review.customerAvatar ? (
+                        <img
+                          src={review.customerAvatar}
+                          alt={review.customerName}
+                          className="w-12 h-12 rounded-full border-3 border-orange-200 shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-400 flex items-center justify-center text-white font-semibold text-lg">
+                          {review.customerName?.charAt(0)?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-gray-900 text-base">{review.customerName}</h4>
+                        {review.isVerified && (
+                          <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Đã mua hàng</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Large Stars Like Shopee */}
+                      <div className="flex items-center gap-1 mb-2">
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`h-4 w-4 ${
-                              i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                            className={`h-5 w-5 ${
+                              i < review.rating 
+                                ? 'text-orange-400 fill-orange-400' 
+                                : 'text-gray-200 fill-gray-200'
                             }`}
                           />
                         ))}
+                        <span className="ml-2 text-sm font-medium text-orange-500">{review.rating}/5</span>
                       </div>
-                      {review.isVerified && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Đã mua
-                        </Badge>
-                      )}
+                      <p className="text-xs text-gray-500">
+                        {new Date(review.createdAt).toLocaleDateString('vi-VN', {
+                          year: 'numeric',
+                          month: 'long', 
+                          day: 'numeric'
+                        })}
+                      </p>
                     </div>
-                    
-                    {review.title && (
-                      <h4 className="font-semibold mb-2">{review.title}</h4>
-                    )}
-                    
-                    <p className={`mb-4 transition-colors duration-300 ${themeClasses.textMuted} line-clamp-3`}>
-                      "{review.content}"
+                  </div>
+                  
+                  {/* Review Title */}
+                  {review.title && (
+                    <h5 className="font-semibold text-gray-800 mb-3 text-base">{review.title}</h5>
+                  )}
+                  
+                  {/* Review Content */}
+                  <div className="mb-4">
+                    <p className="text-gray-700 leading-relaxed line-clamp-4 text-sm">
+                      {review.content}
                     </p>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {review.customerAvatar && (
-                          <img
-                            src={review.customerAvatar}
-                            alt={review.customerName}
-                            className="w-10 h-10 rounded-full border-2 border-gray-200"
-                          />
-                        )}
-                        <div>
-                          <p className="font-semibold text-sm">{review.customerName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(review.createdAt).toLocaleDateString('vi-VN')}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {review.helpfulCount > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Heart className="h-3 w-3" />
-                          <span>{review.helpfulCount}</span>
-                        </div>
-                      )}
+                  </div>
+                  
+                  {/* Footer with Helpful Button */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                    <div className="flex items-center gap-4">
+                      <button className="flex items-center gap-1 text-gray-500 hover:text-orange-500 transition-colors text-sm">
+                        <Heart className="h-4 w-4" />
+                        <span>Hữu ích ({review.helpfulCount || 0})</span>
+                      </button>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <Eye className="h-3 w-3" />
+                      <span>Đánh giá được xác thực</span>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -1354,26 +1587,28 @@ export default function PublicLandingPage() {
         </div>
       )}
 
-      {/* Sticky Mobile Bottom Bar */}
+      {/* Sticky Mobile Bottom Bar - Full Width Purchase */}
       <div className={`fixed bottom-0 left-0 right-0 z-50 border-t p-4 md:hidden transition-colors duration-300 ${themeClasses.card}`}>
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-2">
+          {/* Price and Call Info */}
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Phone className="h-4 w-4" />
+              <span>{landingPage.contactInfo?.phone || 'Hotline'}</span>
+            </div>
+            <div className="font-bold text-lg" style={{color: 'var(--theme-primary)'}}>
+              {finalPrice.toLocaleString('vi-VN')}đ
+            </div>
+          </div>
+          {/* Full Width Purchase Button */}
           <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 transition-colors duration-300"
-            onClick={() => landingPage.contactInfo?.phone && window.open(`tel:${landingPage.contactInfo.phone}`)}
-          >
-            <Phone className="h-4 w-4 mr-1" />
-            Gọi
-          </Button>
-          <Button 
-            size="sm" 
-            className="flex-1 basis-2/3 transition-colors duration-300"
-            style={{background: `linear-gradient(to right, var(--theme-primary), var(--theme-primary-dark))`}}
+            size="lg"
+            className="w-full h-12 text-lg font-semibold transition-all duration-300 hover:scale-[1.02]"
+            style={{background: `linear-gradient(135deg, var(--theme-primary), var(--theme-primary-dark))`}}
             onClick={() => setShowOrderForm(true)}
           >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Đặt hàng - {finalPrice.toLocaleString('vi-VN')}đ
+            <ShoppingCart className="h-5 w-5 mr-2" />
+            Đặt hàng ngay
           </Button>
         </div>
       </div>
