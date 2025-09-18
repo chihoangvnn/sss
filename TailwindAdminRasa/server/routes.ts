@@ -1,16 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { firebaseStorage } from "./firebase-storage";
 import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema, insertShopSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
 
-// Global type extensions for demo data
-declare global {
-  var demoLandingPages: any[] | undefined;
-}
 
 // Payment status validation schema
 const paymentStatusSchema = z.object({
@@ -1114,43 +1109,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(landingPage);
       }
     } catch (error) {
-      console.error("Error fetching public landing page from Firebase:", error);
+      console.error("Error fetching public landing page:", error);
     }
     
-    // Fallback: Check demo landing pages from memory
-    try {
-      const demoPages = global.demoLandingPages || [];
-      const demoPage = demoPages.find(page => page.slug === req.params.slug);
-      
-      if (demoPage && demoPage.isActive) {
-        // Increment view count for demo page
-        demoPage.viewCount = (demoPage.viewCount || 0) + 1;
-        
-        // Add product details if needed
-        if (demoPage.productId) {
-          const product = await storage.getProduct(demoPage.productId);
-          if (product) {
-            demoPage.product = product;
-            
-            // Calculate pricing from product
-            const productPrice = parseFloat(product.price);
-            demoPage.finalPrice = demoPage.customPrice || productPrice;
-            demoPage.originalPrice = productPrice;
-            
-            // Set display data from product if not already set
-            demoPage.displayName = demoPage.displayName || product.name;
-            demoPage.displayImage = demoPage.displayImage || product.image;
-            demoPage.displayDescription = demoPage.displayDescription || product.description;
-          }
-        }
-        
-        return res.json(demoPage);
-      }
-    } catch (demoError) {
-      console.error("Error fetching demo landing page:", demoError);
-    }
-    
-    // Neither Firebase nor demo found
+    // Landing page not found
     res.status(404).json({ error: "Landing page not found or inactive" });
   });
 
