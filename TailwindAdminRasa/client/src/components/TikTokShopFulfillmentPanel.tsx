@@ -50,18 +50,18 @@ interface FulfillmentTask {
 }
 
 const priorityColors = {
-  low: { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200' },
-  normal: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
+  low: { bg: 'bg-tiktok-gray-100', text: 'text-tiktok-gray-800', border: 'border-tiktok-gray-200' },
+  normal: { bg: 'bg-tiktok-cyan/20', text: 'text-tiktok-cyan', border: 'border-tiktok-cyan/30' },
   high: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200' },
-  urgent: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' }
+  urgent: { bg: 'bg-tiktok-pink/20', text: 'text-tiktok-pink', border: 'border-tiktok-pink/30' }
 };
 
 const statusColors = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-  processing: { bg: 'bg-blue-100', text: 'text-blue-800', icon: Package },
+  processing: { bg: 'bg-tiktok-cyan/20', text: 'text-tiktok-cyan', icon: Package },
   ready_to_ship: { bg: 'bg-green-100', text: 'text-green-800', icon: Archive },
-  shipped: { bg: 'bg-emerald-100', text: 'text-emerald-800', icon: Truck },
-  delivered: { bg: 'bg-gray-100', text: 'text-gray-800', icon: CheckCircle },
+  shipped: { bg: 'bg-tiktok-pink/20', text: 'text-tiktok-pink', icon: Truck },
+  delivered: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
   failed: { bg: 'bg-red-100', text: 'text-red-800', icon: AlertTriangle }
 };
 

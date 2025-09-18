@@ -57,7 +57,7 @@ interface SellerAnalytics {
   };
 }
 
-const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+const CHART_COLORS = ['#FE2C55', '#25F4EE', '#161823', '#FE2C55', '#25F4EE']; // TikTok Brand Colors
 
 export function TikTokShopSellerDashboard({ businessAccountId }: { businessAccountId?: string }) {
   // Fetch seller analytics

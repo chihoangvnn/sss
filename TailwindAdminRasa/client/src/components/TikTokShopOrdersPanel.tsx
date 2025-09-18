@@ -37,11 +37,11 @@ import { useToast } from '@/hooks/use-toast';
 
 const statusColors = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', badge: 'bg-yellow-500' },
-  processing: { bg: 'bg-blue-100', text: 'text-blue-800', badge: 'bg-blue-500' },
-  shipped: { bg: 'bg-green-100', text: 'text-green-800', badge: 'bg-green-500' },
-  delivered: { bg: 'bg-emerald-100', text: 'text-emerald-800', badge: 'bg-emerald-500' },
+  processing: { bg: 'bg-tiktok-cyan/20', text: 'text-tiktok-cyan', badge: 'bg-tiktok-cyan' },
+  shipped: { bg: 'bg-tiktok-pink/20', text: 'text-tiktok-pink', badge: 'bg-tiktok-pink' },
+  delivered: { bg: 'bg-green-100', text: 'text-green-800', badge: 'bg-green-500' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-800', badge: 'bg-red-500' },
-  refunded: { bg: 'bg-gray-100', text: 'text-gray-800', badge: 'bg-gray-500' }
+  refunded: { bg: 'bg-tiktok-black/20', text: 'text-tiktok-black', badge: 'bg-tiktok-black' }
 };
 
 const statusIcons = {

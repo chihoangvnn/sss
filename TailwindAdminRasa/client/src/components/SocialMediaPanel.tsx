@@ -930,7 +930,7 @@ export function SocialMediaPanel({
         {currentPlatform === 'tiktok-shop' && (
           <TabsContent value="shop" className="space-y-6 mt-6">
             {/* TikTok Shop Header với branding */}
-            <div className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 p-6 rounded-2xl text-white relative overflow-hidden">
+            <div className="bg-gradient-to-r from-tiktok-black via-tiktok-pink to-tiktok-cyan p-6 rounded-2xl text-white relative overflow-hidden">
               <div className="absolute inset-0 bg-black/10"></div>
               <div className="relative z-10">
                 <div className="flex items-center justify-between">
@@ -940,12 +940,12 @@ export function SocialMediaPanel({
                     </div>
                     <div>
                       <h1 className="text-2xl font-bold">TikTok Shop Partner Center</h1>
-                      <p className="text-pink-100">Quản lý cửa hàng và bán hàng trên TikTok</p>
+                      <p className="text-tiktok-cyan/80">Quản lý cửa hàng và bán hàng trên TikTok</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="text-right">
-                      <p className="text-pink-100 text-sm">Trạng thái cửa hàng</p>
+                      <p className="text-white/80 text-sm">Trạng thái cửa hàng</p>
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                         <span className="font-medium">Đang hoạt động</span>
@@ -959,24 +959,24 @@ export function SocialMediaPanel({
             </div>
 
             <Tabs defaultValue="dashboard" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-gray-100/80 backdrop-blur-sm p-1 rounded-xl">
-                <TabsTrigger value="dashboard" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+              <TabsList className="grid w-full grid-cols-5 bg-tiktok-black/10 backdrop-blur-sm p-1 rounded-xl border border-tiktok-pink/20">
+                <TabsTrigger value="dashboard" className="rounded-lg data-[state=active]:bg-tiktok-pink data-[state=active]:text-white data-[state=active]:shadow-sm font-medium hover:bg-tiktok-pink/10">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Dashboard
                 </TabsTrigger>
-                <TabsTrigger value="products" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                <TabsTrigger value="products" className="rounded-lg data-[state=active]:bg-tiktok-pink data-[state=active]:text-white data-[state=active]:shadow-sm font-medium hover:bg-tiktok-pink/10">
                   <ShoppingBag className="h-4 w-4 mr-2" />
                   Sản phẩm
                 </TabsTrigger>
-                <TabsTrigger value="orders" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                <TabsTrigger value="orders" className="rounded-lg data-[state=active]:bg-tiktok-pink data-[state=active]:text-white data-[state=active]:shadow-sm font-medium hover:bg-tiktok-pink/10">
                   <Package className="h-4 w-4 mr-2" />
                   Đơn hàng
                 </TabsTrigger>
-                <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-tiktok-pink data-[state=active]:text-white data-[state=active]:shadow-sm font-medium hover:bg-tiktok-pink/10">
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Phân tích
                 </TabsTrigger>
-                <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-tiktok-pink data-[state=active]:text-white data-[state=active]:shadow-sm font-medium hover:bg-tiktok-pink/10">
                   <Settings className="h-4 w-4 mr-2" />
                   Cài đặt
                 </TabsTrigger>
@@ -986,15 +986,15 @@ export function SocialMediaPanel({
               <TabsContent value="dashboard" className="space-y-6">
                 {/* Key Metrics Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Card className="relative overflow-hidden bg-gradient-to-br from-pink-500 to-pink-600 text-white border-0">
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-tiktok-pink to-tiktok-pink/80 text-white border-0">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-pink-100 text-sm font-medium">Doanh thu hôm nay</p>
+                          <p className="text-white/80 text-sm font-medium">Doanh thu hôm nay</p>
                           <p className="text-3xl font-bold">2.4M VNĐ</p>
                           <div className="flex items-center mt-2">
-                            <TrendingUp className="h-4 w-4 text-pink-200 mr-1" />
-                            <span className="text-pink-100 text-sm">+12.5%</span>
+                            <TrendingUp className="h-4 w-4 text-white/70 mr-1" />
+                            <span className="text-white/80 text-sm">+12.5%</span>
                           </div>
                         </div>
                         <div className="p-3 bg-white/20 rounded-full">
@@ -1005,15 +1005,15 @@ export function SocialMediaPanel({
                     <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full"></div>
                   </Card>
 
-                  <Card className="relative overflow-hidden bg-gradient-to-br from-cyan-500 to-blue-600 text-white border-0">
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-tiktok-cyan to-tiktok-cyan/80 text-white border-0">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-cyan-100 text-sm font-medium">Đơn hàng mới</p>
+                          <p className="text-white/80 text-sm font-medium">Đơn hàng mới</p>
                           <p className="text-3xl font-bold">147</p>
                           <div className="flex items-center mt-2">
-                            <TrendingUp className="h-4 w-4 text-cyan-200 mr-1" />
-                            <span className="text-cyan-100 text-sm">+8.2%</span>
+                            <TrendingUp className="h-4 w-4 text-white/70 mr-1" />
+                            <span className="text-white/80 text-sm">+8.2%</span>
                           </div>
                         </div>
                         <div className="p-3 bg-white/20 rounded-full">
@@ -1024,15 +1024,15 @@ export function SocialMediaPanel({
                     <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full"></div>
                   </Card>
 
-                  <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-tiktok-black to-tiktok-black/80 text-white border-0">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-purple-100 text-sm font-medium">Video views</p>
+                          <p className="text-white/80 text-sm font-medium">Video views</p>
                           <p className="text-3xl font-bold">1.2M</p>
                           <div className="flex items-center mt-2">
-                            <Eye className="h-4 w-4 text-purple-200 mr-1" />
-                            <span className="text-purple-100 text-sm">24h qua</span>
+                            <Eye className="h-4 w-4 text-tiktok-cyan mr-1" />
+                            <span className="text-white/80 text-sm">24h qua</span>
                           </div>
                         </div>
                         <div className="p-3 bg-white/20 rounded-full">
@@ -1043,15 +1043,15 @@ export function SocialMediaPanel({
                     <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full"></div>
                   </Card>
 
-                  <Card className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-red-500 text-white border-0">
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-tiktok-pink/80 to-tiktok-black text-white border-0">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-orange-100 text-sm font-medium">Tỉ lệ chuyển đổi</p>
+                          <p className="text-white/80 text-sm font-medium">Tỉ lệ chuyển đổi</p>
                           <p className="text-3xl font-bold">3.8%</p>
                           <div className="flex items-center mt-2">
-                            <Target className="h-4 w-4 text-orange-200 mr-1" />
-                            <span className="text-orange-100 text-sm">Tuần này</span>
+                            <Target className="h-4 w-4 text-tiktok-cyan mr-1" />
+                            <span className="text-white/80 text-sm">Tuần này</span>
                           </div>
                         </div>
                         <div className="p-3 bg-white/20 rounded-full">

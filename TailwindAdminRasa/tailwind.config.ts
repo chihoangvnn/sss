@@ -81,6 +81,24 @@ export default {
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
         },
+        // TikTok Brand Colors
+        tiktok: {
+          pink: "#FE2C55",    // Primary TikTok pink
+          black: "#161823",   // TikTok dark/black
+          cyan: "#25F4EE",    // TikTok accent cyan
+          gray: {
+            50: "#F8FAFC",
+            100: "#F1F5F9", 
+            200: "#E2E8F0",
+            300: "#CBD5E1",
+            400: "#94A3B8",
+            500: "#64748B",
+            600: "#475569",
+            700: "#334155",
+            800: "#1E293B",
+            900: "#0F172A"
+          }
+        },
       },
       fontFamily: {
         sans: ["Inter", "var(--font-sans)"],
