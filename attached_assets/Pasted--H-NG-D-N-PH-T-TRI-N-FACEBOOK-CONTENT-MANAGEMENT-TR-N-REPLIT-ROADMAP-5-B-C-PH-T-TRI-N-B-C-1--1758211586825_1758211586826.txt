@@ -1,0 +1,237 @@
+ HƯỚNG DẪN PHÁT TRIỂN FACEBOOK CONTENT MANAGEMENT TRÊN REPLIT
+📋 ROADMAP 5 BƯỚC PHÁT TRIỂN
+BƯỚC 1: TẠO PROJECT VÀ SETUP ENVIRONMENT
+1.1 Tạo Replit mới:
+
+1. Vào Replit.com
+2. Create → Express.js template
+3. Đặt tên: "facebook-content-management"
+1.2 Setup Database:
+
+1. Sidebar → Database → Create PostgreSQL
+2. Copy connection string vào .env
+3. Setup environment variables:
+DATABASE_URL=postgresql://...  # Auto từ Replit DB
+CLOUDINARY_CLOUD_NAME=your_name
+CLOUDINARY_API_KEY=your_key
+CLOUDINARY_API_SECRET=your_secret
+JWT_SECRET=your_secret_123
+1.3 Install dependencies:
+
+npm install sequelize pg pg-hstore cloudinary multer bcryptjs jsonwebtoken
+npm install joi helmet cors express-rate-limit winston
+npm install bull redis  # Cho background jobs
+BƯỚC 2: TẠO DATABASE SCHEMA & MODELS
+2.1 Tạo Sequelize config:
+
+// config/database.js
+const { Sequelize } = require('sequelize');
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  logging: false,
+  dialectOptions: {
+    ssl: { require: true, rejectUnauthorized: false }
+  }
+});
+module.exports = { sequelize };
+2.2 Tạo Models theo thứ tự:
+
+models/
+├── Category.js      # Tạo trước (không có foreign key)
+├── Asset.js         # Sau khi có Category  
+├── Account.js       # Sau khi có Category
+├── Post.js          # Cuối cùng (có FK từ Asset + Account + Category)
+└── index.js         # Associations
+2.3 Test database connection:
+
+// test.js
+const { sequelize } = require('./config/database');
+async function testDB() {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Database connected');
+    
+    await sequelize.sync({ force: true }); // Tạo tables
+    console.log('✅ Tables created');
+  } catch(error) {
+    console.error('❌ DB Error:', error);
+  }
+}
+testDB();
+BƯỚC 3: BUILD API ENDPOINTS
+3.1 Setup Express server:
+
+// server.js
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const app = express();
+// Middleware
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+// Routes
+app.use('/api/categories', require('./routes/categories'));
+app.use('/api/assets', require('./routes/assets'));
+app.use('/upload', require('./routes/upload'));
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK' });
+});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+3.2 Tạo Routes theo thứ tự ưu tiên:
+
+1. categories.js     # CRUD categories (làm trước)
+2. upload.js         # Upload files (cần categories)  
+3. assets.js         # Manage assets (cần upload)
+4. accounts.js       # Facebook accounts
+5. posts.js          # Scheduling posts
+6. analytics.js      # Analytics dashboard
+3.3 Test từng endpoint:
+
+# Test trong Replit Console
+curl https://your-repl.replit.dev/health
+curl -X POST https://your-repl.replit.dev/api/categories \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test Category"}'
+BƯỚC 4: TÍCH HỢP CLOUDINARY & FACEBOOK
+4.1 Setup Cloudinary service:
+
+// services/cloudinaryService.js
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,  
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+const uploadService = {
+  async uploadImage(file) {
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'facebook-content',
+      resource_type: 'auto'
+    });
+    return result;
+  }
+};
+module.exports = uploadService;
+4.2 Test upload:
+
+// Test upload trong Replit
+const testUpload = async () => {
+  const result = await uploadService.uploadImage({
+    path: 'https://example.com/test.jpg'
+  });
+  console.log('Upload result:', result.secure_url);
+};
+4.3 Setup Facebook Graph API:
+
+// services/facebookService.js  
+const axios = require('axios');
+const facebookService = {
+  async postPhoto(accountToken, pageId, imageUrl, caption) {
+    const response = await axios.post(
+      `https://graph.facebook.com/${pageId}/photos`,
+      {
+        url: imageUrl,
+        caption: caption,
+        access_token: accountToken
+      }
+    );
+    return response.data;
+  }
+};
+BƯỚC 5: BACKGROUND JOBS & DEPLOYMENT
+5.1 Setup Redis cho Background Jobs:
+
+# Trong Replit Shell
+npm install bull redis
+5.2 Tạo Background Worker:
+
+// workers/postWorker.js
+const Queue = require('bull');
+const { Post, Asset, Account } = require('../models');
+const postQueue = new Queue('post queue', process.env.REDIS_URL);
+postQueue.process('schedule-post', async (job) => {
+  const { postId } = job.data;
+  const post = await Post.findByPk(postId, {
+    include: [Asset, Account]
+  });
+  
+  if(post && post.scheduled_time <= new Date()) {
+    await facebookService.postPhoto(
+      post.account.access_token,
+      post.account.facebook_id, 
+      post.asset.secure_url,
+      post.caption
+    );
+    
+    await post.update({ status: 'posted' });
+  }
+});
+module.exports = postQueue;
+5.3 Deploy trên Replit:
+
+1. Replit tự động deploy khi commit
+2. URL tự động: https://your-repl.replit.dev
+3. Always-on để background jobs chạy 24/7
+⚡ DEVELOPMENT WORKFLOW TRÊN REPLIT
+Phase 1: Core Setup (Tuần 1)
+□ Tạo Replit project
+□ Setup PostgreSQL database  
+□ Tạo 4 models (Category, Asset, Account, Post)
+□ Test database connection
+□ Health check endpoint
+Phase 2: Basic CRUD (Tuần 2)
+□ Categories CRUD API
+□ File upload to Cloudinary
+□ Assets management API
+□ Test upload workflow
+□ Basic error handling
+Phase 3: Facebook Integration (Tuần 3)
+□ Facebook accounts management
+□ Post scheduling API
+□ Facebook Graph API integration
+□ Test manual posting
+□ Authentication & validation
+Phase 4: Automation (Tuần 4)
+□ Background job system  
+□ Auto posting worker
+□ Auto commenting
+□ Analytics dashboard
+□ Error monitoring & logging
+Phase 5: Advanced Features (Tuần 5)
+□ Duplicate detection (SHA-256 + perceptual hash)
+□ AI content analysis
+□ Revenue tracking
+□ Bulk operations
+□ Performance optimization
+🛠️ REPLIT-SPECIFIC TIPS
+Database Management:
+# Trong Replit Shell
+npm run db:setup    # Tạo tables
+npm run db:seed     # Seed data
+npm run db:reset    # Reset database
+Environment Variables:
+1. Secrets tab → Add environment variables
+2. Auto-reload khi thay đổi .env
+3. PostgreSQL credentials auto-inject
+Always-On cho Background Jobs:
+1. Upgrade Replit plan để có Always-On
+2. Background workers chạy 24/7
+3. Auto-restart khi crash
+Testing API:
+# Replit Console built-in
+curl https://your-repl.replit.dev/api/categories
+Monitoring:
+// Health dashboard
+app.get('/admin/health', (req, res) => {
+  res.json({
+    server: 'running',
+    database: sequelize.authenticate() ? 'connected' : 'error',
+    redis: redisClient.ping() ? 'connected' : 'error',
+    uptime: process.uptime()
+  });
+});

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb, unique, serial, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -940,3 +940,152 @@ export type ProductLandingPage = typeof productLandingPages.$inferSelect;
 
 export type InsertProductReview = z.infer<typeof insertProductReviewSchema>;
 export type ProductReview = typeof productReviews.$inferSelect;
+
+// ==========================================
+// CONTENT MANAGEMENT TABLES
+// ==========================================
+
+// Content categories for organizing assets
+export const contentCategories = pgTable("content_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }).notNull().default("#3B82F6"), // Hex color
+  icon: varchar("icon", { length: 50 }), // Lucide icon name
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Content assets (images, videos) stored in Cloudinary
+export const contentAssets = pgTable("content_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  originalFilename: varchar("original_filename", { length: 255 }).notNull(),
+  
+  // Cloudinary details
+  cloudinaryPublicId: varchar("cloudinary_public_id", { length: 255 }).notNull(),
+  cloudinaryUrl: text("cloudinary_url").notNull(),
+  cloudinarySecureUrl: text("cloudinary_secure_url").notNull(),
+  
+  // File metadata
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  fileSize: integer("file_size").notNull(), // in bytes
+  width: integer("width"), // for images/videos
+  height: integer("height"), // for images/videos
+  duration: decimal("duration", { precision: 8, scale: 3 }), // for videos (seconds)
+  
+  // Organization
+  categoryId: integer("category_id").references(() => contentCategories.id),
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  // SEO & Metadata
+  altText: text("alt_text"),
+  caption: text("caption"),
+  
+  // Usage tracking
+  usageCount: integer("usage_count").default(0),
+  lastUsed: timestamp("last_used"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueCloudinaryPublicId: unique().on(table.cloudinaryPublicId),
+}));
+
+// Scheduled social media posts
+export const scheduledPosts = pgTable("scheduled_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Content
+  caption: text("caption").notNull(),
+  hashtags: jsonb("hashtags").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  // Media attachments
+  assetIds: jsonb("asset_ids").$type<string[]>().default(sql`'[]'::jsonb`), // Array of content asset IDs
+  
+  // Targeting
+  socialAccountId: varchar("social_account_id").notNull().references(() => socialAccounts.id),
+  platform: text("platform", { enum: ["facebook", "instagram", "twitter", "tiktok"] }).notNull(),
+  
+  // Scheduling
+  scheduledTime: timestamp("scheduled_time").notNull(),
+  timezone: varchar("timezone", { length: 50 }).default("Asia/Ho_Chi_Minh"),
+  
+  // Status tracking
+  status: text("status", { 
+    enum: ["draft", "scheduled", "posting", "posted", "failed", "cancelled"] 
+  }).notNull().default("draft"),
+  
+  // Publishing results
+  publishedAt: timestamp("published_at"),
+  platformPostId: varchar("platform_post_id", { length: 255 }), // ID from Facebook/Instagram/etc
+  platformUrl: text("platform_url"), // Direct link to the published post
+  
+  // Error handling
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  lastRetryAt: timestamp("last_retry_at"),
+  
+  // Analytics (populated after posting)
+  analytics: jsonb("analytics").$type<{
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    reach?: number;
+    impressions?: number;
+    clickThroughRate?: number;
+    lastUpdated?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  scheduledTimeIndex: index().on(table.scheduledTime),
+  statusIndex: index().on(table.status),
+  socialAccountIndex: index().on(table.socialAccountId),
+}));
+
+// Content management validation schemas
+export const insertContentCategorySchema = createInsertSchema(contentCategories, {
+  name: z.string().min(1, "Tên danh mục là bắt buộc").max(255),
+  color: z.string().regex(/^#[0-9A-F]{6}$/i, "Màu phải ở định dạng hex (#RRGGBB)"),
+  description: z.string().optional(),
+  icon: z.string().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+export const insertContentAssetSchema = createInsertSchema(contentAssets, {
+  filename: z.string().min(1).max(255),
+  originalFilename: z.string().min(1).max(255),
+  cloudinaryPublicId: z.string().min(1).max(255),
+  cloudinaryUrl: z.string().url(),
+  cloudinarySecureUrl: z.string().url(),
+  mimeType: z.string().min(1).max(100),
+  fileSize: z.number().int().min(1),
+  width: z.number().int().min(1).optional(),
+  height: z.number().int().min(1).optional(),
+  categoryId: z.number().int().optional(),
+  altText: z.string().optional(),
+  caption: z.string().optional(),
+});
+
+export const insertScheduledPostSchema = createInsertSchema(scheduledPosts, {
+  caption: z.string().min(1, "Nội dung bài đăng là bắt buộc"),
+  scheduledTime: z.date(),
+  timezone: z.string().optional(),
+  socialAccountId: z.string().uuid(),
+  platform: z.enum(["facebook", "instagram", "twitter", "tiktok"]),
+  status: z.enum(["draft", "scheduled", "posting", "posted", "failed", "cancelled"]).optional(),
+});
+
+// Content management TypeScript types
+export type InsertContentCategory = z.infer<typeof insertContentCategorySchema>;
+export type ContentCategory = typeof contentCategories.$inferSelect;
+
+export type InsertContentAsset = z.infer<typeof insertContentAssetSchema>;
+export type ContentAsset = typeof contentAssets.$inferSelect;
+
+export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
+export type ScheduledPost = typeof scheduledPosts.$inferSelect;

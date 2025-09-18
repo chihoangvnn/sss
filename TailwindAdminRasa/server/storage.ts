@@ -3,6 +3,7 @@ import {
   storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
   productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
+  contentCategories, contentAssets, scheduledPosts,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -19,10 +20,13 @@ import {
   type TikTokBusinessAccount, type InsertTikTokBusinessAccount,
   type TikTokShopOrder, type InsertTikTokShopOrder,
   type TikTokShopProduct, type InsertTikTokShopProduct,
-  type TikTokVideo, type InsertTikTokVideo
+  type TikTokVideo, type InsertTikTokVideo,
+  type ContentCategory, type InsertContentCategory,
+  type ContentAsset, type InsertContentAsset,
+  type ScheduledPost, type InsertScheduledPost
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, count, sum, sql, ilike, or, gte, isNull } from "drizzle-orm";
+import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -1506,6 +1510,145 @@ export class DatabaseStorage implements IStorage {
   async deleteTikTokVideo(id: string): Promise<boolean> {
     const result = await db.delete(tiktokVideos).where(eq(tiktokVideos.id, id));
     return result.rowCount! > 0;
+  }
+
+  // ===========================================
+  // CONTENT MANAGEMENT METHODS
+  // ===========================================
+
+  // Content Categories
+  async getContentCategories(): Promise<ContentCategory[]> {
+    return await db.select().from(contentCategories)
+      .where(eq(contentCategories.isActive, true))
+      .orderBy(contentCategories.sortOrder, contentCategories.name);
+  }
+
+  async createContentCategory(category: InsertContentCategory): Promise<ContentCategory> {
+    const [newCategory] = await db.insert(contentCategories).values(category).returning();
+    return newCategory;
+  }
+
+  async updateContentCategory(id: number, category: Partial<InsertContentCategory>): Promise<ContentCategory | undefined> {
+    const [updated] = await db.update(contentCategories)
+      .set({ ...category, updatedAt: new Date() })
+      .where(eq(contentCategories.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteContentCategory(id: number): Promise<boolean> {
+    const result = await db.delete(contentCategories).where(eq(contentCategories.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Content Assets
+  async getContentAssets(): Promise<ContentAsset[]> {
+    return await db.select().from(contentAssets)
+      .orderBy(desc(contentAssets.createdAt));
+  }
+
+  async getContentAsset(id: string): Promise<ContentAsset | undefined> {
+    const [asset] = await db.select().from(contentAssets).where(eq(contentAssets.id, id));
+    return asset;
+  }
+
+  async getContentAssetsByCategory(categoryId: number): Promise<ContentAsset[]> {
+    return await db.select().from(contentAssets)
+      .where(eq(contentAssets.categoryId, categoryId))
+      .orderBy(desc(contentAssets.createdAt));
+  }
+
+  async createContentAsset(asset: InsertContentAsset): Promise<ContentAsset> {
+    const [newAsset] = await db.insert(contentAssets).values(asset).returning();
+    return newAsset;
+  }
+
+  async updateContentAsset(id: string, asset: Partial<InsertContentAsset>): Promise<ContentAsset | undefined> {
+    const [updated] = await db.update(contentAssets)
+      .set({ ...asset, updatedAt: new Date() })
+      .where(eq(contentAssets.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteContentAsset(id: string): Promise<boolean> {
+    const result = await db.delete(contentAssets).where(eq(contentAssets.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async incrementAssetUsage(id: string): Promise<void> {
+    await db.update(contentAssets)
+      .set({ 
+        usageCount: sql`${contentAssets.usageCount} + 1`,
+        lastUsed: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(contentAssets.id, id));
+  }
+
+  // Scheduled Posts
+  async getScheduledPosts(): Promise<ScheduledPost[]> {
+    return await db.select().from(scheduledPosts)
+      .orderBy(desc(scheduledPosts.scheduledTime));
+  }
+
+  async getScheduledPost(id: string): Promise<ScheduledPost | undefined> {
+    const [post] = await db.select().from(scheduledPosts).where(eq(scheduledPosts.id, id));
+    return post;
+  }
+
+  async getScheduledPostsToProcess(now: Date): Promise<ScheduledPost[]> {
+    return await db.select().from(scheduledPosts)
+      .where(
+        and(
+          eq(scheduledPosts.status, 'scheduled'),
+          lte(scheduledPosts.scheduledTime, now)
+        )
+      )
+      .orderBy(scheduledPosts.scheduledTime);
+  }
+
+  async getUpcomingScheduledPosts(limit: number = 50): Promise<ScheduledPost[]> {
+    const now = new Date();
+    return await db.select().from(scheduledPosts)
+      .where(
+        and(
+          inArray(scheduledPosts.status, ['scheduled', 'draft']),
+          gte(scheduledPosts.scheduledTime, now)
+        )
+      )
+      .orderBy(scheduledPosts.scheduledTime)
+      .limit(limit);
+  }
+
+  async createScheduledPost(post: InsertScheduledPost): Promise<ScheduledPost> {
+    const [newPost] = await db.insert(scheduledPosts).values(post).returning();
+    return newPost;
+  }
+
+  async updateScheduledPost(id: string, post: Partial<InsertScheduledPost>): Promise<ScheduledPost | undefined> {
+    const [updated] = await db.update(scheduledPosts)
+      .set({ ...post, updatedAt: new Date() })
+      .where(eq(scheduledPosts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateScheduledPostStatus(id: string, status: ScheduledPost['status']): Promise<void> {
+    await db.update(scheduledPosts)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(scheduledPosts.id, id));
+  }
+
+  async deleteScheduledPost(id: string): Promise<boolean> {
+    const result = await db.delete(scheduledPosts).where(eq(scheduledPosts.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async getScheduledPostsByAccount(socialAccountId: string): Promise<ScheduledPost[]> {
+    return await db.select().from(scheduledPosts)
+      .where(eq(scheduledPosts.socialAccountId, socialAccountId))
+      .orderBy(desc(scheduledPosts.scheduledTime));
   }
 }
 
