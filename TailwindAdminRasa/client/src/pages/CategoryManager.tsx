@@ -80,7 +80,7 @@ export default function CategoryManager() {
   // Save category mutation
   const saveMutation = useMutation({
     mutationFn: async (data: CategoryFormData) => {
-      const url = editingCategory ? `/api/categories?id=${editingCategory.id}` : '/api/categories';
+      const url = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
       const method = editingCategory ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -120,7 +120,7 @@ export default function CategoryManager() {
   // Delete category mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/categories?id=${id}`, {
+      const response = await fetch(`/api/categories/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete');
@@ -153,7 +153,7 @@ export default function CategoryManager() {
   // Update sort order mutation
   const updateSortMutation = useMutation({
     mutationFn: async ({ id, sortOrder }: { id: string; sortOrder: number }) => {
-      const response = await fetch(`/api/categories?id=${id}`, {
+      const response = await fetch(`/api/categories/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sortOrder }),
