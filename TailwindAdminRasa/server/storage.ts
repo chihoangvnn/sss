@@ -528,8 +528,11 @@ export class DatabaseStorage implements IStorage {
     // First delete all orders associated with this customer
     const customerOrders = await db.select({ id: orders.id }).from(orders).where(eq(orders.customerId, id));
     
-    // Delete order items for each order
+    // Delete payments, order items, then orders for each order
     for (const order of customerOrders) {
+      // Delete payments first (foreign key constraint)
+      await db.delete(payments).where(eq(payments.orderId, order.id));
+      // Then delete order items
       await db.delete(orderItems).where(eq(orderItems.orderId, order.id));
     }
     
