@@ -10,8 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Eye, Plus, X } from "lucide-react";
+import { ArrowLeft, Save, Eye, Plus, X, Palette, Sparkles } from "lucide-react";
 import { Link } from "wouter";
+import AdvancedThemeBuilder, { AdvancedThemeConfig } from "@/components/AdvancedThemeBuilder";
 
 interface Product {
   id: string;
@@ -51,6 +52,15 @@ export default function LandingPageEditor() {
   const isEditing = Boolean(id);
 
   const [newFeature, setNewFeature] = useState("");
+  const [showAdvancedThemes, setShowAdvancedThemes] = useState(false);
+  const [selectedThemeConfig, setSelectedThemeConfig] = useState<AdvancedThemeConfig | null>(null);
+
+  // Load existing theme config when landing page data is available
+  useEffect(() => {
+    if (existingLandingPage?.advancedThemeConfig && !selectedThemeConfig) {
+      setSelectedThemeConfig(existingLandingPage.advancedThemeConfig);
+    }
+  }, [existingLandingPage, selectedThemeConfig]);
 
   const [formData, setFormData] = useState<ProductLandingPageForm>({
     title: "",
@@ -189,6 +199,8 @@ export default function LandingPageEditor() {
       isActive: formData.isActive,
       theme: formData.theme,
       primaryColor: formData.primaryColor,
+      // Include advanced theme configuration if available (prevent null overwrite)
+      advancedThemeConfig: selectedThemeConfig ?? existingLandingPage?.advancedThemeConfig ?? undefined,
       contactInfo: {
         phone: formData.contactPhone,
         email: formData.contactEmail,
@@ -252,6 +264,64 @@ export default function LandingPageEditor() {
           </p>
         </div>
       </div>
+
+      {/* Advanced Theme Builder Modal/Section */}
+      {showAdvancedThemes && (
+        <div className="mb-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5" />
+                  Advanced Theme Builder
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAdvancedThemes(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <AdvancedThemeBuilder
+                initialConfig={{
+                  colorPalette: {
+                    primary: formData.primaryColor,
+                    secondary: "#6c757d",
+                    accent: "#17a2b8",
+                    success: "#28a745",
+                    warning: "#ffc107",
+                    danger: "#dc3545",
+                    background: "#ffffff",
+                    surface: "#f8f9fa",
+                    text: "#212529",
+                    textMuted: "#6c757d"
+                  }
+                }}
+                onThemeChange={(config) => {
+                  // Update the basic primaryColor when theme changes
+                  setFormData(prev => ({
+                    ...prev,
+                    primaryColor: config.colorPalette.primary
+                  }));
+                  setSelectedThemeConfig(config);
+                }}
+                onSave={(config) => {
+                  setSelectedThemeConfig(config);
+                  setShowAdvancedThemes(false);
+                  toast({
+                    title: "Theme saved!",
+                    description: "Advanced theme configuration has been applied to your landing page."
+                  });
+                }}
+                isPreviewMode={false}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form */}
@@ -510,13 +580,27 @@ export default function LandingPageEditor() {
 
               <div>
                 <Label htmlFor="primaryColor">Màu chủ đạo</Label>
-                <Input
-                  id="primaryColor"
-                  type="color"
-                  value={formData.primaryColor}
-                  onChange={(e) => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
-                  data-testid="input-primary-color"
-                />
+                <div className="space-y-3">
+                  <Input
+                    id="primaryColor"
+                    type="color"
+                    value={formData.primaryColor}
+                    onChange={(e) => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
+                    data-testid="input-primary-color"
+                  />
+                  
+                  {/* Advanced Theme Builder Toggle */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAdvancedThemes(!showAdvancedThemes)}
+                    className="w-full"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {showAdvancedThemes ? 'Ẩn' : 'Hiển thị'} Advanced Theme Builder
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

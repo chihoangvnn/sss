@@ -218,6 +218,9 @@ export const productLandingPages = pgTable("product_landing_pages", {
   // Advanced Theme Configuration (Optional - fallback to basic primaryColor if null)
   themeConfigId: varchar("theme_config_id").references(() => themeConfigurations.id, { onDelete: 'set null' }),
   
+  // Advanced Theme Config JSON (Direct storage for theme builder integration)
+  advancedThemeConfig: jsonb("advanced_theme_config"), // Full theme configuration object
+  
   // Contact info for this landing page
   contactInfo: jsonb("contact_info").notNull().default('{"phone":"","email":"","businessName":""}'), // { phone, email, address, businessName }
   
