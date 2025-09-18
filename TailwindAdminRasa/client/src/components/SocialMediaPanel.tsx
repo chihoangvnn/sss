@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink, Tag, Palette, BarChart3, Users, Filter, Search, Grid, List, Store, Video, ShoppingBag } from "lucide-react";
+import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink, Tag, Palette, BarChart3, Users, Filter, Search, Grid, List, Store, Video, ShoppingBag, Package, DollarSign, Eye, Target } from "lucide-react";
 import { useLocation } from "wouter";
 
 // TikTok Icon Component (since Lucide doesn't have TikTok)
@@ -929,13 +929,486 @@ export function SocialMediaPanel({
         {/* TikTok Shop Tab Content */}
         {currentPlatform === 'tiktok-shop' && (
           <TabsContent value="shop" className="space-y-6 mt-6">
-            <Tabs defaultValue="orders" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                <TabsTrigger value="fulfillment">Fulfillment</TabsTrigger>
-                <TabsTrigger value="settings">Cài đặt</TabsTrigger>
+            {/* TikTok Shop Header với branding */}
+            <div className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 p-6 rounded-2xl text-white relative overflow-hidden">
+              <div className="absolute inset-0 bg-black/10"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                      <TikTokIcon className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold">TikTok Shop Partner Center</h1>
+                      <p className="text-pink-100">Quản lý cửa hàng và bán hàng trên TikTok</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-right">
+                      <p className="text-pink-100 text-sm">Trạng thái cửa hàng</p>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="font-medium">Đang hoạt động</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -right-10 -top-10 w-32 h-32 bg-white/5 rounded-full"></div>
+              <div className="absolute -left-5 -bottom-5 w-24 h-24 bg-white/5 rounded-full"></div>
+            </div>
+
+            <Tabs defaultValue="dashboard" className="w-full">
+              <TabsList className="grid w-full grid-cols-5 bg-gray-100/80 backdrop-blur-sm p-1 rounded-xl">
+                <TabsTrigger value="dashboard" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="products" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                  Sản phẩm
+                </TabsTrigger>
+                <TabsTrigger value="orders" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                  <Package className="h-4 w-4 mr-2" />
+                  Đơn hàng
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Phân tích
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Cài đặt
+                </TabsTrigger>
               </TabsList>
+
+              {/* Dashboard Overview Tab */}
+              <TabsContent value="dashboard" className="space-y-6">
+                {/* Key Metrics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-pink-500 to-pink-600 text-white border-0">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-pink-100 text-sm font-medium">Doanh thu hôm nay</p>
+                          <p className="text-3xl font-bold">2.4M VNĐ</p>
+                          <div className="flex items-center mt-2">
+                            <TrendingUp className="h-4 w-4 text-pink-200 mr-1" />
+                            <span className="text-pink-100 text-sm">+12.5%</span>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-white/20 rounded-full">
+                          <DollarSign className="h-8 w-8" />
+                        </div>
+                      </div>
+                    </CardContent>
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full"></div>
+                  </Card>
+
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-cyan-500 to-blue-600 text-white border-0">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-cyan-100 text-sm font-medium">Đơn hàng mới</p>
+                          <p className="text-3xl font-bold">147</p>
+                          <div className="flex items-center mt-2">
+                            <TrendingUp className="h-4 w-4 text-cyan-200 mr-1" />
+                            <span className="text-cyan-100 text-sm">+8.2%</span>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-white/20 rounded-full">
+                          <ShoppingBag className="h-8 w-8" />
+                        </div>
+                      </div>
+                    </CardContent>
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full"></div>
+                  </Card>
+
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-purple-100 text-sm font-medium">Video views</p>
+                          <p className="text-3xl font-bold">1.2M</p>
+                          <div className="flex items-center mt-2">
+                            <Eye className="h-4 w-4 text-purple-200 mr-1" />
+                            <span className="text-purple-100 text-sm">24h qua</span>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-white/20 rounded-full">
+                          <Video className="h-8 w-8" />
+                        </div>
+                      </div>
+                    </CardContent>
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full"></div>
+                  </Card>
+
+                  <Card className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-red-500 text-white border-0">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-orange-100 text-sm font-medium">Tỉ lệ chuyển đổi</p>
+                          <p className="text-3xl font-bold">3.8%</p>
+                          <div className="flex items-center mt-2">
+                            <Target className="h-4 w-4 text-orange-200 mr-1" />
+                            <span className="text-orange-100 text-sm">Tuần này</span>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-white/20 rounded-full">
+                          <Target className="h-8 w-8" />
+                        </div>
+                      </div>
+                    </CardContent>
+                    <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full"></div>
+                  </Card>
+                </div>
+
+                {/* Quick Actions */}
+                <Card className="border-0 shadow-sm bg-white/70 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-gray-800">
+                      <Plus className="h-5 w-5 text-pink-500" />
+                      Thao tác nhanh
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <Button className="h-20 flex-col space-y-2 bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 border-0">
+                        <Plus className="h-6 w-6" />
+                        <span>Thêm sản phẩm</span>
+                      </Button>
+                      <Button variant="outline" className="h-20 flex-col space-y-2 border-2 border-cyan-200 hover:bg-cyan-50">
+                        <Video className="h-6 w-6 text-cyan-600" />
+                        <span className="text-cyan-700">Tạo video</span>
+                      </Button>
+                      <Button variant="outline" className="h-20 flex-col space-y-2 border-2 border-purple-200 hover:bg-purple-50">
+                        <Users className="h-6 w-6 text-purple-600" />
+                        <span className="text-purple-700">Live stream</span>
+                      </Button>
+                      <Button variant="outline" className="h-20 flex-col space-y-2 border-2 border-orange-200 hover:bg-orange-50">
+                        <BarChart3 className="h-6 w-6 text-orange-600" />
+                        <span className="text-orange-700">Báo cáo</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recent Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="border-0 shadow-sm bg-white/70 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 text-gray-800">
+                          <Package className="h-5 w-5 text-pink-500" />
+                          Đơn hàng gần đây
+                        </span>
+                        <Button variant="ghost" size="sm" className="text-pink-600 hover:text-pink-700">
+                          Xem tất cả
+                        </Button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {[1,2,3].map((i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-gray-50/70 rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <div>
+                                <p className="font-medium text-gray-900">#TTS00{i}234</p>
+                                <p className="text-sm text-gray-500">2 phút trước</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-gray-900">459,000 VNĐ</p>
+                              <Badge className="bg-green-100 text-green-800 border-0">Đã thanh toán</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-sm bg-white/70 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 text-gray-800">
+                          <TrendingUp className="h-5 w-5 text-cyan-500" />
+                          Top sản phẩm
+                        </span>
+                        <Button variant="ghost" size="sm" className="text-cyan-600 hover:text-cyan-700">
+                          Xem chi tiết
+                        </Button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {[
+                          { name: "Áo thun TikTok Fashion", sales: 45, revenue: "2.1M" },
+                          { name: "Túi xách trending viral", sales: 32, revenue: "1.8M" },
+                          { name: "Giày sneaker phong cách", sales: 28, revenue: "1.4M" }
+                        ].map((product, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-gray-50/70 rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                                i === 0 ? 'bg-yellow-500' : i === 1 ? 'bg-gray-400' : 'bg-orange-500'
+                              }`}>
+                                {i + 1}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{product.name}</p>
+                                <p className="text-sm text-gray-500">{product.sales} đã bán</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-pink-600">{product.revenue} VNĐ</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* Products Tab */}
+              <TabsContent value="products" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Quản lý sản phẩm</h2>
+                    <p className="text-gray-600">Tạo và quản lý sản phẩm trên TikTok Shop</p>
+                  </div>
+                  <Button className="bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Thêm sản phẩm mới
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1,2,3,4,5,6].map((i) => (
+                    <Card key={i} className="group hover:shadow-lg transition-all duration-300 border-0 bg-white/70 backdrop-blur-sm">
+                      <CardContent className="p-0">
+                        <div className="aspect-square bg-gradient-to-br from-pink-100 to-purple-100 relative overflow-hidden rounded-t-lg">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <ShoppingBag className="h-16 w-16 text-pink-300" />
+                          </div>
+                          <div className="absolute top-3 right-3">
+                            <Badge className="bg-green-500 text-white border-0">Đang bán</Badge>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-semibold text-gray-900 mb-2">Sản phẩm #{i}</h3>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-lg font-bold text-pink-600">299,000 VNĐ</span>
+                            <span className="text-sm text-gray-500">Đã bán: 24</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="flex-1">Chỉnh sửa</Button>
+                            <Button size="sm" className="bg-pink-500 hover:bg-pink-600">Xem</Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              {/* Orders Management Tab */}
+              <TabsContent value="orders" className="space-y-4">
+                <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-4 rounded-xl border border-cyan-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-cyan-900">Quản lý đơn hàng TikTok Shop</h2>
+                      <p className="text-cyan-700 text-sm">Theo dõi và xử lý đơn hàng từ TikTok Shop</p>
+                    </div>
+                    <div className="flex items-center space-x-2 text-cyan-600">
+                      <Package className="h-5 w-5" />
+                      <span className="font-medium">TikTok Commerce</span>
+                    </div>
+                  </div>
+                </div>
+                <TikTokShopOrdersPanel businessAccountId={businessAccountId} />
+              </TabsContent>
+
+              {/* Analytics Tab */}
+              <TabsContent value="analytics" className="space-y-4">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-purple-900">Phân tích hiệu suất TikTok Shop</h2>
+                      <p className="text-purple-700 text-sm">Báo cáo chi tiết về doanh thu và hiệu suất bán hàng</p>
+                    </div>
+                    <div className="flex items-center space-x-2 text-purple-600">
+                      <TrendingUp className="h-5 w-5" />
+                      <span className="font-medium">Analytics</span>
+                    </div>
+                  </div>
+                </div>
+                <TikTokShopSellerDashboard businessAccountId={businessAccountId} />
+              </TabsContent>
+
+              {/* Settings Tab */}
+              <TabsContent value="settings" className="space-y-4">
+                <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-xl border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">Cài đặt TikTok Shop</h2>
+                      <p className="text-gray-700 text-sm">Cấu hình và quản lý kết nối TikTok Shop</p>
+                    </div>
+                    <div className="flex items-center space-x-2 text-gray-600">
+                      <Settings className="h-5 w-5" />
+                      <span className="font-medium">Settings</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Card className="border-0 shadow-lg bg-gradient-to-br from-pink-50 to-pink-100">
+                    <CardHeader>
+                      <div className="flex items-center space-x-3">
+                        <div className="p-3 bg-pink-500 rounded-xl shadow-lg">
+                          <TikTokIcon className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-pink-900">Kết nối TikTok Shop</CardTitle>
+                          <p className="text-sm text-pink-700">Quản lý tài khoản và quyền truy cập</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="p-4 bg-pink-100/50 rounded-lg border border-pink-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium text-pink-900">Trạng thái kết nối</span>
+                          <Badge className="bg-green-500 text-white border-0 px-3 py-1">
+                            <div className="w-2 h-2 bg-white rounded-full mr-2"></div>
+                            Đã kết nối
+                          </Badge>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-pink-700">Shop ID:</span>
+                            <span className="font-mono bg-pink-200 px-2 py-1 rounded text-pink-900">shop_12345</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-pink-700">Quyền truy cập:</span>
+                            <span className="text-pink-800">Đầy đủ</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-pink-700">Đồng bộ cuối:</span>
+                            <span className="text-pink-800">2 phút trước</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button className="w-full bg-pink-500 hover:bg-pink-600">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Cài đặt
+                        </Button>
+                        <Button variant="outline" className="w-full border-pink-200 text-pink-700 hover:bg-pink-50">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Partner Center
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-lg bg-gradient-to-br from-cyan-50 to-blue-100">
+                    <CardHeader>
+                      <div className="flex items-center space-x-3">
+                        <div className="p-3 bg-cyan-500 rounded-xl shadow-lg">
+                          <Settings className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-cyan-900">Cài đặt đồng bộ</CardTitle>
+                          <p className="text-sm text-cyan-700">Tự động hóa và thông báo</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-cyan-100/50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <ShoppingBag className="h-5 w-5 text-cyan-600" />
+                            <span className="text-cyan-900 font-medium">Đồng bộ sản phẩm</span>
+                          </div>
+                          <Switch />
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-cyan-100/50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <Package className="h-5 w-5 text-cyan-600" />
+                            <span className="text-cyan-900 font-medium">Đồng bộ đơn hàng</span>
+                          </div>
+                          <Switch />
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-cyan-100/50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <MessageSquare className="h-5 w-5 text-cyan-600" />
+                            <span className="text-cyan-900 font-medium">Thông báo real-time</span>
+                          </div>
+                          <Switch />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Advanced Settings */}
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-gray-900">
+                      <Settings className="h-5 w-5 text-gray-600" />
+                      Cài đặt nâng cao
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shop-name" className="text-gray-700 font-medium">Tên cửa hàng</Label>
+                        <Input 
+                          id="shop-name" 
+                          placeholder="Nhập tên cửa hàng..." 
+                          className="border-gray-200 focus:border-pink-400 focus:ring-pink-400"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shop-category" className="text-gray-700 font-medium">Danh mục chính</Label>
+                        <Input 
+                          id="shop-category" 
+                          placeholder="Thời trang, Điện tử..." 
+                          className="border-gray-200 focus:border-pink-400 focus:ring-pink-400"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fulfillment-time" className="text-gray-700 font-medium">Thời gian xử lý đơn hàng</Label>
+                        <Input 
+                          id="fulfillment-time" 
+                          type="number" 
+                          defaultValue="24" 
+                          className="border-gray-200 focus:border-pink-400 focus:ring-pink-400"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shipping-carrier" className="text-gray-700 font-medium">Đối tác vận chuyển</Label>
+                        <Input 
+                          id="shipping-carrier" 
+                          placeholder="GHN, GHTK, J&T Express..." 
+                          className="border-gray-200 focus:border-pink-400 focus:ring-pink-400"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                      <Button variant="outline" className="px-6">Hủy</Button>
+                      <Button className="px-6 bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600">
+                        Lưu cài đặt
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+        )}
 
               {/* Orders Management */}
               <TabsContent value="orders" className="space-y-4">
