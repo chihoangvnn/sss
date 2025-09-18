@@ -871,10 +871,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProductLandingPageBySlug(slug: string): Promise<ProductLandingPage | undefined> {
+    // Normalize input to handle case/whitespace/encoding issues
+    const normalizedSlug = decodeURIComponent(slug).trim().toLowerCase();
+    
+    // Query with case-insensitive comparison
     const [landingPage] = await db
       .select()
       .from(productLandingPages)
-      .where(eq(productLandingPages.slug, slug));
+      .where(sql`lower(${productLandingPages.slug}) = ${normalizedSlug}`);
+    
+    // Fallback: try exact match if normalized didn't work
+    if (!landingPage) {
+      const [exactMatch] = await db
+        .select()
+        .from(productLandingPages)
+        .where(eq(productLandingPages.slug, slug));
+      return exactMatch || undefined;
+    }
+    
     return landingPage || undefined;
   }
 
@@ -935,12 +949,20 @@ export class DatabaseStorage implements IStorage {
     let landingPage: ProductLandingPage | undefined;
     
     // Try to get by slug first, then by ID
-    if (idOrSlug.includes('-') && idOrSlug.length > 36) {
-      landingPage = await this.getProductLandingPageBySlug(idOrSlug);
-    } else {
-      landingPage = await this.getProductLandingPageById(idOrSlug);
-    }
+    // UUIDs are exactly 36 characters with dashes at positions 8,13,18,23
+    const isUUID = idOrSlug.length === 36 && 
+                   idOrSlug[8] === '-' && 
+                   idOrSlug[13] === '-' && 
+                   idOrSlug[18] === '-' && 
+                   idOrSlug[23] === '-';
     
+    if (isUUID) {
+      // This looks like a UUID
+      landingPage = await this.getProductLandingPageById(idOrSlug);
+    } else {
+      // This looks like a slug
+      landingPage = await this.getProductLandingPageBySlug(idOrSlug);
+    }
     if (!landingPage) return null;
 
     // Get product details

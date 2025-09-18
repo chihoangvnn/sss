@@ -1101,6 +1101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/public-landing/:slug", async (req, res) => {
     try {
       const landingPage = await storage.getProductLandingPageWithDetails(req.params.slug);
+      
       if (landingPage && landingPage.isActive) {
         // Increment view count
         if (landingPage.id) {
