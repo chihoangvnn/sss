@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Facebook, Instagram, Twitter, MessageSquare, Settings, Plus, TrendingUp, Webhook, Copy, Check, ExternalLink, Tag, Palette, BarChart3, Users, Filter, Search, Grid, List } from "lucide-react";
+
+// TikTok Icon Component (since Lucide doesn't have TikTok)
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M19.321 5.562a5.122 5.122 0 0 1-.443-.258 6.242 6.242 0 0 1-1.137-.966c-.849-.849-1.347-2.143-1.347-3.416C16.394.482 15.912 0 15.372 0h-3.372c-.54 0-.976.436-.976.976v11.405c0 1.47-1.194 2.665-2.665 2.665s-2.665-1.194-2.665-2.665c0-1.47 1.194-2.665 2.665-2.665.273 0 .537.041.786.117.54.166 1.119-.138 1.285-.678s-.138-1.119-.678-1.285a4.647 4.647 0 0 0-1.393-.203c-2.551 0-4.617 2.066-4.617 4.617s2.066 4.617 4.617 4.617 4.617-2.066 4.617-4.617V6.853c1.346.713 2.88 1.097 4.464 1.097.54 0 .976-.436.976-.976s-.436-.976-.976-.976c-1.346 0-2.64-.524-3.608-1.436z"/>
+  </svg>
+);
 import { FacebookChatManager } from "./FacebookChatManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +32,16 @@ const platformIcons = {
   facebook: Facebook,
   instagram: Instagram,
   twitter: Twitter,
+  "tiktok-business": TikTokIcon,
+  "tiktok-shop": TikTokIcon,
 };
 
 const platformColors = {
   facebook: "text-blue-600",
   instagram: "text-pink-600", 
   twitter: "text-sky-600",
+  "tiktok-business": "text-pink-600",
+  "tiktok-shop": "text-pink-700",
 };
 
 const formatLastPost = (lastPost: Date | null): string => {
@@ -445,8 +456,8 @@ export function SocialMediaPanel({
           </Card>
         ) : (
           accounts.map((account) => {
-          const Icon = platformIcons[account.platform as keyof typeof platformIcons];
-          const colorClass = platformColors[account.platform as keyof typeof platformColors];
+          const Icon = platformIcons[account.platform as keyof typeof platformIcons] || MessageSquare;
+          const colorClass = platformColors[account.platform as keyof typeof platformColors] || "text-gray-600";
 
           return (
             <Card 
@@ -982,7 +993,7 @@ export function SocialMediaPanel({
                           <div>
                             <p className="font-medium text-sm">{tag.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {tag.description || `Tạo ${new Date(tag.createdAt).toLocaleDateString('vi-VN')}`}
+                              {tag.description || `Tạo ${tag.createdAt ? new Date(tag.createdAt).toLocaleDateString('vi-VN') : 'chưa rõ'}`}
                             </p>
                           </div>
                         </div>

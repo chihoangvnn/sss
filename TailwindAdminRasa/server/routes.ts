@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema, insertShopSettingsSchema } from "@shared/schema";
+import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema, insertShopSettingsSchema, insertTikTokBusinessAccountSchema, insertTikTokShopOrderSchema, insertTikTokShopProductSchema, insertTikTokVideoSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
@@ -1448,6 +1448,349 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching webhook config:", error);
       res.status(500).json({ error: "Failed to fetch webhook configuration" });
+    }
+  });
+
+  // TikTok Business API Endpoints
+  app.get("/api/tiktok/business-accounts", requireAdminAuth, async (req, res) => {
+    try {
+      const accounts = await storage.getTikTokBusinessAccounts();
+      // Remove sensitive fields before sending to client
+      const safeAccounts = accounts.map(account => ({
+        id: account.id,
+        businessId: account.businessId,
+        displayName: account.displayName,
+        username: account.username,
+        avatarUrl: account.avatarUrl,
+        businessType: account.businessType,
+        industry: account.industry,
+        followerCount: account.followerCount,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt
+      }));
+      res.json(safeAccounts);
+    } catch (error) {
+      console.error("Error fetching TikTok business accounts:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/tiktok/business-accounts", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      // Validate request body with Zod
+      const validatedData = insertTikTokBusinessAccountSchema.parse(req.body);
+      const account = await storage.createTikTokBusinessAccount(validatedData);
+      
+      // Return safe fields only (no sensitive tokens)
+      const safeAccount = {
+        id: account.id,
+        businessId: account.businessId,
+        displayName: account.displayName,
+        username: account.username,
+        avatarUrl: account.avatarUrl,
+        businessType: account.businessType,
+        industry: account.industry,
+        followerCount: account.followerCount,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt
+      };
+      
+      res.status(201).json(safeAccount);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating TikTok business account:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.put("/api/tiktok/business-accounts/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      // Validate UUID format
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid account ID format" });
+      }
+      
+      // Validate partial update data with Zod
+      const validatedData = insertTikTokBusinessAccountSchema.partial().parse(req.body);
+      const account = await storage.updateTikTokBusinessAccount(req.params.id, validatedData);
+      
+      if (!account) {
+        return res.status(404).json({ error: "TikTok business account not found" });
+      }
+      
+      // Return safe fields only (no sensitive tokens)
+      const safeAccount = {
+        id: account.id,
+        businessId: account.businessId,
+        displayName: account.displayName,
+        username: account.username,
+        avatarUrl: account.avatarUrl,
+        businessType: account.businessType,
+        industry: account.industry,
+        followerCount: account.followerCount,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt
+      };
+      
+      res.json(safeAccount);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating TikTok business account:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/tiktok/business-accounts/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      // Validate UUID format
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid account ID format" });
+      }
+      
+      const success = await storage.deleteTikTokBusinessAccount(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "TikTok business account not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting TikTok business account:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // TikTok Shop Orders API
+  app.get("/api/tiktok/shop-orders", requireAdminAuth, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      if (limit && (isNaN(limit) || limit < 1 || limit > 1000)) {
+        return res.status(400).json({ error: "Invalid limit parameter (1-1000)" });
+      }
+      const orders = await storage.getTikTokShopOrders(limit);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching TikTok shop orders:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/tiktok/shop-orders", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const validatedData = insertTikTokShopOrderSchema.parse(req.body);
+      const order = await storage.createTikTokShopOrder(validatedData);
+      res.status(201).json(order);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating TikTok shop order:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.put("/api/tiktok/shop-orders/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid order ID format" });
+      }
+      
+      const validatedData = insertTikTokShopOrderSchema.partial().parse(req.body);
+      const order = await storage.updateTikTokShopOrder(req.params.id, validatedData);
+      if (!order) {
+        return res.status(404).json({ error: "TikTok shop order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating TikTok shop order:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/tiktok/shop-orders/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid order ID format" });
+      }
+      
+      const success = await storage.deleteTikTokShopOrder(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "TikTok shop order not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting TikTok shop order:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // TikTok Shop Products API
+  app.get("/api/tiktok/shop-products", requireAdminAuth, async (req, res) => {
+    try {
+      const products = await storage.getTikTokShopProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching TikTok shop products:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/tiktok/shop-products", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const validatedData = insertTikTokShopProductSchema.parse(req.body);
+      const product = await storage.createTikTokShopProduct(validatedData);
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating TikTok shop product:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.put("/api/tiktok/shop-products/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid product ID format" });
+      }
+      
+      const validatedData = insertTikTokShopProductSchema.partial().parse(req.body);
+      const product = await storage.updateTikTokShopProduct(req.params.id, validatedData);
+      if (!product) {
+        return res.status(404).json({ error: "TikTok shop product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating TikTok shop product:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/tiktok/shop-products/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid product ID format" });
+      }
+      
+      const success = await storage.deleteTikTokShopProduct(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "TikTok shop product not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting TikTok shop product:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // TikTok Videos API
+  app.get("/api/tiktok/videos", requireAdminAuth, async (req, res) => {
+    try {
+      const businessAccountId = req.query.businessAccountId as string;
+      if (businessAccountId && !businessAccountId.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid business account ID format" });
+      }
+      const videos = await storage.getTikTokVideos(businessAccountId);
+      res.json(videos);
+    } catch (error) {
+      console.error("Error fetching TikTok videos:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/tiktok/videos", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const validatedData = insertTikTokVideoSchema.parse(req.body);
+      const video = await storage.createTikTokVideo(validatedData);
+      res.status(201).json(video);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error creating TikTok video:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.put("/api/tiktok/videos/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid video ID format" });
+      }
+      
+      const validatedData = insertTikTokVideoSchema.partial().parse(req.body);
+      const video = await storage.updateTikTokVideo(req.params.id, validatedData);
+      if (!video) {
+        return res.status(404).json({ error: "TikTok video not found" });
+      }
+      res.json(video);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid input data", details: error.errors });
+      }
+      console.error("Error updating TikTok video:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/tiktok/videos/:id", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid video ID format" });
+      }
+      
+      const success = await storage.deleteTikTokVideo(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "TikTok video not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting TikTok video:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // TikTok Authentication placeholder endpoints
+  app.post("/api/tiktok/connect", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      // TODO: Implement TikTok Business API OAuth flow
+      // For now, return placeholder response
+      res.json({ 
+        message: "TikTok Business API connection will be implemented", 
+        status: "placeholder" 
+      });
+    } catch (error) {
+      console.error("Error connecting TikTok:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/tiktok/disconnect/:accountId", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { accountId } = req.params;
+      
+      // Validate UUID format
+      if (!accountId || !accountId.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid account ID format" });
+      }
+      
+      // TODO: Implement TikTok account disconnection
+      res.json({ 
+        message: "TikTok account disconnection will be implemented", 
+        accountId 
+      });
+    } catch (error) {
+      console.error("Error disconnecting TikTok:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
