@@ -549,7 +549,10 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
             {filteredOrders.map((order) => (
               <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
                 <TableCell className="font-medium" data-testid={`order-id-${order.id}`}>
-                  {order.id}
+                  <div className="flex flex-col">
+                    <span className="font-mono text-sm">DH-{order.id.slice(0, 8)}</span>
+                    <span className="text-xs text-muted-foreground">...{order.id.slice(-4)}</span>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div>
