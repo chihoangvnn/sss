@@ -492,6 +492,69 @@ export function FacebookAppsManagerPanel() {
                   onChange={(e) => setFormData(prev => ({ ...prev, appId: e.target.value }))}
                   placeholder="123456789012345"
                 />
+                {/* Facebook Developer Console Links */}
+                {formData.appId && formData.appId.length >= 10 && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Link className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700">Facebook Developer Links</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {/* App Secret URL */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-600 flex items-center gap-1">
+                          🔐 Lấy App Secret tại:
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={`https://developers.facebook.com/apps/${formData.appId}/settings/basic/`}
+                            readOnly
+                            className="text-xs bg-white font-mono text-blue-600"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(`https://developers.facebook.com/apps/${formData.appId}/settings/basic/`, 'App Secret Link')}
+                            className="shrink-0"
+                          >
+                            {copied === 'App Secret Link' ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Webhook URL */}
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-600 flex items-center gap-1">
+                          🪝 Cài đặt Webhook tại:
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={`https://developers.facebook.com/apps/${formData.appId}/webhooks/`}
+                            readOnly
+                            className="text-xs bg-white font-mono text-blue-600"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => copyToClipboard(`https://developers.facebook.com/apps/${formData.appId}/webhooks/`, 'Webhook Link')}
+                            className="shrink-0"
+                          >
+                            {copied === 'Webhook Link' ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="appSecret">App Secret *</Label>
@@ -989,6 +1052,69 @@ export function FacebookAppsManagerPanel() {
                 onChange={(e) => setFormData(prev => ({ ...prev, appId: e.target.value }))}
                 placeholder="123456789012345"
               />
+              {/* Facebook Developer Console Links */}
+              {formData.appId && formData.appId.length >= 10 && (
+                <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Link className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700">Facebook Developer Links</span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {/* App Secret URL */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600 flex items-center gap-1">
+                        🔐 Lấy App Secret tại:
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={`https://developers.facebook.com/apps/${formData.appId}/settings/basic/`}
+                          readOnly
+                          className="text-xs bg-white font-mono text-blue-600"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(`https://developers.facebook.com/apps/${formData.appId}/settings/basic/`, 'App Secret Link')}
+                          className="shrink-0"
+                        >
+                          {copied === 'App Secret Link' ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Webhook URL */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600 flex items-center gap-1">
+                        🪝 Cài đặt Webhook tại:
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={`https://developers.facebook.com/apps/${formData.appId}/webhooks/`}
+                          readOnly
+                          className="text-xs bg-white font-mono text-blue-600"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(`https://developers.facebook.com/apps/${formData.appId}/webhooks/`, 'Webhook Link')}
+                          className="shrink-0"
+                        >
+                          {copied === 'Webhook Link' ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-appSecret">App Secret (để trống nếu không muốn thay đổi)</Label>
