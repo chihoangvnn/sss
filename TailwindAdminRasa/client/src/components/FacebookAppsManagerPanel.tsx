@@ -25,7 +25,8 @@ import {
   ArrowRight,
   Play,
   Pause,
-  Lock
+  Lock,
+  Tags
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,15 @@ import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
+interface UnifiedTag {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  category: string;
+  description?: string;
+}
+
 interface FacebookApp {
   id: string;
   appName: string;
@@ -84,6 +94,7 @@ interface FacebookApp {
   description?: string;
   subscriptionFields: string[];
   isActive: boolean;
+  tagIds?: string[]; // References to unified_tags.id
   createdAt: string;
   updatedAt?: string;
 }
@@ -100,7 +111,10 @@ interface CreateAppData {
 export function FacebookAppsManagerPanel() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isTagEditDialogOpen, setIsTagEditDialogOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<FacebookApp | null>(null);
+  const [editingAppForTags, setEditingAppForTags] = useState<FacebookApp | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [environmentFilter, setEnvironmentFilter] = useState<string>("all");
@@ -275,6 +289,60 @@ export function FacebookAppsManagerPanel() {
     },
   });
 
+  // Load unified tags
+  const { data: allTags = [], isLoading: isTagsLoading } = useQuery({
+    queryKey: ['unified-tags'],
+    queryFn: async () => {
+      const response = await fetch('/api/tags', {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch tags');
+      }
+      
+      return await response.json() as UnifiedTag[];
+    },
+  });
+
+  // Update Facebook app tags mutation
+  const updateAppTagsMutation = useMutation({
+    mutationFn: async ({ id, tagIds }: { id: string; tagIds: string[] }) => {
+      const response = await fetch(`/api/facebook-apps/${id}/tags`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ tagIds }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update app tags');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facebook-apps'] });
+      setIsTagEditDialogOpen(false);
+      setEditingAppForTags(null);
+      setSelectedTagIds([]);
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật tags cho Facebook App thành công",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể cập nhật tags cho Facebook App",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       appName: "",
@@ -356,6 +424,31 @@ export function FacebookAppsManagerPanel() {
     });
     setIsEditDialogOpen(true);
   };
+
+  const handleEditAppTags = (app: FacebookApp) => {
+    setEditingAppForTags(app);
+    setSelectedTagIds(app.tagIds || []);
+    setIsTagEditDialogOpen(true);
+  };
+
+  const handleTagToggle = (tagId: string) => {
+    setSelectedTagIds(prev => 
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  const handleSaveAppTags = () => {
+    if (!editingAppForTags) return;
+    updateAppTagsMutation.mutate({ 
+      id: editingAppForTags.id, 
+      tagIds: selectedTagIds 
+    });
+  };
+
+  // Helper function to get tag info by ID
+  const getTagById = (tagId: string) => allTags.find(tag => tag.id === tagId);
 
   const handleDeleteApp = (id: string) => {
     deleteAppMutation.mutate(id);
@@ -756,6 +849,7 @@ export function FacebookAppsManagerPanel() {
                   <div className="w-[200px]">Tên App</div>
                   <div className="w-[140px]">App ID</div>
                   <div className="w-[80px]">Status</div>
+                  <div className="w-[180px]">Tags</div>
                   <div className="flex-1">Actions</div>
                 </div>
               </div>
@@ -813,6 +907,38 @@ export function FacebookAppsManagerPanel() {
                       )}
                     </div>
                     
+                    {/* Tags Column - Từ phải sang trái */}
+                    <div className="w-[180px] shrink-0 flex items-center justify-end gap-1 overflow-hidden">
+                      {app.tagIds && app.tagIds.length > 0 ? (
+                        <div className="flex items-center gap-1 flex-wrap-reverse justify-end">
+                          {app.tagIds.slice(0, 3).reverse().map((tagId) => {
+                            const tag = getTagById(tagId);
+                            if (!tag) return null;
+                            return (
+                              <Badge
+                                key={tagId}
+                                variant="outline"
+                                className="text-[9px] px-1.5 py-0 h-4 leading-4 truncate max-w-[50px]"
+                                style={{ 
+                                  backgroundColor: `${tag.color}15`, 
+                                  borderColor: tag.color,
+                                  color: tag.color 
+                                }}
+                                title={tag.name}
+                              >
+                                {tag.name}
+                              </Badge>
+                            );
+                          })}
+                          {app.tagIds.length > 3 && (
+                            <span className="text-[9px] text-gray-500 ml-1">+{app.tagIds.length - 3}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-gray-400 italic">Chưa có tags</span>
+                      )}
+                    </div>
+                    
                     {/* Actions Column */}
                     <div className="flex-1 flex items-center gap-1">
                       <Tooltip>
@@ -860,6 +986,22 @@ export function FacebookAppsManagerPanel() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Edit App</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditAppTags(app)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Tags className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit Tags</p>
                         </TooltipContent>
                       </Tooltip>
                       
@@ -1056,6 +1198,87 @@ export function FacebookAppsManagerPanel() {
                 </>
               ) : (
                 'Cập nhật'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tag Edit Modal */}
+      <Dialog open={isTagEditDialogOpen} onOpenChange={setIsTagEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa Tags</DialogTitle>
+            <DialogDescription>
+              Chọn tags cho Facebook App "{editingAppForTags?.appName}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {isTagsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                <span className="ml-2 text-gray-600">Đang tải tags...</span>
+              </div>
+            ) : allTags.length === 0 ? (
+              <div className="text-center py-8">
+                <Tags className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Chưa có tags nào</p>
+                <p className="text-sm text-gray-500">Tạo tags trong Tag Management trước</p>
+              </div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto">
+                <div className="grid grid-cols-1 gap-2">
+                  {allTags.map((tag) => (
+                    <label
+                      key={tag.id}
+                      className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTagIds.includes(tag.id)}
+                        onChange={() => handleTagToggle(tag.id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <Badge
+                          variant="outline"
+                          className="text-xs shrink-0"
+                          style={{ 
+                            backgroundColor: `${tag.color}15`, 
+                            borderColor: tag.color,
+                            color: tag.color 
+                          }}
+                        >
+                          {tag.name}
+                        </Badge>
+                        <span className="text-xs text-gray-500 capitalize">({tag.category})</span>
+                        {tag.description && (
+                          <span className="text-xs text-gray-400 truncate" title={tag.description}>
+                            {tag.description}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTagEditDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button 
+              onClick={handleSaveAppTags} 
+              disabled={updateAppTagsMutation.isPending || !editingAppForTags}
+            >
+              {updateAppTagsMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Đang lưu...
+                </>
+              ) : (
+                'Lưu Tags'
               )}
             </Button>
           </DialogFooter>
