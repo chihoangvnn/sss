@@ -3,6 +3,7 @@ import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { storage } from '../storage';
 import { postScheduler } from '../services/post-scheduler';
+import { aiContentGenerator } from '../services/ai-content-generator';
 import { facebookPostingService } from '../services/facebook-posting-service';
 import { insertContentCategorySchema, insertContentAssetSchema, insertScheduledPostSchema, insertContentLibrarySchema, updateContentLibrarySchema } from '../../shared/schema';
 
@@ -717,6 +718,146 @@ router.get('/analytics/content/:contentId', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching content analytics:', error);
     res.status(500).json({ error: 'Failed to fetch content analytics' });
+  }
+});
+
+// ===========================================
+// AI CONTENT VARIATIONS API
+// ===========================================
+
+// Generate content variations using AI (requires admin auth)
+router.post('/ai/variations', requireAdminAuth, async (req, res) => {
+  try {
+    const { baseContent, platforms, tones, variationsPerPlatform, includeHashtags, targetAudience, contentType } = req.body;
+    
+    if (!baseContent || !platforms || !Array.isArray(platforms)) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: baseContent, platforms (array)' 
+      });
+    }
+
+    const result = await aiContentGenerator.generateVariations({
+      baseContent,
+      platforms,
+      tones,
+      variationsPerPlatform: variationsPerPlatform || 2,
+      includeHashtags: includeHashtags !== false, // Default to true
+      targetAudience,
+      contentType
+    });
+    
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error generating AI variations:', error);
+    res.status(500).json({ error: `Failed to generate AI variations: ${error}` });
+  }
+});
+
+// Optimize single content for specific platform (test endpoint - no auth for now)  
+router.post('/ai/optimize', async (req, res) => {
+  try {
+    const { content, platform, tone } = req.body;
+    
+    if (!content || !platform) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: content, platform' 
+      });
+    }
+
+    const optimized = await aiContentGenerator.optimizeForPlatform(
+      content,
+      platform,
+      tone || 'professional'
+    );
+    
+    res.json(optimized);
+  } catch (error) {
+    console.error('Error optimizing content:', error);
+    res.status(500).json({ error: `Failed to optimize content: ${error}` });
+  }
+});
+
+// Generate hashtags for content (test endpoint - no auth for now)
+router.post('/ai/hashtags', async (req, res) => {
+  try {
+    const { content, platform, count } = req.body;
+    
+    if (!content || !platform) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: content, platform' 
+      });
+    }
+
+    const hashtags = await aiContentGenerator.generateHashtags(
+      content,
+      platform,
+      count || 5
+    );
+    
+    res.json({ hashtags, count: hashtags.length });
+  } catch (error) {
+    console.error('Error generating hashtags:', error);
+    res.status(500).json({ error: `Failed to generate hashtags: ${error}` });
+  }
+});
+
+// Generate variations and save to Content Library (requires admin auth)
+router.post('/ai/variations/save', requireAdminAuth, async (req, res) => {
+  try {
+    const { baseContent, platforms, tones, variationsPerPlatform, includeHashtags, targetAudience, contentType, priority, tagIds } = req.body;
+    
+    if (!baseContent || !platforms || !Array.isArray(platforms)) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: baseContent, platforms (array)' 
+      });
+    }
+
+    // Generate AI variations
+    const aiResult = await aiContentGenerator.generateVariations({
+      baseContent,
+      platforms,
+      tones,
+      variationsPerPlatform: variationsPerPlatform || 2,
+      includeHashtags: includeHashtags !== false,
+      targetAudience,
+      contentType
+    });
+
+    // Save each variation to Content Library
+    const savedItems = [];
+    for (const variation of aiResult.variations) {
+      try {
+        const contentLibraryItem = await storage.createContentLibraryItem({
+          title: `AI Generated - ${variation.platform} (${variation.tone})`,
+          baseContent: variation.variation,
+          contentType: 'text',
+          platforms: [variation.platform],
+          priority: priority || 'normal',
+          status: 'active',
+          tagIds: tagIds || []
+        });
+        
+        savedItems.push(contentLibraryItem);
+      } catch (saveError) {
+        console.error(`Failed to save variation for ${variation.platform}:`, saveError);
+      }
+    }
+
+    res.status(201).json({
+      message: `Generated and saved ${savedItems.length} content variations`,
+      aiResult,
+      savedItems: savedItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        platform: item.platforms?.[0],
+        content: item.baseContent?.substring(0, 100) + (item.baseContent && item.baseContent.length > 100 ? '...' : '')
+      })),
+      totalGenerated: aiResult.totalGenerated,
+      totalSaved: savedItems.length
+    });
+  } catch (error) {
+    console.error('Error generating and saving AI variations:', error);
+    res.status(500).json({ error: `Failed to generate and save variations: ${error}` });
   }
 });
 
