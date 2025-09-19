@@ -937,12 +937,7 @@ router.post('/smart-scheduler/preview', async (req, res) => {
       });
     }
 
-    if (!config.selectedFanpages || config.selectedFanpages.length === 0) {
-      return res.status(400).json({
-        error: 'Selected fanpages are required',
-        details: 'Please select at least one fanpage for distribution'
-      });
-    }
+    // Note: selectedFanpages is optional - Smart Scheduler will auto-select based on tags if empty
 
     if (!config.contentTypes || config.contentTypes.length === 0) {
       return res.status(400).json({
@@ -993,12 +988,7 @@ router.post('/smart-scheduler/schedule', requireAdminAuth, async (req, res) => {
       });
     }
 
-    if (!config.selectedFanpages || config.selectedFanpages.length === 0) {
-      return res.status(400).json({
-        error: 'Selected fanpages are required',
-        details: 'Please select at least one fanpage for distribution'
-      });
-    }
+    // Note: selectedFanpages is optional - Smart Scheduler will auto-select based on tags if empty
 
     if (!config.contentTypes || config.contentTypes.length === 0) {
       return res.status(400).json({
