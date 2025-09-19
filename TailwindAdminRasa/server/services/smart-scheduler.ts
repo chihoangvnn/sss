@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { socialAccounts, contentLibrary, scheduledPosts, unifiedTags } from '../../shared/schema';
+import { socialAccounts, contentLibrary, scheduledPosts, unifiedTags, facebookApps } from '../../shared/schema';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import type { 
   SocialAccount, 
@@ -56,9 +56,11 @@ export class SmartSchedulerService {
     console.log('🎯 Smart Scheduler: Generating preview with config:', config);
     
     try {
-      // 1. Fetch relevant data
+      // 1. Fetch relevant data - AUTO-SELECT fanpages based on Facebook Apps tags
       const [fanpages, content, tags] = await Promise.all([
-        this.getFanpagesByIds(config.selectedFanpages),
+        config.selectedFanpages && config.selectedFanpages.length > 0 
+          ? this.getFanpagesByIds(config.selectedFanpages) // Use manual selection if provided
+          : this.getFanpagesByTags(config.selectedTags), // Auto-select based on Facebook Apps tags
         this.getMatchingContent(config.selectedTags, config.contentTypes),
         this.getTagsMap()
       ]);
@@ -467,6 +469,49 @@ export class SmartSchedulerService {
     return await db.select()
       .from(socialAccounts)
       .where(inArray(socialAccounts.id, fanpageIds));
+  }
+
+  /**
+   * Helper: Auto-select fanpages based on Facebook Apps tags
+   */
+  private async getFanpagesByTags(selectedTags: string[]): Promise<SocialAccount[]> {
+    if (selectedTags.length === 0) {
+      // If no tags selected, return all Facebook social accounts
+      return await db.select()
+        .from(socialAccounts)
+        .where(eq(socialAccounts.platform, 'facebook'));
+    }
+
+    console.log(`🔍 Auto-selecting fanpages based on tags: ${JSON.stringify(selectedTags)}`);
+    
+    // Find Facebook Apps that have matching tags
+    const matchingFacebookApps = await db.select()
+      .from(facebookApps)
+      .where(
+        and(
+          eq(facebookApps.isActive, true),
+          sql`${facebookApps.tagIds} ?| array[${selectedTags.map(tag => `'${tag}'`).join(', ')}]`
+        )
+      );
+
+    console.log(`📱 Found ${matchingFacebookApps.length} Facebook Apps with matching tags`);
+    
+    if (matchingFacebookApps.length === 0) {
+      console.log(`ℹ️  No Facebook Apps found with matching tags, returning all Facebook social accounts`);
+      // If no Facebook Apps match, return all Facebook social accounts as fallback
+      return await db.select()
+        .from(socialAccounts)
+        .where(eq(socialAccounts.platform, 'facebook'));
+    }
+
+    // For now, return all Facebook social accounts when we have matching Facebook Apps
+    // In the future, this could be more sophisticated (e.g., match by App ID)
+    const fanpages = await db.select()
+      .from(socialAccounts)
+      .where(eq(socialAccounts.platform, 'facebook'));
+      
+    console.log(`🎯 Auto-selected ${fanpages.length} Facebook fanpages for distribution`);
+    return fanpages;
   }
 
   /**
