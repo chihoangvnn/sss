@@ -904,7 +904,7 @@ router.post('/ai/variations/save', async (req, res) => {
  */
 router.get('/tags', async (req, res) => {
   try {
-    const tags = await storage.getAllTags();
+    const tags = await storage.getUnifiedTags();
     res.json(tags);
   } catch (error) {
     console.error('Error fetching tags:', error);
