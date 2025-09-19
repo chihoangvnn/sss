@@ -158,7 +158,7 @@ router.get('/assets/:id', requireAuth, async (req, res) => {
 });
 
 // Upload new content asset (requires admin auth - sensitive operation)
-router.post('/assets/upload', requireAdminAuth, upload.single('file'), async (req, res) => {
+router.post('/assets/upload', requireAdminAuth, upload.single('file') as any, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -571,6 +571,152 @@ router.get('/library/priority/:priority', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching content by priority:', error);
     res.status(500).json({ error: 'Failed to fetch content by priority' });
+  }
+});
+
+// ===========================================
+// SMART SCHEDULER ENGINE API
+// ===========================================
+
+// Generate smart schedule from Content Library (requires admin auth)
+router.post('/scheduler/smart-generate', requireAdminAuth, async (req, res) => {
+  try {
+    const { targetTime, platforms, tags, priority, accountSelection, maxPostsPerAccount } = req.body;
+    
+    if (!targetTime || !platforms || !Array.isArray(platforms)) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: targetTime, platforms (array)' 
+      });
+    }
+
+    const scheduledPosts = await postScheduler.generateSmartSchedule({
+      targetTime: new Date(targetTime),
+      platforms,
+      tags,
+      priority,
+      accountSelection: accountSelection || 'round-robin',
+      maxPostsPerAccount: maxPostsPerAccount || 1
+    });
+    
+    res.status(201).json({
+      message: `Generated ${scheduledPosts.length} smart scheduled posts`,
+      scheduledPosts,
+      summary: {
+        totalPosts: scheduledPosts.length,
+        platforms: Array.from(new Set(scheduledPosts.map(p => p.platform))),
+        accounts: Array.from(new Set(scheduledPosts.map(p => p.socialAccountId)))
+      }
+    });
+  } catch (error) {
+    console.error('Error generating smart schedule:', error);
+    res.status(500).json({ error: 'Failed to generate smart schedule' });
+  }
+});
+
+// Batch generate smart schedules for multiple time slots (requires admin auth)
+router.post('/scheduler/smart-batch', requireAdminAuth, async (req, res) => {
+  try {
+    const { startTime, endTime, intervalHours, platforms, tags, priority, accountSelection } = req.body;
+    
+    if (!startTime || !endTime || !intervalHours || !platforms || !Array.isArray(platforms)) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: startTime, endTime, intervalHours, platforms (array)' 
+      });
+    }
+
+    const scheduledPosts = await postScheduler.batchGenerateSmartSchedule({
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      intervalHours,
+      platforms,
+      tags,
+      priority,
+      accountSelection: accountSelection || 'round-robin'
+    });
+    
+    res.status(201).json({
+      message: `Batch generated ${scheduledPosts.length} smart scheduled posts`,
+      scheduledPosts,
+      summary: {
+        totalPosts: scheduledPosts.length,
+        platforms: Array.from(new Set(scheduledPosts.map(p => p.platform))),
+        accounts: Array.from(new Set(scheduledPosts.map(p => p.socialAccountId))),
+        timeSlots: Math.ceil((new Date(endTime).getTime() - new Date(startTime).getTime()) / (intervalHours * 60 * 60 * 1000))
+      }
+    });
+  } catch (error) {
+    console.error('Error batch generating smart schedule:', error);
+    res.status(500).json({ error: 'Failed to batch generate smart schedule' });
+  }
+});
+
+// Preview smart content selection without creating posts (requires basic auth)
+router.post('/scheduler/smart-preview', requireAuth, async (req, res) => {
+  try {
+    const { platforms, tags, priority, accountSelection, maxPostsPerAccount } = req.body;
+    
+    if (!platforms || !Array.isArray(platforms)) {
+      return res.status(400).json({ 
+        error: 'Missing required field: platforms (array)' 
+      });
+    }
+
+    // Get smart content selection
+    const contentItems = await postScheduler.selectSmartContent({
+      tags,
+      priority,
+      platforms,
+      excludeRecentlyUsed: true,
+      limit: 20
+    });
+
+    // Get account selection
+    const selectedAccounts = await postScheduler.selectAccountsForDistribution({
+      platforms,
+      selectionMode: accountSelection || 'round-robin',
+      maxAccountsPerPlatform: maxPostsPerAccount || 1,
+      excludeInactive: true
+    });
+
+    res.json({
+      contentItems: contentItems.map(item => ({
+        id: item.id,
+        content: item.baseContent?.substring(0, 100) + (item.baseContent && item.baseContent.length > 100 ? '...' : ''),
+        priority: item.priority,
+        tags: item.tagIds,
+        platforms: item.platforms,
+        usageCount: item.usageCount,
+        lastUsed: item.lastUsed
+      })),
+      selectedAccounts: selectedAccounts.map(account => ({
+        id: account.id,
+        platform: account.platform,
+        name: account.name,
+        isActive: account.isActive,
+        connected: account.connected,
+        lastPost: account.lastPost
+      })),
+      estimatedPosts: Math.min(contentItems.length, selectedAccounts.length),
+      distribution: selectedAccounts.reduce((acc, account) => {
+        acc[account.platform] = (acc[account.platform] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    });
+  } catch (error) {
+    console.error('Error previewing smart selection:', error);
+    res.status(500).json({ error: 'Failed to preview smart selection' });
+  }
+});
+
+// Get content performance analytics (requires basic auth)
+router.get('/analytics/content/:contentId', requireAuth, async (req, res) => {
+  try {
+    const { contentId } = req.params;
+    const analytics = await postScheduler.getContentAnalytics(contentId);
+    res.json(analytics);
+  } catch (error) {
+    console.error('Error fetching content analytics:', error);
+    res.status(500).json({ error: 'Failed to fetch content analytics' });
   }
 });
 

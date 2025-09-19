@@ -1,12 +1,27 @@
 import { DatabaseStorage } from '../storage';
 import { facebookPostingService } from './facebook-posting-service';
-import { ScheduledPost, ContentAsset, SocialAccount } from '../../shared/schema';
+import { ScheduledPost, ContentAsset, SocialAccount, ContentLibrary } from '../../shared/schema';
 
 export interface PostJobResult {
   success: boolean;
   postId?: string;
   error?: string;
   retryAfter?: number; // Minutes to wait before retry
+}
+
+export interface SmartScheduleOptions {
+  targetTime: Date;
+  platforms: string[];
+  tags?: string[];
+  priority?: 'high' | 'normal' | 'low';
+  accountSelection?: 'all' | 'random' | 'round-robin';
+  maxPostsPerAccount?: number;
+}
+
+export interface ContentSelectionResult {
+  content: ContentLibrary;
+  selectedAccounts: SocialAccount[];
+  estimatedReach: number;
 }
 
 export class PostScheduler {
@@ -126,6 +141,12 @@ export class PostScheduler {
         throw new Error(`Social account ${post.socialAccountId} not found`);
       }
 
+      // Check if platform is supported
+      const supportedPlatforms = ['facebook']; // Only Facebook is currently implemented
+      if (!supportedPlatforms.includes(post.platform)) {
+        throw new Error(`Platform ${post.platform} is not yet implemented. Supported: ${supportedPlatforms.join(', ')}`);
+      }
+
       // Get content assets if any
       const assets: ContentAsset[] = [];
       if (post.assetIds && post.assetIds.length > 0) {
@@ -147,9 +168,6 @@ export class PostScheduler {
         case 'facebook':
           result = await this.postToFacebook(socialAccount, message, assets);
           break;
-        case 'instagram':
-          result = await this.postToInstagram(socialAccount, message, assets);
-          break;
         default:
           throw new Error(`Unsupported platform: ${post.platform}`);
       }
@@ -157,6 +175,14 @@ export class PostScheduler {
       if (result.success && result.postId) {
         // Post successful
         await this.handlePostSuccess(post, result.postId);
+        
+        // Update Content Library usage if this was from Content Library
+        if (post.analytics && typeof post.analytics === 'object') {
+          const analytics = post.analytics as any;
+          if (analytics.contentLibraryId) {
+            await this.storage.incrementContentUsage(analytics.contentLibraryId);
+          }
+        }
       } else {
         // Post failed
         throw new Error(result.error || 'Unknown posting error');
@@ -330,6 +356,323 @@ export class PostScheduler {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to trigger post' 
+      };
+    }
+  }
+
+  // ===========================================
+  // SMART SCHEDULER ENGINE
+  // ===========================================
+
+  /**
+   * Select smart content from Content Library based on priority and tags
+   */
+  async selectSmartContent(options: {
+    tags?: string[];
+    priority?: 'high' | 'normal' | 'low';
+    platforms?: string[];
+    excludeRecentlyUsed?: boolean;
+    limit?: number;
+  }): Promise<ContentLibrary[]> {
+    const { tags, priority, platforms, excludeRecentlyUsed = true, limit = 10 } = options;
+    
+    // Build filters for content selection
+    const filters: any = {};
+    if (tags && tags.length > 0) {
+      filters.tags = tags;
+    }
+    if (priority) {
+      filters.priority = priority;
+    }
+    filters.status = 'active'; // Only active content
+    
+    // Get content from Content Library
+    let contentItems = await this.storage.getContentLibraryItems(filters);
+    
+    // Filter by platforms if specified
+    if (platforms && platforms.length > 0) {
+      contentItems = contentItems.filter(item => 
+        !item.platforms || item.platforms.some(platform => platforms.includes(platform))
+      );
+    }
+    
+    // Exclude recently used content (within last 7 days)
+    if (excludeRecentlyUsed) {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      contentItems = contentItems.filter(item => 
+        !item.lastUsed || new Date(item.lastUsed) < sevenDaysAgo
+      );
+    }
+    
+    // Sort by priority: high -> normal -> low, then by usage count (ascending)
+    contentItems.sort((a, b) => {
+      const priorityOrder = { high: 3, normal: 2, low: 1 };
+      const aPriority = priorityOrder[a.priority || 'normal'];
+      const bPriority = priorityOrder[b.priority || 'normal'];
+      
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority; // Higher priority first
+      }
+      
+      // Same priority, prefer less used content
+      return (a.usageCount || 0) - (b.usageCount || 0);
+    });
+    
+    return contentItems.slice(0, limit);
+  }
+
+  /**
+   * Select accounts for smart distribution
+   */
+  async selectAccountsForDistribution(options: {
+    platforms: string[];
+    selectionMode: 'all' | 'random' | 'round-robin';
+    maxAccountsPerPlatform?: number;
+    excludeInactive?: boolean;
+  }): Promise<SocialAccount[]> {
+    const { platforms, selectionMode, maxAccountsPerPlatform = 3, excludeInactive = true } = options;
+    
+    let selectedAccounts: SocialAccount[] = [];
+    
+    for (const platform of platforms) {
+      // Get all accounts for this platform
+      let accounts = await this.storage.getSocialAccountsByPlatform(platform);
+      
+      // Filter out inactive accounts if requested
+      if (excludeInactive) {
+        accounts = accounts.filter(account => account.isActive && account.connected);
+      }
+      
+      if (accounts.length === 0) continue;
+      
+      // Apply selection logic
+      let selected: SocialAccount[] = [];
+      
+      switch (selectionMode) {
+        case 'all':
+          selected = accounts.slice(0, maxAccountsPerPlatform);
+          break;
+          
+        case 'random':
+          // Randomly select accounts
+          const shuffled = [...accounts].sort(() => Math.random() - 0.5);
+          selected = shuffled.slice(0, Math.min(maxAccountsPerPlatform, accounts.length));
+          break;
+          
+        case 'round-robin':
+          // Select accounts with least recent posts
+          selected = accounts
+            .sort((a, b) => {
+              const aLastPost = a.lastPost ? new Date(a.lastPost).getTime() : 0;
+              const bLastPost = b.lastPost ? new Date(b.lastPost).getTime() : 0;
+              return aLastPost - bLastPost; // Oldest last post first
+            })
+            .slice(0, maxAccountsPerPlatform);
+          break;
+      }
+      
+      selectedAccounts.push(...selected);
+    }
+    
+    return selectedAccounts;
+  }
+
+  /**
+   * Generate smart schedule for Content Library items
+   */
+  async generateSmartSchedule(options: SmartScheduleOptions): Promise<ScheduledPost[]> {
+    const {
+      targetTime,
+      platforms,
+      tags,
+      priority,
+      accountSelection = 'round-robin',
+      maxPostsPerAccount = 1
+    } = options;
+    
+    console.log('🧠 Generating smart schedule with Content Library integration...');
+    
+    // 1. Select smart content from Content Library
+    const contentItems = await this.selectSmartContent({
+      tags,
+      priority,
+      platforms,
+      excludeRecentlyUsed: true,
+      limit: 20
+    });
+    
+    if (contentItems.length === 0) {
+      console.log('⚠️ No suitable content found in Content Library');
+      return [];
+    }
+    
+    console.log(`📚 Found ${contentItems.length} content items from Content Library`);
+    
+    // 2. Select accounts for distribution
+    const selectedAccounts = await this.selectAccountsForDistribution({
+      platforms,
+      selectionMode: accountSelection,
+      maxAccountsPerPlatform: maxPostsPerAccount,
+      excludeInactive: true
+    });
+    
+    if (selectedAccounts.length === 0) {
+      console.log('⚠️ No suitable social accounts found for distribution');
+      return [];
+    }
+    
+    console.log(`👥 Selected ${selectedAccounts.length} accounts for distribution`);
+    
+    // 3. Create scheduled posts by distributing content to accounts
+    const scheduledPosts: ScheduledPost[] = [];
+    let contentIndex = 0;
+    
+    for (const account of selectedAccounts) {
+      if (contentIndex >= contentItems.length) {
+        contentIndex = 0; // Wrap around if we have more accounts than content
+      }
+      
+      const content = contentItems[contentIndex];
+      
+      // Calculate target time with small random offset for natural distribution
+      const offsetMinutes = Math.floor(Math.random() * 30); // 0-30 minute offset
+      const scheduledTime = new Date(targetTime.getTime() + offsetMinutes * 60 * 1000);
+      
+      // Create scheduled post data
+      const postData = {
+        socialAccountId: account.id,
+        platform: account.platform,
+        caption: content.content,
+        hashtags: content.hashtags || [],
+        assetIds: content.assetIds || [],
+        scheduledTime,
+        timezone: 'UTC',
+        status: 'scheduled' as const,
+        analytics: {
+          contentLibraryId: content.id,
+          smartGenerated: true,
+          priority: content.priority,
+          tags: content.tags
+        }
+      };
+      
+      try {
+        const scheduledPost = await this.storage.createScheduledPost(postData);
+        scheduledPosts.push(scheduledPost);
+        
+        // Note: Content usage will be incremented when post is actually published
+        // This prevents counting scheduled posts that may never be published
+        
+        console.log(`✅ Scheduled post for ${account.platform} account (${account.name})`);
+      } catch (error) {
+        console.error(`❌ Failed to schedule post for ${account.platform}:`, error);
+      }
+      
+      contentIndex++;
+    }
+    
+    console.log(`🎯 Generated ${scheduledPosts.length} smart scheduled posts`);
+    return scheduledPosts;
+  }
+
+  /**
+   * Batch generate smart schedules for multiple time slots
+   */
+  async batchGenerateSmartSchedule(options: {
+    startTime: Date;
+    endTime: Date;
+    intervalHours: number;
+    platforms: string[];
+    tags?: string[];
+    priority?: 'high' | 'normal' | 'low';
+    accountSelection?: 'all' | 'random' | 'round-robin';
+  }): Promise<ScheduledPost[]> {
+    const {
+      startTime,
+      endTime,
+      intervalHours,
+      platforms,
+      tags,
+      priority,
+      accountSelection = 'round-robin'
+    } = options;
+    
+    console.log('🔄 Batch generating smart schedules...');
+    
+    const allScheduledPosts: ScheduledPost[] = [];
+    const intervalMs = intervalHours * 60 * 60 * 1000;
+    
+    let currentTime = new Date(startTime);
+    
+    while (currentTime < endTime) {
+      const posts = await this.generateSmartSchedule({
+        targetTime: new Date(currentTime),
+        platforms,
+        tags,
+        priority,
+        accountSelection,
+        maxPostsPerAccount: 1
+      });
+      
+      allScheduledPosts.push(...posts);
+      currentTime = new Date(currentTime.getTime() + intervalMs);
+    }
+    
+    console.log(`🎉 Batch generated ${allScheduledPosts.length} smart scheduled posts`);
+    return allScheduledPosts;
+  }
+
+  /**
+   * Get content performance analytics
+   */
+  async getContentAnalytics(contentId: string): Promise<{
+    totalPosts: number;
+    totalReach: number;
+    averageEngagement: number;
+    platformBreakdown: Record<string, number>;
+    recentPerformance: any[];
+  }> {
+    try {
+      // Get all scheduled posts that used this content
+      const posts = await this.storage.getScheduledPosts();
+      const contentPosts = posts.filter(post => 
+        post.analytics && 
+        typeof post.analytics === 'object' && 
+        (post.analytics as any).contentLibraryId === contentId
+      );
+      
+      const platformBreakdown: Record<string, number> = {};
+      let totalReach = 0;
+      let totalEngagement = 0;
+      
+      for (const post of contentPosts) {
+        platformBreakdown[post.platform] = (platformBreakdown[post.platform] || 0) + 1;
+        
+        if (post.analytics && typeof post.analytics === 'object') {
+          const analytics = post.analytics as any;
+          totalReach += analytics.reach || 0;
+          totalEngagement += analytics.engagement || 0;
+        }
+      }
+      
+      return {
+        totalPosts: contentPosts.length,
+        totalReach,
+        averageEngagement: contentPosts.length > 0 ? totalEngagement / contentPosts.length : 0,
+        platformBreakdown,
+        recentPerformance: contentPosts
+          .filter(post => post.publishedAt)
+          .sort((a, b) => new Date(b.publishedAt!).getTime() - new Date(a.publishedAt!).getTime())
+          .slice(0, 10)
+      };
+    } catch (error) {
+      console.error('Error getting content analytics:', error);
+      return {
+        totalPosts: 0,
+        totalReach: 0,
+        averageEngagement: 0,
+        platformBreakdown: {},
+        recentPerformance: []
       };
     }
   }

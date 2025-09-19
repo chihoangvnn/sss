@@ -85,6 +85,7 @@ export interface IStorage {
   getSocialAccount(id: string): Promise<SocialAccount | undefined>;
   getSocialAccountById(id: string): Promise<SocialAccount | undefined>;
   getSocialAccountByPlatform(platform: string): Promise<SocialAccount | undefined>;
+  getSocialAccountsByPlatform(platform: string): Promise<SocialAccount[]>;
   createSocialAccount(account: InsertSocialAccount): Promise<SocialAccount>;
 
   // Page tag methods
@@ -732,6 +733,10 @@ export class DatabaseStorage implements IStorage {
   async getSocialAccountByPlatform(platform: string): Promise<SocialAccount | undefined> {
     const [account] = await db.select().from(socialAccounts).where(eq(socialAccounts.platform, platform as any));
     return account || undefined;
+  }
+
+  async getSocialAccountsByPlatform(platform: string): Promise<SocialAccount[]> {
+    return await db.select().from(socialAccounts).where(eq(socialAccounts.platform, platform as any));
   }
 
 
