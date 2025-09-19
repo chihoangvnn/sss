@@ -426,7 +426,7 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
               
               {/* Tags */}
               <div className="flex gap-1 mt-2">
-                {selectedConv.tags.map((tag) => (
+                {(selectedConv.tags || []).map((tag) => (
                   <Badge key={tag} variant="secondary" className="text-xs">
                     {tag}
                   </Badge>
