@@ -58,18 +58,14 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
   // Fetch messages for selected conversation
   const { data: messages = [], isLoading: messagesLoading } = useQuery<FacebookMessage[]>({
     queryKey: ["/api/facebook/conversations", selectedConversation, "messages"],
-    queryFn: () => selectedConversation ? apiRequest(`/api/facebook/conversations/${selectedConversation}/messages`) : Promise.resolve([]),
+    queryFn: () => selectedConversation ? apiRequest("GET", `/api/facebook/conversations/${selectedConversation}/messages`) : Promise.resolve([]),
     enabled: !!selectedConversation,
   });
 
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
-      return apiRequest(`/api/facebook/conversations/${conversationId}/send`, {
-        method: "POST",
-        body: JSON.stringify({ content }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("POST", `/api/facebook/conversations/${conversationId}/send`, { content });
     },
     onSuccess: () => {
       // Refresh messages for the conversation
@@ -98,11 +94,7 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
   // Update conversation mutation
   const updateConversationMutation = useMutation({
     mutationFn: async ({ conversationId, updates }: { conversationId: string; updates: Partial<FacebookConversation> }) => {
-      return apiRequest(`/api/facebook/conversations/${conversationId}`, {
-        method: "PATCH",
-        body: JSON.stringify(updates),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("PATCH", `/api/facebook/conversations/${conversationId}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -125,9 +117,7 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (conversationId: string) => {
-      return apiRequest(`/api/facebook/conversations/${conversationId}/read`, {
-        method: "POST",
-      });
+      return apiRequest("POST", `/api/facebook/conversations/${conversationId}/read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
