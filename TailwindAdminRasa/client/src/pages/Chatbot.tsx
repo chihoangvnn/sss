@@ -1,9 +1,9 @@
-import { ChatbotInterface } from "@/components/ChatbotInterface";
+import { ChatbotManagement } from "@/components/ChatbotManagement";
 
 export default function Chatbot() {
   return (
-    <div className="p-6" data-testid="page-chatbot">
-      <ChatbotInterface />
+    <div className="h-full" data-testid="page-chatbot">
+      <ChatbotManagement />
     </div>
   );
 }
