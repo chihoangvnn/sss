@@ -15,6 +15,7 @@ import {
   Store,
   Bot,
   Tags,
+  Hash,
   Building2,
   FileText,
   Palette,
@@ -65,6 +66,11 @@ const mainMenuItems = [
     title: "Danh mục",
     url: "/categories",
     icon: Tags,
+  },
+  {
+    title: "🏷️ Quản lý Tag",
+    url: "/tag-management",
+    icon: Hash,
   },
   {
     title: "Đơn hàng",

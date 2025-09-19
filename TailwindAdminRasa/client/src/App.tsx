@@ -24,6 +24,7 @@ import PublicLandingPage from "@/pages/PublicLandingPage";
 import PublicStorefront from "@/pages/PublicStorefront";
 import StorefrontManager from "@/pages/StorefrontManager";
 import CategoryManager from "@/pages/CategoryManager";
+import TagManagement from "@/pages/TagManagement";
 import IndustryManager from "@/pages/IndustryManager";
 import ShopSettings from "@/pages/ShopSettings";
 import { ContentLibrary } from "@/pages/ContentLibrary";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/customers" component={Customers} />
       <Route path="/customers/:id" component={CustomerDetails} />
       <Route path="/categories" component={CategoryManager} />
+      <Route path="/tag-management" component={TagManagement} />
       <Route path="/industries" component={IndustryManager} />
       <Route path="/shop-settings" component={ShopSettings} />
       <Route path="/analytics" component={Analytics} />
