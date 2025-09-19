@@ -30,6 +30,8 @@ import ShopSettings from "@/pages/ShopSettings";
 import { ContentLibrary } from "@/pages/ContentLibrary";
 import { PostScheduler } from "@/pages/PostScheduler";
 import FacebookAppsManager from "@/pages/FacebookAppsManager";
+import TikTokBusiness from "@/pages/TikTokBusiness";
+import TikTokShop from "@/pages/TikTokShop";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -60,8 +62,8 @@ function Router() {
       <Route path="/facebook" component={SocialMedia} />
       <Route path="/instagram" component={SocialMedia} />
       <Route path="/twitter" component={SocialMedia} />
-      <Route path="/tiktok-business" component={SocialMedia} />
-      <Route path="/tiktok-shop" component={SocialMedia} />
+      <Route path="/tiktok-business" component={TikTokBusiness} />
+      <Route path="/tiktok-shop" component={TikTokShop} />
       <Route component={NotFound} />
     </Switch>
   );
