@@ -113,7 +113,7 @@ export class SmartSchedulerService {
           hashtags: this.generateHashtagsArray(match.reasons),
           assetIds: contentItem?.assetIds || [], // Use actual asset IDs from content
           socialAccountId: match.fanpageId,
-          platform: fanpage?.platform || 'facebook' as const, // Use fanpage's actual platform
+          platform: this.mapPlatformToValidType(fanpage?.platform) || 'facebook' as const, // Use fanpage's actual platform
           scheduledTime: new Date(match.scheduledTime),
           timezone: config.schedulingPeriod?.timezone || 'Asia/Ho_Chi_Minh',
           status: 'scheduled' as const,
@@ -159,10 +159,17 @@ export class SmartSchedulerService {
     console.log(`📝 Generating matches for ${content.length} content items across ${fanpages.length} fanpages`);
     console.log(`⏰ Time slots generated: ${timeSlots.length} slots`);
 
-    // Filter content based on includingText preference
+    // Filter content based on selected content types and includingText preference
     let filteredContent = content;
+    
+    // If specific content types are selected, filter to those types
+    if (config.contentTypes && config.contentTypes.length > 0) {
+      filteredContent = content.filter(item => config.contentTypes.includes(item.contentType as 'image' | 'video' | 'text'));
+    }
+    
+    // Additional filter: exclude text if includingText is false
     if (!config.includingText) {
-      filteredContent = content.filter(item => item.contentType !== 'text');
+      filteredContent = filteredContent.filter(item => item.contentType !== 'text');
     }
 
     // Shuffle content for randomness
@@ -479,6 +486,24 @@ export class SmartSchedulerService {
   private async getTagsMap(): Promise<Map<string, string>> {
     const tags = await db.select().from(unifiedTags);
     return new Map(tags.map((tag: any) => [tag.id, tag.name]));
+  }
+
+  /**
+   * Map platform to valid type for scheduled posts
+   */
+  private mapPlatformToValidType(platform?: string): 'facebook' | 'instagram' | 'twitter' | 'tiktok' {
+    switch (platform) {
+      case 'tiktok-business':
+      case 'tiktok-shop':
+        return 'tiktok';
+      case 'facebook':
+      case 'instagram':
+      case 'twitter':
+      case 'tiktok':
+        return platform;
+      default:
+        return 'facebook';
+    }
   }
 
   /**
