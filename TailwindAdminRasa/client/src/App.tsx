@@ -29,6 +29,7 @@ import IndustryManager from "@/pages/IndustryManager";
 import ShopSettings from "@/pages/ShopSettings";
 import { ContentLibrary } from "@/pages/ContentLibrary";
 import { PostScheduler } from "@/pages/PostScheduler";
+import FacebookAppsManager from "@/pages/FacebookAppsManager";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/chatbot" component={Chatbot} />
       <Route path="/content-library" component={ContentLibrary} />
       <Route path="/post-scheduler" component={PostScheduler} />
+      <Route path="/facebook-apps" component={FacebookAppsManager} />
       <Route path="/facebook" component={SocialMedia} />
       <Route path="/instagram" component={SocialMedia} />
       <Route path="/twitter" component={SocialMedia} />

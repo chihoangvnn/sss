@@ -143,6 +143,16 @@ const chatbotMenuItems = [
   },
 ];
 
+// Admin/Configuration items
+const adminItems = [
+  {
+    title: "🔧 Facebook Apps",
+    url: "/facebook-apps",
+    icon: Settings,
+    description: "Quản lý cấu hình Facebook Apps và webhook"
+  },
+];
+
 const integrationItems = [
   {
     title: "Facebook",
@@ -266,6 +276,28 @@ export function AppSidebar() {
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                       <div className={`ml-auto h-2 w-2 rounded-full ${getStatusColor(item.status)}`} />
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Quản trị nâng cao</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {adminItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === item.url}
+                    data-testid={`admin-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

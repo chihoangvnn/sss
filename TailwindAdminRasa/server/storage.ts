@@ -4,6 +4,7 @@ import {
   productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
   contentCategories, contentAssets, scheduledPosts, unifiedTags, contentLibrary,
+  facebookApps, facebookWebhookEvents,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -24,7 +25,9 @@ import {
   type ContentCategory, type InsertContentCategory,
   type ContentAsset, type InsertContentAsset,
   type ScheduledPost, type InsertScheduledPost,
-  type ContentLibrary, type InsertContentLibrary, type UpdateContentLibrary
+  type ContentLibrary, type InsertContentLibrary, type UpdateContentLibrary,
+  type FacebookApp, type InsertFacebookApp,
+  type FacebookWebhookEvent, type InsertFacebookWebhookEvent
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
@@ -109,6 +112,14 @@ export interface IStorage {
   createTikTokBusinessAccount(account: InsertTikTokBusinessAccount): Promise<TikTokBusinessAccount>;
   updateTikTokBusinessAccount(id: string, account: Partial<InsertTikTokBusinessAccount>): Promise<TikTokBusinessAccount | undefined>;
   deleteTikTokBusinessAccount(id: string): Promise<boolean>;
+
+  // Facebook Apps methods
+  getAllFacebookApps(): Promise<FacebookApp[]>;
+  getFacebookAppById(id: string): Promise<FacebookApp | undefined>;
+  getFacebookAppByAppId(appId: string): Promise<FacebookApp | undefined>;
+  createFacebookApp(app: InsertFacebookApp): Promise<FacebookApp>;
+  updateFacebookApp(id: string, app: Partial<InsertFacebookApp>): Promise<FacebookApp | undefined>;
+  deleteFacebookApp(id: string): Promise<boolean>;
 
   // TikTok Shop Order methods
   getTikTokShopOrders(limit?: number): Promise<TikTokShopOrder[]>;
@@ -1439,6 +1450,40 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTikTokBusinessAccount(id: string): Promise<boolean> {
     const result = await db.delete(tiktokBusinessAccounts).where(eq(tiktokBusinessAccounts.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // Facebook Apps methods
+  async getAllFacebookApps(): Promise<FacebookApp[]> {
+    return await db.select().from(facebookApps).orderBy(desc(facebookApps.createdAt));
+  }
+
+  async getFacebookAppById(id: string): Promise<FacebookApp | undefined> {
+    const [app] = await db.select().from(facebookApps).where(eq(facebookApps.id, id));
+    return app;
+  }
+
+  async getFacebookAppByAppId(appId: string): Promise<FacebookApp | undefined> {
+    const [app] = await db.select().from(facebookApps).where(eq(facebookApps.appId, appId));
+    return app;
+  }
+
+  async createFacebookApp(app: InsertFacebookApp): Promise<FacebookApp> {
+    const [newApp] = await db.insert(facebookApps).values(app).returning();
+    return newApp;
+  }
+
+  async updateFacebookApp(id: string, app: Partial<InsertFacebookApp>): Promise<FacebookApp | undefined> {
+    const [updatedApp] = await db
+      .update(facebookApps)
+      .set({ ...app, updatedAt: new Date() })
+      .where(eq(facebookApps.id, id))
+      .returning();
+    return updatedApp;
+  }
+
+  async deleteFacebookApp(id: string): Promise<boolean> {
+    const result = await db.delete(facebookApps).where(eq(facebookApps.id, id));
     return result.rowCount! > 0;
   }
 

@@ -299,6 +299,50 @@ export const socialAccounts = pgTable("social_accounts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Facebook Apps Configuration Management
+export const facebookApps = pgTable("facebook_apps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  appName: text("app_name").notNull(), // User-friendly app name
+  appId: text("app_id").notNull().unique(), // Facebook App ID
+  appSecret: text("app_secret").notNull(), // Encrypted Facebook App Secret
+  
+  // Webhook Configuration
+  webhookUrl: text("webhook_url"), // Auto-generated webhook URL
+  verifyToken: text("verify_token"), // User-defined verify token
+  subscriptionFields: jsonb("subscription_fields").$type<string[]>().default(sql`'["messages", "messaging_postbacks", "feed"]'::jsonb`),
+  
+  // Status & Settings
+  isActive: boolean("is_active").default(true),
+  environment: text("environment", { enum: ["development", "staging", "production"] }).default("development"),
+  description: text("description"), // Optional app description
+  
+  // Tracking
+  lastWebhookEvent: timestamp("last_webhook_event"), // Last received webhook
+  totalEvents: integer("total_events").default(0), // Total webhook events received
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Facebook App Webhook Events Log (for monitoring)
+export const facebookWebhookEvents = pgTable("facebook_webhook_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  appId: varchar("app_id").notNull().references(() => facebookApps.id),
+  eventType: text("event_type").notNull(), // "message", "feed", "postback", etc.
+  eventData: jsonb("event_data").notNull(), // Raw webhook event data
+  processedAt: timestamp("processed_at").defaultNow(),
+  status: text("status", { enum: ["success", "failed", "pending"] }).default("pending"),
+  errorMessage: text("error_message"), // If processing failed
+});
+
+// Types for Facebook Apps
+export type FacebookApp = typeof facebookApps.$inferSelect;
+export type InsertFacebookApp = typeof facebookApps.$inferInsert;
+
+// Types for Facebook Webhook Events
+export type FacebookWebhookEvent = typeof facebookWebhookEvents.$inferSelect;
+export type InsertFacebookWebhookEvent = typeof facebookWebhookEvents.$inferInsert;
+
 // Page Tags Management
 export const pageTags = pgTable("page_tags", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

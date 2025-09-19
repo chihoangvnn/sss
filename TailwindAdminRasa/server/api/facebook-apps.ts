@@ -1,0 +1,292 @@
+import { Router } from 'express';
+import { storage } from '../storage';
+import crypto from 'crypto';
+
+const router = Router();
+
+// 🔒 Authentication middleware for Facebook apps management
+const requireAdminAuth = (req: any, res: any, next: any) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Unauthorized. Please log in as an administrator.",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  next();
+};
+
+// Secure encryption/decryption for app secrets using AES-256-GCM
+const ENCRYPTION_KEY = (() => {
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key || key.length !== 64) {
+    throw new Error('ENCRYPTION_KEY environment variable must be a 64-character (32-byte) hex string');
+  }
+  return Buffer.from(key, 'hex');
+})();
+
+const encryptSecret = (secret: string): string => {
+  const iv = crypto.randomBytes(16); // 128-bit IV for AES
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+  
+  let encrypted = cipher.update(secret, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  // Format: iv:authTag:encryptedData
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+};
+
+const decryptSecret = (encryptedSecret: string): string => {
+  try {
+    const parts = encryptedSecret.split(':');
+    if (parts.length !== 3) {
+      throw new Error('Invalid encrypted secret format');
+    }
+    
+    const [ivHex, authTagHex, encryptedData] = parts;
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    
+    const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    return decrypted;
+  } catch (error) {
+    console.error('Error decrypting app secret:', error);
+    return '';
+  }
+};
+
+// =====================================================================
+// 📱 FACEBOOK APPS MANAGEMENT API
+// =====================================================================
+
+/**
+ * GET /api/facebook-apps
+ * Get all Facebook apps (secrets masked for security)
+ */
+router.get('/', requireAdminAuth, async (req, res) => {
+  try {
+    const apps = await storage.getAllFacebookApps();
+    
+    // Mask app secrets for security
+    const maskedApps = apps.map(app => ({
+      ...app,
+      appSecret: app.appSecret ? `${app.appSecret.substring(0, 8)}****` : '',
+      appSecretSet: !!app.appSecret
+    }));
+
+    res.json(maskedApps);
+  } catch (error) {
+    console.error('Error fetching Facebook apps:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch Facebook apps',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/facebook-apps
+ * Create new Facebook app configuration
+ */
+router.post('/', requireAdminAuth, async (req, res) => {
+  try {
+    const { appName, appId, appSecret, verifyToken, environment, description } = req.body;
+    
+    // Validate required fields
+    if (!appName || !appId || !appSecret) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'appName, appId, and appSecret are required'
+      });
+    }
+
+    // Generate webhook URL
+    const webhookUrl = `${req.protocol}://${req.get('host')}/api/webhooks/facebook/${appId}`;
+    
+    // Encrypt app secret
+    const encryptedSecret = encryptSecret(appSecret);
+
+    const newApp = await storage.createFacebookApp({
+      appName,
+      appId,
+      appSecret: encryptedSecret,
+      webhookUrl,
+      verifyToken: verifyToken || `verify_${Date.now()}`,
+      environment: environment || 'development',
+      description,
+      subscriptionFields: ['messages', 'messaging_postbacks', 'feed'],
+      isActive: true
+    });
+
+    // Return without exposing secret
+    res.status(201).json({
+      ...newApp,
+      appSecret: `${appSecret.substring(0, 8)}****`,
+      appSecretSet: true
+    });
+
+  } catch (error) {
+    console.error('Error creating Facebook app:', error);
+    
+    if (error instanceof Error && error.message.includes('unique')) {
+      return res.status(409).json({
+        error: 'App ID already exists',
+        details: 'A Facebook app with this App ID is already configured'
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to create Facebook app',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * PUT /api/facebook-apps/:id
+ * Update Facebook app configuration
+ */
+router.put('/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    
+    // Encrypt app secret if provided
+    if (updateData.appSecret && updateData.appSecret !== '') {
+      updateData.appSecret = encryptSecret(updateData.appSecret);
+    } else {
+      // Don't update secret if not provided
+      delete updateData.appSecret;
+    }
+
+    // Update webhook URL if app ID changed
+    if (updateData.appId) {
+      updateData.webhookUrl = `${req.protocol}://${req.get('host')}/api/webhooks/facebook/${updateData.appId}`;
+    }
+
+    const updatedApp = await storage.updateFacebookApp(id, updateData);
+    
+    if (!updatedApp) {
+      return res.status(404).json({ error: 'Facebook app not found' });
+    }
+
+    // Return without exposing secret
+    res.json({
+      ...updatedApp,
+      appSecret: updatedApp.appSecret ? `${updatedApp.appSecret.substring(0, 8)}****` : '',
+      appSecretSet: !!updatedApp.appSecret
+    });
+
+  } catch (error) {
+    console.error('Error updating Facebook app:', error);
+    res.status(500).json({ 
+      error: 'Failed to update Facebook app',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * DELETE /api/facebook-apps/:id
+ * Delete Facebook app configuration
+ */
+router.delete('/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deleted = await storage.deleteFacebookApp(id);
+    
+    if (!deleted) {
+      return res.status(404).json({ error: 'Facebook app not found' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Facebook app deleted successfully' 
+    });
+
+  } catch (error) {
+    console.error('Error deleting Facebook app:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete Facebook app',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/facebook-apps/:id/webhook-info
+ * Get webhook configuration info for specific app
+ */
+router.get('/:id/webhook-info', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const app = await storage.getFacebookAppById(id);
+    
+    if (!app) {
+      return res.status(404).json({ error: 'Facebook app not found' });
+    }
+
+    res.json({
+      webhookUrl: app.webhookUrl,
+      verifyToken: app.verifyToken,
+      appId: app.appId,
+      subscriptionFields: app.subscriptionFields,
+      isActive: app.isActive,
+      lastWebhookEvent: app.lastWebhookEvent,
+      totalEvents: app.totalEvents
+    });
+
+  } catch (error) {
+    console.error('Error fetching webhook info:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch webhook information',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/facebook-apps/:id/test-webhook
+ * Test webhook configuration
+ */
+router.post('/:id/test-webhook', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const app = await storage.getFacebookAppById(id);
+    
+    if (!app) {
+      return res.status(404).json({ error: 'Facebook app not found' });
+    }
+
+    // For now, just return the configuration for manual testing
+    res.json({
+      success: true,
+      testInstructions: {
+        webhookUrl: app.webhookUrl,
+        verifyToken: app.verifyToken,
+        subscriptionFields: app.subscriptionFields,
+        message: 'Use these details to configure webhook in Facebook App Dashboard'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error testing webhook:', error);
+    res.status(500).json({ 
+      error: 'Failed to test webhook',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Export functions for use in webhook handling
+export { encryptSecret, decryptSecret };
+export default router;
