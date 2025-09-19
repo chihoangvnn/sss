@@ -3,7 +3,7 @@ import {
   storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
   productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
-  contentCategories, contentAssets, scheduledPosts, unifiedTags,
+  contentCategories, contentAssets, scheduledPosts, unifiedTags, contentLibrary,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -23,7 +23,8 @@ import {
   type TikTokVideo, type InsertTikTokVideo,
   type ContentCategory, type InsertContentCategory,
   type ContentAsset, type InsertContentAsset,
-  type ScheduledPost, type InsertScheduledPost
+  type ScheduledPost, type InsertScheduledPost,
+  type ContentLibrary, type InsertContentLibrary, type UpdateContentLibrary
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
@@ -209,6 +210,17 @@ export interface IStorage {
   updateProductReview(id: string, review: Partial<InsertProductReview>): Promise<ProductReview | undefined>;
   deleteProductReview(id: string): Promise<boolean>;
   incrementHelpfulCount(id: string): Promise<boolean>;
+
+  // Content Library methods
+  getContentLibraryItems(filters?: { tags?: string[]; status?: string; contentType?: string; priority?: string }): Promise<ContentLibrary[]>;
+  getContentLibraryItem(id: string): Promise<ContentLibrary | undefined>;
+  createContentLibraryItem(item: InsertContentLibrary): Promise<ContentLibrary>;
+  updateContentLibraryItem(id: string, item: UpdateContentLibrary): Promise<ContentLibrary | undefined>;
+  deleteContentLibraryItem(id: string): Promise<boolean>;
+  incrementContentUsage(id: string): Promise<void>;
+  addAIVariation(id: string, variation: { content: string; tone: string; style: string }): Promise<ContentLibrary | undefined>;
+  getContentLibraryByTags(tagIds: string[]): Promise<ContentLibrary[]>;
+  getContentLibraryByPriority(priority: string): Promise<ContentLibrary[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1685,6 +1697,110 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(scheduledPosts)
       .where(eq(scheduledPosts.socialAccountId, socialAccountId))
       .orderBy(desc(scheduledPosts.scheduledTime));
+  }
+
+  // Content Library methods
+  async getContentLibraryItems(filters?: { tags?: string[]; status?: string; contentType?: string; priority?: string }): Promise<ContentLibrary[]> {
+    // Build conditions array to properly combine multiple WHERE clauses
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(contentLibrary.status, filters.status as any));
+    }
+    if (filters?.contentType) {
+      conditions.push(eq(contentLibrary.contentType, filters.contentType as any));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(contentLibrary.priority, filters.priority as any));
+    }
+    if (filters?.tags && filters.tags.length > 0) {
+      // Use JSONB "contains any" logic with @> operator for "any tag" match
+      // Create OR conditions for each tag to use GIN index efficiently
+      const tagConditions = filters.tags.map(tag => 
+        sql`${contentLibrary.tagIds} @> ${JSON.stringify([tag])}`
+      );
+      conditions.push(or(...tagConditions));
+    }
+    
+    let query = db.select().from(contentLibrary);
+    
+    // Apply all conditions using AND logic
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(contentLibrary.createdAt));
+  }
+
+  async getContentLibraryItem(id: string): Promise<ContentLibrary | undefined> {
+    const [item] = await db.select().from(contentLibrary).where(eq(contentLibrary.id, id));
+    return item;
+  }
+
+  async createContentLibraryItem(item: InsertContentLibrary): Promise<ContentLibrary> {
+    const [newItem] = await db.insert(contentLibrary).values(item).returning();
+    return newItem;
+  }
+
+  async updateContentLibraryItem(id: string, item: UpdateContentLibrary): Promise<ContentLibrary | undefined> {
+    const [updated] = await db.update(contentLibrary)
+      .set({ ...item, updatedAt: new Date() })
+      .where(eq(contentLibrary.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteContentLibraryItem(id: string): Promise<boolean> {
+    const result = await db.delete(contentLibrary).where(eq(contentLibrary.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async incrementContentUsage(id: string): Promise<void> {
+    await db.update(contentLibrary)
+      .set({ 
+        usageCount: sql`${contentLibrary.usageCount} + 1`,
+        lastUsed: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(contentLibrary.id, id));
+  }
+
+  async addAIVariation(id: string, variation: { content: string; tone: string; style: string }): Promise<ContentLibrary | undefined> {
+    const [item] = await db.select().from(contentLibrary).where(eq(contentLibrary.id, id));
+    if (!item) return undefined;
+
+    const newVariation = {
+      id: Date.now().toString(), // Simple ID for variation
+      content: variation.content,
+      tone: variation.tone,
+      style: variation.style,
+      generatedAt: new Date().toISOString()
+    };
+
+    const updatedVariations = [...(item.aiVariations || []), newVariation];
+
+    const [updated] = await db.update(contentLibrary)
+      .set({ 
+        aiVariations: updatedVariations,
+        updatedAt: new Date()
+      })
+      .where(eq(contentLibrary.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getContentLibraryByTags(tagIds: string[]): Promise<ContentLibrary[]> {
+    if (tagIds.length === 0) return [];
+    
+    return await db.select().from(contentLibrary)
+      .where(sql`${contentLibrary.tagIds} && ${JSON.stringify(tagIds)}`)
+      .orderBy(desc(contentLibrary.lastUsed), desc(contentLibrary.createdAt));
+  }
+
+  async getContentLibraryByPriority(priority: string): Promise<ContentLibrary[]> {
+    return await db.select().from(contentLibrary)
+      .where(eq(contentLibrary.priority, priority as any))
+      .orderBy(desc(contentLibrary.createdAt));
   }
 }
 

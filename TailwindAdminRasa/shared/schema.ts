@@ -1084,6 +1084,56 @@ export const scheduledPosts = pgTable("scheduled_posts", {
   socialAccountIndex: index().on(table.socialAccountId),
 }));
 
+// Content Library for storing reusable content with tag-based organization
+export const contentLibrary = pgTable("content_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Content
+  title: varchar("title", { length: 255 }).notNull(),
+  baseContent: text("base_content").notNull(), // Original content text
+  
+  // Content type
+  contentType: text("content_type", { 
+    enum: ["text", "image", "video", "mixed"] 
+  }).notNull().default("text"),
+  
+  // Media attachments
+  assetIds: jsonb("asset_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References contentAssets.id
+  
+  // Organization & Tagging
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unifiedTags.id
+  
+  // AI Variations
+  aiVariations: jsonb("ai_variations").$type<{
+    id: string;
+    content: string;
+    tone: string; // 'formal' | 'casual' | 'trendy' | 'sales'
+    style: string; // 'headline' | 'story' | 'question' | 'cta'
+    generatedAt: string;
+  }[]>().default(sql`'[]'::jsonb`),
+  
+  // Priority & Usage
+  priority: text("priority", { enum: ["high", "normal", "low"] }).notNull().default("normal"),
+  usageCount: integer("usage_count").default(0),
+  lastUsed: timestamp("last_used"),
+  
+  // Status & Settings
+  status: text("status", { enum: ["draft", "active", "archived"] }).notNull().default("draft"),
+  isTemplate: boolean("is_template").default(false), // For reusable templates
+  
+  // Scheduling hints
+  platforms: jsonb("platforms").$type<string[]>().default(sql`'["facebook", "instagram", "tiktok"]'::jsonb`), // Suggested platforms
+  bestTimeSlots: jsonb("best_time_slots").$type<string[]>().default(sql`'[]'::jsonb`), // Suggested posting times
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  titleIndex: index().on(table.title),
+  statusIndex: index().on(table.status),
+  priorityIndex: index().on(table.priority),
+  contentTypeIndex: index().on(table.contentType),
+}));
+
 // Content management validation schemas
 export const insertContentCategorySchema = createInsertSchema(contentCategories, {
   name: z.string().min(1, "Tên danh mục là bắt buộc").max(255),
@@ -1138,3 +1188,22 @@ export const insertUnifiedTagSchema = createInsertSchema(unifiedTags, {
 
 export type InsertUnifiedTag = z.infer<typeof insertUnifiedTagSchema>;
 export type UnifiedTag = typeof unifiedTags.$inferSelect;
+
+// Content Library validation schema
+export const insertContentLibrarySchema = createInsertSchema(contentLibrary, {
+  title: z.string().min(1, "Tiêu đề là bắt buộc").max(255),
+  baseContent: z.string().min(1, "Nội dung là bắt buộc"),
+  contentType: z.enum(["text", "image", "video", "mixed"]),
+  priority: z.enum(["high", "normal", "low"]).optional(),
+  status: z.enum(["draft", "active", "archived"]).optional(),
+  tagIds: z.array(z.string()).optional(),
+  assetIds: z.array(z.string()).optional(),
+  platforms: z.array(z.string()).optional(),
+  bestTimeSlots: z.array(z.string()).optional(),
+});
+
+export const updateContentLibrarySchema = insertContentLibrarySchema.partial();
+
+export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
+export type UpdateContentLibrary = z.infer<typeof updateContentLibrarySchema>;
+export type ContentLibrary = typeof contentLibrary.$inferSelect;

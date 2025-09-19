@@ -4,7 +4,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { storage } from '../storage';
 import { postScheduler } from '../services/post-scheduler';
 import { facebookPostingService } from '../services/facebook-posting-service';
-import { insertContentCategorySchema, insertContentAssetSchema, insertScheduledPostSchema } from '../../shared/schema';
+import { insertContentCategorySchema, insertContentAssetSchema, insertScheduledPostSchema, insertContentLibrarySchema, updateContentLibrarySchema } from '../../shared/schema';
 
 const router = Router();
 
@@ -405,6 +405,172 @@ router.post('/scheduler/:action', requireAdminAuth, async (req, res) => {
   } catch (error) {
     console.error('Error controlling scheduler:', error);
     res.status(500).json({ error: 'Failed to control scheduler' });
+  }
+});
+
+// ===========================================
+// CONTENT LIBRARY
+// ===========================================
+
+// Get all content library items with optional filtering (requires basic auth)
+router.get('/library', requireAuth, async (req, res) => {
+  try {
+    const { tags, status, contentType, priority } = req.query;
+    
+    const filters: any = {};
+    if (tags && typeof tags === 'string') {
+      filters.tags = tags.split(',').map(tag => tag.trim());
+    }
+    if (status && typeof status === 'string') {
+      filters.status = status;
+    }
+    if (contentType && typeof contentType === 'string') {
+      filters.contentType = contentType;
+    }
+    if (priority && typeof priority === 'string') {
+      filters.priority = priority;
+    }
+
+    const items = await storage.getContentLibraryItems(filters);
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching content library items:', error);
+    res.status(500).json({ error: 'Failed to fetch content library items' });
+  }
+});
+
+// Get specific content library item by ID (requires basic auth)
+router.get('/library/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await storage.getContentLibraryItem(id);
+    
+    if (!item) {
+      return res.status(404).json({ error: 'Content library item not found' });
+    }
+    
+    res.json(item);
+  } catch (error) {
+    console.error('Error fetching content library item:', error);
+    res.status(500).json({ error: 'Failed to fetch content library item' });
+  }
+});
+
+// Create new content library item (requires admin auth)
+router.post('/library', requireAdminAuth, async (req, res) => {
+  try {
+    const validatedData = insertContentLibrarySchema.parse(req.body);
+    const newItem = await storage.createContentLibraryItem(validatedData);
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error('Error creating content library item:', error);
+    res.status(400).json({ error: 'Invalid content library item data' });
+  }
+});
+
+// Update content library item (requires admin auth)
+router.put('/library/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const validatedData = updateContentLibrarySchema.parse(req.body);
+    
+    const updatedItem = await storage.updateContentLibraryItem(id, validatedData);
+    
+    if (!updatedItem) {
+      return res.status(404).json({ error: 'Content library item not found' });
+    }
+    
+    res.json(updatedItem);
+  } catch (error) {
+    console.error('Error updating content library item:', error);
+    res.status(400).json({ error: 'Invalid content library item data' });
+  }
+});
+
+// Delete content library item (requires admin auth - sensitive operation)
+router.delete('/library/:id', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await storage.deleteContentLibraryItem(id);
+    
+    if (!deleted) {
+      return res.status(404).json({ error: 'Content library item not found' });
+    }
+    
+    res.json({ message: 'Content library item deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting content library item:', error);
+    res.status(500).json({ error: 'Failed to delete content library item' });
+  }
+});
+
+// Add AI variation to content library item (requires admin auth)
+router.post('/library/:id/variations', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content, tone, style } = req.body;
+    
+    if (!content || !tone || !style) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: content, tone, style' 
+      });
+    }
+    
+    const updatedItem = await storage.addAIVariation(id, { content, tone, style });
+    
+    if (!updatedItem) {
+      return res.status(404).json({ error: 'Content library item not found' });
+    }
+    
+    res.json(updatedItem);
+  } catch (error) {
+    console.error('Error adding AI variation:', error);
+    res.status(500).json({ error: 'Failed to add AI variation' });
+  }
+});
+
+// Increment content usage count (requires basic auth)
+router.post('/library/:id/usage', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await storage.incrementContentUsage(id);
+    res.json({ message: 'Usage count incremented' });
+  } catch (error) {
+    console.error('Error incrementing usage:', error);
+    res.status(500).json({ error: 'Failed to increment usage count' });
+  }
+});
+
+// Get content library items by tags (requires basic auth)
+router.get('/library/tags/:tagIds', requireAuth, async (req, res) => {
+  try {
+    const { tagIds } = req.params;
+    const tagIdArray = tagIds.split(',').map(tag => tag.trim());
+    
+    const items = await storage.getContentLibraryByTags(tagIdArray);
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching content by tags:', error);
+    res.status(500).json({ error: 'Failed to fetch content by tags' });
+  }
+});
+
+// Get content library items by priority (requires basic auth)
+router.get('/library/priority/:priority', requireAuth, async (req, res) => {
+  try {
+    const { priority } = req.params;
+    
+    if (!['high', 'normal', 'low'].includes(priority)) {
+      return res.status(400).json({ 
+        error: 'Invalid priority. Must be: high, normal, or low' 
+      });
+    }
+    
+    const items = await storage.getContentLibraryByPriority(priority);
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching content by priority:', error);
+    res.status(500).json({ error: 'Failed to fetch content by priority' });
   }
 });
 
