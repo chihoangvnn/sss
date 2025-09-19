@@ -454,11 +454,18 @@ export class SmartSchedulerService {
     contentTypes: string[]
   ): Promise<ContentLibrary[]> {
     
+    // Handle empty tagIds case - return all content matching types
+    if (tagIds.length === 0) {
+      return await db.select()
+        .from(contentLibrary)
+        .where(inArray(contentLibrary.contentType, contentTypes as any));
+    }
+    
     const query = db.select()
       .from(contentLibrary)
       .where(
         and(
-          sql`${contentLibrary.tagIds} ?| ${tagIds}`, // PostgreSQL JSONB ?| operator for array overlap
+          sql`${contentLibrary.tagIds} ?| array[${sql.join(tagIds.map(id => sql`${id}`), sql`, `)}]`, // PostgreSQL JSONB ?| operator for array overlap
           inArray(contentLibrary.contentType, contentTypes as any)
         )
       );
