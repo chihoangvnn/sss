@@ -65,7 +65,7 @@ async function processFacebookMessage(event: any) {
         participantAvatar: userData.picture?.data?.url,
         status: 'active',
         priority: 'normal',
-        tags: [],
+        tagIds: [],
         messageCount: 0,
         lastMessageAt: new Date(timestamp),
         lastMessagePreview: messageData.text?.substring(0, 100) || '[Media]',
@@ -2271,13 +2271,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/social-accounts/:accountId/tags", requireAdminAuth, requireCSRFToken, async (req, res) => {
     try {
       const { accountId } = req.params;
-      const { tags } = req.body;
+      const { tagIds } = req.body;
       
-      if (!Array.isArray(tags)) {
-        return res.status(400).json({ error: "Tags must be an array" });
+      if (!Array.isArray(tagIds)) {
+        return res.status(400).json({ error: "Tag IDs must be an array" });
       }
 
-      const updatedAccount = await storage.updateSocialAccount(accountId, { tags });
+      const updatedAccount = await storage.updateSocialAccount(accountId, { tagIds });
       
       if (!updatedAccount) {
         return res.status(404).json({ error: "Social account not found" });
@@ -2316,7 +2316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tokenExpiresAt: null,
           pageAccessTokens: [],
           webhookSubscriptions: [],
-          tags: [],
+          tagIds: [],
           followers: 0,
           connected: false,
           lastPost: null,

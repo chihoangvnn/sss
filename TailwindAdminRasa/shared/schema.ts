@@ -966,7 +966,7 @@ export const contentCategories = pgTable("content_categories", {
 export const unifiedTags = pgTable("unified_tags", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  slug: varchar("slug", { length: 100 }).notNull().unique(), // URL-friendly identifier
+  slug: varchar("slug", { length: 100 }).notNull(), // URL-friendly identifier (unique constraint defined below)
   
   // Organization
   category: text("category").notNull().default("general"), // "product", "content", "promotion", "tutorial", etc
@@ -992,7 +992,7 @@ export const unifiedTags = pgTable("unified_tags", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
-  uniqueSlug: unique().on(table.slug),
+  uniqueUnifiedSlug: unique().on(table.slug),
 }));
 
 // Content assets (images, videos) stored in Cloudinary
