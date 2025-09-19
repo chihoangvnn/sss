@@ -98,9 +98,10 @@ export class SmartSchedulerService {
         throw new Error('No content matches found for the given configuration');
       }
 
-      // 2. Re-fetch data for post creation (fix scoping issue)
+      // 2. Re-fetch data for post creation - get fanpages from matches, not config
+      const fanpageIds = Array.from(new Set(matches.map(m => m.fanpageId)));
       const [fanpages, content] = await Promise.all([
-        this.getFanpagesByIds(config.selectedFanpages),
+        this.getFanpagesByIds(fanpageIds), // Use fanpage IDs from generated matches
         this.getMatchingContent(config.selectedTags, config.contentTypes)
       ]);
 
@@ -476,7 +477,7 @@ export class SmartSchedulerService {
    */
   private async getFanpagesByTags(selectedTags: string[]): Promise<SocialAccount[]> {
     if (selectedTags.length === 0) {
-      // If no tags selected, return all Facebook social accounts
+      // If no tags selected, return all Facebook social accounts as fallback
       return await db.select()
         .from(socialAccounts)
         .where(eq(socialAccounts.platform, 'facebook'));
@@ -484,34 +485,54 @@ export class SmartSchedulerService {
 
     console.log(`🔍 Auto-selecting fanpages based on tags: ${JSON.stringify(selectedTags)}`);
     
-    // Find Facebook Apps that have matching tags
+    // Fix SQL injection: use parameterized query
+    const tagParams = selectedTags.map(tag => sql`${tag}`);
     const matchingFacebookApps = await db.select()
       .from(facebookApps)
       .where(
         and(
           eq(facebookApps.isActive, true),
-          sql`${facebookApps.tagIds} ?| array[${selectedTags.map(tag => `'${tag}'`).join(', ')}]`
+          sql`${facebookApps.tagIds} ?| array[${sql.join(tagParams, sql`, `)}]`
         )
       );
 
     console.log(`📱 Found ${matchingFacebookApps.length} Facebook Apps with matching tags`);
     
     if (matchingFacebookApps.length === 0) {
-      console.log(`ℹ️  No Facebook Apps found with matching tags, returning all Facebook social accounts`);
-      // If no Facebook Apps match, return all Facebook social accounts as fallback
-      return await db.select()
-        .from(socialAccounts)
-        .where(eq(socialAccounts.platform, 'facebook'));
+      console.log(`ℹ️  No Facebook Apps found with matching tags, returning empty array`);
+      // If no Facebook Apps match, return empty array (not all accounts)
+      return [];
     }
 
-    // For now, return all Facebook social accounts when we have matching Facebook Apps
-    // In the future, this could be more sophisticated (e.g., match by App ID)
-    const fanpages = await db.select()
+    // Interim solution: Filter Facebook social accounts by tag intersection
+    // Get all Facebook social accounts first
+    const allFacebookAccounts = await db.select()
       .from(socialAccounts)
       .where(eq(socialAccounts.platform, 'facebook'));
       
-    console.log(`🎯 Auto-selected ${fanpages.length} Facebook fanpages for distribution`);
-    return fanpages;
+    // Filter by tag overlap (tagIds or contentPreferences.preferredTags)
+    // Reuse tagParams from above for consistency
+    const filteredFanpages = await db.select()
+      .from(socialAccounts)
+      .where(
+        and(
+          eq(socialAccounts.platform, 'facebook'),
+          sql`(
+            ${socialAccounts.tagIds} ?| array[${sql.join(tagParams, sql`, `)}] OR
+            jsonb_extract_path(${socialAccounts.contentPreferences}, 'preferredTags') ?| array[${sql.join(tagParams, sql`, `)}]
+          )`
+        )
+      );
+      
+    console.log(`🎯 Filtered ${filteredFanpages.length}/${allFacebookAccounts.length} Facebook fanpages by tag intersection`);
+    
+    // Fallback: if no tag-matched accounts found, use all Facebook accounts
+    if (filteredFanpages.length === 0) {
+      console.log(`ℹ️  No fanpages matched tags, using all ${allFacebookAccounts.length} Facebook accounts as fallback`);
+      return allFacebookAccounts;
+    }
+    
+    return filteredFanpages;
   }
 
   /**
