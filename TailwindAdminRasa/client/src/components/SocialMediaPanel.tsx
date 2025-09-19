@@ -1446,15 +1446,15 @@ export function SocialMediaPanel({
                       </div>
                       <div className="flex gap-1 flex-wrap">
                         {existingTags.map((tag) => {
-                          const isAssigned = account.tags?.includes(tag.id) || false;
+                          const isAssigned = account.tagIds?.includes(tag.id) || false;
                           return (
                             <button
                               key={tag.id}
                               onClick={async () => {
                                 try {
-                                  const currentTags = account.tags || [];
+                                  const currentTags = account.tagIds || [];
                                   const newTags = isAssigned 
-                                    ? currentTags.filter(t => t !== tag.id)
+                                    ? currentTags.filter((t: string) => t !== tag.id)
                                     : [...currentTags, tag.id];
                                   
                                   const response = await apiRequest('PATCH', `/api/social-accounts/${account.id}/tags`, { tags: newTags });
