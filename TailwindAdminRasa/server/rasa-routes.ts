@@ -2,6 +2,40 @@ import { Express } from 'express';
 import { storage } from './storage';
 import { firebaseStorage } from './firebase-storage';
 
+// Authentication middleware for RASA endpoints
+const requireSessionAuth = (req: any, res: any, next: any) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      status: "error",
+      error: "Unauthorized. Authentication required for RASA endpoints.",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  next();
+};
+
+// CSRF protection for state-changing RASA operations
+const requireCSRFToken = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  const csrfToken = req.headers['x-csrf-token'] || req.body.csrfToken;
+  const sessionCSRF = req.session.csrfToken;
+  
+  if (!csrfToken || !sessionCSRF || csrfToken !== sessionCSRF) {
+    return res.status(403).json({ 
+      status: "error",
+      error: "CSRF token invalid", 
+      message: "Invalid or missing CSRF token" 
+    });
+  }
+  
+  next();
+};
+
 // Helper function for real inventory data
 const getInventory = async (productId: string, variantId?: string) => {
   try {
@@ -378,7 +412,7 @@ export function setupRasaRoutes(app: Express) {
    * GET /api/rasa/customers/search
    * Tìm kiếm khách hàng cho bot
    */
-  app.get("/api/rasa/customers/search", async (req, res) => {
+  app.get("/api/rasa/customers/search", requireSessionAuth, async (req, res) => {
     try {
       const { q: searchTerm } = req.query;
       
@@ -426,7 +460,7 @@ export function setupRasaRoutes(app: Express) {
    * GET /api/rasa/customers/:customerId/profile
    * Lấy thông tin chi tiết khách hàng
    */
-  app.get("/api/rasa/customers/:customerId/profile", async (req, res) => {
+  app.get("/api/rasa/customers/:customerId/profile", requireSessionAuth, async (req, res) => {
     try {
       const { customerId } = req.params;
       
@@ -478,7 +512,7 @@ export function setupRasaRoutes(app: Express) {
    * POST /api/rasa/customers
    * Tạo khách hàng mới từ chatbot
    */
-  app.post("/api/rasa/customers", async (req, res) => {
+  app.post("/api/rasa/customers", requireSessionAuth, requireCSRFToken, async (req, res) => {
     try {
       const { name, phone, email, customerType = 'retail', creditLimit = 0 } = req.body;
 
@@ -518,7 +552,7 @@ export function setupRasaRoutes(app: Express) {
    * POST /api/rasa/orders/calculate
    * Tính toán đơn hàng trước khi tạo
    */
-  app.post("/api/rasa/orders/calculate", async (req, res) => {
+  app.post("/api/rasa/orders/calculate", requireSessionAuth, requireCSRFToken, async (req, res) => {
     try {
       const { customerId, items, discount = 0, shippingFee = 0 } = req.body;
 
@@ -651,7 +685,7 @@ export function setupRasaRoutes(app: Express) {
    * POST /api/rasa/orders
    * Tạo đơn hàng từ chatbot
    */
-  app.post("/api/rasa/orders", async (req, res) => {
+  app.post("/api/rasa/orders", requireSessionAuth, requireCSRFToken, async (req, res) => {
     try {
       const { 
         customerId, 

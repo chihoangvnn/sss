@@ -826,6 +826,13 @@ export class DatabaseStorage implements IStorage {
     return await this.createBotSettings(defaultSettings);
   }
 
+  // Centralized serializer to prevent secret leakage
+  toPublicBotSettings(settings: BotSettings | undefined | null): any {
+    if (!settings) return null;
+    const { apiKey, ...publicSettings } = settings;
+    return publicSettings;
+  }
+
   // Dashboard stats
   async getDashboardStats(): Promise<{
     totalRevenue: number;

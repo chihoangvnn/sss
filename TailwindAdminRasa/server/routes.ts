@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema, insertShopSettingsSchema, insertTikTokBusinessAccountSchema, insertTikTokShopOrderSchema, insertTikTokShopProductSchema, insertTikTokVideoSchema, insertBotSettingsSchema } from "@shared/schema";
 import { z } from "zod";
+import { promisify } from 'util';
+import { lookup } from 'dns';
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
 import { tiktokAuth } from "./tiktok-auth";
@@ -2555,13 +2557,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingSettings) {
         // Update existing settings
         const updatedSettings = await storage.updateBotSettings(existingSettings.id, validatedData);
-        const { apiKey, ...safeResponse } = updatedSettings || {};
-        res.json(safeResponse);
+        const publicSettings = storage.toPublicBotSettings(updatedSettings);
+        res.json(publicSettings);
       } else {
         // Create new settings
         const newSettings = await storage.createBotSettings(validatedData);
-        const { apiKey, ...safeResponse } = newSettings;
-        res.json(safeResponse);
+        const publicSettings = storage.toPublicBotSettings(newSettings);
+        res.json(publicSettings);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -2586,7 +2588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { rasaUrl, timeout } = testRasaSchema.parse(req.body);
       const testUrl = rasaUrl || "http://localhost:5005";
       
-      // Security: Validate URL to prevent SSRF attacks
+      // Enhanced Security: Comprehensive SSRF protection with DNS resolution
       const url = new URL(testUrl);
       
       // Only allow HTTP/HTTPS protocols
@@ -2598,28 +2600,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Block private IP ranges and localhost (except for development)
-      const hostname = url.hostname;
-      const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(hostname);
-      const isPrivateIP = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(hostname);
-      
-      // In production, we might want to be more restrictive
-      if (!isLocalhost && isPrivateIP) {
+      // Block credentials in URL
+      if (url.username || url.password) {
         return res.json({
           success: false,
-          status: 'error', 
-          message: 'Connection to private IP addresses is not allowed'
+          status: 'error',
+          message: 'URLs with credentials are not allowed'
         });
       }
       
-      // Restrict ports to common HTTP ports
+      // Enhanced hostname validation with DNS resolution check
+      const hostname = url.hostname;
+      const isLocalhost = ['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(hostname);
+      
+      // Function to check if IP is private/dangerous
+      const isDangerousIP = (ip: string): boolean => {
+        // IPv4 private/dangerous ranges
+        const ipv4Patterns = [
+          /^127\./, // Loopback
+          /^10\./, // Private Class A
+          /^172\.(1[6-9]|2[0-9]|3[01])\./, // Private Class B  
+          /^192\.168\./, // Private Class C
+          /^169\.254\./, // Link-local
+          /^0\./, // Current network
+          /^22[4-9]\./, // Multicast
+          /^23[0-9]\./, // Multicast
+          /^240\./ // Reserved
+        ];
+        
+        // IPv6 dangerous patterns
+        const ipv6Patterns = [
+          /^::1$/, // Loopback
+          /^fc00:/, // Unique local
+          /^fe80:/, // Link-local
+          /^::ffff:127\./, // IPv4-mapped loopback
+          /^::ffff:10\./, // IPv4-mapped private
+          /^::ffff:172\./, // IPv4-mapped private
+          /^::ffff:192\.168\./, // IPv4-mapped private
+          /^ff[0-9a-f][0-9a-f]:/ // Multicast
+        ];
+        
+        return ipv4Patterns.some(pattern => pattern.test(ip)) || 
+               ipv6Patterns.some(pattern => pattern.test(ip));
+      };
+
+      // For non-localhost hostnames, perform DNS resolution check
+      if (!isLocalhost) {
+        const dnsLookup = promisify(lookup);
+        try {
+          // CRITICAL: Resolve ALL A and AAAA records with { all: true }
+          const [ipv4Result, ipv6Result] = await Promise.allSettled([
+            dnsLookup(hostname, { family: 4, all: true }).catch(() => null),
+            dnsLookup(hostname, { family: 6, all: true }).catch(() => null)
+          ]);
+          
+          const allIPs: string[] = [];
+          
+          if (ipv4Result.status === 'fulfilled' && Array.isArray(ipv4Result.value)) {
+            allIPs.push(...ipv4Result.value.map((r: any) => r.address));
+          }
+          
+          if (ipv6Result.status === 'fulfilled' && Array.isArray(ipv6Result.value)) {
+            allIPs.push(...ipv6Result.value.map((r: any) => r.address));
+          }
+          
+          // Check if any resolved IP is dangerous
+          const dangerousIPs = allIPs.filter(isDangerousIP);
+          if (dangerousIPs.length > 0) {
+            return res.json({
+              success: false,
+              status: 'error',
+              message: `Domain resolves to blocked IP addresses: ${dangerousIPs.join(', ')}`
+            });
+          }
+          
+          if (allIPs.length === 0) {
+            return res.json({
+              success: false,
+              status: 'error',
+              message: 'Unable to resolve domain to any IP address'
+            });
+          }
+        } catch (dnsError) {
+          return res.json({
+            success: false,
+            status: 'error',
+            message: 'DNS resolution failed or domain not found'
+          });
+        }
+      }
+      
+      // Additional hostname string validation as backup
+      const isPrivateIPv4 = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.|169\.254\.)/.test(hostname);
+      const isPrivateIPv6 = /^(::1|fc00:|fe80:|::ffff:0:0|::ffff:127\.|::ffff:10\.|::ffff:172\.|::ffff:192\.168\.)/.test(hostname);
+      
+      if (isPrivateIPv4 || isPrivateIPv6) {
+        return res.json({
+          success: false,
+          status: 'error', 
+          message: 'Direct IP access to private addresses is not allowed'
+        });
+      }
+      
+      // Restrict ports to safe HTTP/RASA ports
       const port = url.port ? parseInt(url.port) : (url.protocol === 'https:' ? 443 : 80);
-      const allowedPorts = [80, 443, 5005, 8000, 8080, 3000]; // Add common RASA ports
+      const allowedPorts = [80, 443, 5005, 8000, 8080, 3000]; // Common RASA and HTTP ports
       if (!allowedPorts.includes(port)) {
         return res.json({
           success: false,
           status: 'error',
-          message: 'Port not allowed for RASA connection'
+          message: `Port ${port} not allowed. Allowed ports: ${allowedPorts.join(', ')}`
         });
       }
 
