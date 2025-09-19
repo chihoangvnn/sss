@@ -719,8 +719,8 @@ export function FacebookAppsManagerPanel() {
         </CardContent>
       </Card>
 
-      {/* Apps List */}
-      <div className="space-y-4">
+      {/* Apps List - Compact */}
+      <div className="space-y-3">
         {filteredApps.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
@@ -745,265 +745,90 @@ export function FacebookAppsManagerPanel() {
         ) : (
           filteredApps.map((app) => (
             <Card key={app.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">{app.appName}</h3>
-                      <Badge variant={getEnvironmentBadgeVariant(app.environment)}>
-                        {app.environment}
-                      </Badge>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={app.isActive}
-                          onCheckedChange={(checked) => handleToggleStatus(app.id, checked)}
-                          disabled={toggleStatusMutation.isPending}
-                        />
-                        <span className="text-sm text-gray-600">
-                          {app.isActive ? 'Hoạt động' : 'Tạm dừng'}
-                        </span>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  {/* Left side - App info */}
+                  <div className="flex-1 flex items-center gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium text-gray-900">{app.appName}</h3>
+                        <Badge variant={getEnvironmentBadgeVariant(app.environment)} className="text-xs">
+                          {app.environment}
+                        </Badge>
                       </div>
-                    </div>
-                    
-                    {app.description && (
-                      <p className="text-gray-600 mb-4">{app.description}</p>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* App ID */}
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">App ID</Label>
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
-                            {app.appId}
-                          </code>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs">App ID:</span>
+                          <code className="text-xs bg-gray-100 px-1 rounded">{app.appId}</code>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => copyToClipboard(app.appId, 'App ID')}
-                            className="h-6 w-6 p-0"
+                            className="h-5 w-5 p-0"
                           >
-                            {copied === 'App ID' ? (
-                              <Check className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
+                            {copied === 'App ID' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                           </Button>
                         </div>
-                      </div>
-
-                      {/* App Secret */}
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">App Secret</Label>
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
-                            {app.appSecretSet ? '•••••••• (Configured)' : 'Not Set'}
-                          </code>
-                          <div className="text-xs text-gray-500">
-                            {app.appSecretSet ? '✓ Set' : '✗ Missing'}
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          🔒 Secret is encrypted and hidden for security
-                        </p>
-                      </div>
-
-                      {/* Verify Token */}
-                      <div className="space-y-1">
-                        <Label className="text-sm font-medium text-gray-700">Verify Token</Label>
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
-                            {app.verifyToken}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(app.verifyToken, 'Verify Token')}
-                            className="h-6 w-6 p-0"
-                          >
-                            {copied === 'Verify Token' ? (
-                              <Check className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs">Secret:</span>
+                          {app.appSecretSet ? (
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <XCircle className="h-3 w-3 text-red-500" />
+                          )}
                         </div>
                       </div>
-
-                      {/* Webhook URL */}
-                      <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                        <Label className="text-sm font-medium text-gray-700">Webhook URL</Label>
-                        <div className="flex items-center gap-2">
-                          <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono flex-1 truncate">
-                            {app.webhookUrl}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(app.webhookUrl, 'Webhook URL')}
-                            className="h-6 w-6 p-0"
-                          >
-                            {copied === 'Webhook URL' ? (
-                              <Check className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(app.webhookUrl, '_blank')}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Setup Helper Section */}
-                    <div className="mt-6 border-t pt-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleSetupHelper(app.id)}
-                        className="mb-4"
-                      >
-                        <Info className="h-4 w-4 mr-2" />
-                        {showSetupHelper[app.id] ? 'Ẩn' : 'Hiện'} Hướng dẫn Setup Facebook
-                      </Button>
-                      
-                      {showSetupHelper[app.id] && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-                          <div className="flex items-center gap-2 text-blue-800 font-medium">
-                            <Settings className="h-4 w-4" />
-                            Hướng dẫn cấu hình Facebook Developer Console
-                          </div>
-                          
-                          <div className="space-y-3 text-sm">
-                            <div className="flex items-start gap-3">
-                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">1</div>
-                              <div>
-                                <p className="font-medium text-gray-900">Truy cập Facebook Developer Console</p>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-auto p-0 text-blue-600 hover:text-blue-800"
-                                  onClick={() => window.open('https://developers.facebook.com/apps', '_blank')}
-                                >
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  https://developers.facebook.com/apps
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-start gap-3">
-                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">2</div>
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900 mb-2">Chọn App → Webhooks → Chỉnh sửa</p>
-                                <div className="space-y-2">
-                                  <div>
-                                    <Label className="text-xs font-medium text-gray-600">📋 Webhook URL (Sao chép và dán):</Label>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <code className="text-xs bg-white border px-2 py-1 rounded font-mono flex-1 break-all">
-                                        {app.webhookUrl}
-                                      </code>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(app.webhookUrl, 'Webhook URL Setup')}
-                                        className="h-7 px-2"
-                                      >
-                                        {copied === 'Webhook URL Setup' ? (
-                                          <Check className="h-3 w-3 text-green-600" />
-                                        ) : (
-                                          <Copy className="h-3 w-3" />
-                                        )}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  
-                                  <div>
-                                    <Label className="text-xs font-medium text-gray-600">🔑 Verify Token (Sao chép và dán):</Label>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <code className="text-xs bg-white border px-2 py-1 rounded font-mono">
-                                        {app.verifyToken}
-                                      </code>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(app.verifyToken, 'Verify Token Setup')}
-                                        className="h-7 px-2"
-                                      >
-                                        {copied === 'Verify Token Setup' ? (
-                                          <Check className="h-3 w-3 text-green-600" />
-                                        ) : (
-                                          <Copy className="h-3 w-3" />
-                                        )}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-start gap-3">
-                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">3</div>
-                              <div>
-                                <p className="font-medium text-gray-900">Chọn Subscription Fields</p>
-                                <div className="text-gray-600 mt-1">
-                                  Tick: <code className="bg-gray-100 px-1 rounded text-xs">messages</code>, <code className="bg-gray-100 px-1 rounded text-xs">messaging_postbacks</code>, <code className="bg-gray-100 px-1 rounded text-xs">feed</code>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-start gap-3">
-                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">4</div>
-                              <div>
-                                <p className="font-medium text-gray-900">Nhấn "Verify and Save"</p>
-                                <p className="text-gray-600 mt-1 text-xs">Facebook sẽ gửi request đến webhook để xác thực</p>
-                              </div>
-                            </div>
-                            
-                            <div className="bg-green-50 border border-green-200 rounded p-3 mt-4">
-                              <div className="flex items-center gap-2 text-green-800 text-xs font-medium">
-                                <CheckCircle className="h-4 w-4" />
-                                <span>✅ Sau khi setup xong, webhook sẽ tự động nhận events từ Facebook!</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 text-xs text-gray-500">
-                      Tạo lúc: {new Date(app.createdAt).toLocaleString('vi-VN')}
-                      {app.updatedAt && (
-                        <> • Cập nhật: {new Date(app.updatedAt).toLocaleString('vi-VN')}</>
-                      )}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 ml-4">
+                  
+                  {/* Right side - Status & Actions */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Switch
+                        checked={app.isActive}
+                        onCheckedChange={(checked) => handleToggleStatus(app.id, checked)}
+                        disabled={toggleStatusMutation.isPending}
+                        className="scale-75"
+                      />
+                      <span className="text-xs text-gray-600">{app.isActive ? 'On' : 'Off'}</span>
+                    </div>
+                    
                     <Button
-                      variant="outline"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleSetupHelper(app.id)}
+                      className="h-7 w-7 p-0"
+                      title="Setup Helper"
+                    >
+                      <Info className="h-3 w-3" />
+                    </Button>
+                    
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleEditApp(app)}
+                      className="h-7 w-7 p-0"
+                      title="Chỉnh sửa"
                     >
-                      <Edit3 className="h-4 w-4" />
+                      <Edit3 className="h-3 w-3" />
                     </Button>
+                    
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="h-4 w-4" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-600 hover:text-red-800"
+                          title="Xóa"
+                        >
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                          <AlertDialogTitle>Xóa Facebook App</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Bạn có chắc chắn muốn xóa Facebook App "{app.appName}"? 
-                            Hành động này không thể hoàn tác.
+                            Bạn có chắc chắn muốn xóa app "{app.appName}"? Hành động này không thể hoàn tác.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -1019,6 +844,19 @@ export function FacebookAppsManagerPanel() {
                     </AlertDialog>
                   </div>
                 </div>
+                
+                {/* Setup Helper - Inline when expanded */}
+                {showSetupHelper[app.id] && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        Setup Helper cho "{app.appName}"
+                      </h4>
+                      <p className="text-sm text-blue-700">Webhook URL và Verify Token sẽ hiển thị sau khi hoàn thành setup.</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))
