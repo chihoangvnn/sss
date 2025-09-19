@@ -923,7 +923,7 @@ router.get('/tags', async (req, res) => {
  * POST /api/content/smart-scheduler/preview
  * Generate preview of smart scheduling distribution
  */
-router.post('/smart-scheduler/preview', requireAdminAuth, async (req, res) => {
+router.post('/smart-scheduler/preview', async (req, res) => {
   try {
     console.log('🎯 Smart Scheduler Preview API called');
 
