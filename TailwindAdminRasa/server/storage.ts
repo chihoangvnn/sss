@@ -3,7 +3,7 @@ import {
   storefrontConfig, storefrontOrders, categories, industries, payments, shopSettings,
   productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
-  contentCategories, contentAssets, scheduledPosts,
+  contentCategories, contentAssets, scheduledPosts, unifiedTags,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -16,7 +16,7 @@ import {
   type ProductReview, type InsertProductReview,
   type FacebookConversation, type InsertFacebookConversation,
   type FacebookMessage, type InsertFacebookMessage,
-  type PageTag, type InsertPageTag,
+  type PageTag, type InsertPageTag, type UnifiedTag, type InsertUnifiedTag,
   type TikTokBusinessAccount, type InsertTikTokBusinessAccount,
   type TikTokShopOrder, type InsertTikTokShopOrder,
   type TikTokShopProduct, type InsertTikTokShopProduct,
@@ -90,6 +90,13 @@ export interface IStorage {
   createPageTag(tag: InsertPageTag): Promise<PageTag>;
   updatePageTag(id: string, tag: Partial<InsertPageTag>): Promise<PageTag | undefined>;
   deletePageTag(id: string): Promise<boolean>;
+  
+  // Unified tag methods (Cross-platform tag system)
+  getUnifiedTags(): Promise<UnifiedTag[]>;
+  getUnifiedTag(id: string): Promise<UnifiedTag | undefined>;
+  createUnifiedTag(tag: InsertUnifiedTag): Promise<UnifiedTag>;
+  updateUnifiedTag(id: string, tag: Partial<InsertUnifiedTag>): Promise<UnifiedTag | undefined>;
+  deleteUnifiedTag(id: string): Promise<boolean>;
 
   // TikTok Business Account methods
   getTikTokBusinessAccounts(): Promise<TikTokBusinessAccount[]>;
@@ -1272,6 +1279,35 @@ export class DatabaseStorage implements IStorage {
 
   async deletePageTag(id: string): Promise<boolean> {
     const result = await db.delete(pageTags).where(eq(pageTags.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Unified tag methods implementation
+  async getUnifiedTags(): Promise<UnifiedTag[]> {
+    return await db.select().from(unifiedTags).orderBy(desc(unifiedTags.createdAt));
+  }
+
+  async getUnifiedTag(id: string): Promise<UnifiedTag | undefined> {
+    const [tag] = await db.select().from(unifiedTags).where(eq(unifiedTags.id, id));
+    return tag || undefined;
+  }
+
+  async createUnifiedTag(tag: InsertUnifiedTag): Promise<UnifiedTag> {
+    const [newTag] = await db.insert(unifiedTags).values(tag).returning();
+    return newTag;
+  }
+
+  async updateUnifiedTag(id: string, tag: Partial<InsertUnifiedTag>): Promise<UnifiedTag | undefined> {
+    const [updatedTag] = await db
+      .update(unifiedTags)
+      .set({ ...tag, updatedAt: new Date() })
+      .where(eq(unifiedTags.id, id))
+      .returning();
+    return updatedTag || undefined;
+  }
+
+  async deleteUnifiedTag(id: string): Promise<boolean> {
+    const result = await db.delete(unifiedTags).where(eq(unifiedTags.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 

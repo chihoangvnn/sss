@@ -2185,7 +2185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tag Management API (Admin-only Protected)
   app.get("/api/tags", requireAdminAuth, async (req, res) => {
     try {
-      const tags = await storage.getPageTags();
+      const tags = await storage.getUnifiedTags();
       res.json(tags);
     } catch (error) {
       console.error("Error fetching tags:", error);
@@ -2201,11 +2201,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing required fields: name and color" });
       }
 
-      const tag = await storage.createPageTag({
+      const tag = await storage.createUnifiedTag({
         name: name.trim(),
         color: color,
         description: description?.trim() || null,
-        isDefault: false
+        category: 'general',
+        platforms: [],
+        slug: name.trim().toLowerCase().replace(/\s+/g, '-')
       });
 
       res.json({ 
@@ -2230,7 +2232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (description !== undefined) updates.description = description?.trim() || null;
       updates.updatedAt = new Date();
 
-      const tag = await storage.updatePageTag(tagId, updates);
+      const tag = await storage.updateUnifiedTag(tagId, updates);
       
       if (!tag) {
         return res.status(404).json({ error: "Tag not found" });
@@ -2251,7 +2253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { tagId } = req.params;
       
-      const success = await storage.deletePageTag(tagId);
+      const success = await storage.deleteUnifiedTag(tagId);
       
       if (!success) {
         return res.status(404).json({ error: "Tag not found" });
