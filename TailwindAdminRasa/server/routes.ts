@@ -2339,12 +2339,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tags/:tagId", requireAdminAuth, requireCSRFToken, async (req, res) => {
     try {
       const { tagId } = req.params;
-      const { name, color, description } = req.body;
+      const { name, color, description, category, platforms, icon, keywords } = req.body;
       
       const updates: any = {};
       if (name !== undefined) updates.name = name.trim();
       if (color !== undefined) updates.color = color;
       if (description !== undefined) updates.description = description?.trim() || null;
+      if (category !== undefined) updates.category = category;
+      if (platforms !== undefined) updates.platforms = platforms;
+      if (icon !== undefined) updates.icon = icon?.trim() || null;
+      if (keywords !== undefined) updates.keywords = keywords;
       updates.updatedAt = new Date();
 
       const tag = await storage.updateUnifiedTag(tagId, updates);
