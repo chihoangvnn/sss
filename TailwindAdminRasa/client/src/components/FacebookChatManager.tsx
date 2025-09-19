@@ -58,7 +58,11 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
   // Fetch messages for selected conversation
   const { data: messages = [], isLoading: messagesLoading } = useQuery<FacebookMessage[]>({
     queryKey: ["/api/facebook/conversations", selectedConversation, "messages"],
-    queryFn: () => selectedConversation ? apiRequest("GET", `/api/facebook/conversations/${selectedConversation}/messages`) : Promise.resolve([]),
+    queryFn: async () => {
+      if (!selectedConversation) return [];
+      const response = await apiRequest("GET", `/api/facebook/conversations/${selectedConversation}/messages`);
+      return response.json();
+    },
     enabled: !!selectedConversation,
   });
 
