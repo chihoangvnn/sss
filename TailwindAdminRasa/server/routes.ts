@@ -2404,31 +2404,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Facebook Webhook Verification (GET) and Event Processing (POST)
-  app.get("/api/webhooks/facebook", async (req, res) => {
+  // Facebook Webhook Verification (GET) and Event Processing (POST) - With App ID support
+  app.get("/api/webhooks/facebook/:appId?", async (req, res) => {
     try {
-      // Get verify token from database (prioritize database over environment)
-      const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
-      const webhookConfig = facebookAccount?.webhookSubscriptions?.[0];
-      const VERIFY_TOKEN = webhookConfig?.verifyToken || process.env.FACEBOOK_VERIFY_TOKEN || "your_verify_token_here";
+      const { appId } = req.params;
+      let VERIFY_TOKEN = "your_verify_token_here";
+      
+      if (appId) {
+        // Get verify token from Facebook app in database
+        console.log(`Facebook webhook verification for app ID: ${appId}`);
+        const facebookApp = await storage.getFacebookAppByAppId(appId);
+        if (facebookApp) {
+          VERIFY_TOKEN = facebookApp.verifyToken;
+          console.log('Found Facebook app with verify token in database');
+        } else {
+          console.error(`Facebook app not found for app ID: ${appId}`);
+          return res.sendStatus(404);
+        }
+      } else {
+        // Fallback to old method (backward compatibility)
+        const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
+        const webhookConfig = facebookAccount?.webhookSubscriptions?.[0];
+        VERIFY_TOKEN = webhookConfig?.verifyToken || process.env.FACEBOOK_VERIFY_TOKEN || "your_verify_token_here";
+      }
       
       const mode = req.query['hub.mode'];
       const token = req.query['hub.verify_token'];
       const challenge = req.query['hub.challenge'];
       
       console.log('Webhook verification attempt:', { 
+        appId,
         mode, 
-        token, 
-        dbToken: webhookConfig?.verifyToken ? 'found' : 'missing',
-        envToken: process.env.FACEBOOK_VERIFY_TOKEN ? 'found' : 'missing'
+        token: token ? 'provided' : 'missing',
+        expectedToken: VERIFY_TOKEN ? 'found' : 'missing'
       });
 
       if (mode && token) {
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-          console.log('Facebook webhook verified with token:', token);
+          console.log('Facebook webhook verified successfully for app:', appId || 'legacy');
           res.status(200).send(challenge);
         } else {
-          console.error('Facebook webhook verification failed. Expected:', VERIFY_TOKEN, 'Got:', token);
+          console.error('Facebook webhook verification failed. Token mismatch');
           res.sendStatus(403);
         }
       } else {
@@ -2442,7 +2458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add express.raw middleware ONLY for webhook signature validation
-  app.use("/api/webhooks/facebook", (req, res, next) => {
+  app.use("/api/webhooks/facebook*", (req, res, next) => {
     if (req.method === 'POST') {
       express.raw({ type: 'application/json' })(req, res, next);
     } else {
@@ -2450,11 +2466,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/webhooks/facebook", async (req, res) => {
+  app.post("/api/webhooks/facebook/:appId?", async (req, res) => {
     try {
+      const { appId } = req.params;
+      
+      // Get app secret from database if appId provided
+      let appSecret = process.env.FACEBOOK_APP_SECRET;
+      if (appId) {
+        console.log(`Facebook webhook POST for app ID: ${appId}`);
+        const facebookApp = await storage.getFacebookAppByAppId(appId);
+        if (facebookApp) {
+          // Note: App secret is encrypted in database, would need decryption
+          console.log('Found Facebook app in database for webhook processing');
+        } else {
+          console.warn(`Facebook app not found for app ID: ${appId}, using env secret`);
+        }
+      }
+      
       // Verify webhook signature for security using raw body
       const signature = req.headers['x-hub-signature-256'] as string;
-      const appSecret = process.env.FACEBOOK_APP_SECRET;
       
       if (appSecret && signature) {
         const expectedSignature = 'sha256=' + crypto
