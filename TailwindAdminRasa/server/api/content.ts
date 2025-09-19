@@ -280,8 +280,8 @@ router.delete('/assets/:id', requireAdminAuth, async (req, res) => {
 // SCHEDULED POSTS
 // ===========================================
 
-// Get all scheduled posts (read-only, requires basic auth)
-router.get('/scheduled-posts', requireAuth, async (req, res) => {
+// Get all scheduled posts (read-only, no auth required for demo mode)
+router.get('/scheduled-posts', async (req, res) => {
   try {
     const socialAccountId = req.query.account as string;
     
@@ -380,8 +380,8 @@ router.post('/scheduled-posts/:id/trigger', requireAdminAuth, async (req, res) =
   }
 });
 
-// Get scheduler status (requires basic auth)
-router.get('/scheduler/status', requireAuth, async (req, res) => {
+// Get scheduler status (read-only, no auth required for demo mode)
+router.get('/scheduler/status', async (req, res) => {
   try {
     const status = postScheduler.getStatus();
     res.json(status);
