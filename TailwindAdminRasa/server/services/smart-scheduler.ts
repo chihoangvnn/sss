@@ -458,7 +458,7 @@ export class SmartSchedulerService {
       .from(contentLibrary)
       .where(
         and(
-          sql`${contentLibrary.tagIds} && ${JSON.stringify(tagIds)}`, // PostgreSQL array overlap
+          sql`${contentLibrary.tagIds} ?| ${tagIds}`, // PostgreSQL JSONB ?| operator for array overlap
           inArray(contentLibrary.contentType, contentTypes as any)
         )
       );
