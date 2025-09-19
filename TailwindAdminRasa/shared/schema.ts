@@ -958,6 +958,39 @@ export const contentCategories = pgTable("content_categories", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Unified Tags System - Replaces page_tags and content_categories
+export const unifiedTags = pgTable("unified_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(), // URL-friendly identifier
+  
+  // Organization
+  category: text("category").notNull().default("general"), // "product", "content", "promotion", "tutorial", etc
+  platforms: jsonb("platforms").$type<string[]>().default(sql`'["facebook", "tiktok", "instagram"]'::jsonb`), // Platform compatibility
+  
+  // Visual
+  color: varchar("color", { length: 7 }).notNull().default("#3B82F6"), // Hex color
+  icon: varchar("icon", { length: 50 }), // Lucide icon name
+  
+  // Metadata
+  description: text("description"),
+  keywords: jsonb("keywords").$type<string[]>().default(sql`'[]'::jsonb`), // Search keywords
+  
+  // Analytics & Usage
+  usageCount: integer("usage_count").default(0),
+  lastUsed: timestamp("last_used"),
+  
+  // Settings
+  isSystemDefault: boolean("is_system_default").default(false),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueSlug: unique().on(table.slug),
+}));
+
 // Content assets (images, videos) stored in Cloudinary
 export const contentAssets = pgTable("content_assets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -977,8 +1010,8 @@ export const contentAssets = pgTable("content_assets", {
   duration: decimal("duration", { precision: 8, scale: 3 }), // for videos (seconds)
   
   // Organization
-  categoryId: integer("category_id").references(() => contentCategories.id),
-  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  categoryId: integer("category_id").references(() => contentCategories.id), // Keep for backward compatibility
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   
   // SEO & Metadata
   altText: text("alt_text"),
