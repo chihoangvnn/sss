@@ -217,6 +217,32 @@ export const orderItems = pgTable("order_items", {
 });
 
 // Enhanced Social media accounts table with multi-platform support
+// Interface for fanpage content preferences
+export interface FanpageContentPreferences {
+  preferredTags: string[];        // Tags this fanpage should prioritize
+  excludedTags: string[];         // Tags this fanpage should never use
+  topicCategories: string[];      // Main categories: Beauty, Fashion, Food, etc.
+  mediaRatio: {
+    image: number;                // 0-100 percentage preference for images
+    video: number;                // 0-100 percentage preference for videos
+    textOnly: number;             // 0-100 percentage preference for text-only
+  };
+  postingTimes: string[];         // Preferred posting hours ["09:00", "14:00", "21:00"]
+  contentLength: 'short' | 'medium' | 'long'; // Preferred content length
+  brandVoice: string;             // Friendly, Professional, Casual, etc.
+  hashtagCount: number;           // Max number of hashtags per post
+}
+
+// Interface for smart scheduling rules
+export interface SmartSchedulingRules {
+  enabled: boolean;
+  distributionMode: 'even' | 'weighted' | 'performance'; // How to distribute content
+  conflictResolution: 'skip' | 'ask' | 'force'; // Handle content-fanpage mismatches
+  timeSpacing: number;            // Minimum minutes between posts on same fanpage
+  maxPostsPerDay: number;         // Maximum posts per day per fanpage
+  respectPeakHours: boolean;      // Prioritize peak engagement hours
+}
+
 export const socialAccounts = pgTable("social_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   platform: text("platform", { enum: ["facebook", "instagram", "twitter", "tiktok-business", "tiktok-shop"] }).notNull(),
@@ -232,6 +258,32 @@ export const socialAccounts = pgTable("social_accounts", {
   
   // Organization
   tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
+  
+  // 🎯 HYBRID SMART SCHEDULER - Fanpage Preferences
+  contentPreferences: jsonb("content_preferences").$type<FanpageContentPreferences>().default(sql`'{
+    "preferredTags": [],
+    "excludedTags": [],
+    "topicCategories": [],
+    "mediaRatio": {"image": 70, "video": 25, "textOnly": 5},
+    "postingTimes": ["09:00", "14:00", "21:00"],
+    "contentLength": "medium",
+    "brandVoice": "friendly",
+    "hashtagCount": 5
+  }'::jsonb`),
+  
+  // Smart scheduling configuration
+  schedulingRules: jsonb("scheduling_rules").$type<SmartSchedulingRules>().default(sql`'{
+    "enabled": true,
+    "distributionMode": "weighted",
+    "conflictResolution": "ask",
+    "timeSpacing": 60,
+    "maxPostsPerDay": 8,
+    "respectPeakHours": true
+  }'::jsonb`),
+  
+  // Performance tracking for smart algorithm
+  performanceScore: decimal("performance_score", { precision: 5, scale: 2 }).default("0"), // 0-100 effectiveness score
+  lastOptimization: timestamp("last_optimization"), // Last time AI optimized settings
   
   // Analytics
   followers: integer("followers").default(0),
