@@ -172,18 +172,34 @@ export class SmartSchedulerService {
       filteredContent = filteredContent.filter(item => item.contentType !== 'text');
     }
 
+    console.log(`🧹 Filtered content: ${filteredContent.length} items after filtering`);
+    filteredContent.forEach((item, index) => {
+      console.log(`   ${index + 1}. "${item.title}" (type: ${item.contentType}, tags: ${JSON.stringify(item.tagIds)})`);
+    });
+
     // Shuffle content for randomness
     const shuffledContent = this.shuffleArray([...filteredContent]);
     let timeSlotIndex = 0;
     const usedTimeSlots = new Set<string>(); // Track used time slots to prevent collisions
 
     for (const contentItem of shuffledContent) {
+      console.log(`🔍 Processing content: "${contentItem.title}" (type: ${contentItem.contentType}, tags: ${JSON.stringify(contentItem.tagIds)})`);
+      
       // Find best matching fanpages for this content
-      const fanpageScores = fanpages.map(fanpage => ({
-        fanpage,
-        score: this.calculateContentFanpageScore(contentItem, fanpage, config.selectedTags, tagsMap),
-        reasons: this.getMatchingReasons(contentItem, fanpage, config.selectedTags, tagsMap)
-      })).filter(item => item.score > 0); // Only include compatible fanpages
+      const fanpageScores = fanpages.map(fanpage => {
+        const score = this.calculateContentFanpageScore(contentItem, fanpage, config.selectedTags, tagsMap);
+        const reasons = this.getMatchingReasons(contentItem, fanpage, config.selectedTags, tagsMap);
+        console.log(`💯 Fanpage "${fanpage.name}" score: ${score}, reasons: ${JSON.stringify(reasons)}`);
+        return {
+          fanpage,
+          score,
+          reasons
+        };
+      }).filter(item => {
+        const isCompatible = item.score > 0;
+        console.log(`🎯 Fanpage "${item.fanpage.name}" compatible: ${isCompatible} (score: ${item.score})`);
+        return isCompatible;
+      }); // Only include compatible fanpages
 
       // Sort by score (best matches first)
       fanpageScores.sort((a, b) => b.score - a.score);
