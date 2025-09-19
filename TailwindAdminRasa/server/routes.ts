@@ -147,7 +147,7 @@ async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?
     const pageTokens = socialAccount.pageAccessTokens as any[];
     if (!pageTokens || pageTokens.length === 0) {
       console.log('No page tokens available');
-      return { name: createFallbackUserName(userId) };
+      return { name: createFallbackUserName(userId, socialAccount.name) };
     }
 
     // Find the correct page token for the specific page ID
@@ -161,7 +161,7 @@ async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?
     
     if (!pageToken) {
       console.log('No access token found');
-      return { name: createFallbackUserName(userId) };
+      return { name: createFallbackUserName(userId, socialAccount.name) };
     }
 
     const response = await fetch(`https://graph.facebook.com/v18.0/${userId}?fields=name,picture&access_token=${pageToken}`);
@@ -170,19 +170,24 @@ async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?
     } else {
       console.log(`Failed to fetch user data: ${response.status} - Using fallback name`);
       // Facebook has strict privacy policies - fallback to friendly user ID
-      return { name: createFallbackUserName(userId) };
+      return { name: createFallbackUserName(userId, socialAccount.name) };
     }
   } catch (error) {
     console.error('Error fetching Facebook user data:', error);
-    return { name: createFallbackUserName(userId) };
+    return { name: createFallbackUserName(userId, socialAccount.name) };
   }
 }
 
-// Create a friendly fallback name from user ID
-function createFallbackUserName(userId: string): string {
-  // Extract last 6 digits from user ID for shorter display
-  const shortId = userId.slice(-6);
-  return `Người dùng #${shortId}`;
+// Create a friendly fallback name using app name and random numbers
+function createFallbackUserName(userId: string, appName?: string): string {
+  // Generate random 3-digit number for uniqueness
+  const randomNum = Math.floor(Math.random() * 900) + 100; // 100-999
+  
+  // Clean app name or use default
+  const cleanAppName = appName ? appName.replace(/[^a-zA-Z0-9\s]/g, '').trim() : 'SocialApp';
+  const shortAppName = cleanAppName.length > 15 ? cleanAppName.substring(0, 15) : cleanAppName;
+  
+  return `${shortAppName} User ${randomNum}`;
 }
 
 
