@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Calendar, Clock, Plus, Edit, Trash2, Send, Pause, Play, 
   Facebook, Instagram, Image, Video, Tag, Eye, AlertCircle,
-  CheckCircle, XCircle, Loader2, Filter, Search, LayoutList
+  CheckCircle, XCircle, Loader2, Filter, Search, LayoutList, Upload
 } from 'lucide-react';
 import { ScheduledPost, SocialAccount, ContentAsset } from '../../../shared/schema';
 import { PostCalendarView } from '../components/PostCalendarView';
+import { BulkUpload } from '../components/BulkUpload';
 
 interface PostSchedulerProps {}
 
@@ -18,6 +19,7 @@ export function PostScheduler({}: PostSchedulerProps) {
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   // Fetch scheduled posts
   const { data: scheduledPosts = [], isLoading: postsLoading } = useQuery({
@@ -143,6 +145,44 @@ export function PostScheduler({}: PostSchedulerProps) {
     }
   };
 
+  // Bulk upload handler
+  const handleBulkUpload = async (posts: Partial<ScheduledPost>[]) => {
+    try {
+      const response = await fetch('/api/content/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ posts }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to bulk upload posts');
+      }
+
+      const result = await response.json();
+      
+      // Refresh the posts list
+      queryClient.invalidateQueries({ queryKey: ['scheduled-posts'] });
+      
+      // Close the modal
+      setShowBulkUpload(false);
+      
+      // Show detailed success message
+      if (result.errorCount > 0) {
+        alert(`Hoàn thành! Thành công: ${result.successCount}, Lỗi: ${result.errorCount}. Xem chi tiết trong console.`);
+        console.log('Bulk upload results:', result.results);
+      } else {
+        alert(`Thành công! Đã tạo ${result.successCount} bài đăng.`);
+      }
+      
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      alert(`Lỗi: ${error instanceof Error ? error.message : 'Không thể tải lên hàng loạt'}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -205,6 +245,14 @@ export function PostScheduler({}: PostSchedulerProps) {
             >
               <Plus className="w-4 h-4" />
               Lên Lịch Bài Đăng
+            </button>
+            
+            <button
+              onClick={() => setShowBulkUpload(true)}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Tải Hàng Loạt
             </button>
           </div>
         </div>
@@ -517,6 +565,15 @@ export function PostScheduler({}: PostSchedulerProps) {
               queryClient.invalidateQueries({ queryKey: ['scheduled-posts'] });
               setEditingPost(null);
             }}
+          />
+        )}
+
+        {/* Bulk Upload Modal */}
+        {showBulkUpload && (
+          <BulkUpload
+            accounts={socialAccounts}
+            onClose={() => setShowBulkUpload(false)}
+            onBulkUpload={handleBulkUpload}
           />
         )}
       </div>

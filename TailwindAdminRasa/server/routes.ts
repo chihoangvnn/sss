@@ -28,6 +28,7 @@ import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } fr
 import crypto from 'crypto';
 import express from 'express';
 import { postScheduler } from './services/post-scheduler';
+import bulkUploadRoutes from './routes/bulk-upload';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any) {
@@ -3236,6 +3237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   const contentRoutes = await import("./api/content");
   app.use("/api/content", contentRoutes.default);
+  app.use("/api/content", bulkUploadRoutes);
 
   // ==========================================
   // API FALLBACK - Catch unmatched API routes and return JSON 404
