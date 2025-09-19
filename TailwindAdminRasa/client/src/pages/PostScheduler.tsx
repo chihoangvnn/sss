@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Calendar, Clock, Plus, Edit, Trash2, Send, Pause, Play, 
   Facebook, Instagram, Image, Video, Tag, Eye, AlertCircle,
-  CheckCircle, XCircle, Loader2, Filter, Search
+  CheckCircle, XCircle, Loader2, Filter, Search, LayoutList
 } from 'lucide-react';
 import { ScheduledPost, SocialAccount, ContentAsset } from '../../../shared/schema';
+import { PostCalendarView } from '../components/PostCalendarView';
 
 interface PostSchedulerProps {}
 
@@ -15,6 +16,8 @@ export function PostScheduler({}: PostSchedulerProps) {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Fetch scheduled posts
   const { data: scheduledPosts = [], isLoading: postsLoading } = useQuery({
@@ -25,7 +28,8 @@ export function PostScheduler({}: PostSchedulerProps) {
         : '/api/content/scheduled-posts';
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch scheduled posts');
-      return response.json() as ScheduledPost[];
+      const data = await response.json();
+      return data as ScheduledPost[];
     },
   });
 
@@ -35,7 +39,8 @@ export function PostScheduler({}: PostSchedulerProps) {
     queryFn: async () => {
       const response = await fetch('/api/social-accounts');
       if (!response.ok) throw new Error('Failed to fetch social accounts');
-      return response.json() as SocialAccount[];
+      const data = await response.json();
+      return data as SocialAccount[];
     },
   });
 
@@ -151,6 +156,32 @@ export function PostScheduler({}: PostSchedulerProps) {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <div className="flex items-center bg-white border border-gray-200 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1 rounded-md transition-colors flex items-center gap-2 ${
+                  viewMode === 'list'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <LayoutList className="w-4 h-4" />
+                Danh Sách
+              </button>
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`px-3 py-1 rounded-md transition-colors flex items-center gap-2 ${
+                  viewMode === 'calendar'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                Lịch
+              </button>
+            </div>
+            
             {/* Scheduler Status */}
             <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-200">
               <div className={`w-2 h-2 rounded-full ${
@@ -162,7 +193,14 @@ export function PostScheduler({}: PostSchedulerProps) {
             </div>
             
             <button
-              onClick={() => setShowScheduleModal(true)}
+              onClick={() => {
+                if (selectedDate) {
+                  // If a date is selected from calendar, use it
+                  setShowScheduleModal(true);
+                } else {
+                  setShowScheduleModal(true);
+                }
+              }}
               className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -222,23 +260,58 @@ export function PostScheduler({}: PostSchedulerProps) {
           ))}
         </div>
 
-        {/* Posts List */}
-        {postsLoading ? (
-          <div className="grid grid-cols-1 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+        {/* Content Area - Calendar or List View */}
+        {viewMode === 'calendar' ? (
+          <PostCalendarView
+            posts={filteredPosts}
+            accounts={socialAccounts}
+            onEditPost={(post) => setEditingPost(post)}
+            onTriggerPost={(postId) => triggerPostMutation.mutate(postId)}
+            onDeletePost={(postId) => {
+              if (confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
+                deletePostMutation.mutate(postId);
+              }
+            }}
+            onCreatePost={(date) => {
+              setSelectedDate(date);
+              setShowScheduleModal(true);
+            }}
+            onReschedulePost={async (postId, newDate) => {
+              try {
+                const response = await fetch(`/api/content/scheduled-posts/${postId}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    scheduledTime: newDate.toISOString(),
+                  }),
+                });
+                if (!response.ok) throw new Error('Failed to reschedule post');
+                queryClient.invalidateQueries({ queryKey: ['scheduled-posts'] });
+              } catch (error) {
+                console.error('Error rescheduling post:', error);
+              }
+            }}
+          />
+        ) : (
+          /* Posts List View */
+          postsLoading ? (
+            <div className="grid grid-cols-1 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : filteredPosts.length === 0 ? (
+              ))}
+            </div>
+          ) : filteredPosts.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -289,7 +362,7 @@ export function PostScheduler({}: PostSchedulerProps) {
                             {getStatusIcon(post.status)}
                             <span>{getStatusText(post.status)}</span>
                             <span>•</span>
-                            <span>{formatDate(post.scheduledTime)}</span>
+                            <span>{formatDate(String(post.scheduledTime))}</span>
                             {isPast && isScheduled && (
                               <span className="text-orange-600 font-medium">• Quá hạn</span>
                             )}
@@ -377,9 +450,9 @@ export function PostScheduler({}: PostSchedulerProps) {
                           <div>
                             <p className="text-sm font-medium text-red-800">Lỗi đăng bài:</p>
                             <p className="text-sm text-red-700">{post.errorMessage}</p>
-                            {post.retryCount > 0 && (
+                            {(post.retryCount || 0) > 0 && (
                               <p className="text-xs text-red-600 mt-1">
-                                Đã thử lại {post.retryCount} lần
+                                Đã thử lại {post.retryCount || 0} lần
                               </p>
                             )}
                           </div>
@@ -421,6 +494,7 @@ export function PostScheduler({}: PostSchedulerProps) {
               );
             })}
           </div>
+        )
         )}
 
         {/* Schedule Modal */}
