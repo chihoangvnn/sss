@@ -6,6 +6,8 @@ import { postScheduler } from '../services/post-scheduler';
 import { aiContentGenerator } from '../services/ai-content-generator';
 import { facebookPostingService } from '../services/facebook-posting-service';
 import { insertContentCategorySchema, insertContentAssetSchema, insertScheduledPostSchema, insertContentLibrarySchema, updateContentLibrarySchema } from '../../shared/schema';
+import { smartSchedulerService } from '../services/smart-scheduler';
+import type { SmartSchedulingConfig } from '../services/smart-scheduler';
 
 const router = Router();
 
@@ -889,6 +891,169 @@ router.post('/ai/variations/save', async (req, res) => {
   } catch (error) {
     console.error('Error generating and saving AI variations:', error);
     res.status(500).json({ error: `Failed to generate and save variations: ${error}` });
+  }
+});
+
+// =====================================================================
+// 🏷️ TAGS API ENDPOINTS
+// =====================================================================
+
+/**
+ * GET /api/content/tags
+ * Get all unified tags
+ */
+router.get('/tags', async (req, res) => {
+  try {
+    const tags = await storage.getAllTags();
+    res.json(tags);
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch tags',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// =====================================================================
+// 🎯 SMART SCHEDULER API ENDPOINTS
+// =====================================================================
+
+/**
+ * POST /api/content/smart-scheduler/preview
+ * Generate preview of smart scheduling distribution
+ */
+router.post('/smart-scheduler/preview', requireAdminAuth, async (req, res) => {
+  try {
+    console.log('🎯 Smart Scheduler Preview API called');
+
+    const config: SmartSchedulingConfig = req.body;
+    
+    // Validate required fields
+    if (!config.selectedTags || config.selectedTags.length === 0) {
+      return res.status(400).json({
+        error: 'Selected tags are required',
+        details: 'Please select at least one tag for content filtering'
+      });
+    }
+
+    if (!config.selectedFanpages || config.selectedFanpages.length === 0) {
+      return res.status(400).json({
+        error: 'Selected fanpages are required',
+        details: 'Please select at least one fanpage for distribution'
+      });
+    }
+
+    if (!config.contentTypes || config.contentTypes.length === 0) {
+      return res.status(400).json({
+        error: 'Content types are required',
+        details: 'Please select at least one content type (image, video, or text)'
+      });
+    }
+
+    if (!config.schedulingPeriod?.startDate || !config.schedulingPeriod?.endDate) {
+      return res.status(400).json({
+        error: 'Scheduling period is required',
+        details: 'Please provide start and end dates for the scheduling period'
+      });
+    }
+
+    // Generate preview
+    const preview = await smartSchedulerService.generatePreview(config);
+    
+    console.log(`✅ Generated preview with ${preview.length} matches`);
+    
+    res.json(preview);
+
+  } catch (error) {
+    console.error('❌ Smart Scheduler Preview error:', error);
+    
+    res.status(500).json({
+      error: 'Failed to generate smart scheduling preview',
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
+/**
+ * POST /api/content/smart-scheduler/schedule
+ * Execute smart scheduling and create scheduled posts
+ */
+router.post('/smart-scheduler/schedule', requireAdminAuth, async (req, res) => {
+  try {
+    console.log('🚀 Smart Scheduler Schedule API called');
+
+    const config: SmartSchedulingConfig = req.body;
+    
+    // Same validation as preview
+    if (!config.selectedTags || config.selectedTags.length === 0) {
+      return res.status(400).json({
+        error: 'Selected tags are required',
+        details: 'Please select at least one tag for content filtering'
+      });
+    }
+
+    if (!config.selectedFanpages || config.selectedFanpages.length === 0) {
+      return res.status(400).json({
+        error: 'Selected fanpages are required',
+        details: 'Please select at least one fanpage for distribution'
+      });
+    }
+
+    if (!config.contentTypes || config.contentTypes.length === 0) {
+      return res.status(400).json({
+        error: 'Content types are required',
+        details: 'Please select at least one content type (image, video, or text)'
+      });
+    }
+
+    if (!config.schedulingPeriod?.startDate || !config.schedulingPeriod?.endDate) {
+      return res.status(400).json({
+        error: 'Scheduling period is required',
+        details: 'Please provide start and end dates for the scheduling period'
+      });
+    }
+
+    if (!config.postsPerDay || config.postsPerDay < 1) {
+      return res.status(400).json({
+        error: 'Posts per day must be at least 1',
+        details: 'Please specify a valid number of posts per day'
+      });
+    }
+
+    // Execute smart scheduling
+    const result = await smartSchedulerService.executeSmartScheduling(config);
+    
+    console.log(`✅ Smart scheduling completed: ${result.totalPosts} posts created`);
+    
+    res.json({
+      success: true,
+      message: 'Smart scheduling completed successfully',
+      totalPosts: result.totalPosts,
+      fanpageCount: result.fanpageCount,
+      contentMatched: result.contentMatched,
+      avgScore: result.avgScore,
+      timeDistribution: result.timeDistribution,
+      summary: {
+        scheduledPosts: result.totalPosts,
+        fanpagesUsed: result.fanpageCount,
+        contentItemsUsed: result.contentMatched,
+        averageMatchScore: Math.round(result.avgScore),
+        schedulingPeriod: {
+          from: config.schedulingPeriod.startDate,
+          to: config.schedulingPeriod.endDate
+        },
+        distributionMode: config.distributionMode
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Smart Scheduler Schedule error:', error);
+    
+    res.status(500).json({
+      error: 'Failed to execute smart scheduling',
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
   }
 });
 
