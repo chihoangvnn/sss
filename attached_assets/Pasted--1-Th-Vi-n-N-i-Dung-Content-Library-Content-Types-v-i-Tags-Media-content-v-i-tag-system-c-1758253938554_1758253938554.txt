@@ -1,0 +1,97 @@
+ 1. Thư Viện Nội Dung (Content Library)
+Content Types với Tags:
+// Media content với tag system
+contentLibrary = {
+  id: varchar().primaryKey(),
+  title: text(),
+  content: text(),                    // Text content
+  mediaUrls: string[],               // Video/hình ảnh URLs
+  tagIds: string[],                  // Reference to unified_tags
+  contentType: "text" | "video" | "image" | "mixed",
+  platforms: string[],               // Auto from tags
+  priority: "high" | "normal" | "low",
+  usageCount: integer(),
+  lastUsed: timestamp(),
+  isActive: boolean(),
+  createdAt: timestamp()
+}
+Tag-based Organization:
+📁 #sản-phẩm (45 bài)
+├── 📝 Text posts (20)
+├── 📷 Images (15) 
+└── 🎥 Videos (10)
+📁 #khuyến-mãi (30 bài)
+├── 📝 Sales posts (20)
+└── 🎥 Promo videos (10)
+⏰ 2. Lịch Đăng Bài Thông Minh (Smart Scheduler)
+Priority + Random System:
+schedulingRules = {
+  priorityPosts: string[],           // Manually selected priority content
+  randomPool: string[],              // Auto-selected from library by tags
+  timeSlots: {
+    morning: "9:00-11:00",
+    afternoon: "14:00-16:00", 
+    evening: "19:00-21:00"
+  },
+  distribution: {
+    accountId: string,
+    postsPerDay: number,
+    platforms: string[],
+    timePreferences: string[]
+  }
+}
+Multi-Account Distribution:
+Account A (Facebook + Instagram):
+├── 9:00 AM - Priority post (#sản-phẩm)
+├── 2:30 PM - Random post (#nội-dung) 
+└── 8:15 PM - Random post (#khuyến-mãi)
+Account B (TikTok + Twitter):
+├── 10:45 AM - Random post (#video)
+└── 7:30 PM - Priority post (#event)
+🔄 3. Đồng Bộ Đa Nền Tảng (Multi-Platform Sync)
+Cross-Platform Publishing:
+crossPlatformPost = {
+  contentId: string,
+  platforms: {
+    facebook: { accountId, customizations },
+    instagram: { accountId, customizations },
+    tiktok: { accountId, customizations }
+  },
+  scheduledTime: Date,
+  status: "pending" | "posting" | "completed"
+}
+🎛️ 4. UI Control Panel:
+Content Library Page:
+📚 Thư Viện Nội Dung
+┌────────────────────────────────────┐
+│ 🏷️ Filter by tags: [All] ▼        │
+│ 📊 Total: 150 bài | 50 videos     │
+│                                    │
+│ ➕ [Tạo nội dung mới]             │
+│ 🤖 [Generate AI variations]        │
+│                                    │
+│ [Grid view của content theo tags]  │
+└────────────────────────────────────┘
+Smart Scheduler Page:
+⏰ Lịch Đăng Thông Minh
+┌────────────────────────────────────┐
+│ 📌 Priority Queue (5 bài chọn)    │
+│ 🎲 Random Pool (100+ bài)         │
+│                                    │
+│ 📊 Distribution Setup:             │
+│ • Account A: 3 bài/ngày           │
+│ • Account B: 2 bài/ngày           │
+│ • Total: 35 bài/tuần              │
+│                                    │
+│ ⚙️ [Configure rules]              │
+│ ▶️ [Start auto-scheduling]        │
+└────────────────────────────────────┘
+🚀 Implementation Plan:
+Content Library với tag integration
+Smart Scheduler Engine với priority + random logic
+Multi-account distribution system
+Cross-platform sync functionality
+Analytics dashboard để track performance
+Bạn có muốn tôi chuyển sang Build mode để bắt đầu triển khai không?
+
+Tôi sẽ bắt đầu với Content Library trước, sau đó Smart Scheduler, cuối cùng là Multi-platform sync.

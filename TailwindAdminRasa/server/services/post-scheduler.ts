@@ -106,7 +106,7 @@ export class PostScheduler {
     
     return posts.filter(post => 
       post.status === 'scheduled' && 
-      post.retryCount < this.maxRetries
+      (post.retryCount || 0) < this.maxRetries
     );
   }
 
@@ -121,7 +121,7 @@ export class PostScheduler {
 
     try {
       // Get social account details
-      const socialAccount = await this.storage.getSocialAccount(post.socialAccountId);
+      const socialAccount = await this.storage.getSocialAccountById(post.socialAccountId);
       if (!socialAccount) {
         throw new Error(`Social account ${post.socialAccountId} not found`);
       }
