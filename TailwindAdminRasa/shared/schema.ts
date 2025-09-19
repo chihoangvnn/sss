@@ -147,6 +147,10 @@ export const products = pgTable("products", {
   image: text("image"), // Deprecated - kept for backward compatibility
   images: jsonb("images").$type<CloudinaryImage[]>().default(sql`'[]'::jsonb`), // Array of Cloudinary image URLs with metadata
   videos: jsonb("videos").$type<CloudinaryVideo[]>().default(sql`'[]'::jsonb`), // Array of Cloudinary video URLs with metadata
+  
+  // Organization  
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -227,7 +231,7 @@ export const socialAccounts = pgTable("social_accounts", {
   webhookSubscriptions: jsonb("webhook_subscriptions").$type<WebhookSubscription[]>().default(sql`'[]'::jsonb`), // Active webhooks
   
   // Organization
-  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Tag IDs for organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   
   // Analytics
   followers: integer("followers").default(0),
@@ -292,7 +296,7 @@ export const tiktokBusinessAccounts = pgTable("tiktok_business_accounts", {
   lastSync: timestamp("last_sync"),
   
   // Organization
-  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Tag IDs for organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   
   // Status
   isActive: boolean("is_active").default(true),
@@ -364,7 +368,7 @@ export const tiktokShopOrders = pgTable("tiktok_shop_orders", {
   tiktokFees: decimal("tiktok_fees", { precision: 15, scale: 2 }).default("0"),
   
   // Organization
-  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   notes: text("notes"),
   
   // Timestamps
@@ -412,7 +416,7 @@ export const tiktokShopProducts = pgTable("tiktok_shop_products", {
   syncError: text("sync_error"),
   
   // Organization
-  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -449,7 +453,7 @@ export const tiktokVideos = pgTable("tiktok_videos", {
   }).default("published"),
   
   // Organization
-  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   
   // Timestamps
   publishedAt: timestamp("published_at"),
@@ -470,7 +474,7 @@ export const facebookConversations = pgTable("facebook_conversations", {
   status: text("status", { enum: ["active", "resolved", "pending", "archived"] }).notNull().default("active"),
   priority: text("priority", { enum: ["low", "normal", "high", "urgent"] }).notNull().default("normal"),
   assignedTo: varchar("assigned_to"), // Admin user handling this conversation
-  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // Conversation tags
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   
   // Analytics
   messageCount: integer("message_count").notNull().default(0),
@@ -1122,3 +1126,15 @@ export type ContentAsset = typeof contentAssets.$inferSelect;
 
 export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
 export type ScheduledPost = typeof scheduledPosts.$inferSelect;
+
+// Unified Tags validation schemas
+export const insertUnifiedTagSchema = createInsertSchema(unifiedTags, {
+  name: z.string().min(1, "Tên tag là bắt buộc"),
+  slug: z.string().min(1, "Slug là bắt buộc"),
+  category: z.string().min(1, "Danh mục là bắt buộc"),
+  platforms: z.array(z.string()).min(1, "Ít nhất 1 platform"),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Màu phải là hex color"),
+});
+
+export type InsertUnifiedTag = z.infer<typeof insertUnifiedTagSchema>;
+export type UnifiedTag = typeof unifiedTags.$inferSelect;
