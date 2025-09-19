@@ -364,7 +364,7 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                       
                       <div className="flex items-center justify-between">
                         <div className="flex gap-1">
-                          {conversation.tags.slice(0, 2).map((tag) => (
+                          {(conversation.tags || []).slice(0, 2).map((tag) => (
                             <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0.5">
                               {tag}
                             </Badge>
