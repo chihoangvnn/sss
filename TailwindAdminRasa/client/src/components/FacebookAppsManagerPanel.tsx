@@ -22,7 +22,10 @@ import {
   Shuffle,
   Info,
   Link,
-  ArrowRight
+  ArrowRight,
+  Play,
+  Pause,
+  Lock
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +61,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -96,7 +105,6 @@ export function FacebookAppsManagerPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [environmentFilter, setEnvironmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [showSetupHelper, setShowSetupHelper] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -318,12 +326,6 @@ export function FacebookAppsManagerPanel() {
     });
   };
 
-  const toggleSetupHelper = (appId: string) => {
-    setShowSetupHelper(prev => ({
-      ...prev,
-      [appId]: !prev[appId]
-    }));
-  };
 
   const handleCreateApp = () => {
     if (!formData.appName || !formData.appId || !formData.appSecret) {
@@ -719,8 +721,8 @@ export function FacebookAppsManagerPanel() {
         </CardContent>
       </Card>
 
-      {/* Apps List - Compact */}
-      <div className="space-y-3">
+      {/* Apps List - Ultra Compact Single Line */}
+      <TooltipProvider>
         {filteredApps.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
@@ -743,125 +745,165 @@ export function FacebookAppsManagerPanel() {
             </CardContent>
           </Card>
         ) : (
-          filteredApps.map((app) => (
-            <Card key={app.id}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  {/* Left side - App info */}
-                  <div className="flex-1 flex items-center gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-gray-900">{app.appName}</h3>
-                        <Badge variant={getEnvironmentBadgeVariant(app.environment)} className="text-xs">
-                          {app.environment}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs">App ID:</span>
-                          <code className="text-xs bg-gray-100 px-1 rounded">{app.appId}</code>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Facebook Apps ({filteredApps.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Table Header */}
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
+                <div className="flex items-center text-xs font-medium text-gray-600 gap-2">
+                  <div className="w-[200px]">Tên App</div>
+                  <div className="w-[140px]">App ID</div>
+                  <div className="w-[80px]">Status</div>
+                  <div className="flex-1">Actions</div>
+                </div>
+              </div>
+              
+              {/* Ultra Compact Single-Line Apps Rows */}
+              <div className="divide-y divide-gray-100">
+                {filteredApps.map((app) => (
+                  <div key={app.id} className="flex items-center gap-2 h-9 text-xs px-4 hover:bg-gray-50 transition-colors">
+                    {/* Name Column */}
+                    <div className="w-[200px] flex items-center gap-2 min-w-0">
+                      <span className="font-medium truncate" title={app.appName}>{app.appName}</span>
+                      <span className={`shrink-0 w-4 h-4 rounded text-[9px] leading-4 text-center font-bold ${
+                        app.environment === 'production' 
+                          ? 'bg-red-100 text-red-700'
+                          : app.environment === 'staging'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`} title={`Environment: ${app.environment}`}>
+                        {app.environment === 'production' ? 'P' : 
+                         app.environment === 'staging' ? 'S' : 'D'}
+                      </span>
+                    </div>
+                    
+                    {/* App ID Column */}
+                    <div className="w-[140px] shrink-0">
+                      <button
+                        onClick={() => copyToClipboard(app.appId, app.id)}
+                        className="font-mono text-[10px] bg-slate-50 hover:bg-slate-100 rounded px-2 py-0.5 truncate max-w-full cursor-pointer transition-colors"
+                        title={`Click to copy: ${app.appId}`}
+                      >
+                        {app.appId}
+                        {copied === app.id && <span className="ml-1 text-green-600">✓</span>}
+                      </button>
+                    </div>
+                    
+                    {/* Status Column */}
+                    <div className="w-[80px] shrink-0 flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${
+                        app.isActive ? 'bg-green-500' : 'bg-red-400'
+                      }`} title={app.isActive ? 'Active' : 'Inactive'}></div>
+                      <span className="text-[10px] text-gray-600">
+                        {app.isActive ? 'ON' : 'OFF'}
+                      </span>
+                      {app.appSecretSet && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div>
+                              <Lock className="w-3 h-3 text-green-600" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>App Secret configured</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    
+                    {/* Actions Column */}
+                    <div className="flex-1 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(app.appId, 'App ID')}
-                            className="h-5 w-5 p-0"
+                            onClick={() => handleToggleStatus(app.id, !app.isActive)}
+                            className="h-6 w-6 p-0"
                           >
-                            {copied === 'App ID' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            {app.isActive ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                           </Button>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs">Secret:</span>
-                          {app.appSecretSet ? (
-                            <CheckCircle className="h-3 w-3 text-green-600" />
-                          ) : (
-                            <XCircle className="h-3 w-3 text-red-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Right side - Status & Actions */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <Switch
-                        checked={app.isActive}
-                        onCheckedChange={(checked) => handleToggleStatus(app.id, checked)}
-                        disabled={toggleStatusMutation.isPending}
-                        className="scale-75"
-                      />
-                      <span className="text-xs text-gray-600">{app.isActive ? 'On' : 'Off'}</span>
-                    </div>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleSetupHelper(app.id)}
-                      className="h-7 w-7 p-0"
-                      title="Setup Helper"
-                    >
-                      <Info className="h-3 w-3" />
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditApp(app)}
-                      className="h-7 w-7 p-0"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                    </Button>
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-800"
-                          title="Xóa"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Xóa Facebook App</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Bạn có chắc chắn muốn xóa app "{app.appName}"? Hành động này không thể hoàn tác.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Hủy</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteApp(app.id)}
-                            className="bg-red-600 hover:bg-red-700"
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{app.isActive ? 'Pause' : 'Activate'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`https://developers.facebook.com/apps/${app.appId}/settings/basic/`, '_blank', 'noopener,noreferrer')}
+                            className="h-6 w-6 p-0"
                           >
-                            Xóa
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-                
-                {/* Setup Helper - Inline when expanded */}
-                {showSetupHelper[app.id] && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                        <Info className="h-4 w-4" />
-                        Setup Helper cho "{app.appName}"
-                      </h4>
-                      <p className="text-sm text-blue-700">Webhook URL và Verify Token sẽ hiển thị sau khi hoàn thành setup.</p>
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Facebook Developer Console</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditApp(app)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Edit3 className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit App</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <AlertDialog>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-600 hover:text-red-700">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete App</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Bạn có chắc chắn muốn xóa Facebook App "{app.appName}"? 
+                              Hành động này không thể hoàn tác.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteApp(app.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Xóa
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
+                ))
+              }
+              </div>
+            </CardContent>
+          </Card>
         )}
-      </div>
+      </TooltipProvider>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
