@@ -55,7 +55,7 @@ export class FacebookAuthService {
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
       state: state,
-      scope: 'email,pages_read_engagement,pages_show_list,pages_manage_posts',
+      scope: 'email,pages_read_engagement,pages_show_list,pages_manage_posts,pages_messaging,pages_messaging_subscriptions',
       response_type: 'code',
     });
 
