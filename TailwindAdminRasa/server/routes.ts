@@ -147,7 +147,7 @@ async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?
     const pageTokens = socialAccount.pageAccessTokens as any[];
     if (!pageTokens || pageTokens.length === 0) {
       console.log('No page tokens available');
-      return { name: 'Unknown User' };
+      return { name: createFallbackUserName(userId) };
     }
 
     // Find the correct page token for the specific page ID
@@ -161,20 +161,28 @@ async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?
     
     if (!pageToken) {
       console.log('No access token found');
-      return { name: 'Unknown User' };
+      return { name: createFallbackUserName(userId) };
     }
 
     const response = await fetch(`https://graph.facebook.com/v18.0/${userId}?fields=name,picture&access_token=${pageToken}`);
     if (response.ok) {
       return await response.json();
     } else {
-      console.log('Failed to fetch user data:', response.status);
-      return { name: 'Unknown User' };
+      console.log(`Failed to fetch user data: ${response.status} - Using fallback name`);
+      // Facebook has strict privacy policies - fallback to friendly user ID
+      return { name: createFallbackUserName(userId) };
     }
   } catch (error) {
     console.error('Error fetching Facebook user data:', error);
-    return { name: 'Unknown User' };
+    return { name: createFallbackUserName(userId) };
   }
+}
+
+// Create a friendly fallback name from user ID
+function createFallbackUserName(userId: string): string {
+  // Extract last 6 digits from user ID for shorter display
+  const shortId = userId.slice(-6);
+  return `Người dùng #${shortId}`;
 }
 
 
