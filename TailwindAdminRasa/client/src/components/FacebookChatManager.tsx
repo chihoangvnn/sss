@@ -45,6 +45,7 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "pending" | "resolved">("all");
+  const [filterPipeline, setFilterPipeline] = useState<string>("all");
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -53,6 +54,16 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
   // Fetch conversations
   const { data: conversations = [], isLoading: conversationsLoading, error: conversationsError } = useQuery<ConversationData[]>({
     queryKey: ["/api/facebook/conversations"],
+  });
+
+  // Fetch pipeline tags
+  const { data: pipelineTags = [] } = useQuery({
+    queryKey: ["/api/tags"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/tags");
+      const tags = await response.json();
+      return tags.filter((tag: any) => tag.category === 'customer_pipeline');
+    },
   });
 
   // Fetch messages for selected conversation
@@ -191,7 +202,8 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
     const matchesSearch = conv.participantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          conv.lastMessagePreview?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterStatus === "all" || conv.status === filterStatus;
-    return matchesSearch && matchesFilter;
+    const matchesPipeline = filterPipeline === "all" || (conv.tagIds && conv.tagIds.includes(filterPipeline));
+    return matchesSearch && matchesFilter && matchesPipeline;
   });
 
   const selectedConv = conversations.find(c => c.id === selectedConversation);
@@ -305,6 +317,40 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
               <TabsTrigger value="resolved" className="text-xs">Xong</TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {/* Pipeline Filter */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Pipeline khách hàng</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <Button
+                variant={filterPipeline === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterPipeline("all")}
+                className="text-xs h-7"
+              >
+                Tất cả
+              </Button>
+              {pipelineTags.map((tag: any) => (
+                <Button
+                  key={tag.id}
+                  variant={filterPipeline === tag.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterPipeline(tag.id)}
+                  className="text-xs h-7"
+                  style={{
+                    backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
+                    borderColor: tag.color,
+                    color: filterPipeline === tag.id ? 'white' : tag.color
+                  }}
+                >
+                  {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Conversations List */}
@@ -418,13 +464,52 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                 </div>
               </div>
               
-              {/* Tags */}
-              <div className="flex gap-1 mt-2">
-                {(selectedConv.tags || []).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
+              {/* Pipeline Tags */}
+              <div className="space-y-2 mt-2">
+                <div className="flex flex-wrap gap-1">
+                  {selectedConv.tagIds && selectedConv.tagIds.length > 0 && 
+                    pipelineTags.filter((tag: any) => selectedConv.tagIds.includes(tag.id)).map((tag: any) => (
+                      <Badge 
+                        key={tag.id} 
+                        variant="secondary" 
+                        className="text-xs px-2 py-1"
+                        style={{ backgroundColor: tag.color, color: 'white' }}
+                      >
+                        {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                      </Badge>
+                    ))
+                  }
+                </div>
+
+                {/* Quick Tag Assignment */}
+                <div className="flex flex-wrap gap-1">
+                  {pipelineTags.map((tag: any) => {
+                    const isAssigned = selectedConv.tagIds && selectedConv.tagIds.includes(tag.id);
+                    return (
+                      <Button
+                        key={tag.id}
+                        variant={isAssigned ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          const currentTags = selectedConv.tagIds || [];
+                          const newTags = isAssigned 
+                            ? currentTags.filter((t: string) => t !== tag.id)
+                            : [...currentTags, tag.id];
+                          
+                          handleUpdateTags(selectedConv.id, newTags);
+                        }}
+                        className="text-xs h-6 px-2"
+                        style={{
+                          backgroundColor: isAssigned ? tag.color : 'transparent',
+                          borderColor: tag.color,
+                          color: isAssigned ? 'white' : tag.color
+                        }}
+                      >
+                        {tag.icon}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
