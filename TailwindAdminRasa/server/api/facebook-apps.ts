@@ -306,6 +306,54 @@ router.post('/:id/test-webhook', requireAdminAuth, async (req, res) => {
   }
 });
 
+/**
+ * PATCH /api/facebook-apps/:id/tags
+ * Update tags for a Facebook app
+ */
+router.patch('/:id/tags', requireAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tagIds } = req.body;
+    
+    // Validate tagIds is an array
+    if (!Array.isArray(tagIds)) {
+      return res.status(400).json({
+        error: 'Invalid tag data',
+        details: 'tagIds must be an array of tag IDs'
+      });
+    }
+
+    // Validate all tagIds are strings
+    const invalidTags = tagIds.filter(tagId => typeof tagId !== 'string');
+    if (invalidTags.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid tag data',
+        details: 'All tag IDs must be strings'
+      });
+    }
+
+    const updatedApp = await storage.updateFacebookApp(id, { tagIds });
+    
+    if (!updatedApp) {
+      return res.status(404).json({ error: 'Facebook app not found' });
+    }
+
+    // Return the updated app with masked secret
+    res.json({
+      ...updatedApp,
+      appSecret: updatedApp.appSecret ? `${updatedApp.appSecret.substring(0, 8)}****` : '',
+      appSecretSet: !!updatedApp.appSecret
+    });
+
+  } catch (error) {
+    console.error('Error updating Facebook app tags:', error);
+    res.status(500).json({ 
+      error: 'Failed to update tags',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Export functions for use in webhook handling
 export { encryptSecret, decryptSecret };
 export default router;
