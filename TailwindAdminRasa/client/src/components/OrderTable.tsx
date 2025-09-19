@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Eye, MoreHorizontal, Search, Filter, Plus, Edit, Trash2, Store, ShoppingBag, Zap, UserPlus, RefreshCw } from "lucide-react";
+import { useResponsive, useTouchFriendly } from "@/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -172,6 +173,10 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
 
   // 🌿 Gentle Green Notifications for Main Orders
   const { triggerNewOrderNotification, NewOrderNotificationComponent } = useNewOrderNotification();
+  
+  // 📱 Enhanced responsive design hooks
+  const { isMobile, isTablet, deviceType } = useResponsive();
+  const { touchButtonSize, minTouchTarget, touchPadding, touchGap } = useTouchFriendly();
 
   // 🚀 Enhanced Orders Query with Source Filtering
   const { data: orders = [], isLoading, error } = useQuery<OrderWithCustomerInfo[]>({
@@ -532,115 +537,230 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Mã đơn hàng</TableHead>
-              <TableHead>Khách hàng</TableHead>
-              <TableHead>Nguồn</TableHead>
-              <TableHead>Ngày đặt</TableHead>
-              <TableHead>Sản phẩm</TableHead>
-              <TableHead>Tổng tiền</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {/* 📱 Mobile-First Responsive Rendering */}
+        {isMobile ? (
+          /* 📱 MOBILE CARD LAYOUT - Touch-Friendly Design */
+          <div className={`space-y-4 ${touchGap}`}>
             {filteredOrders.map((order, index) => {
               // 🎯 Logic Order Number: Date + Sequential
               const orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
               const dateStr = orderDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-              const sequentialNum = (filteredOrders.length - index).toString().padStart(3, '0'); // Reverse index for newest first
+              const sequentialNum = (filteredOrders.length - index).toString().padStart(3, '0');
               const logicOrderId = `${dateStr}-${sequentialNum}`;
               
               return (
-                <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
-                  <TableCell className="font-medium" data-testid={`order-id-${order.id}`}>
-                    <div className="flex flex-col">
-                      <span className="font-mono text-sm font-semibold text-blue-600">#{logicOrderId}</span>
-                      <span className="text-xs text-muted-foreground">ID: {order.id.slice(-8)}</span>
+                <div
+                  key={order.id}
+                  className={`activity-card relative overflow-hidden ${touchPadding} space-y-4`}
+                  data-testid={`mobile-order-card-${order.id}`}
+                >
+                  {/* Background gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--activity-teal))]/5 via-transparent to-[hsl(var(--activity-mint))]/5 pointer-events-none" />
+                  
+                  {/* Header với Order ID và Status */}
+                  <div className="relative flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-col">
+                        <span className="font-mono text-lg font-bold text-[hsl(var(--activity-teal))]">#{logicOrderId}</span>
+                        <span className="text-sm text-muted-foreground">ID: {order.id.slice(-8)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getSourceBadge(order.sourceInfo)}
+                        {getSyncStatusBadge(order.sourceInfo?.syncStatus)}
+                      </div>
                     </div>
-                  </TableCell>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{order.customerName}</div>
-                    <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
+                    <div className="text-right">
+                      {getStatusBadge(order.status)}
+                    </div>
                   </div>
-                </TableCell>
-                <TableCell data-testid={`order-source-${order.id}`}>
-                  <div className="flex flex-col gap-1">
-                    {getSourceBadge(order.sourceInfo)}
-                    {getSyncStatusBadge(order.sourceInfo?.syncStatus)}
+                  
+                  {/* Customer Info */}
+                  <div className="relative bg-surface/30 rounded-xl p-4 border border-border/50">
+                    <h4 className="font-bold text-foreground mb-1">{order.customerName}</h4>
+                    <p className="text-sm text-muted-foreground">{order.customerEmail}</p>
                   </div>
-                </TableCell>
-                <TableCell data-testid={`order-date-${order.id}`}>
-                  {order.createdAt ? formatDate(order.createdAt.toString()) : 'N/A'}
-                </TableCell>
-                <TableCell data-testid={`order-items-${order.id}`}>
-                  {order.items} sản phẩm
-                </TableCell>
-                <TableCell className="font-medium" data-testid={`order-total-${order.id}`}>
-                  {formatPrice(Number(order.total))}
-                </TableCell>
-                <TableCell data-testid={`order-status-${order.id}`}>
-                  {getStatusBadge(order.status)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {/* 🎨 Inline Action Buttons - Primary actions visible */}
-                  <div className="flex items-center justify-end gap-2">
-                    {/* Primary Action - Xem chi tiết */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewOrder(order)}
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                      data-testid={`view-order-${order.id}`}
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      Xem
-                    </Button>
+                  
+                  {/* Order Details Grid */}
+                  <div className="relative grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <span className="text-sm font-medium text-muted-foreground">Ngày đặt</span>
+                      <div className="text-base font-semibold">
+                        {order.createdAt ? formatDate(order.createdAt.toString()) : 'N/A'}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-sm font-medium text-muted-foreground">Sản phẩm</span>
+                      <div className="text-base font-semibold text-[hsl(var(--activity-pink))]">
+                        {order.items} sản phẩm
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Total và Actions */}
+                  <div className="relative flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="space-y-1">
+                      <span className="text-sm font-medium text-muted-foreground">Tổng tiền</span>
+                      <div className="text-xl font-bold text-[hsl(var(--activity-mint))]">
+                        {formatPrice(Number(order.total))}
+                      </div>
+                    </div>
                     
-                    {/* Secondary Action - Chỉnh sửa */}
-                    <Button
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleEditOrder(order)}
-                      className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                      data-testid={`edit-order-${order.id}`}
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Sửa
-                    </Button>
-                    
-                    {/* More actions dropdown */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                          data-testid={`order-more-actions-${order.id}`}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteOrder(order)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Xóa đơn hàng
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Touch-Friendly Action Buttons */}
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewOrder(order)}
+                        className={`${touchButtonSize} ${minTouchTarget} text-[hsl(var(--activity-teal))] border-[hsl(var(--activity-teal))]/30 hover:bg-[hsl(var(--activity-teal))]/10`}
+                        data-testid={`mobile-view-order-${order.id}`}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Xem
+                      </Button>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            className={`${touchButtonSize} ${minTouchTarget} border-border/50 hover:border-[hsl(var(--activity-purple))]/30`}
+                            data-testid={`mobile-order-actions-${order.id}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-48">
+                          <DropdownMenuItem 
+                            onClick={() => handleEditOrder(order)}
+                            className="text-base py-3"
+                          >
+                            <Edit className="h-4 w-4 mr-3" />
+                            Chỉnh sửa đơn hàng
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteOrder(order)}
+                            className="text-destructive focus:text-destructive text-base py-3"
+                          >
+                            <Trash2 className="h-4 w-4 mr-3" />
+                            Xóa đơn hàng
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </TableCell>
-              </TableRow>
-            );
+                </div>
+              );
             })}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          /* 💻 DESKTOP TABLE LAYOUT - Traditional Table Design */
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mã đơn hàng</TableHead>
+                <TableHead>Khách hàng</TableHead>
+                <TableHead>Nguồn</TableHead>
+                <TableHead>Ngày đặt</TableHead>
+                <TableHead>Sản phẩm</TableHead>
+                <TableHead>Tổng tiền</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOrders.map((order, index) => {
+                // 🎯 Logic Order Number: Date + Sequential
+                const orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
+                const dateStr = orderDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+                const sequentialNum = (filteredOrders.length - index).toString().padStart(3, '0');
+                const logicOrderId = `${dateStr}-${sequentialNum}`;
+                
+                return (
+                  <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
+                    <TableCell className="font-medium" data-testid={`order-id-${order.id}`}>
+                      <div className="flex flex-col">
+                        <span className="font-mono text-sm font-semibold text-blue-600">#{logicOrderId}</span>
+                        <span className="text-xs text-muted-foreground">ID: {order.id.slice(-8)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{order.customerName}</div>
+                        <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell data-testid={`order-source-${order.id}`}>
+                      <div className="flex flex-col gap-1">
+                        {getSourceBadge(order.sourceInfo)}
+                        {getSyncStatusBadge(order.sourceInfo?.syncStatus)}
+                      </div>
+                    </TableCell>
+                    <TableCell data-testid={`order-date-${order.id}`}>
+                      {order.createdAt ? formatDate(order.createdAt.toString()) : 'N/A'}
+                    </TableCell>
+                    <TableCell data-testid={`order-items-${order.id}`}>
+                      {order.items} sản phẩm
+                    </TableCell>
+                    <TableCell className="font-medium" data-testid={`order-total-${order.id}`}>
+                      {formatPrice(Number(order.total))}
+                    </TableCell>
+                    <TableCell data-testid={`order-status-${order.id}`}>
+                      {getStatusBadge(order.status)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {/* Desktop Action Buttons */}
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewOrder(order)}
+                          className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                          data-testid={`view-order-${order.id}`}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Xem
+                        </Button>
+                        
+                        <Button
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditOrder(order)}
+                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                          data-testid={`edit-order-${order.id}`}
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Sửa
+                        </Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                              data-testid={`order-more-actions-${order.id}`}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteOrder(order)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Xóa đơn hàng
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
 
         {filteredOrders.length === 0 && (
           <div className="text-center py-8">
