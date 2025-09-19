@@ -2421,7 +2421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Facebook webhook verification for app ID: ${appId}`);
         const facebookApp = await storage.getFacebookAppByAppId(appId);
         if (facebookApp) {
-          VERIFY_TOKEN = facebookApp.verifyToken;
+          VERIFY_TOKEN = facebookApp.verifyToken || "your_verify_token_here";
           console.log('Found Facebook app with verify token in database');
         } else {
           console.error(`Facebook app not found for app ID: ${appId}`);
