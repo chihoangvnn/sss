@@ -2893,8 +2893,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn('FACEBOOK_APP_SECRET not configured - webhook security disabled');
       }
 
-      // Parse the JSON body manually since we used express.raw
-      const body = JSON.parse(req.body.toString());
+      // Parse the JSON body - handle both Buffer (from express.raw) and Object (from express.json)
+      let body;
+      if (Buffer.isBuffer(req.body)) {
+        // Body is raw Buffer from express.raw middleware
+        body = JSON.parse(req.body.toString());
+      } else if (typeof req.body === 'object') {
+        // Body is already parsed object from express.json middleware
+        body = req.body;
+      } else {
+        throw new Error('Invalid body format received');
+      }
       console.log('Facebook webhook received:', JSON.stringify(body, null, 2));
 
       // Process webhook events
