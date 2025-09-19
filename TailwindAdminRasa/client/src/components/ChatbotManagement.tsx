@@ -25,6 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 // Types
 interface ChatbotStats {
@@ -94,6 +97,15 @@ export function ChatbotManagement() {
     rasaUrl: "",
     webhookUrl: ""
   });
+  const [showConfig, setShowConfig] = useState(false);
+  const [configForm, setConfigForm] = useState<BotSettings>({
+    isEnabled: true,
+    autoReply: false,
+    rasaUrl: "http://localhost:5005",
+    webhookUrl: ""
+  });
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTest, setConnectionTest] = useState<{ success: boolean; status: string; message: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -171,9 +183,88 @@ export function ChatbotManagement() {
     }
   };
 
+  // Fetch bot settings from API
+  const fetchBotSettings = async () => {
+    try {
+      const response = await fetch('/api/chatbot/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setBotSettings(data);
+      }
+    } catch (error) {
+      console.error('Error fetching bot settings:', error);
+    }
+  };
+
+  // Save bot settings to API
+  const saveBotSettings = async (settings: BotSettings) => {
+    try {
+      const response = await fetch('/api/chatbot/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setBotSettings(data);
+        return { success: true };
+      }
+      return { success: false, error: 'Failed to save settings' };
+    } catch (error) {
+      console.error('Error saving bot settings:', error);
+      return { success: false, error: 'Network error' };
+    }
+  };
+
+  // Test RASA connection
+  const testRasaConnection = async (rasaUrl: string) => {
+    try {
+      const response = await fetch('/api/chatbot/test-rasa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rasaUrl, timeout: 5000 })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      return { success: false, error: 'Failed to test connection' };
+    } catch (error) {
+      console.error('Error testing RASA connection:', error);
+      return { success: false, error: 'Network error' };
+    }
+  };
+
+  // Handle configuration form
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    setConnectionTest(null);
+    
+    const result = await testRasaConnection(configForm.rasaUrl);
+    setConnectionTest(result);
+    setTestingConnection(false);
+  };
+
+  const handleSaveConfig = async () => {
+    const result = await saveBotSettings(configForm);
+    if (result.success) {
+      setBotSettings(configForm);
+      setShowConfig(false);
+    }
+  };
+
+  const openConfig = () => {
+    setConfigForm(botSettings);
+    setConnectionTest(null);
+    setShowConfig(true);
+  };
+
   useEffect(() => {
     fetchStats();
     fetchConversations();
+    fetchBotSettings();
     setIsLoading(false);
 
     // Auto refresh every 30 seconds
@@ -625,7 +716,7 @@ export function ChatbotManagement() {
               <Badge variant={stats?.rasaStatus === 'online' ? "default" : "secondary"}>
                 {stats?.rasaStatus || 'Offline'}
               </Badge>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={openConfig}>
                 Config
               </Button>
             </div>
@@ -657,6 +748,137 @@ export function ChatbotManagement() {
           </div>
         </div>
       </div>
+
+      {/* Configuration Modal */}
+      <Dialog open={showConfig} onOpenChange={setShowConfig}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Cấu hình Bot RASA</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Bot Settings */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bot-enabled" className="text-sm font-medium">
+                  Kích hoạt Bot
+                </Label>
+                <Switch
+                  id="bot-enabled"
+                  checked={configForm.isEnabled}
+                  onCheckedChange={(checked) => 
+                    setConfigForm(prev => ({ ...prev, isEnabled: checked }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="auto-reply" className="text-sm font-medium">
+                  Tự động trả lời
+                </Label>
+                <Switch
+                  id="auto-reply"
+                  checked={configForm.autoReply}
+                  onCheckedChange={(checked) => 
+                    setConfigForm(prev => ({ ...prev, autoReply: checked }))
+                  }
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* RASA URL Configuration */}
+            <div className="space-y-2">
+              <Label htmlFor="rasa-url" className="text-sm font-medium">
+                RASA Server URL
+              </Label>
+              <Input
+                id="rasa-url"
+                placeholder="http://localhost:5005"
+                value={configForm.rasaUrl}
+                onChange={(e) => 
+                  setConfigForm(prev => ({ ...prev, rasaUrl: e.target.value }))
+                }
+              />
+              <p className="text-xs text-gray-500">
+                URL của RASA server đang chạy trên máy local
+              </p>
+            </div>
+
+            {/* Test Connection */}
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={handleTestConnection}
+                disabled={testingConnection || !configForm.rasaUrl}
+                className="w-full"
+              >
+                {testingConnection ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Đang kiểm tra...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="h-4 w-4 mr-2" />
+                    Test kết nối RASA
+                  </>
+                )}
+              </Button>
+              
+              {connectionTest && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  connectionTest.success 
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {connectionTest.success ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span className="font-medium">
+                      {connectionTest.success ? 'Kết nối thành công!' : 'Kết nối thất bại'}
+                    </span>
+                  </div>
+                  <p className="mt-1">{connectionTest.message}</p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Webhook URL */}
+            <div className="space-y-2">
+              <Label htmlFor="webhook-url" className="text-sm font-medium">
+                Webhook URL (Tùy chọn)
+              </Label>
+              <Input
+                id="webhook-url"
+                placeholder="https://your-app.com/webhook"
+                value={configForm.webhookUrl}
+                onChange={(e) => 
+                  setConfigForm(prev => ({ ...prev, webhookUrl: e.target.value }))
+                }
+              />
+              <p className="text-xs text-gray-500">
+                URL để nhận thông báo từ RASA server
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowConfig(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleSaveConfig}>
+              Lưu cấu hình
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

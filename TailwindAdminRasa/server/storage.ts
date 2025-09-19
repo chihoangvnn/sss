@@ -4,7 +4,7 @@ import {
   productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
   contentCategories, contentAssets, scheduledPosts, unifiedTags, contentLibrary,
-  facebookApps, facebookWebhookEvents,
+  facebookApps, facebookWebhookEvents, botSettings,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -27,7 +27,8 @@ import {
   type ScheduledPost, type InsertScheduledPost,
   type ContentLibrary, type InsertContentLibrary, type UpdateContentLibrary,
   type FacebookApp, type InsertFacebookApp,
-  type FacebookWebhookEvent, type InsertFacebookWebhookEvent
+  type FacebookWebhookEvent, type InsertFacebookWebhookEvent,
+  type BotSettings, type InsertBotSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
@@ -168,6 +169,12 @@ export interface IStorage {
   // Chatbot methods
   getChatbotConversations(limit?: number): Promise<ChatbotConversation[]>;
   createChatbotConversation(conversation: InsertChatbotConversation): Promise<ChatbotConversation>;
+
+  // Bot Settings methods
+  getBotSettings(): Promise<BotSettings | undefined>;
+  createBotSettings(settings: InsertBotSettings): Promise<BotSettings>;
+  updateBotSettings(id: string, settings: Partial<InsertBotSettings>): Promise<BotSettings | undefined>;
+  getBotSettingsOrDefault(): Promise<BotSettings>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -777,6 +784,46 @@ export class DatabaseStorage implements IStorage {
   async createChatbotConversation(conversation: InsertChatbotConversation): Promise<ChatbotConversation> {
     const [newConversation] = await db.insert(chatbotConversations).values(conversation).returning();
     return newConversation;
+  }
+
+  // Bot Settings methods
+  async getBotSettings(): Promise<BotSettings | undefined> {
+    const [settings] = await db.select().from(botSettings).limit(1);
+    return settings || undefined;
+  }
+
+  async createBotSettings(settings: InsertBotSettings): Promise<BotSettings> {
+    const [newSettings] = await db.insert(botSettings).values(settings).returning();
+    return newSettings;
+  }
+
+  async updateBotSettings(id: string, settings: Partial<InsertBotSettings>): Promise<BotSettings | undefined> {
+    const [updatedSettings] = await db
+      .update(botSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(botSettings.id, id))
+      .returning();
+    return updatedSettings || undefined;
+  }
+
+  async getBotSettingsOrDefault(): Promise<BotSettings> {
+    const settings = await this.getBotSettings();
+    if (settings) {
+      return settings;
+    }
+    
+    // Create default settings if none exist
+    const defaultSettings: InsertBotSettings = {
+      rasaUrl: "http://localhost:5005",
+      webhookUrl: "",
+      isEnabled: true,
+      autoReply: false,
+      connectionTimeout: 5000,
+      maxRetries: 3,
+      healthStatus: "offline"
+    };
+    
+    return await this.createBotSettings(defaultSettings);
   }
 
   // Dashboard stats

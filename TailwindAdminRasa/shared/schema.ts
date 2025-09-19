@@ -622,6 +622,23 @@ export const chatbotConversations = pgTable("chatbot_conversations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Bot settings table for RASA configuration
+export const botSettings = pgTable("bot_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rasaUrl: text("rasa_url").notNull().default("http://localhost:5005"),
+  webhookUrl: text("webhook_url"),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  autoReply: boolean("auto_reply").notNull().default(false),
+  apiKey: text("api_key"), // Optional API key for RASA auth
+  connectionTimeout: integer("connection_timeout").notNull().default(5000), // in milliseconds
+  maxRetries: integer("max_retries").notNull().default(3),
+  lastHealthCheck: timestamp("last_health_check"),
+  healthStatus: text("health_status", { enum: ["online", "offline", "error"] }).notNull().default("offline"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Product reviews table - separate from landing page testimonials
 export const productReviews = pgTable("product_reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -926,6 +943,12 @@ export const insertChatbotConversationSchema = createInsertSchema(chatbotConvers
   updatedAt: true,
 });
 
+export const insertBotSettingsSchema = createInsertSchema(botSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertStorefrontConfigSchema = createInsertSchema(storefrontConfig).omit({
   id: true,
   updatedAt: true,
@@ -1016,6 +1039,9 @@ export type TikTokVideo = typeof tiktokVideos.$inferSelect;
 
 export type InsertChatbotConversation = z.infer<typeof insertChatbotConversationSchema>;
 export type ChatbotConversation = typeof chatbotConversations.$inferSelect;
+
+export type InsertBotSettings = z.infer<typeof insertBotSettingsSchema>;
+export type BotSettings = typeof botSettings.$inferSelect;
 
 export type InsertStorefrontConfig = z.infer<typeof insertStorefrontConfigSchema>;
 export type StorefrontConfig = typeof storefrontConfig.$inferSelect;

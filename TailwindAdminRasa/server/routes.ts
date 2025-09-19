@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema, insertShopSettingsSchema, insertTikTokBusinessAccountSchema, insertTikTokShopOrderSchema, insertTikTokShopProductSchema, insertTikTokVideoSchema } from "@shared/schema";
+import { insertProductSchema, insertCustomerSchema, insertOrderSchema, insertCategorySchema, insertPaymentSchema, insertSocialAccountSchema, insertShopSettingsSchema, insertTikTokBusinessAccountSchema, insertTikTokShopOrderSchema, insertTikTokShopProductSchema, insertTikTokVideoSchema, insertBotSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupRasaRoutes } from "./rasa-routes";
 import { facebookAuth } from "./facebook-auth";
@@ -2520,6 +2520,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       console.error("Error fetching chatbot stats:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Bot settings management endpoints
+  app.get("/api/chatbot/settings", requireSessionAuth, async (req, res) => {
+    try {
+      const settings = await storage.getBotSettingsOrDefault();
+      // Remove sensitive fields from response
+      const { apiKey, ...safeSettings } = settings;
+      res.json(safeSettings);
+    } catch (error) {
+      console.error("Error fetching bot settings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/chatbot/settings", requireSessionAuth, async (req, res) => {
+    try {
+      // Validate input with Zod - only allow safe user-controlled fields
+      const safeBotSettingsSchema = z.object({
+        isEnabled: z.boolean().optional(),
+        autoReply: z.boolean().optional(),
+        rasaUrl: z.string().url("Invalid RASA URL format").optional(),
+        webhookUrl: z.string().url("Invalid webhook URL format").or(z.literal("")).optional(),
+        connectionTimeout: z.number().int().min(1000).max(30000).optional(),
+        maxRetries: z.number().int().min(0).max(10).optional()
+      });
+
+      const validatedData = safeBotSettingsSchema.parse(req.body);
+      const existingSettings = await storage.getBotSettings();
+      
+      if (existingSettings) {
+        // Update existing settings
+        const updatedSettings = await storage.updateBotSettings(existingSettings.id, validatedData);
+        const { apiKey, ...safeResponse } = updatedSettings || {};
+        res.json(safeResponse);
+      } else {
+        // Create new settings
+        const newSettings = await storage.createBotSettings(validatedData);
+        const { apiKey, ...safeResponse } = newSettings;
+        res.json(safeResponse);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid input", 
+          details: error.errors 
+        });
+      }
+      console.error("Error saving bot settings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/chatbot/test-rasa", requireSessionAuth, async (req, res) => {
+    try {
+      // Validate and sanitize input
+      const testRasaSchema = z.object({
+        rasaUrl: z.string().url("Invalid URL format").optional(),
+        timeout: z.number().int().min(1000).max(10000).optional().default(5000)
+      });
+
+      const { rasaUrl, timeout } = testRasaSchema.parse(req.body);
+      const testUrl = rasaUrl || "http://localhost:5005";
+      
+      // Security: Validate URL to prevent SSRF attacks
+      const url = new URL(testUrl);
+      
+      // Only allow HTTP/HTTPS protocols
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        return res.json({
+          success: false,
+          status: 'error',
+          message: 'Only HTTP and HTTPS protocols are allowed'
+        });
+      }
+      
+      // Block private IP ranges and localhost (except for development)
+      const hostname = url.hostname;
+      const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(hostname);
+      const isPrivateIP = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(hostname);
+      
+      // In production, we might want to be more restrictive
+      if (!isLocalhost && isPrivateIP) {
+        return res.json({
+          success: false,
+          status: 'error', 
+          message: 'Connection to private IP addresses is not allowed'
+        });
+      }
+      
+      // Restrict ports to common HTTP ports
+      const port = url.port ? parseInt(url.port) : (url.protocol === 'https:' ? 443 : 80);
+      const allowedPorts = [80, 443, 5005, 8000, 8080, 3000]; // Add common RASA ports
+      if (!allowedPorts.includes(port)) {
+        return res.json({
+          success: false,
+          status: 'error',
+          message: 'Port not allowed for RASA connection'
+        });
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      try {
+        const response = await fetch(`${testUrl}/status`, {
+          method: 'GET',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const status = await response.json();
+          res.json({ 
+            success: true, 
+            status: 'online', 
+            message: 'RASA server is reachable',
+            serverInfo: status
+          });
+        } else {
+          res.json({ 
+            success: false, 
+            status: 'error', 
+            message: `RASA server responded with status ${response.status}` 
+          });
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          res.json({ 
+            success: false, 
+            status: 'timeout', 
+            message: `Connection timeout after ${timeout}ms` 
+          });
+        } else {
+          res.json({ 
+            success: false, 
+            status: 'error', 
+            message: `Cannot connect to RASA server: ${fetchError.message}` 
+          });
+        }
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid input", 
+          details: error.errors 
+        });
+      }
+      console.error("Error testing RASA connection:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
