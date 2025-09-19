@@ -316,6 +316,9 @@ export const facebookApps = pgTable("facebook_apps", {
   environment: text("environment", { enum: ["development", "staging", "production"] }).default("development"),
   description: text("description"), // Optional app description
   
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
+  
   // Tracking
   lastWebhookEvent: timestamp("last_webhook_event"), // Last received webhook
   totalEvents: integer("total_events").default(0), // Total webhook events received
