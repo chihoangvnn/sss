@@ -1,9 +1,9 @@
-import { SocialMediaPanel } from "@/components/SocialMediaPanel";
+import { SimpleSocialMediaPanel } from "@/components/SimpleSocialMediaPanel";
 
 export default function SocialMedia() {
   return (
-    <div className="p-6" data-testid="page-social-media">
-      <SocialMediaPanel />
+    <div className="min-h-screen bg-gray-50" data-testid="page-social-media">
+      <SimpleSocialMediaPanel />
     </div>
   );
 }

@@ -99,7 +99,7 @@ export function SocialMediaPanel({
   const [location] = useLocation();
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("chat");
   
   // Detect current platform from URL
   const currentPlatform = location.includes('/tiktok-business') ? 'tiktok-business'
@@ -556,39 +556,14 @@ export function SocialMediaPanel({
 
       {/* Main Tabs - Platform Specific */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-100">
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Dashboard
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+          <TabsTrigger value="chat" className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Tin nhắn Facebook
           </TabsTrigger>
           <TabsTrigger value="accounts" className="flex items-center gap-2">
             <Settings className="w-4 h-4" />
-            Tài khoản
-          </TabsTrigger>
-          
-          {/* Platform-specific third tab */}
-          {currentPlatform === 'facebook' && (
-            <TabsTrigger value="chat" className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Tin nhắn
-            </TabsTrigger>
-          )}
-          {currentPlatform === 'tiktok-business' && (
-            <TabsTrigger value="business" className="flex items-center gap-2">
-              <Video className="w-4 h-4" />
-              Business API
-            </TabsTrigger>
-          )}
-          {currentPlatform === 'tiktok-shop' && (
-            <TabsTrigger value="shop" className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4" />
-              Shop Management
-            </TabsTrigger>
-          )}
-          
-          <TabsTrigger value="tags" className="flex items-center gap-2">
-            <Tag className="w-4 h-4" />
-            Quản lý Tags
+            Kết nối
           </TabsTrigger>
         </TabsList>
 
