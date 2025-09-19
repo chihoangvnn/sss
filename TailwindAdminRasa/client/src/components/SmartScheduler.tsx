@@ -390,6 +390,24 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                   <Users className="w-5 h-5 text-blue-600" />
                   Phân Phối Fanpage
                 </h3>
+
+                {/* Auto-Selection Notice */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <svg className="w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-green-800 font-medium mb-1">🎯 Tự Động Chọn Fanpage</h4>
+                      <p className="text-green-700 text-sm">
+                        <strong>Tùy chọn:</strong> Bạn có thể {selectedFanpages.length > 0 ? 'tiếp tục với fanpages đã chọn' : 'bỏ qua bước này'}. 
+                        {selectedFanpages.length === 0 && ' Hệ thống sẽ tự động chọn fanpages phù hợp dựa trên Facebook Apps có cùng tags với content.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {(socialAccounts as SocialAccount[]).map((account: SocialAccount) => {
@@ -651,7 +669,6 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                 onClick={() => setCurrentStep(currentStep + 1)}
                 disabled={
                   (currentStep === 1 && (selectedTags.length === 0 || contentTypes.length === 0)) ||
-                  (currentStep === 2 && selectedFanpages.length === 0) ||
                   (currentStep === 3 && (!startDate || !endDate))
                 }
                 className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
