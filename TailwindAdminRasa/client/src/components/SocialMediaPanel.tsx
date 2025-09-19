@@ -99,7 +99,14 @@ export function SocialMediaPanel({
   const [location] = useLocation();
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("chat");
+  // Set platform-appropriate default tab
+  const getDefaultTab = () => {
+    if (location.includes('/tiktok-business')) return "business";
+    if (location.includes('/tiktok-shop')) return "shop";
+    return "chat"; // Facebook default
+  };
+  
+  const [activeTab, setActiveTab] = useState(getDefaultTab());
   
   // Detect current platform from URL
   const currentPlatform = location.includes('/tiktok-business') ? 'tiktok-business'
