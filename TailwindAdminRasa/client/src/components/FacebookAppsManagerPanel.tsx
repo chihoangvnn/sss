@@ -448,15 +448,18 @@ export function FacebookAppsManagerPanel() {
           <DialogTrigger asChild>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Thêm Facebook App
+              Kết nối Facebook App
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Thêm Facebook App mới</DialogTitle>
+              <DialogTitle>Kết nối Facebook App có sẵn</DialogTitle>
               <DialogDescription>
-                Tạo cấu hình mới cho Facebook App và webhook
+                Nhập thông tin Facebook App đã tạo trên Facebook Developer Console để kết nối vào hệ thống quản lý
               </DialogDescription>
+              <div className="text-xs text-blue-600 mt-2 p-2 bg-blue-50 rounded border">
+                💡 <strong>Lưu ý:</strong> Bạn cần tạo App trên Facebook Developer Console trước, sau đó nhập thông tin ở đây để kết nối
+              </div>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -546,10 +549,10 @@ export function FacebookAppsManagerPanel() {
                 {createAppMutation.isPending ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Đang tạo...
+                    Đang kết nối...
                   </>
                 ) : (
-                  'Tạo App'
+                  'Kết nối App'
                 )}
               </Button>
             </DialogFooter>
@@ -664,14 +667,14 @@ export function FacebookAppsManagerPanel() {
               </h3>
               <p className="text-gray-600 mb-4">
                 {apps.length === 0 
-                  ? 'Thêm Facebook App đầu tiên để bắt đầu quản lý webhook'
+                  ? 'Kết nối Facebook App đầu tiên để bắt đầu quản lý webhook'
                   : 'Thử điều chỉnh bộ lọc để tìm Facebook App mong muốn'
                 }
               </p>
               {apps.length === 0 && (
                 <Button onClick={() => setIsCreateDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Thêm Facebook App đầu tiên
+                  Kết nối Facebook App đầu tiên
                 </Button>
               )}
             </CardContent>
