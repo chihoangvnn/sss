@@ -218,12 +218,38 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
     });
   };
 
-  // Handle tag updates
-  const handleUpdateTags = (conversationId: string, tags: string[]) => {
+  // Handle tag updates with pipeline stage exclusivity
+  const handleUpdateTags = (conversationId: string, tagIds: string[]) => {
     updateConversationMutation.mutate({
       conversationId,
-      updates: { tags }
+      updates: { tagIds }
     });
+  };
+
+  // Handle pipeline stage assignment (exclusive)
+  const handleAssignPipelineStage = (conversationId: string, newStageId: string) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation) return;
+
+    const currentTagIds = conversation.tagIds || [];
+    const pipelineTagIds = pipelineTags.map((tag: any) => tag.id);
+    
+    // Remove all existing pipeline stage tags and add the new one
+    const nonPipelineTagIds = currentTagIds.filter((tagId: string) => !pipelineTagIds.includes(tagId));
+    const newTagIds = [...nonPipelineTagIds, newStageId];
+    
+    handleUpdateTags(conversationId, newTagIds);
+  };
+
+  // Handle pipeline stage removal
+  const handleRemovePipelineStage = (conversationId: string, stageId: string) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation) return;
+
+    const currentTagIds = conversation.tagIds || [];
+    const newTagIds = currentTagIds.filter((tagId: string) => tagId !== stageId);
+    
+    handleUpdateTags(conversationId, newTagIds);
   };
 
   // Handle priority updates
@@ -481,7 +507,7 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                   }
                 </div>
 
-                {/* Quick Tag Assignment */}
+                {/* Quick Pipeline Stage Assignment (Exclusive) */}
                 <div className="flex flex-wrap gap-1">
                   {pipelineTags.map((tag: any) => {
                     const isAssigned = selectedConv.tagIds && selectedConv.tagIds.includes(tag.id);
@@ -491,12 +517,11 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                         variant={isAssigned ? "default" : "outline"}
                         size="sm"
                         onClick={() => {
-                          const currentTags = selectedConv.tagIds || [];
-                          const newTags = isAssigned 
-                            ? currentTags.filter((t: string) => t !== tag.id)
-                            : [...currentTags, tag.id];
-                          
-                          handleUpdateTags(selectedConv.id, newTags);
+                          if (isAssigned) {
+                            handleRemovePipelineStage(selectedConv.id, tag.id);
+                          } else {
+                            handleAssignPipelineStage(selectedConv.id, tag.id);
+                          }
                         }}
                         className="text-xs h-6 px-2"
                         style={{
