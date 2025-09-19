@@ -18,7 +18,11 @@ import {
   Search,
   Filter,
   Download,
-  Upload
+  Upload,
+  Shuffle,
+  Info,
+  Link,
+  ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,11 +92,11 @@ export function FacebookAppsManagerPanel() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<FacebookApp | null>(null);
-  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [environmentFilter, setEnvironmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showSetupHelper, setShowSetupHelper] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -274,6 +278,53 @@ export function FacebookAppsManagerPanel() {
     });
   };
 
+  // Random Vietnamese business app names generator
+  const generateRandomAppName = () => {
+    const adjectives = [
+      "Thông Minh", "Nhanh Chóng", "Hiện Đại", "Tiện Lợi", "Đáng Tin", 
+      "Chuyên Nghiệp", "Sáng Tạo", "Hiệu Quả", "An Toàn", "Tiên Phong",
+      "Xuất Sắc", "Linh Hoạt", "Tối Ưu", "Thân Thiện", "Đột Phá"
+    ];
+    const nouns = [
+      "Shop", "Store", "Market", "Business", "Commerce", "Trade", "Sales",
+      "Hub", "Center", "Point", "Zone", "Plaza", "Mall", "Mart", "Express",
+      "Connect", "Link", "Bridge", "Network", "Pro", "Max", "Plus"
+    ];
+    const businessTypes = [
+      "Bán Hàng", "Kinh Doanh", "Thương Mại", "Dịch Vụ", "Cửa Hàng",
+      "Siêu Thị", "Showroom", "Boutique", "Outlet", "Gallery"
+    ];
+    
+    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+    const randomType = businessTypes[Math.floor(Math.random() * businessTypes.length)];
+    
+    const formats = [
+      `${randomAdjective} ${randomNoun}`,
+      `${randomType} ${randomAdjective}`,
+      `${randomNoun} ${randomType}`,
+      `${randomAdjective} ${randomType} ${randomNoun}`
+    ];
+    
+    return formats[Math.floor(Math.random() * formats.length)];
+  };
+
+  const handleGenerateRandomName = () => {
+    const randomName = generateRandomAppName();
+    setFormData(prev => ({ ...prev, appName: randomName }));
+    toast({
+      title: "Đã tạo tên ngẫu nhiên",
+      description: `Tên app: ${randomName}`,
+    });
+  };
+
+  const toggleSetupHelper = (appId: string) => {
+    setShowSetupHelper(prev => ({
+      ...prev,
+      [appId]: !prev[appId]
+    }));
+  };
+
   const handleCreateApp = () => {
     if (!formData.appName || !formData.appId || !formData.appSecret) {
       toast({
@@ -312,12 +363,7 @@ export function FacebookAppsManagerPanel() {
     toggleStatusMutation.mutate({ id, isActive });
   };
 
-  const toggleSecretVisibility = (appId: string) => {
-    setShowSecrets(prev => ({
-      ...prev,
-      [appId]: !prev[appId]
-    }));
-  };
+  // Removed toggleSecretVisibility function - no longer needed for security
 
   const copyToClipboard = async (text: string, type: string) => {
     try {
@@ -415,12 +461,25 @@ export function FacebookAppsManagerPanel() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="appName">Tên App *</Label>
-                <Input
-                  id="appName"
-                  value={formData.appName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, appName: e.target.value }))}
-                  placeholder="My Facebook App"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="appName"
+                    value={formData.appName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, appName: e.target.value }))}
+                    placeholder="My Facebook App"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateRandomName}
+                    className="px-3"
+                    title="Tạo tên ngẫu nhiên"
+                  >
+                    <Shuffle className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="appId">App ID *</Label>
@@ -672,35 +731,15 @@ export function FacebookAppsManagerPanel() {
                         <Label className="text-sm font-medium text-gray-700">App Secret</Label>
                         <div className="flex items-center gap-2">
                           <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
-                            {showSecrets[app.id] ? app.appSecret : '••••••••'}
+                            {app.appSecretSet ? '•••••••• (Configured)' : 'Not Set'}
                           </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSecretVisibility(app.id)}
-                            className="h-6 w-6 p-0"
-                          >
-                            {showSecrets[app.id] ? (
-                              <EyeOff className="h-3 w-3" />
-                            ) : (
-                              <Eye className="h-3 w-3" />
-                            )}
-                          </Button>
-                          {app.appSecretSet && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(app.appSecret, 'App Secret')}
-                              className="h-6 w-6 p-0"
-                            >
-                              {copied === 'App Secret' ? (
-                                <Check className="h-3 w-3 text-green-600" />
-                              ) : (
-                                <Copy className="h-3 w-3" />
-                              )}
-                            </Button>
-                          )}
+                          <div className="text-xs text-gray-500">
+                            {app.appSecretSet ? '✓ Set' : '✗ Missing'}
+                          </div>
                         </div>
+                        <p className="text-xs text-gray-500">
+                          🔒 Secret is encrypted and hidden for security
+                        </p>
                       </div>
 
                       {/* Verify Token */}
@@ -754,6 +793,121 @@ export function FacebookAppsManagerPanel() {
                           </Button>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Setup Helper Section */}
+                    <div className="mt-6 border-t pt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleSetupHelper(app.id)}
+                        className="mb-4"
+                      >
+                        <Info className="h-4 w-4 mr-2" />
+                        {showSetupHelper[app.id] ? 'Ẩn' : 'Hiện'} Hướng dẫn Setup Facebook
+                      </Button>
+                      
+                      {showSetupHelper[app.id] && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                          <div className="flex items-center gap-2 text-blue-800 font-medium">
+                            <Settings className="h-4 w-4" />
+                            Hướng dẫn cấu hình Facebook Developer Console
+                          </div>
+                          
+                          <div className="space-y-3 text-sm">
+                            <div className="flex items-start gap-3">
+                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">1</div>
+                              <div>
+                                <p className="font-medium text-gray-900">Truy cập Facebook Developer Console</p>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-auto p-0 text-blue-600 hover:text-blue-800"
+                                  onClick={() => window.open('https://developers.facebook.com/apps', '_blank')}
+                                >
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  https://developers.facebook.com/apps
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-3">
+                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">2</div>
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900 mb-2">Chọn App → Webhooks → Chỉnh sửa</p>
+                                <div className="space-y-2">
+                                  <div>
+                                    <Label className="text-xs font-medium text-gray-600">📋 Webhook URL (Sao chép và dán):</Label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <code className="text-xs bg-white border px-2 py-1 rounded font-mono flex-1 break-all">
+                                        {app.webhookUrl}
+                                      </code>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(app.webhookUrl, 'Webhook URL Setup')}
+                                        className="h-7 px-2"
+                                      >
+                                        {copied === 'Webhook URL Setup' ? (
+                                          <Check className="h-3 w-3 text-green-600" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <Label className="text-xs font-medium text-gray-600">🔑 Verify Token (Sao chép và dán):</Label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <code className="text-xs bg-white border px-2 py-1 rounded font-mono">
+                                        {app.verifyToken}
+                                      </code>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyToClipboard(app.verifyToken, 'Verify Token Setup')}
+                                        className="h-7 px-2"
+                                      >
+                                        {copied === 'Verify Token Setup' ? (
+                                          <Check className="h-3 w-3 text-green-600" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-3">
+                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">3</div>
+                              <div>
+                                <p className="font-medium text-gray-900">Chọn Subscription Fields</p>
+                                <div className="text-gray-600 mt-1">
+                                  Tick: <code className="bg-gray-100 px-1 rounded text-xs">messages</code>, <code className="bg-gray-100 px-1 rounded text-xs">messaging_postbacks</code>, <code className="bg-gray-100 px-1 rounded text-xs">feed</code>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-3">
+                              <div className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">4</div>
+                              <div>
+                                <p className="font-medium text-gray-900">Nhấn "Verify and Save"</p>
+                                <p className="text-gray-600 mt-1 text-xs">Facebook sẽ gửi request đến webhook để xác thực</p>
+                              </div>
+                            </div>
+                            
+                            <div className="bg-green-50 border border-green-200 rounded p-3 mt-4">
+                              <div className="flex items-center gap-2 text-green-800 text-xs font-medium">
+                                <CheckCircle className="h-4 w-4" />
+                                <span>✅ Sau khi setup xong, webhook sẽ tự động nhận events từ Facebook!</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 text-xs text-gray-500">
