@@ -88,12 +88,12 @@ const mainMenuItems = [
     icon: BarChart3,
   },
   {
-    title: "Thư viện Nội dung",
-    url: "/content-library",
+    title: "📷 Thư viện Nội dung",
+    url: "/content-library", 
     icon: Image,
   },
   {
-    title: "Lịch Đăng Bài",
+    title: "📅 Lịch Đăng Bài",
     url: "/post-scheduler",
     icon: Calendar,
   },
