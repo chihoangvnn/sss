@@ -34,7 +34,7 @@ import bulkUploadRoutes from './routes/bulk-upload';
 import facebookAppsRouter from './api/facebook-apps';
 
 // Facebook webhook event processing functions
-async function processFacebookMessage(event: any) {
+async function processFacebookMessage(event: any, appId?: string) {
   try {
     console.log('Processing Facebook message event:', event);
     
@@ -60,7 +60,7 @@ async function processFacebookMessage(event: any) {
     
     if (!conversation) {
       // Create new conversation
-      const userData = await fetchFacebookUserData(senderId, socialAccount, recipientId);
+      const userData = await fetchFacebookUserData(senderId, socialAccount, recipientId, appId);
       conversation = await storage.createFacebookConversation({
         pageId: recipientId,
         pageName: socialAccount.name,
@@ -141,13 +141,14 @@ async function processFacebookFeedEvent(change: any) {
   }
 }
 
-async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?: string) {
+async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?: string, appId?: string) {
   try {
     // Get page access token for this page
     const pageTokens = socialAccount.pageAccessTokens as any[];
     if (!pageTokens || pageTokens.length === 0) {
       console.log('No page tokens available');
-      return { name: createFallbackUserName(userId, socialAccount.name) };
+      const appName = await resolveAppName(appId);
+      return { name: createFallbackUserName(userId, appName) };
     }
 
     // Find the correct page token for the specific page ID
@@ -161,7 +162,8 @@ async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?
     
     if (!pageToken) {
       console.log('No access token found');
-      return { name: createFallbackUserName(userId, socialAccount.name) };
+      const appName = await resolveAppName(appId);
+      return { name: createFallbackUserName(userId, appName) };
     }
 
     const response = await fetch(`https://graph.facebook.com/v18.0/${userId}?fields=name,picture&access_token=${pageToken}`);
@@ -170,12 +172,33 @@ async function fetchFacebookUserData(userId: string, socialAccount: any, pageId?
     } else {
       console.log(`Failed to fetch user data: ${response.status} - Using fallback name`);
       // Facebook has strict privacy policies - fallback to friendly user ID
-      return { name: createFallbackUserName(userId, socialAccount.name) };
+      const appName = await resolveAppName(appId);
+      return { name: createFallbackUserName(userId, appName) };
     }
   } catch (error) {
     console.error('Error fetching Facebook user data:', error);
-    return { name: createFallbackUserName(userId, socialAccount.name) };
+    const appName = await resolveAppName(appId);
+    return { name: createFallbackUserName(userId, appName) };
   }
+}
+
+// Helper function to resolve app name from app ID
+async function resolveAppName(appId?: string): Promise<string | undefined> {
+  if (!appId) {
+    return undefined;
+  }
+  
+  try {
+    const facebookApp = await storage.getFacebookAppByAppId(appId);
+    if (facebookApp && facebookApp.appName) {
+      console.log(`Resolved app name: "${facebookApp.appName}" for app ID: ${appId}`);
+      return facebookApp.appName;
+    }
+  } catch (error) {
+    console.error('Error resolving app name:', error);
+  }
+  
+  return undefined;
 }
 
 // Create a friendly fallback name using app name and random numbers
@@ -2925,7 +2948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Handle messaging events
           if (entry.messaging) {
             for (const event of entry.messaging) {
-              await processFacebookMessage(event);
+              await processFacebookMessage(event, appId);
             }
           }
           
