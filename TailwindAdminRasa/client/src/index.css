@@ -462,4 +462,21 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after {
     inset: -1px;
   }
+
+  /* Safe area utilities for mobile devices */
+  .h-safe-area-inset-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Mobile bottom navigation padding utility */
+  .pb-mobile-nav {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Mobile-only utility */
+  @media (max-width: 767px) {
+    .mobile-content-padding {
+      padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+  }
 }

@@ -33,6 +33,7 @@ import FacebookAppsManager from "@/pages/FacebookAppsManager";
 import TikTokBusiness from "@/pages/TikTokBusiness";
 import TikTokShop from "@/pages/TikTokShop";
 import NotFound from "@/pages/not-found";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 function Router() {
   return (
@@ -95,12 +96,16 @@ function App() {
                   <ThemeToggle />
                 </div>
               </header>
-              <main className="flex-1 overflow-auto bg-background">
+              <main className="flex-1 overflow-auto bg-background mobile-content-padding">
                 <Router />
               </main>
             </div>
           </div>
         </SidebarProvider>
+        
+        {/* Modern Mobile Bottom Navigation */}
+        <MobileBottomNav />
+        
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
