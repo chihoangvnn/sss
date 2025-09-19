@@ -123,8 +123,10 @@ router.post('/', requireAdminAuth, async (req, res) => {
       });
     }
 
-    // Generate webhook URL
-    const webhookUrl = `${req.protocol}://${req.get('host')}/api/webhooks/facebook/${appId}`;
+    // Generate webhook URL - Facebook requires HTTPS
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'https'; // Force HTTPS for webhooks
+    const host = process.env.REPLIT_DEV_DOMAIN || req.get('host'); // Use Replit domain if available
+    const webhookUrl = `${protocol}://${host}/api/webhooks/facebook/${appId}`;
     
     // Encrypt app secret
     const encryptedSecret = encryptSecret(appSecret);

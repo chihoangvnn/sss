@@ -1820,16 +1820,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
       if (!facebookAccount) {
+        // Facebook requires HTTPS for webhooks
+        const protocol = 'https';
+        const host = process.env.REPLIT_DEV_DOMAIN || req.get('host');
         return res.json({ 
-          webhookUrl: `${req.protocol}://${req.get('host')}/api/webhooks/facebook`,
+          webhookUrl: `${protocol}://${host}/api/webhooks/facebook`,
           verifyToken: "",
           status: 'not_configured'
         });
       }
 
       const webhookConfig = facebookAccount.webhookSubscriptions?.[0];
+      // Facebook requires HTTPS for webhooks
+      const protocol = 'https';
+      const host = process.env.REPLIT_DEV_DOMAIN || req.get('host');
       res.json({
-        webhookUrl: webhookConfig?.webhookUrl || `${req.protocol}://${req.get('host')}/api/webhooks/facebook`,
+        webhookUrl: webhookConfig?.webhookUrl || `${protocol}://${host}/api/webhooks/facebook`,
         verifyToken: webhookConfig?.verifyToken ? `${webhookConfig.verifyToken.substring(0, 6)}****` : "",
         verifyTokenSet: !!webhookConfig?.verifyToken,
         status: webhookConfig?.status || 'not_configured',
