@@ -155,9 +155,16 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
     }
   }, [selectedConversation, conversations]);
 
-  const formatTimeAgo = (date: Date) => {
+  const formatTimeAgo = (date: Date | string | null) => {
+    if (!date) return "Chưa có tin nhắn";
+    
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    // Handle invalid date
+    if (isNaN(dateObj.getTime())) return "Thời gian không hợp lệ";
+    
+    const diffMs = now.getTime() - dateObj.getTime();
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
