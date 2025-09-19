@@ -44,9 +44,41 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
   const [selectedFanpages, setSelectedFanpages] = useState<string[]>([]);
   const [contentTypes, setContentTypes] = useState<('image' | 'video' | 'text')[]>(['image', 'video']);
   const [includingText, setIncludingText] = useState(true);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Helper function to format local date as YYYY-MM-DD
+  const formatLocalYYYYMMDD = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  // Get default dates: today and +10 days (in local timezone)
+  const getDefaultDates = () => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0); // Set to noon to avoid DST issues
+    
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 10);
+    
+    return {
+      startDate: formatLocalYYYYMMDD(today),
+      endDate: formatLocalYYYYMMDD(endDate)
+    };
+  };
+
+  // Initialize with lazy evaluation to avoid recomputing on every render
+  const [startDate, setStartDate] = useState(() => getDefaultDates().startDate);
+  const [endDate, setEndDate] = useState(() => getDefaultDates().endDate);
   const [postsPerDay, setPostsPerDay] = useState(3);
+
+  // Reset dates to "today" and "today+10" when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const defaultDates = getDefaultDates();
+      setStartDate(defaultDates.startDate);
+      setEndDate(defaultDates.endDate);
+    }
+  }, [isOpen]);
   const [distributionMode, setDistributionMode] = useState<'even' | 'weighted' | 'smart'>('smart');
   const [currentStep, setCurrentStep] = useState(1);
   const [previewData, setPreviewData] = useState<ContentMatch[]>([]);
