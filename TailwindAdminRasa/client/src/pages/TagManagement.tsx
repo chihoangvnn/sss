@@ -91,7 +91,7 @@ const createTag = async (data: CreateTagData): Promise<UnifiedTag> => {
 
 const updateTag = async ({ id, ...data }: Partial<UnifiedTag> & { id: string }): Promise<UnifiedTag> => {
   const response = await fetch(`/api/tags/${id}`, {
-    method: "PUT",
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
