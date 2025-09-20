@@ -319,9 +319,65 @@ router.post('/scheduled-posts', requireAdminAuth, async (req, res) => {
       ...req.body,
       scheduledTime: new Date(req.body.scheduledTime),
     });
+
+    // 🛡️ PRE-SCHEDULE VALIDATION: Check posting capacity before allowing schedule creation
+    // 🔒 SECURITY: Derive group/app information server-side - NEVER trust client input
+    const socialAccount = await storage.getSocialAccountById(validatedData.socialAccountId);
+    if (!socialAccount) {
+      return res.status(404).json({ error: 'Social account not found' });
+    }
+
+    // TODO: When group_accounts table is implemented, derive groupId from DB:
+    // const groupAssignment = await storage.getGroupAssignmentByAccountId(validatedData.socialAccountId);
+    // const groupId = groupAssignment?.groupId;
     
+    // For now, use undefined to ensure account-level checking (most restrictive)
+    const groupId = undefined; // Will check account-level limits only (safest approach)
+    const appId = undefined;   // TODO: Derive from social account's app association when available
+    
+    // Check if this post can be scheduled at the proposed time without violating limits
+    // TODO: Implement time-aware capacity checking in limit engine
+    // For now, check current capacity as a basic safeguard
+    const capacity = await limitEngine.checkPostingCapacity(
+      validatedData.socialAccountId,
+      groupId,
+      appId
+    );
+
+    // TODO: Enhanced validation should consider:
+    // 1. Capacity at the proposed scheduledTime (not just current time)
+    // 2. Overlap with other scheduled posts in the same time window
+    // 3. Time-specific rate limits and recovery windows
+
+    // For scheduling, we use a more lenient check - allow if not currently at limit
+    // (Different from trigger which checks immediate posting capacity)
+    if (!capacity.canPost && capacity.remainingSlots === 0) {
+      const violation = capacity.violations[0];
+      const suggestedTime = capacity.suggestedScheduleTimes[0];
+      
+      console.log(`🚫 Pre-schedule validation prevented post creation:`, violation);
+      
+      return res.status(429).json({ 
+        error: `Cannot schedule post: ${violation?.violatedRule.scope} capacity exceeded`,
+        code: 'SCHEDULING_LIMIT_EXCEEDED',
+        violations: capacity.violations,
+        suggestedScheduleTime: suggestedTime,
+        priority: capacity.priority,
+        message: `⚠️ Scheduling limit reached! ${violation?.violatedRule.scope} capacity is full. Suggested schedule time: ${suggestedTime ? new Date(suggestedTime).toLocaleString('vi-VN') : 'later'}`
+      });
+    }
+
+    // Proceed with creating the scheduled post if validation passes
+    console.log(`✅ Pre-schedule validation passed for new post, creating schedule`);
     const post = await storage.createScheduledPost(validatedData);
-    res.status(201).json(post);
+    
+    res.status(201).json({
+      ...post,
+      capacityInfo: {
+        priority: capacity.priority,
+        remainingSlots: capacity.remainingSlots
+      }
+    });
   } catch (error) {
     console.error('Error creating scheduled post:', error);
     res.status(400).json({ error: 'Invalid post data' });
@@ -334,6 +390,68 @@ router.put('/scheduled-posts/:id', requireAdminAuth, async (req, res) => {
     const updateData = { ...req.body };
     if (updateData.scheduledTime) {
       updateData.scheduledTime = new Date(updateData.scheduledTime);
+    }
+
+    // Get existing post to check if social account is being changed
+    const existingPost = await storage.getScheduledPost(req.params.id);
+    if (!existingPost) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Determine which social account to validate (existing or new)
+    const socialAccountId = updateData.socialAccountId || existingPost.socialAccountId;
+
+    // 🛡️ PRE-SCHEDULE VALIDATION: Check posting capacity for updates that could affect limits
+    // Only validate if social account or schedule time is being changed
+    if (updateData.socialAccountId || updateData.scheduledTime) {
+      console.log(`🔍 Pre-schedule validation for post update: ${req.params.id}`);
+      
+      // 🔒 SECURITY: Derive group/app information server-side - NEVER trust client input
+      const socialAccount = await storage.getSocialAccountById(socialAccountId);
+      if (!socialAccount) {
+        return res.status(404).json({ error: 'Social account not found' });
+      }
+
+      // TODO: When group_accounts table is implemented, derive groupId from DB:
+      // const groupAssignment = await storage.getGroupAssignmentByAccountId(socialAccountId);
+      // const groupId = groupAssignment?.groupId;
+      
+      // For now, use undefined to ensure account-level checking (most restrictive)
+      const groupId = undefined; // Will check account-level limits only (safest approach)
+      const appId = undefined;   // TODO: Derive from social account's app association when available
+      
+      // Check if this update can be applied without violating limits at the scheduled time
+      // TODO: Implement time-aware capacity checking in limit engine
+      // For now, check current capacity as a basic safeguard  
+      const capacity = await limitEngine.checkPostingCapacity(
+        socialAccountId,
+        groupId,
+        appId
+      );
+
+      // TODO: Enhanced validation should consider:
+      // 1. Capacity at the proposed scheduledTime (not just current time)  
+      // 2. Impact of changing existing scheduled post timing
+      // 3. Time-specific rate limits and recovery windows
+
+      // For updates, be more lenient - only block if severely over capacity
+      if (!capacity.canPost && capacity.remainingSlots === 0) {
+        const violation = capacity.violations[0];
+        const suggestedTime = capacity.suggestedScheduleTimes[0];
+        
+        console.log(`🚫 Pre-schedule validation prevented post update:`, violation);
+        
+        return res.status(429).json({ 
+          error: `Cannot update post: ${violation?.violatedRule.scope} capacity exceeded`,
+          code: 'UPDATE_LIMIT_EXCEEDED',
+          violations: capacity.violations,
+          suggestedScheduleTime: suggestedTime,
+          priority: capacity.priority,
+          message: `⚠️ Update blocked! ${violation?.violatedRule.scope} capacity is full. Consider scheduling for: ${suggestedTime ? new Date(suggestedTime).toLocaleString('vi-VN') : 'later'}`
+        });
+      }
+
+      console.log(`✅ Pre-schedule validation passed for post update: ${req.params.id}`);
     }
     
     const post = await storage.updateScheduledPost(req.params.id, updateData);
