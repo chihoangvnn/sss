@@ -128,7 +128,16 @@ function PlatformCard({ platform, accounts, stats }: {
         {/* Connect Section */}
         <div className="border-t pt-4">
           {platform === 'facebook' ? (
-            <FacebookConnectButton />
+            <div className="space-y-2">
+              <FacebookConnectButton />
+              <Button 
+                variant="ghost" 
+                className="w-full text-sm" 
+                onClick={() => window.open('/facebook-apps', '_blank')}
+              >
+                🔧 Manage Facebook Apps
+              </Button>
+            </div>
           ) : (
             <Button 
               variant="outline" 
