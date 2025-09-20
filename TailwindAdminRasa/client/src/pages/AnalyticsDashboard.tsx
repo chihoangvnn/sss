@@ -91,8 +91,14 @@ export function AnalyticsDashboard() {
   // Auto-refresh for real-time monitoring
   useEffect(() => {
     const interval = setInterval(() => {
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/analytics'] });
+      // Invalidate all analytics queries with proper key matching
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          return query.queryKey[0] && 
+                 typeof query.queryKey[0] === 'string' && 
+                 query.queryKey[0].startsWith('/api/analytics');
+        }
+      });
     }, refreshInterval);
 
     return () => clearInterval(interval);
