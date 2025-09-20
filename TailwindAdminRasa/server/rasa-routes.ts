@@ -1,6 +1,7 @@
 import { Express } from 'express';
 import { storage } from './storage';
 import { firebaseStorage } from './firebase-storage';
+import { RasaDescriptions } from '../shared/schema';
 
 // Authentication middleware for RASA endpoints
 const requireSessionAuth = (req: any, res: any, next: any) => {
@@ -542,6 +543,233 @@ export function setupRasaRoutes(app: Express) {
       res.status(500).json({ 
         status: "error", 
         message: "Không thể tạo khách hàng mới" 
+      });
+    }
+  });
+
+  // === PRODUCT DESCRIPTION MANAGEMENT APIs ===
+
+  /**
+   * GET /api/rasa/products/:productId/description
+   * Lấy mô tả sản phẩm cho RASA - random hoặc theo context
+   * Query params: context (safety|convenience|quality|health)
+   */
+  app.get("/api/rasa/products/:productId/description", async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const { context } = req.query;
+      
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({
+          status: "error",
+          message: "Không tìm thấy sản phẩm"
+        });
+      }
+
+      // Parse descriptions from database with robust typing
+      const descriptions = (product.descriptions ?? {}) as Partial<RasaDescriptions>;
+      const rasaVariations = descriptions.rasa_variations || {};
+      const contexts = descriptions.contexts || {};
+
+      let selectedDescription: string;
+      let selectedIndex: string;
+      let selectionType: string;
+
+      if (context && contexts[context as string]) {
+        // Context-based selection with fallback verification
+        selectedIndex = contexts[context as string];
+        selectedDescription = rasaVariations[selectedIndex];
+        
+        // If context points to missing variation, fall back to random
+        if (!selectedDescription && Object.keys(rasaVariations).length > 0) {
+          const availableKeys = Object.keys(rasaVariations);
+          selectedIndex = availableKeys[Math.floor(Math.random() * availableKeys.length)];
+          selectedDescription = rasaVariations[selectedIndex];
+          selectionType = "context_fallback_random";
+        } else if (selectedDescription) {
+          selectionType = "context";
+        } else {
+          // No variations available, use primary
+          selectedDescription = product.description || product.name;
+          selectedIndex = "primary";
+          selectionType = "context_fallback_primary";
+        }
+      } else if (Object.keys(rasaVariations).length > 0) {
+        // Random selection from available variations
+        const availableKeys = Object.keys(rasaVariations);
+        selectedIndex = availableKeys[Math.floor(Math.random() * availableKeys.length)];
+        selectedDescription = rasaVariations[selectedIndex];
+        selectionType = "random";
+      } else {
+        // Fallback to primary description
+        selectedDescription = product.description || product.name;
+        selectedIndex = "primary";
+        selectionType = "fallback";
+      }
+
+      res.json({
+        status: "success",
+        data: {
+          productId: product.id,
+          productName: product.name,
+          description: selectedDescription,
+          descriptionIndex: selectedIndex,
+          selectionType,
+          context: context || null,
+          price: parseFloat(product.price),
+          stock: product.stock,
+          image: product.image,
+          sku: product.id
+        }
+      });
+    } catch (error) {
+      console.error("RASA API Error - Get Product Description:", error);
+      res.status(500).json({
+        status: "error", 
+        message: "Không thể lấy mô tả sản phẩm"
+      });
+    }
+  });
+
+  /**
+   * GET /api/rasa/products/:productId/description/:index
+   * Lấy mô tả sản phẩm theo index cụ thể (0, 1, 2, 3)
+   */
+  app.get("/api/rasa/products/:productId/description/:index", async (req, res) => {
+    try {
+      const { productId, index } = req.params;
+      
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({
+          status: "error",
+          message: "Không tìm thấy sản phẩm"
+        });
+      }
+
+      const descriptions = (product.descriptions ?? {}) as Partial<RasaDescriptions>;
+      const rasaVariations = descriptions.rasa_variations || {};
+
+      if (!rasaVariations[index]) {
+        return res.status(404).json({
+          status: "error",
+          message: `Không tìm thấy mô tả với index ${index}`
+        });
+      }
+
+      res.json({
+        status: "success",
+        data: {
+          productId: product.id,
+          productName: product.name,
+          description: rasaVariations[index],
+          descriptionIndex: index,
+          selectionType: "specific",
+          price: parseFloat(product.price),
+          stock: product.stock,
+          image: product.image,
+          sku: product.id
+        }
+      });
+    } catch (error) {
+      console.error("RASA API Error - Get Specific Description:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Không thể lấy mô tả sản phẩm"
+      });
+    }
+  });
+
+  /**
+   * GET /api/rasa/products/:productId/descriptions/all
+   * Lấy tất cả mô tả của sản phẩm cho A/B testing
+   */
+  app.get("/api/rasa/products/:productId/descriptions/all", async (req, res) => {
+    try {
+      const { productId } = req.params;
+      
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({
+          status: "error",
+          message: "Không tìm thấy sản phẩm"
+        });
+      }
+
+      const descriptions = (product.descriptions ?? {}) as Partial<RasaDescriptions>;
+      const rasaVariations = descriptions.rasa_variations || {};
+      const contexts = descriptions.contexts || {};
+
+      // Build all available descriptions
+      const allDescriptions = Object.keys(rasaVariations).map(index => ({
+        index,
+        description: rasaVariations[index],
+        context: Object.keys(contexts).find(ctx => contexts[ctx] === index) || null
+      }));
+
+      res.json({
+        status: "success",
+        data: {
+          productId: product.id,
+          productName: product.name,
+          primary: product.description,
+          variations: allDescriptions,
+          contexts,
+          totalVariations: allDescriptions.length,
+          price: parseFloat(product.price),
+          stock: product.stock,
+          image: product.image
+        }
+      });
+    } catch (error) {
+      console.error("RASA API Error - Get All Descriptions:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Không thể lấy danh sách mô tả"
+      });
+    }
+  });
+
+  /**
+   * POST /api/rasa/products/:productId/description/analytics
+   * Track analytics cho description usage (A/B testing)
+   */
+  app.post("/api/rasa/products/:productId/description/analytics", async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const { descriptionIndex, action, userId, conversationId } = req.body;
+
+      if (!descriptionIndex || !action) {
+        return res.status(400).json({
+          status: "error",
+          message: "Thiếu thông tin index hoặc action"
+        });
+      }
+
+      // Simple analytics tracking (could be enhanced with dedicated analytics table)
+      const analyticsData = {
+        productId,
+        descriptionIndex,
+        action, // "view", "click", "conversion"
+        userId: userId || "anonymous",
+        conversationId: conversationId || null,
+        timestamp: new Date().toISOString()
+      };
+
+      // Log for now - could store in dedicated analytics table later
+      console.log("RASA Description Analytics:", analyticsData);
+
+      res.json({
+        status: "success",
+        message: "Analytics tracked successfully",
+        data: { tracked: true }
+      });
+    } catch (error) {
+      console.error("RASA API Error - Track Analytics:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Không thể ghi nhận analytics"
       });
     }
   });
