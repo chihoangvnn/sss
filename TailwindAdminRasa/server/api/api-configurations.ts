@@ -8,6 +8,13 @@ const router = express.Router();
 
 // Authentication middleware for admin operations
 const requireAuth = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  // In production, check for valid session
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ 
       error: "Unauthorized. Please log in to manage API configurations.",
