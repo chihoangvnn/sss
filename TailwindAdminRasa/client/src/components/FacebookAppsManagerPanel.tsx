@@ -714,6 +714,11 @@ export function FacebookAppsManagerPanel() {
         <div className="flex items-center gap-3">
           {/* Template Downloads */}
           <FacebookAppTemplateDownload variant="compact" />
+          {/* Add Facebook App Button */}
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="h-4 w-4 mr-2" />
+            Kết nối Facebook App
+          </Button>
         </div>
       </div>
 
@@ -766,12 +771,6 @@ export function FacebookAppsManagerPanel() {
       </Card>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Kết nối Facebook App
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Kết nối Facebook App có sẵn</DialogTitle>
