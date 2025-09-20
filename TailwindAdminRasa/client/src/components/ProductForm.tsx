@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save } from "lucide-react";
+import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
-import type { CloudinaryImage, CloudinaryVideo } from "@shared/schema";
+import type { CloudinaryImage, CloudinaryVideo, RasaDescriptions } from "@shared/schema";
 
 interface Industry {
   id: string;
@@ -71,6 +71,11 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     images: [] as CloudinaryImage[],
     videos: [] as CloudinaryVideo[],
   });
+
+  // 🤖 AI Generated Descriptions State
+  const [generatedDescriptions, setGeneratedDescriptions] = useState<RasaDescriptions | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showDescriptionPreview, setShowDescriptionPreview] = useState(false);
 
   // Fetch industries for dropdown
   const { data: industries = [], isLoading: industriesLoading, error: industriesError } = useQuery<Industry[]>({
@@ -180,6 +185,87 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     },
   });
 
+  // 🤖 AI Content Generation Function
+  const generateDescriptions = async () => {
+    if (!formData.name.trim()) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập tên sản phẩm trước khi tạo mô tả",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    try {
+      // Get industry and category names
+      const selectedIndustry = industries.find(i => i.id === formData.industryId);
+      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+
+      const response = await fetch('/api/ai/generate-product-descriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: formData.name,
+          industryName: selectedIndustry?.name,
+          categoryName: selectedCategory?.name,
+          options: {
+            targetLanguage: 'vietnamese',
+            customContext: ''
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Không thể tạo mô tả');
+      }
+
+      const result = await response.json();
+      setGeneratedDescriptions(result);
+      
+      // Auto-fill primary description
+      setFormData(prev => ({
+        ...prev,
+        description: result.primary
+      }));
+      
+      setShowDescriptionPreview(true);
+
+      toast({
+        title: "Thành công! 🎉",
+        description: `Đã tạo 1 mô tả chính + ${Object.keys(result.rasa_variations).length} biến thể RASA`,
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể tạo mô tả tự động",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Copy description to clipboard
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Đã copy!",
+        description: "Mô tả đã được copy vào clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể copy mô tả",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -211,6 +297,9 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       image: formData.image.trim() || undefined,
       images: formData.images || [],
       videos: formData.videos || [],
+      // 🤖 Include AI generated descriptions for RASA
+      descriptions: generatedDescriptions || {},
+      defaultImageIndex: 0, // Default to first image
     };
 
     saveMutation.mutate(saveData);
@@ -282,18 +371,124 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </p>
             </div>
 
-            {/* Description */}
+            {/* Description with AI Generation */}
             <div>
-              <Label htmlFor="description">Mô tả</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="description">Mô tả sản phẩm</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={generateDescriptions}
+                  disabled={isGenerating || !formData.name.trim()}
+                  className="gap-2"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4" />
+                  )}
+                  {isGenerating ? 'Đang tạo...' : '🪄 Tự động tạo mô tả'}
+                </Button>
+              </div>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả chi tiết sản phẩm"
+                placeholder="Nhập mô tả hoặc click 'Tự động tạo mô tả' để AI tạo giúp bạn"
                 rows={3}
                 data-testid="input-product-description"
               />
+              {!formData.name.trim() && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 Nhập tên sản phẩm trước để AI có thể tạo mô tả phù hợp
+                </p>
+              )}
             </div>
+
+            {/* AI Generated Descriptions Preview */}
+            {generatedDescriptions && (
+              <div className="border rounded-lg p-4 bg-gradient-to-r from-green-50 to-blue-50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-green-600" />
+                    <h4 className="font-medium text-sm">🤖 Mô tả đã tạo bởi AI</h4>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
+                    className="gap-1"
+                  >
+                    {showDescriptionPreview ? (
+                      <EyeOff className="h-3 w-3" />
+                    ) : (
+                      <Eye className="h-3 w-3" />
+                    )}
+                    {showDescriptionPreview ? 'Ẩn' : 'Xem'} chi tiết
+                  </Button>
+                </div>
+
+                {showDescriptionPreview && (
+                  <div className="space-y-3">
+                    {/* Primary Description */}
+                    <div className="bg-white rounded p-3 border-l-4 border-green-500">
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-green-700 font-medium">✅ Mô tả chính:</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(generatedDescriptions.primary)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p className="text-sm text-gray-700 bg-green-50 p-2 rounded">
+                        {generatedDescriptions.primary}
+                      </p>
+                    </div>
+
+                    {/* RASA Variations */}
+                    <div className="bg-white rounded p-3 border-l-4 border-blue-500">
+                      <Label className="text-blue-700 font-medium mb-2 block">🤖 RASA Chat Variations:</Label>
+                      <div className="grid gap-2">
+                        {Object.entries(generatedDescriptions.rasa_variations).map(([index, description]) => {
+                          const contextLabels = {
+                            "0": "🛡️ An toàn",
+                            "1": "⚡ Tiện lợi", 
+                            "2": "⭐ Chất lượng",
+                            "3": "💚 Sức khỏe"
+                          };
+                          return (
+                            <div key={index} className="flex items-start gap-2 bg-blue-50 p-2 rounded">
+                              <span className="text-xs font-medium text-blue-600 min-w-fit">
+                                {contextLabels[index as keyof typeof contextLabels]}:
+                              </span>
+                              <span className="text-sm text-gray-700 flex-1">{description}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(description)}
+                                className="h-5 w-5 p-0 flex-shrink-0"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2 italic">
+                        💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations).length} mô tả này khi chat với khách hàng
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Price and Stock */}
             <div className="grid grid-cols-2 gap-4">

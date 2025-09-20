@@ -32,6 +32,7 @@ import express from 'express';
 import { postScheduler } from './services/post-scheduler';
 import bulkUploadRoutes from './routes/bulk-upload';
 import facebookAppsRouter from './api/facebook-apps';
+import aiContentRouter from './api/ai-content';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3771,6 +3772,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FACEBOOK APPS MANAGEMENT API ROUTES
   // ==========================================
   app.use("/api/facebook-apps", facebookAppsRouter);
+
+  // ==========================================
+  // AI CONTENT GENERATION API ROUTES  
+  // ==========================================
+  app.use("/api/ai", aiContentRouter);
 
   // ==========================================
   // API CONFIGURATIONS MANAGEMENT ROUTES
