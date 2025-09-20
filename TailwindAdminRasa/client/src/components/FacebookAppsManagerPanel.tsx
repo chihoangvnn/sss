@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { 
   Plus, 
   Settings, 
@@ -30,7 +31,8 @@ import {
   Webhook,
   TestTube,
   CheckCircle2,
-  Activity
+  Activity,
+  Facebook
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -150,6 +152,7 @@ interface CreateAppData {
 }
 
 export function FacebookAppsManagerPanel() {
+  const [location, navigate] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isTagEditDialogOpen, setIsTagEditDialogOpen] = useState(false);
@@ -917,7 +920,7 @@ export function FacebookAppsManagerPanel() {
                   <div className="border-t border-green-300 pt-3 mt-3">
                     <Label className="text-xs text-green-700 font-medium mb-2 block">🔗 Direct Facebook Console Links:</Label>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
@@ -935,6 +938,17 @@ export function FacebookAppsManagerPanel() {
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
                           App Settings
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate('/facebook')}
+                          className="text-xs border-green-300 hover:bg-green-50 text-green-700"
+                        >
+                          <Facebook className="h-3 w-3 mr-1" />
+                          Manage Facebook Social
                         </Button>
                       </div>
                     </div>
