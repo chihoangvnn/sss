@@ -99,8 +99,21 @@ export function createApiManagementMiddleware() {
       const config = await configCache.get(endpoint, method);
 
       if (!config) {
-        // No configuration found - allow the request to proceed
-        // This maintains backward compatibility for unconfigured APIs
+        // No configuration found - create default tracking for unconfigured APIs
+        const defaultConfig = {
+          id: 'unconfigured',
+          endpoint: endpoint,
+          method: method,
+          isEnabled: true,
+          maintenanceMode: false,
+          rateLimitEnabled: false
+        } as any;
+        
+        // Store default config for tracking purposes
+        (req as any).apiConfig = defaultConfig;
+        (req as any).apiStartTime = startTime;
+        (req as any).isUnconfigured = true;
+        
         return next();
       }
 
@@ -162,6 +175,7 @@ export function createApiResponseMiddleware() {
 
     const config: ApiConfiguration = (req as any).apiConfig;
     const startTime: number = (req as any).apiStartTime;
+    const isUnconfigured = (req as any).isUnconfigured;
 
     // Hook into response finish event
     const originalEnd = res.end;
@@ -171,12 +185,18 @@ export function createApiResponseMiddleware() {
       // Update statistics asynchronously (don't block response)
       setImmediate(async () => {
         try {
-          if (res.statusCode >= 400) {
-            // Increment error count
-            await storage.incrementApiError(config.id);
+          if (isUnconfigured) {
+            // For unconfigured APIs, just log the usage (don't update database)
+            console.log(`📊 Unconfigured API: ${config.method} ${config.endpoint} - ${res.statusCode} in ${responseTime}ms`);
           } else {
-            // Increment access count and update response time
-            await storage.incrementApiAccess(config.id, responseTime);
+            // For configured APIs, update database statistics
+            if (res.statusCode >= 400) {
+              // Increment error count
+              await storage.incrementApiError(config.id);
+            } else {
+              // Increment access count and update response time
+              await storage.incrementApiAccess(config.id, responseTime);
+            }
           }
         } catch (error) {
           console.error('Error updating API statistics:', error);
