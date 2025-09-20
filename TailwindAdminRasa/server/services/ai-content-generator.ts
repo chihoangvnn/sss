@@ -305,6 +305,185 @@ Respond with JSON in this format:
       throw new Error(`Failed to generate hashtags: ${error}`);
     }
   }
+
+  // 🤖 NEW: RASA Product Description Generator
+  async generateProductDescriptions(
+    productName: string,
+    industryName?: string,
+    categoryName?: string,
+    options: {
+      targetLanguage?: 'vietnamese' | 'english';
+      customContext?: string;
+    } = {}
+  ): Promise<{
+    primary: string;
+    rasa_variations: { [key: string]: string };
+    contexts: { [key: string]: string };
+  }> {
+    // Input validation
+    if (!productName || productName.trim().length === 0) {
+      throw new Error("Product name is required and cannot be empty");
+    }
+
+    const { 
+      targetLanguage = 'vietnamese',
+      customContext = ''
+    } = options;
+
+    const systemPrompt = `Bạn là chuyên gia viết mô tả sản phẩm chuyên nghiệp cho thương mại điện tử và chatbot RASA.
+
+NHIỆM VỤ:
+Tạo 1 mô tả chính + 4 biến thể benefit-focused cho sản phẩm "${productName}"
+${industryName ? `Ngành hàng: "${industryName}"` : ''}
+${categoryName ? `Danh mục: "${categoryName}"` : ''}
+${customContext ? `Bối cảnh đặc biệt: "${customContext}"` : ''}
+
+YÊU CẦU CHẤT LƯỢNG:
+✅ Ngôn ngữ: ${targetLanguage === 'vietnamese' ? 'Tiếng Việt tự nhiên, thân thiện' : 'Natural English'}
+✅ Độ dài: 1-2 câu ngắn gọn, súc tích (max 120 từ)
+✅ Tập trung: BENEFIT khách hàng nhận được, KHÔNG chỉ feature sản phẩm
+✅ Cảm xúc: Kích thích mong muốn mua hàng, tạo động lực hành động
+✅ Phù hợp: Context ngành hàng và nhóm khách hàng mục tiêu
+
+4 BIẾN THỂ BENEFIT-FOCUSED:
+0️⃣ SAFETY (An toàn/Tin cậy): Nhấn mạnh sự yên tâm, an toàn, đáng tin cậy
+1️⃣ CONVENIENCE (Tiện lợi): Tập trung vào sự dễ dàng, tiết kiệm thời gian, thuận tiện
+2️⃣ QUALITY (Chất lượng): Nhấn mạnh giá trị cao, độ bền, hiệu quả vượt trội
+3️⃣ HEALTH (Sức khỏe/Hạnh phúc): Focus vào lợi ích sức khỏe, cảm xúc tích cực
+
+VÍ DỤ THỰC TẾ:
+Sản phẩm: "Rau cải hữu cơ"
+- Primary: "Rau cải hữu cơ tươi ngon, an toàn cho cả gia đình"
+- Safety: "Con ăn rau yên tâm, mẹ không lo thuốc trừ sâu"
+- Convenience: "Nấu ăn dễ dàng, bữa cơm gia đình thêm ngon"
+- Quality: "Tươi xanh từ vườn, chất lượng tuyệt vời mỗi ngày"
+- Health: "Vitamin tự nhiên giúp con khỏe mạnh, thông minh"
+
+QUAN TRỌNG: contexts phải trả về exact mapping:
+{
+  "safety": "0",
+  "convenience": "1", 
+  "quality": "2",
+  "health": "3"
+}
+
+Trả về JSON đúng format:`;
+
+    const responseSchema = {
+      type: "object",
+      properties: {
+        primary: { type: "string" },
+        rasa_variations: {
+          type: "object",
+          properties: {
+            "0": { type: "string" },
+            "1": { type: "string" },
+            "2": { type: "string" },
+            "3": { type: "string" }
+          },
+          required: ["0", "1", "2", "3"]
+        },
+        contexts: {
+          type: "object",
+          properties: {
+            safety: { type: "string", enum: ["0"] },
+            convenience: { type: "string", enum: ["1"] },
+            quality: { type: "string", enum: ["2"] },
+            health: { type: "string", enum: ["3"] }
+          },
+          required: ["safety", "convenience", "quality", "health"]
+        }
+      },
+      required: ["primary", "rasa_variations", "contexts"]
+    };
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-pro",
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: "application/json",
+          responseSchema
+        },
+        contents: `
+        Sản phẩm cần tạo mô tả: "${productName}"
+        ${industryName ? `Thuộc ngành hàng: "${industryName}"` : ''}
+        ${categoryName ? `Danh mục: "${categoryName}"` : ''}
+        
+        Hãy tạo 1 mô tả chính + 4 biến thể benefit-focused theo format yêu cầu.
+        
+        Lưu ý: Mỗi mô tả phải khác biệt rõ ràng, tập trung vào benefit cụ thể.
+        `
+      });
+
+      const rawJson = response.text;
+      
+      if (rawJson) {
+        try {
+          const result = JSON.parse(rawJson);
+          
+          // Validate result structure
+          if (!result.primary || !result.rasa_variations || !result.contexts) {
+            throw new Error("Invalid response structure from AI");
+          }
+          
+          // Ensure all required variations exist
+          const requiredKeys = ["0", "1", "2", "3"];
+          for (const key of requiredKeys) {
+            if (!result.rasa_variations[key] || result.rasa_variations[key].trim().length === 0) {
+              throw new Error(`Missing or empty variation for key: ${key}`);
+            }
+          }
+          
+          // Validate contexts mapping
+          const expectedContexts = { safety: "0", convenience: "1", quality: "2", health: "3" };
+          if (!result.contexts || JSON.stringify(result.contexts) !== JSON.stringify(expectedContexts)) {
+            console.warn('AI returned invalid contexts, using default mapping');
+            result.contexts = expectedContexts;
+          }
+          
+          // Enforce word count limits (max 120 words per description)
+          const enforceWordLimit = (text: string): string => {
+            const words = text.trim().split(/\s+/);
+            return words.length > 120 ? words.slice(0, 120).join(' ') + '...' : text;
+          };
+          
+          result.primary = enforceWordLimit(result.primary);
+          Object.keys(result.rasa_variations).forEach(key => {
+            result.rasa_variations[key] = enforceWordLimit(result.rasa_variations[key]);
+          });
+          
+          return result;
+          
+        } catch (parseError) {
+          console.error('Failed to parse product description response:', parseError, 'Raw:', rawJson);
+          
+          // Graceful fallback: generate simple benefit-focused descriptions
+          console.log('Using fallback description generation for:', productName);
+          return {
+            primary: `${productName} - chất lượng cao, giá trị tuyệt vời cho khách hàng`,
+            rasa_variations: {
+              "0": `${productName} an toàn, đáng tin cậy cho mọi gia đình`,
+              "1": `${productName} tiện lợi, dễ sử dụng hàng ngày`, 
+              "2": `${productName} chất lượng cao, hiệu quả vượt trội`,
+              "3": `${productName} tốt cho sức khỏe, mang lại hạnh phúc`
+            },
+            contexts: {
+              safety: "0",
+              convenience: "1", 
+              quality: "2",
+              health: "3"
+            }
+          };
+        }
+      } else {
+        throw new Error("Empty response from Gemini API");
+      }
+    } catch (error) {
+      console.error('Product description generation failed:', error);
+      throw new Error(`Failed to generate product descriptions: ${error}`);
+    }
+  }
 }
 
 // Export singleton instance
