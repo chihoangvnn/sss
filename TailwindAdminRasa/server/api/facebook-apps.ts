@@ -395,6 +395,193 @@ router.patch('/:id/tags', requireAdminAuth, async (req, res) => {
   }
 });
 
+// Bulk import Facebook apps
+router.post('/bulk-import', requireAdminAuth, async (req, res) => {
+  try {
+    const { apps } = req.body;
+    
+    // Validate request format
+    if (!Array.isArray(apps)) {
+      return res.status(400).json({
+        error: 'Invalid request format',
+        details: 'Request body must contain an "apps" array'
+      });
+    }
+
+    if (apps.length === 0) {
+      return res.status(400).json({
+        error: 'No apps to import',
+        details: 'Apps array is empty'
+      });
+    }
+
+    if (apps.length > 50) {
+      return res.status(400).json({
+        error: 'Too many apps',
+        details: 'Maximum 50 apps can be imported at once'
+      });
+    }
+
+    // 🔒 SECURITY FIX: Pre-fetch existing apps once (performance optimization)
+    const existingApps = await storage.getAllFacebookApps();
+    const existingAppIds = new Set(existingApps.map((app: any) => app.appId));
+    const existingAppNames = new Set(existingApps.map((app: any) => app.appName.toLowerCase()));
+
+    // 🔒 SECURITY FIX: Validate and dedupe within incoming batch
+    const batchAppIds = new Set<string>();
+    const batchAppNames = new Set<string>();
+
+    const results: {
+      success: Array<{ index: number; app: any }>;
+      errors: Array<{ index: number; app: any; error: string }>;
+      total: number;
+    } = {
+      success: [],
+      errors: [],
+      total: apps.length
+    };
+
+    // Process each app
+    for (let i = 0; i < apps.length; i++) {
+      const appData = apps[i];
+      
+      try {
+        // 🔒 SECURITY FIX: Trim and validate inputs
+        const appName = appData.appName?.trim();
+        const appId = appData.appId?.trim();
+        const appSecret = appData.appSecret?.trim();
+        const environment = appData.environment?.trim() || 'development';
+        const description = appData.description?.trim().substring(0, 500) || ''; // Cap description length
+
+        // 🔒 SECURITY FIX: Create safe app info for error responses (no secrets)
+        const safeAppInfo = {
+          appName: appName || appData.appName,
+          appId: appId || appData.appId,
+          environment: environment || appData.environment
+        };
+
+        // Validate required fields
+        if (!appName || !appId || !appSecret) {
+          results.errors.push({
+            index: i,
+            app: safeAppInfo, // 🔒 SECURITY FIX: No secrets in error response
+            error: 'Missing required fields (appName, appId, appSecret)'
+          });
+          continue;
+        }
+
+        // Validate environment
+        if (!['development', 'production', 'staging'].includes(environment)) {
+          results.errors.push({
+            index: i,
+            app: safeAppInfo, // 🔒 SECURITY FIX: No secrets in error response
+            error: 'Invalid environment. Must be development, production, or staging'
+          });
+          continue;
+        }
+
+        // Check for existing apps by ID or Name
+        if (existingAppIds.has(appId) || existingAppNames.has(appName.toLowerCase())) {
+          results.errors.push({
+            index: i,
+            app: safeAppInfo, // 🔒 SECURITY FIX: No secrets in error response
+            error: `App already exists (App ID: ${appId} or Name: ${appName})`
+          });
+          continue;
+        }
+
+        // Check for duplicates within current batch
+        if (batchAppIds.has(appId) || batchAppNames.has(appName.toLowerCase())) {
+          results.errors.push({
+            index: i,
+            app: safeAppInfo, // 🔒 SECURITY FIX: No secrets in error response
+            error: `Duplicate within batch (App ID: ${appId} or Name: ${appName})`
+          });
+          continue;
+        }
+
+        // Track this app in batch to prevent duplicates
+        batchAppIds.add(appId);
+        batchAppNames.add(appName.toLowerCase());
+
+        // 🔒 SECURITY FIX: Generate webhookUrl (force HTTPS like single app creation)
+        const host = process.env.REPLIT_DEV_DOMAIN || req.get('host');
+        const webhookUrl = `https://${host}/api/webhooks/facebook/${appId}`;
+
+        // 🔒 SECURITY FIX: Generate high-entropy verifyToken to avoid collisions
+        const verifyToken = `verify_${crypto.randomBytes(8).toString('hex')}_${Date.now()}`;
+
+        // 🔒 SECURITY FIX: Set default subscriptionFields and isActive
+        const subscriptionFields = ['messages', 'messaging_postbacks', 'feed'];
+
+        // 🔒 SECURITY FIX: Encrypt app secret before storage
+        const encryptedSecret = encryptSecret(appSecret);
+
+        // Create the app with all required fields
+        const createdApp = await storage.createFacebookApp({
+          appName,
+          appId,
+          appSecret: encryptedSecret, // 🔒 SECURITY FIX: Encrypted secret
+          environment: environment as 'development' | 'production' | 'staging',
+          description,
+          webhookUrl,
+          verifyToken,
+          subscriptionFields,
+          isActive: true
+        });
+
+        // 🔒 SECURITY FIX: Never return any secret information
+        results.success.push({
+          index: i,
+          app: {
+            id: createdApp.id,
+            appName: createdApp.appName,
+            appId: createdApp.appId,
+            environment: createdApp.environment,
+            description: createdApp.description,
+            webhookUrl: createdApp.webhookUrl,
+            verifyToken: createdApp.verifyToken,
+            subscriptionFields: createdApp.subscriptionFields,
+            isActive: createdApp.isActive,
+            appSecretSet: true // Only indicate that secret is set
+          }
+        });
+
+      } catch (error) {
+        // 🔒 SECURITY FIX: Use safe app info in catch block too (no secrets)
+        const safeAppInfo = {
+          appName: appData.appName,
+          appId: appData.appId,
+          environment: appData.environment
+        };
+        results.errors.push({
+          index: i,
+          app: safeAppInfo, // 🔒 SECURITY FIX: No secrets in error response
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Return results with summary
+    res.json({
+      message: `Bulk import completed. ${results.success.length} apps created, ${results.errors.length} errors`,
+      summary: {
+        total: results.total,
+        success: results.success.length,
+        errors: results.errors.length
+      },
+      results
+    });
+
+  } catch (error) {
+    console.error('Error during bulk import:', error);
+    res.status(500).json({ 
+      error: 'Bulk import failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Export functions for use in webhook handling
 export { encryptSecret, decryptSecret };
 export default router;
