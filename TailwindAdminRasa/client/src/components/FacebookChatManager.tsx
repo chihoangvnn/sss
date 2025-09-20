@@ -480,6 +480,60 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                   </div>
                 </div>
               </div>
+              
+              {/* Pipeline Assignment for Current Conversation */}
+              <div className="px-4 py-2 border-b bg-gray-50/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">Lưu pipeline cho cuộc trò chuyện này</span>
+                </div>
+                <div className="space-y-2">
+                  {/* Current Tags */}
+                  <div className="flex flex-wrap gap-1">
+                    {selectedConv.tagIds && selectedConv.tagIds.length > 0 && 
+                      pipelineTags.filter((tag: any) => selectedConv.tagIds.includes(tag.id)).map((tag: any) => (
+                        <Badge 
+                          key={tag.id} 
+                          variant="secondary" 
+                          className="text-xs px-2 py-1"
+                          style={{ backgroundColor: tag.color, color: 'white' }}
+                        >
+                          {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                        </Badge>
+                      ))
+                    }
+                  </div>
+
+                  {/* Quick Pipeline Stage Assignment */}
+                  <div className="flex flex-wrap gap-1">
+                    {pipelineTags.map((tag: any) => {
+                      const isAssigned = selectedConv.tagIds && selectedConv.tagIds.includes(tag.id);
+                      return (
+                        <Button
+                          key={tag.id}
+                          variant={isAssigned ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            if (isAssigned) {
+                              handleRemovePipelineStage(selectedConv.id, tag.id);
+                            } else {
+                              handleAssignPipelineStage(selectedConv.id, tag.id);
+                            }
+                          }}
+                          className="text-xs h-6 px-2"
+                          style={{
+                            backgroundColor: isAssigned ? tag.color : 'transparent',
+                            borderColor: tag.color,
+                            color: isAssigned ? 'white' : tag.color
+                          }}
+                        >
+                          {tag.icon}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Messages Area */}
