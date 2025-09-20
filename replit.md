@@ -4,6 +4,14 @@
 
 This is a comprehensive e-commerce management system with admin dashboard, storefront generation, and social media integration built with React, TypeScript, and modern web technologies. The system provides complete management capabilities for products, orders, customers, and includes specialized features for generating product landing pages, public storefronts, chatbot integration with RASA, and social media management.
 
+## Recent Changes
+
+**September 20, 2025** - Post Scheduler UI Enhancement:
+- Converted Post Scheduler page to compact one-line layout for better space efficiency
+- Removed ScheduledPostsMiniManager component from sidebar (redundant functionality)
+- Cleaned up demo data and unused component files
+- Improved UI/UX with hover-based action buttons and condensed information display
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
