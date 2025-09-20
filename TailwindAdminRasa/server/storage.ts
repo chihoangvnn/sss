@@ -2027,6 +2027,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contentLibrary.priority, priority as any))
       .orderBy(desc(contentLibrary.createdAt));
   }
+
+  // Account Groups methods
+  async getAccountGroups(): Promise<any[]> {
+    return await db.select().from(accountGroups).orderBy(desc(accountGroups.createdAt));
+  }
 }
 
 export const storage = new DatabaseStorage();

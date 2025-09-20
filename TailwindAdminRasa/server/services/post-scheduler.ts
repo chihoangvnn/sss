@@ -541,19 +541,20 @@ export class PostScheduler {
       // Create scheduled post data
       const postData = {
         socialAccountId: account.id,
-        platform: account.platform,
-        caption: content.content,
-        hashtags: content.hashtags || [],
+        platform: account.platform as 'facebook' | 'instagram' | 'twitter' | 'tiktok',
+        caption: content.baseContent,
+        hashtags: [], // Convert tagIds to hashtags later if needed
         assetIds: content.assetIds || [],
         scheduledTime,
         timezone: 'UTC',
         status: 'scheduled' as const,
         analytics: {
+          // Store Content Library metadata for tracking
           contentLibraryId: content.id,
           smartGenerated: true,
           priority: content.priority,
-          tags: content.tags
-        }
+          tagIds: content.tagIds
+        } as any
       };
       
       try {
