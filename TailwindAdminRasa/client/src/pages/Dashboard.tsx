@@ -2,7 +2,6 @@ import { useState } from "react";
 import { DashboardStats } from "@/components/DashboardStats";
 import { RevenueChart } from "@/components/RevenueChart";
 import { OrderTable } from "@/components/OrderTable";
-import { SocialMediaPanel } from "@/components/SocialMediaPanel";
 import { ProfessionalDashboard } from "@/components/ProfessionalDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Zap } from "lucide-react";
@@ -43,7 +42,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <SocialMediaPanel />
         </TabsContent>
 
         <TabsContent value="professional" className="mt-6">
