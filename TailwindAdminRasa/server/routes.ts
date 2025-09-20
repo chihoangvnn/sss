@@ -3717,6 +3717,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/facebook-apps", facebookAppsRouter);
 
   // ==========================================
+  // API CONFIGURATIONS MANAGEMENT ROUTES
+  // ==========================================
+  const apiConfigurationsRouter = await import("./api/api-configurations");
+  app.use("/api/api-configurations", apiConfigurationsRouter.default);
+
+  // ==========================================
   // API FALLBACK - Catch unmatched API routes and return JSON 404
   // This prevents API requests from falling through to Vite's HTML serve
   // ==========================================

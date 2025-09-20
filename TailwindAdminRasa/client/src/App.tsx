@@ -32,6 +32,7 @@ import { PostScheduler } from "@/pages/PostScheduler";
 import FacebookAppsManager from "@/pages/FacebookAppsManager";
 import TikTokBusiness from "@/pages/TikTokBusiness";
 import TikTokShop from "@/pages/TikTokShop";
+import ApiManagement from "@/pages/ApiManagement";
 import NotFound from "@/pages/not-found";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 
@@ -65,6 +66,7 @@ function Router() {
       <Route path="/twitter" component={SocialMedia} />
       <Route path="/tiktok-business" component={TikTokBusiness} />
       <Route path="/tiktok-shop" component={TikTokShop} />
+      <Route path="/api-management" component={ApiManagement} />
       <Route component={NotFound} />
     </Switch>
   );
