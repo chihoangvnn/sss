@@ -837,7 +837,7 @@ export function FacebookAppsManagerPanel() {
                     <Label className="text-xs text-green-700 font-medium">📍 Webhook URL:</Label>
                     <div className="flex items-center gap-2">
                       <Input
-                        value={`https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}`}
+                        value={`${window.location.origin}/api/webhooks/facebook/${webhookHelperAppId}`}
                         readOnly
                         className="text-xs font-mono bg-white border-green-300 text-green-700"
                       />
@@ -845,7 +845,7 @@ export function FacebookAppsManagerPanel() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const url = `https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}`;
+                          const url = `${window.location.origin}/api/webhooks/facebook/${webhookHelperAppId}`;
                           copyToClipboard(url, 'Webhook Helper URL');
                         }}
                         className="border-green-300 hover:bg-green-100"
@@ -891,7 +891,7 @@ export function FacebookAppsManagerPanel() {
                     <Label className="text-xs text-blue-700 font-medium">🧪 Test Verification URL:</Label>
                     <div className="flex items-center gap-2">
                       <Input
-                        value={`https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}?hub.mode=subscribe&hub.verify_token=${webhookHelperToken || `verify_${Date.now()}`}&hub.challenge=test123`}
+                        value={`${window.location.origin}/api/webhooks/facebook/${webhookHelperAppId}?hub.mode=subscribe&hub.verify_token=${webhookHelperToken || `verify_${webhookHelperAppId}`}&hub.challenge=test123`}
                         readOnly
                         className="text-xs font-mono bg-blue-50 border-blue-300 text-blue-700"
                       />
@@ -899,7 +899,7 @@ export function FacebookAppsManagerPanel() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const testUrl = `https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}?hub.mode=subscribe&hub.verify_token=${webhookHelperToken || `verify_${Date.now()}`}&hub.challenge=test123`;
+                          const testUrl = `${window.location.origin}/api/webhooks/facebook/${webhookHelperAppId}?hub.mode=subscribe&hub.verify_token=${webhookHelperToken || `verify_${webhookHelperAppId}`}&hub.challenge=test123`;
                           copyToClipboard(testUrl, 'Webhook Test URL');
                         }}
                         className="border-blue-300 hover:bg-blue-100"
