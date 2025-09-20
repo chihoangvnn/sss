@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { storage } from '../storage';
 import crypto from 'crypto';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -20,6 +21,106 @@ const requireAdminAuth = (req: any, res: any, next: any) => {
   }
   next();
 };
+
+// 🛡️ CSRF PROTECTION for destructive operations
+const requireCSRFProtection = (req: any, res: any, next: any) => {
+  // For development mode, skip CSRF protection
+  if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+    next();
+    return;
+  }
+
+  // Check CSRF token from header
+  const csrfToken = req.headers['x-csrf-token'];
+  const sessionCSRF = req.session?.csrfToken;
+
+  if (!csrfToken || !sessionCSRF || csrfToken !== sessionCSRF) {
+    return res.status(403).json({
+      error: 'CSRF token validation failed',
+      code: 'CSRF_PROTECTION'
+    });
+  }
+
+  // 🛡️ HARDENED ORIGIN VALIDATION - Exact matching only
+  const origin = req.headers.origin;
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [`${req.protocol}://${req.headers.host}`];
+
+  if (!origin) {
+    return res.status(403).json({
+      error: 'Origin header required',
+      code: 'ORIGIN_MISSING'
+    });
+  }
+
+  // Exact origin matching - prevent substring bypass attacks
+  if (!allowedOrigins.includes(origin)) {
+    return res.status(403).json({
+      error: 'Origin not allowed',
+      code: 'ORIGIN_BLOCKED',
+      allowedOrigins: allowedOrigins.map(o => o.replace(/https?:\/\//, '[protocol]://')) // Don't expose full URLs
+    });
+  }
+
+  next();
+};
+
+// 🛡️ CSRF TOKEN GENERATION ENDPOINT
+router.get('/csrf-token', requireAdminAuth, (req: any, res: any) => {
+  try {
+    // Generate CSRF token if not exists or regenerate for security
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    
+    // Store in session
+    if (!req.session) {
+      return res.status(500).json({
+        error: 'Session not available',
+        code: 'SESSION_ERROR'
+      });
+    }
+    
+    req.session.csrfToken = csrfToken;
+    
+    // Return token for client to use in headers
+    res.json({
+      csrfToken,
+      timestamp: Date.now(),
+      expiresIn: 3600000 // 1 hour
+    });
+  } catch (error) {
+    console.error('Error generating CSRF token:', error);
+    res.status(500).json({
+      error: 'Failed to generate CSRF token',
+      code: 'CSRF_GENERATION_FAILED'
+    });
+  }
+});
+
+// 🛡️ PRODUCTION-GRADE ZOD VALIDATION SCHEMAS
+const FacebookAppSchema = z.object({
+  appName: z.string()
+    .trim()
+    .min(2, 'App name must be at least 2 characters')
+    .max(100, 'App name must be less than 100 characters'),
+  appId: z.string()
+    .trim()
+    .regex(/^\d{10,20}$/, 'App ID must be 10-20 digits'),
+  appSecret: z.string()
+    .trim()
+    .min(32, 'App secret must be at least 32 characters')
+    .max(256, 'App secret too long'),
+  environment: z.enum(['development', 'staging', 'production']).default('development'),
+  description: z.string()
+    .trim()
+    .max(500, 'Description must be less than 500 characters')
+    .optional()
+    .default('')
+});
+
+const BulkImportSchema = z.object({
+  apps: z.array(FacebookAppSchema)
+    .min(1, 'At least one app is required')
+    .max(50, 'Maximum 50 apps can be imported at once')
+});
 
 // Secure encryption/decryption for app secrets using AES-256-GCM
 const ENCRYPTION_KEY = (() => {
@@ -152,7 +253,7 @@ router.get('/', requireAdminAuth, async (req, res) => {
  * POST /api/facebook-apps
  * Create new Facebook app configuration
  */
-router.post('/', requireAdminAuth, async (req, res) => {
+router.post('/', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { appName, appId, appSecret, verifyToken, environment, description } = req.body;
     
@@ -212,7 +313,7 @@ router.post('/', requireAdminAuth, async (req, res) => {
  * PUT /api/facebook-apps/:id
  * Update Facebook app configuration
  */
-router.put('/:id', requireAdminAuth, async (req, res) => {
+router.put('/:id', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
@@ -256,7 +357,7 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
  * DELETE /api/facebook-apps/:id
  * Delete Facebook app configuration
  */
-router.delete('/:id', requireAdminAuth, async (req, res) => {
+router.delete('/:id', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -351,7 +452,7 @@ router.post('/:id/test-webhook', requireAdminAuth, async (req, res) => {
  * PATCH /api/facebook-apps/:id/tags
  * Update tags for a Facebook app
  */
-router.patch('/:id/tags', requireAdminAuth, async (req, res) => {
+router.patch('/:id/tags', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { id } = req.params;
     const { tagIds } = req.body;
@@ -396,31 +497,23 @@ router.patch('/:id/tags', requireAdminAuth, async (req, res) => {
 });
 
 // Bulk import Facebook apps
-router.post('/bulk-import', requireAdminAuth, async (req, res) => {
+router.post('/bulk-import', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
-    const { apps } = req.body;
+    // 🛡️ PRODUCTION-GRADE ZOD VALIDATION
+    const validation = BulkImportSchema.safeParse(req.body);
     
-    // Validate request format
-    if (!Array.isArray(apps)) {
+    if (!validation.success) {
       return res.status(400).json({
-        error: 'Invalid request format',
-        details: 'Request body must contain an "apps" array'
+        error: 'Invalid request data',
+        details: validation.error.errors.map(err => ({
+          path: err.path.join('.'),
+          message: err.message,
+          code: err.code
+        }))
       });
     }
 
-    if (apps.length === 0) {
-      return res.status(400).json({
-        error: 'No apps to import',
-        details: 'Apps array is empty'
-      });
-    }
-
-    if (apps.length > 50) {
-      return res.status(400).json({
-        error: 'Too many apps',
-        details: 'Maximum 50 apps can be imported at once'
-      });
-    }
+    const { apps } = validation.data;
 
     // 🔒 SECURITY FIX: Pre-fetch existing apps once (performance optimization)
     const existingApps = await storage.getAllFacebookApps();
@@ -583,7 +676,7 @@ router.post('/bulk-import', requireAdminAuth, async (req, res) => {
 });
 
 // 🗑️ Bulk delete Facebook apps
-router.post('/bulk-delete', requireAdminAuth, async (req, res) => {
+router.post('/bulk-delete', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { ids } = req.body; // 🔧 FIX: Use 'ids' for internal database IDs
     
@@ -628,7 +721,7 @@ router.post('/bulk-delete', requireAdminAuth, async (req, res) => {
     } = {
       success: [],
       errors: [],
-      total: appIds.length
+      total: uniqueIds.length
     };
 
     // Pre-fetch existing apps for validation and logging
@@ -691,7 +784,7 @@ router.post('/bulk-delete', requireAdminAuth, async (req, res) => {
 });
 
 // ⚡ Bulk toggle isActive status for Facebook apps
-router.post('/bulk-toggle', requireAdminAuth, async (req, res) => {
+router.post('/bulk-toggle', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { appIds, isActive } = req.body;
     
@@ -740,7 +833,7 @@ router.post('/bulk-toggle', requireAdminAuth, async (req, res) => {
     } = {
       success: [],
       errors: [],
-      total: appIds.length
+      total: uniqueIds.length
     };
 
     // Pre-fetch existing apps for validation
@@ -805,7 +898,7 @@ router.post('/bulk-toggle', requireAdminAuth, async (req, res) => {
 });
 
 // 🏷️ Bulk update tags for Facebook apps
-router.post('/bulk-update-tags', requireAdminAuth, async (req, res) => {
+router.post('/bulk-update-tags', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { appIds, tagIds, operation = 'replace' } = req.body;
     
@@ -869,7 +962,7 @@ router.post('/bulk-update-tags', requireAdminAuth, async (req, res) => {
     } = {
       success: [],
       errors: [],
-      total: appIds.length
+      total: uniqueIds.length
     };
 
     // Pre-fetch existing apps for validation
