@@ -332,39 +332,6 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
             </TabsList>
           </Tabs>
 
-          {/* Pipeline Filter */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">Pipeline khách hàng</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              <Button
-                variant={filterPipeline === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterPipeline("all")}
-                className="text-xs h-7"
-              >
-                Tất cả
-              </Button>
-              {pipelineTags.map((tag: any) => (
-                <Button
-                  key={tag.id}
-                  variant={filterPipeline === tag.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterPipeline(tag.id)}
-                  className="text-xs h-7"
-                  style={{
-                    backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
-                    borderColor: tag.color,
-                    color: filterPipeline === tag.id ? 'white' : tag.color
-                  }}
-                >
-                  {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
-                </Button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Conversations List */}
@@ -523,6 +490,40 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Pipeline Filter - Moved from Sidebar */}
+            <div className="p-3 border-b bg-gray-50/50">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Pipeline khách hàng</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                <Button
+                  variant={filterPipeline === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterPipeline("all")}
+                  className="text-xs h-7"
+                >
+                  Tất cả
+                </Button>
+                {pipelineTags.map((tag: any) => (
+                  <Button
+                    key={tag.id}
+                    variant={filterPipeline === tag.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterPipeline(tag.id)}
+                    className="text-xs h-7"
+                    style={{
+                      backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
+                      borderColor: tag.color,
+                      color: filterPipeline === tag.id ? 'white' : tag.color
+                    }}
+                  >
+                    {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                  </Button>
+                ))}
               </div>
             </div>
 
