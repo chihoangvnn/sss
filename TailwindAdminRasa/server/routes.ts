@@ -3699,6 +3699,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
+  // API MANAGEMENT MIDDLEWARE SETUP
+  // ==========================================
+  const { setupApiManagement } = await import("./middleware/api-management");
+  setupApiManagement(app);
+
+  // ==========================================
   // CONTENT MANAGEMENT API ROUTES
   // ==========================================
   const contentRoutes = await import("./api/content");
