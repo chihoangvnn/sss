@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 
 // Types for conversation and message data
 interface ConversationData extends FacebookConversation {
-  participantAvatar?: string;
+  participantAvatar: string | null;
 }
 
 interface FacebookChatManagerProps {
@@ -385,7 +385,7 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                       
                       <div className="flex items-center justify-between">
                         <div className="flex gap-1">
-                          {(conversation.tags || []).slice(0, 2).map((tag) => (
+                          {(conversation.tags || []).slice(0, 2).map((tag: string) => (
                             <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0.5">
                               {tag}
                             </Badge>
@@ -412,126 +412,106 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
       <div className="flex-1 flex flex-col">
         {selectedConv ? (
           <>
-            {/* Chat Header */}
-            <div className="p-4 border-b bg-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage src={selectedConv.participantAvatar} />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                      {selectedConv.participantName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{selectedConv.participantName}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span>{selectedConv.pageName}</span>
-                      <Circle className={cn("w-2 h-2 fill-current", getStatusColor(selectedConv.status))} />
-                      <span className="capitalize">{selectedConv.status}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Pipeline Filter - 2 rows, right aligned */}
-                <div className="flex flex-col items-end gap-1 max-w-xs">
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    <Button
-                      variant={filterPipeline === "all" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFilterPipeline("all")}
-                      className="text-xs h-7"
-                    >
-                      Tất cả
-                    </Button>
-                    {pipelineTags.slice(0, 2).map((tag: any) => (
-                      <Button
-                        key={tag.id}
-                        variant={filterPipeline === tag.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setFilterPipeline(tag.id)}
-                        className="text-xs h-7"
-                        style={{
-                          backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
-                          borderColor: tag.color,
-                          color: filterPipeline === tag.id ? 'white' : tag.color
-                        }}
-                      >
-                        {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-1 justify-end">
-                    {pipelineTags.slice(2).map((tag: any) => (
-                      <Button
-                        key={tag.id}
-                        variant={filterPipeline === tag.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setFilterPipeline(tag.id)}
-                        className="text-xs h-7"
-                        style={{
-                          backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
-                          borderColor: tag.color,
-                          color: filterPipeline === tag.id ? 'white' : tag.color
-                        }}
-                      >
-                        {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+            {/* Pipeline Filter - Full Width Top */}
+            <div className="p-3 border-b bg-gray-50/50">
+              <div className="flex flex-wrap gap-1 justify-center">
+                <Button
+                  variant={filterPipeline === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterPipeline("all")}
+                  className="text-xs h-7"
+                >
+                  Tất cả
+                </Button>
+                {pipelineTags.map((tag: any) => (
+                  <Button
+                    key={tag.id}
+                    variant={filterPipeline === tag.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterPipeline(tag.id)}
+                    className="text-xs h-7"
+                    style={{
+                      backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
+                      borderColor: tag.color,
+                      color: filterPipeline === tag.id ? 'white' : tag.color
+                    }}
+                  >
+                    {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                  </Button>
+                ))}
               </div>
-              
-              {/* Pipeline Assignment for Current Conversation */}
-              <div className="px-4 py-2 border-b bg-gray-50/50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">Lưu pipeline cho cuộc trò chuyện này</span>
-                </div>
-                <div className="space-y-2">
-                  {/* Current Tags */}
-                  <div className="flex flex-wrap gap-1">
-                    {selectedConv.tagIds && selectedConv.tagIds.length > 0 && 
-                      pipelineTags.filter((tag: any) => selectedConv.tagIds.includes(tag.id)).map((tag: any) => (
-                        <Badge 
-                          key={tag.id} 
-                          variant="secondary" 
-                          className="text-xs px-2 py-1"
-                          style={{ backgroundColor: tag.color, color: 'white' }}
-                        >
-                          {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
-                        </Badge>
-                      ))
-                    }
-                  </div>
+            </div>
 
-                  {/* Quick Pipeline Stage Assignment */}
-                  <div className="flex flex-wrap gap-1">
-                    {pipelineTags.map((tag: any) => {
-                      const isAssigned = selectedConv.tagIds && selectedConv.tagIds.includes(tag.id);
-                      return (
-                        <Button
-                          key={tag.id}
-                          variant={isAssigned ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => {
-                            if (isAssigned) {
-                              handleRemovePipelineStage(selectedConv.id, tag.id);
-                            } else {
-                              handleAssignPipelineStage(selectedConv.id, tag.id);
-                            }
-                          }}
-                          className="text-xs h-6 px-2"
-                          style={{
-                            backgroundColor: isAssigned ? tag.color : 'transparent',
-                            borderColor: tag.color,
-                            color: isAssigned ? 'white' : tag.color
-                          }}
-                        >
-                          {tag.icon}
-                        </Button>
-                      );
-                    })}
+            {/* User Info Header */}
+            <div className="p-4 border-b bg-white">
+              <div className="flex items-center gap-3 justify-end">
+                <div className="text-right">
+                  <h3 className="font-semibold text-gray-900">{selectedConv.participantName}</h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 justify-end">
+                    <span>{selectedConv.pageName}</span>
+                    <Circle className={cn("w-2 h-2 fill-current", getStatusColor(selectedConv.status))} />
+                    <span className="capitalize">{selectedConv.status}</span>
                   </div>
+                </div>
+                <Avatar className="w-10 h-10">
+                  <AvatarImage src={selectedConv.participantAvatar} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                    {selectedConv.participantName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+
+            {/* Pipeline Assignment for Current Conversation */}
+            <div className="px-4 py-2 border-b bg-gray-50/50">
+              <div className="flex items-center gap-2 mb-2">
+                <Tag className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Lưu pipeline cho cuộc trò chuyện này</span>
+              </div>
+              <div className="space-y-2">
+                {/* Current Tags */}
+                <div className="flex flex-wrap gap-1">
+                  {selectedConv.tagIds && selectedConv.tagIds.length > 0 && 
+                    pipelineTags.filter((tag: any) => selectedConv.tagIds?.includes(tag.id)).map((tag: any) => (
+                      <Badge 
+                        key={tag.id} 
+                        variant="secondary" 
+                        className="text-xs px-2 py-1"
+                        style={{ backgroundColor: tag.color, color: 'white' }}
+                      >
+                        {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                      </Badge>
+                    ))
+                  }
+                </div>
+
+                {/* Quick Pipeline Stage Assignment */}
+                <div className="flex flex-wrap gap-1">
+                  {pipelineTags.map((tag: any) => {
+                    const isAssigned = selectedConv.tagIds && selectedConv.tagIds.includes(tag.id);
+                    return (
+                      <Button
+                        key={tag.id}
+                        variant={isAssigned ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          if (isAssigned) {
+                            handleRemovePipelineStage(selectedConv.id, tag.id);
+                          } else {
+                            handleAssignPipelineStage(selectedConv.id, tag.id);
+                          }
+                        }}
+                        className="text-xs h-6 px-2"
+                        style={{
+                          backgroundColor: isAssigned ? tag.color : 'transparent',
+                          borderColor: tag.color,
+                          color: isAssigned ? 'white' : tag.color
+                        }}
+                      >
+                        {tag.icon}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
