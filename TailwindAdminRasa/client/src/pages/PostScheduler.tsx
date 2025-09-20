@@ -10,7 +10,6 @@ import { ScheduledPost, SocialAccount, ContentAsset, AccountGroup } from '../../
 import { PostCalendarView } from '../components/PostCalendarView';
 import { BulkUpload } from '../components/BulkUpload';
 import { SmartScheduler } from '../components/SmartScheduler';
-import { GroupManagementModal } from '../components/GroupManagementModal';
 
 interface PostSchedulerProps {}
 
@@ -25,7 +24,6 @@ export function PostScheduler({}: PostSchedulerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showSmartScheduler, setShowSmartScheduler] = useState(false);
-  const [showGroupManagement, setShowGroupManagement] = useState(false);
 
   // Fetch scheduled posts
   const { data: scheduledPosts = [], isLoading: postsLoading } = useQuery({
@@ -185,8 +183,8 @@ export function PostScheduler({}: PostSchedulerProps) {
     // In production, this would come from the group_accounts junction table
     
     // Example logic: determine priority based on account characteristics
-    const followers = account.followers || 0;
-    const engagement = account.engagement || 0;
+    const followers = Number(account.followers) || 0;
+    const engagement = Number(account.engagement) || 0;
     
     if (followers > 100000 && engagement > 5) return 1; // VIP
     if (followers > 50000 && engagement > 3) return 2;  // High priority  
@@ -452,13 +450,6 @@ export function PostScheduler({}: PostSchedulerProps) {
               Smart Scheduler
             </button>
 
-            <button
-              onClick={() => setShowGroupManagement(true)}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg flex items-center gap-2"
-            >
-              <Users className="w-4 h-4" />
-              Quản Lý Groups
-            </button>
           </div>
         </div>
 
@@ -778,24 +769,9 @@ export function PostScheduler({}: PostSchedulerProps) {
           <SmartScheduler
             isOpen={showSmartScheduler}
             onClose={() => setShowSmartScheduler(false)}
-            onSchedule={handleSmartSchedule}
           />
         )}
 
-        {/* Group Management Modal */}
-        {showGroupManagement && (
-          <GroupManagementModal
-            isOpen={showGroupManagement}
-            onClose={() => setShowGroupManagement(false)}
-            groups={accountGroups}
-            socialAccounts={socialAccounts}
-            groupLimits={groupLimits}
-            onRefresh={() => {
-              queryClient.invalidateQueries({ queryKey: ['account-groups'] });
-              queryClient.invalidateQueries({ queryKey: ['group-limits'] });
-            }}
-          />
-        )}
       </div>
     </div>
   );
