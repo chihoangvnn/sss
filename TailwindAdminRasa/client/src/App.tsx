@@ -90,8 +90,8 @@ function App() {
                 <div className="flex items-center gap-4">
                   <SidebarTrigger data-testid="button-sidebar-toggle" />
                   <div>
-                    <h1 className="text-lg font-semibold">E-Commerce Admin Dashboard</h1>
-                    <p className="text-sm text-muted-foreground">Hệ thống quản lý bán hàng thông minh</p>
+                    <h1 className="text-lg font-semibold">Facebook Chat & Pipeline Manager</h1>
+                    <p className="text-sm text-muted-foreground">Quản lý khách hàng và pipeline bán hàng trực tiếp</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
