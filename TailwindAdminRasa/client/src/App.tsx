@@ -36,6 +36,7 @@ import TikTokShop from "@/pages/TikTokShop";
 import ApiManagement from "@/pages/ApiManagement";
 import NotFound from "@/pages/not-found";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { SocialMediaHub } from "@/components/SocialMediaHub";
 
 function Router() {
   return (
@@ -64,9 +65,9 @@ function Router() {
       <Route path="/facebook-apps" component={FacebookAppsManager} />
       <Route path="/groups-manager" component={GroupsManager} />
       <Route path="/facebook" component={SocialMedia} />
-      <Route path="/instagram" component={SocialMedia} />
-      <Route path="/twitter" component={SocialMedia} />
-      <Route path="/social-media" component={SocialMedia} />
+      <Route path="/instagram" component={() => { window.location.href = '/social-media'; return null; }} />
+      <Route path="/twitter" component={() => { window.location.href = '/social-media'; return null; }} />
+      <Route path="/social-media" component={SocialMediaHub} />
       <Route path="/tiktok-business" component={TikTokBusiness} />
       <Route path="/tiktok-shop" component={TikTokShop} />
       <Route path="/api-management" component={ApiManagement} />
