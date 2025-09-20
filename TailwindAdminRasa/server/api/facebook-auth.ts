@@ -12,11 +12,11 @@ const oauthStates = new Map<string, { timestamp: number; sessionId?: string }>()
 // Clean expired states every 10 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [state, data] of oauthStates.entries()) {
+  oauthStates.forEach((data, state) => {
     if (now - data.timestamp > 600000) { // 10 minutes
       oauthStates.delete(state);
     }
-  }
+  });
 }, 600000);
 
 // Environment variables check
@@ -212,6 +212,45 @@ router.get('/facebook/status', async (req, res) => {
     console.error('Facebook status check error:', error);
     res.status(500).json({ 
       error: 'Failed to check Facebook status',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /auth/facebook/account/:accountId/pages
+ * Get detailed page information for a specific Facebook account
+ */
+router.get('/facebook/account/:accountId/pages', async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    
+    const account = await storage.getSocialAccountById(accountId);
+    if (!account || account.platform !== 'facebook') {
+      return res.status(404).json({ error: 'Facebook account not found' });
+    }
+    
+    // Return the pageAccessTokens stored in the account
+    const pages = Array.isArray(account.pageAccessTokens) ? account.pageAccessTokens : [];
+    
+    res.json({ 
+      success: true,
+      accountId,
+      accountName: account.name,
+      pages: pages.map(page => ({
+        pageId: page.pageId,
+        pageName: page.pageName,
+        accessToken: '***', // Don't expose the actual token
+        permissions: page.permissions || [],
+        status: page.status || 'active',
+        expiresAt: page.expiresAt
+      })),
+      totalPages: pages.length
+    });
+  } catch (error) {
+    console.error('Facebook account pages error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get Facebook account pages',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
