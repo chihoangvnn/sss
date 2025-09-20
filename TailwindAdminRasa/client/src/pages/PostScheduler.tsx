@@ -3,18 +3,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Calendar, Clock, Plus, Edit, Trash2, Send, Pause, Play, 
   Facebook, Instagram, Image, Video, Tag, Eye, AlertCircle,
-  CheckCircle, XCircle, Loader2, Filter, Search, LayoutList, Upload
+  CheckCircle, XCircle, Loader2, Filter, Search, LayoutList, Upload,
+  Users, Target, Settings, TrendingUp, Shield, Zap
 } from 'lucide-react';
-import { ScheduledPost, SocialAccount, ContentAsset } from '../../../shared/schema';
+import { ScheduledPost, SocialAccount, ContentAsset, AccountGroup } from '../../../shared/schema';
 import { PostCalendarView } from '../components/PostCalendarView';
 import { BulkUpload } from '../components/BulkUpload';
 import { SmartScheduler } from '../components/SmartScheduler';
+import { GroupManagementModal } from '../components/GroupManagementModal';
 
 interface PostSchedulerProps {}
 
 export function PostScheduler({}: PostSchedulerProps) {
   const queryClient = useQueryClient();
   const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
@@ -22,6 +25,7 @@ export function PostScheduler({}: PostSchedulerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showSmartScheduler, setShowSmartScheduler] = useState(false);
+  const [showGroupManagement, setShowGroupManagement] = useState(false);
 
   // Fetch scheduled posts
   const { data: scheduledPosts = [], isLoading: postsLoading } = useQuery({
@@ -48,6 +52,31 @@ export function PostScheduler({}: PostSchedulerProps) {
     },
   });
 
+  // Fetch account groups
+  const { data: accountGroups = [] } = useQuery({
+    queryKey: ['account-groups'],
+    queryFn: async () => {
+      const response = await fetch('/api/analytics/groups');
+      if (!response.ok) throw new Error('Failed to fetch account groups');
+      const data = await response.json();
+      return data as AccountGroup[];
+    },
+  });
+
+  // Fetch group limits and usage using new limit management API
+  const { data: groupLimits } = useQuery({
+    queryKey: ['group-limits', selectedGroup],
+    queryFn: async () => {
+      const url = selectedGroup !== 'all' 
+        ? `/api/limits/status?scope=group&scopeId=${selectedGroup}`
+        : '/api/limits/status';
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch group limits');
+      return response.json();
+    },
+    refetchInterval: 10000, // Update every 10 seconds
+  });
+
   // Fetch scheduler status
   const { data: schedulerStatus } = useQuery({
     queryKey: ['scheduler-status'],
@@ -72,9 +101,39 @@ export function PostScheduler({}: PostSchedulerProps) {
     },
   });
 
-  // Trigger post mutation
+  // Trigger post mutation with limit violation prevention
   const triggerPostMutation = useMutation({
     mutationFn: async (postId: string) => {
+      // Get post details first
+      const post = scheduledPosts.find(p => p.id === postId);
+      if (!post) throw new Error('Post not found');
+
+      // Check posting capacity before triggering
+      const capacityResponse = await fetch('/api/limits/check-capacity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          socialAccountId: post.socialAccountId,
+          groupId: selectedGroup !== 'all' ? selectedGroup : undefined
+        })
+      });
+
+      if (capacityResponse.ok) {
+        const capacity = await capacityResponse.json();
+        
+        // Check if posting is allowed
+        if (!capacity.canPost) {
+          const violation = capacity.violations[0];
+          const suggestedTime = capacity.suggestedScheduleTimes[0];
+          
+          throw new Error(
+            `🚫 Limit violation detected! ${violation?.violatedRule.scope} limit exceeded (${violation?.currentUsage}/${violation?.maxAllowed}). ` +
+            `Suggested retry time: ${suggestedTime ? new Date(suggestedTime).toLocaleString('vi-VN') : 'later'}`
+          );
+        }
+      }
+
+      // Proceed with posting if capacity check passes
       const response = await fetch(`/api/content/scheduled-posts/${postId}/trigger`, {
         method: 'POST'
       });
@@ -86,14 +145,55 @@ export function PostScheduler({}: PostSchedulerProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['group-limits'] }); // Refresh limits after posting
     },
   });
 
-  // Filter posts
+  // Filter posts by status and group  
   const filteredPosts = scheduledPosts.filter(post => {
     if (filterStatus !== 'all' && post.status !== filterStatus) return false;
+    
+    // Group filtering implementation
+    if (selectedGroup !== 'all') {
+      // Check if post's social account belongs to the selected group
+      const postAccount = socialAccounts.find(acc => acc.id === post.socialAccountId);
+      if (!postAccount) return false;
+      
+      // TODO: When group-account relationship is fully implemented in backend,
+      // this will use actual group assignments from group_accounts table.
+      // For now, we simulate group assignment based on account name patterns
+      // or other criteria that can be implemented immediately.
+      
+      // Simple group matching for demonstration (can be enhanced)
+      const selectedGroupData = accountGroups.find(g => g.id === selectedGroup);
+      if (!selectedGroupData) return false;
+      
+      // Match by group priority level for now (as temporary filtering)
+      // Priority 1-2 = VIP accounts, 3-4 = Standard accounts, 5 = Basic accounts
+      const accountPriority = getAccountPriorityLevel(postAccount);
+      const groupPriority = selectedGroupData.priority || 3;
+      
+      return accountPriority === groupPriority;
+    }
+    
     return true;
   });
+
+  // Helper function to determine account priority level
+  const getAccountPriorityLevel = (account: SocialAccount): number => {
+    // This is a temporary implementation for group filtering
+    // In production, this would come from the group_accounts junction table
+    
+    // Example logic: determine priority based on account characteristics
+    const followers = account.followers || 0;
+    const engagement = account.engagement || 0;
+    
+    if (followers > 100000 && engagement > 5) return 1; // VIP
+    if (followers > 50000 && engagement > 3) return 2;  // High priority  
+    if (followers > 10000 && engagement > 1) return 3;  // Standard
+    if (followers > 1000) return 4;                     // Low priority
+    return 5; // Basic
+  };
 
   // Group posts by status
   const postsByStatus = {
@@ -185,9 +285,60 @@ export function PostScheduler({}: PostSchedulerProps) {
     }
   };
 
-  // Smart scheduler handler
+  // Smart scheduler handler with bulk limit checking
   const handleSmartSchedule = async (config: any) => {
     try {
+      // First, validate the configuration and generate planned posts
+      const planResponse = await fetch('/api/content/smart-scheduler/plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+
+      if (!planResponse.ok) {
+        const error = await planResponse.json();
+        throw new Error(error.message || 'Failed to create schedule plan');
+      }
+
+      const plan = await planResponse.json();
+      
+      // Perform bulk capacity check before scheduling
+      const bulkCheckResponse = await fetch('/api/limits/bulk-check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          posts: plan.posts?.map((post: any) => ({
+            socialAccountId: post.socialAccountId,
+            groupId: selectedGroup !== 'all' ? selectedGroup : undefined,
+            scheduledTime: post.scheduledTime
+          })) || []
+        })
+      });
+
+      if (bulkCheckResponse.ok) {
+        const bulkResult = await bulkCheckResponse.json();
+        
+        // Show capacity analysis to user
+        if (!bulkResult.canScheduleAll) {
+          const message = 
+            `⚠️ Limit Capacity Analysis:\n` +
+            `✅ Allowed: ${bulkResult.summary.allowedCount}/${bulkResult.summary.totalPosts} posts\n` +
+            `🚫 Blocked: ${bulkResult.summary.blockedCount} posts\n` +
+            `🔄 Alternatives: ${bulkResult.summary.alternativeCount} suggestions\n` +
+            `📊 Success Rate: ${bulkResult.summary.successRate}%\n\n` +
+            `Continue with allowed posts only?`;
+          
+          if (!confirm(message)) {
+            return;
+          }
+        }
+      }
+
+      // Proceed with actual scheduling
       const response = await fetch('/api/content/smart-scheduler/schedule', {
         method: 'POST',
         headers: {
@@ -203,14 +354,15 @@ export function PostScheduler({}: PostSchedulerProps) {
 
       const result = await response.json();
       
-      // Refresh the posts list
+      // Refresh the posts list and limits
       queryClient.invalidateQueries({ queryKey: ['scheduled-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['group-limits'] });
       
       // Close the modal
       setShowSmartScheduler(false);
       
       // Show success message
-      alert(`Smart Scheduler hoàn thành! Đã tạo ${result.totalPosts} bài đăng cho ${result.fanpageCount} fanpages.`);
+      alert(`🎉 Smart Scheduler hoàn thành! Đã tạo ${result.totalPosts} bài đăng cho ${result.fanpageCount} fanpages.`);
       
     } catch (error) {
       console.error('Smart schedule error:', error);
@@ -299,13 +451,21 @@ export function PostScheduler({}: PostSchedulerProps) {
               </svg>
               Smart Scheduler
             </button>
+
+            <button
+              onClick={() => setShowGroupManagement(true)}
+              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              Quản Lý Groups
+            </button>
           </div>
         </div>
 
         {/* Controls */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            {/* Social Account Filter */}
+            {/* Filters */}
             <div className="flex items-center gap-4">
               <select
                 value={selectedAccount}
@@ -316,6 +476,19 @@ export function PostScheduler({}: PostSchedulerProps) {
                 {socialAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name} ({account.platform})
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">Tất cả groups</option>
+                {accountGroups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name} (P{group.priority})
                   </option>
                 ))}
               </select>
@@ -333,6 +506,40 @@ export function PostScheduler({}: PostSchedulerProps) {
                 <option value="failed">Thất bại</option>
               </select>
             </div>
+
+            {/* Group Limits Info */}
+            {selectedGroup !== 'all' && groupLimits && (
+              <div className="flex items-center gap-4">
+                <div className="text-sm">
+                  <span className="text-gray-600">Limits:</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    {groupLimits.byScope?.group?.map((limit: any, index: number) => (
+                      <div key={index} className="flex items-center gap-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                          limit.usagePercent > 90 ? 'bg-red-500' : 
+                          limit.usagePercent > 70 ? 'bg-yellow-500' : 'bg-green-500'
+                        }`}></div>
+                        <span className="text-xs font-medium">
+                          {limit.currentUsage}/{limit.rule.maxCount} ({limit.rule.limitType})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Health Score */}
+                  {groupLimits.summary && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${
+                        groupLimits.summary.healthScore >= 80 ? 'bg-green-100 text-green-700' :
+                        groupLimits.summary.healthScore >= 60 ? 'bg-yellow-100 text-yellow-700' : 
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        Health: {groupLimits.summary.healthScore}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -571,6 +778,22 @@ export function PostScheduler({}: PostSchedulerProps) {
           <SmartScheduler
             isOpen={showSmartScheduler}
             onClose={() => setShowSmartScheduler(false)}
+            onSchedule={handleSmartSchedule}
+          />
+        )}
+
+        {/* Group Management Modal */}
+        {showGroupManagement && (
+          <GroupManagementModal
+            isOpen={showGroupManagement}
+            onClose={() => setShowGroupManagement(false)}
+            groups={accountGroups}
+            socialAccounts={socialAccounts}
+            groupLimits={groupLimits}
+            onRefresh={() => {
+              queryClient.invalidateQueries({ queryKey: ['account-groups'] });
+              queryClient.invalidateQueries({ queryKey: ['group-limits'] });
+            }}
           />
         )}
       </div>
