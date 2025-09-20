@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Facebook, MessageSquare, Settings, Users, Activity, Zap } from "lucide-react";
 import { FacebookChatManager } from "./FacebookChatManager";
+import { FacebookConnectButton } from "./FacebookConnectButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -197,23 +198,31 @@ export function SimpleSocialMediaPanel({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-16">
-                  <div className="relative mb-8">
-                    <div className="w-24 h-24 mx-auto bg-gradient-to-br from-[hsl(var(--activity-teal))]/10 to-[hsl(var(--activity-mint))]/5 rounded-3xl flex items-center justify-center border-2 border-[hsl(var(--activity-teal))]/20">
-                      <Facebook className="w-12 h-12 text-[hsl(var(--activity-teal))]/60" />
+                <div className="space-y-6">
+                  <div className="text-center py-8">
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[hsl(var(--activity-teal))]/10 to-[hsl(var(--activity-mint))]/5 rounded-2xl flex items-center justify-center border-2 border-[hsl(var(--activity-teal))]/20">
+                        <Facebook className="w-10 h-10 text-[hsl(var(--activity-teal))]/60" />
+                      </div>
                     </div>
+                    <h3 className="text-xl font-bold text-foreground/90 mb-3">Facebook Account Management</h3>
+                    <p className="text-foreground/60 mb-6 max-w-md mx-auto">
+                      Connect and manage multiple Facebook accounts for comprehensive social media automation
+                    </p>
                   </div>
-                  <h3 className="text-xl font-bold text-foreground/90 mb-3">Bắt đầu kết nối Social Media</h3>
-                  <p className="text-foreground/60 mb-8 max-w-md mx-auto">
-                    Kết nối tài khoản Facebook để bắt đầu quản lý tin nhắn và tương tác với khách hàng một cách chuyên nghiệp
-                  </p>
-                  <Button 
-                    onClick={handleFacebookConnect} 
-                    className="bg-gradient-to-r from-[hsl(var(--activity-teal))] to-[hsl(var(--activity-mint))] hover:from-[hsl(var(--activity-teal))]/90 hover:to-[hsl(var(--activity-mint))]/90 text-white px-8 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                  >
-                    <Facebook className="w-5 h-5 mr-3" />
-                    Kết nối Facebook ngay
-                  </Button>
+                  
+                  <FacebookConnectButton 
+                    accounts={facebookAccounts}
+                    onSuccess={() => {
+                      // Refresh accounts after successful connection
+                      window.location.reload();
+                    }}
+                    onDisconnect={(accountId) => {
+                      console.log('Account disconnected:', accountId);
+                    }}
+                    compact={false}
+                    showAccountDetails={true}
+                  />
                 </div>
               )}
             </CardContent>
