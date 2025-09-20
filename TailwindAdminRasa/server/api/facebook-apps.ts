@@ -696,7 +696,7 @@ router.post('/bulk-delete', requireAdminAuth, requireCSRFProtection, async (req,
     }
 
     // 🔧 DEDUPLICATION FIX: Remove duplicate IDs
-    const uniqueIds = [...new Set(ids)];
+    const uniqueIds = Array.from(new Set(ids));
 
     if (uniqueIds.length > 50) {
       return res.status(400).json({
@@ -833,7 +833,7 @@ router.post('/bulk-toggle', requireAdminAuth, requireCSRFProtection, async (req,
     } = {
       success: [],
       errors: [],
-      total: uniqueIds.length
+      total: appIds.length
     };
 
     // Pre-fetch existing apps for validation
@@ -859,7 +859,7 @@ router.post('/bulk-toggle', requireAdminAuth, requireCSRFProtection, async (req,
           results.success.push({
             id: appId,
             appName: existingApp.appName,
-            isActive: updatedApp.isActive
+            isActive: updatedApp.isActive || false
           });
         } else {
           results.errors.push({
@@ -962,7 +962,7 @@ router.post('/bulk-update-tags', requireAdminAuth, requireCSRFProtection, async 
     } = {
       success: [],
       errors: [],
-      total: uniqueIds.length
+      total: appIds.length
     };
 
     // Pre-fetch existing apps for validation
@@ -991,7 +991,7 @@ router.post('/bulk-update-tags', requireAdminAuth, requireCSRFProtection, async 
             newTagIds = [...tagIds];
             break;
           case 'add':
-            newTagIds = [...new Set([...currentTagIds, ...tagIds])];
+            newTagIds = Array.from(new Set([...currentTagIds, ...tagIds]));
             break;
           case 'remove':
             newTagIds = currentTagIds.filter(tagId => !tagIds.includes(tagId));
