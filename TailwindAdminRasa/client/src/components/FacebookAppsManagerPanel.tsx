@@ -72,6 +72,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { FacebookAppTemplateDownload } from "./FacebookAppTemplateDownload";
 
 interface UnifiedTag {
   id: string;
@@ -622,6 +623,10 @@ export function FacebookAppsManagerPanel() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Facebook Apps Manager</h1>
           <p className="text-gray-600 mt-1">Quản lý cấu hình Facebook Apps và webhook</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Template Downloads */}
+          <FacebookAppTemplateDownload variant="compact" />
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>

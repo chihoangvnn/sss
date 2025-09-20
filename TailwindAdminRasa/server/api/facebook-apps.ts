@@ -582,6 +582,373 @@ router.post('/bulk-import', requireAdminAuth, async (req, res) => {
   }
 });
 
+// 🗑️ Bulk delete Facebook apps
+router.post('/bulk-delete', requireAdminAuth, async (req, res) => {
+  try {
+    const { ids } = req.body; // 🔧 FIX: Use 'ids' for internal database IDs
+    
+    // Validate request format
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({
+        error: 'Invalid request format',
+        details: 'Request body must contain an "ids" array (internal database IDs)'
+      });
+    }
+
+    if (ids.length === 0) {
+      return res.status(400).json({
+        error: 'No apps to delete',
+        details: 'ids array is empty'
+      });
+    }
+
+    // 🔧 DEDUPLICATION FIX: Remove duplicate IDs
+    const uniqueIds = [...new Set(ids)];
+
+    if (uniqueIds.length > 50) {
+      return res.status(400).json({
+        error: 'Too many apps',
+        details: 'Maximum 50 apps can be deleted at once'
+      });
+    }
+
+    // Validate all IDs are strings
+    const invalidIds = uniqueIds.filter(id => typeof id !== 'string' || !id.trim());
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid app IDs',
+        details: 'All app IDs must be non-empty strings'
+      });
+    }
+
+    const results: {
+      success: Array<{ id: string; appName?: string }>;
+      errors: Array<{ id: string; error: string }>;
+      total: number;
+    } = {
+      success: [],
+      errors: [],
+      total: appIds.length
+    };
+
+    // Pre-fetch existing apps for validation and logging
+    const existingApps = await storage.getAllFacebookApps();
+    const existingAppsMap = new Map(existingApps.map(app => [app.id, app]));
+
+    // Process each app deletion
+    for (const appId of uniqueIds) { // 🔧 CRITICAL FIX: Use uniqueIds instead of undefined appIds
+      try {
+        const existingApp = existingAppsMap.get(appId);
+        
+        if (!existingApp) {
+          results.errors.push({
+            id: appId,
+            error: 'App not found'
+          });
+          continue;
+        }
+
+        const deleted = await storage.deleteFacebookApp(appId);
+        
+        if (deleted) {
+          results.success.push({
+            id: appId,
+            appName: existingApp.appName // Safe to include app name for confirmation
+          });
+        } else {
+          results.errors.push({
+            id: appId,
+            error: 'Failed to delete app'
+          });
+        }
+
+      } catch (error) {
+        results.errors.push({
+          id: appId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Return results with summary
+    res.json({
+      message: `Bulk delete completed. ${results.success.length} apps deleted, ${results.errors.length} errors`,
+      summary: {
+        total: results.total,
+        success: results.success.length,
+        errors: results.errors.length
+      },
+      results
+    });
+
+  } catch (error) {
+    console.error('Error during bulk delete:', error);
+    res.status(500).json({ 
+      error: 'Bulk delete failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// ⚡ Bulk toggle isActive status for Facebook apps
+router.post('/bulk-toggle', requireAdminAuth, async (req, res) => {
+  try {
+    const { appIds, isActive } = req.body;
+    
+    // Validate request format
+    if (!Array.isArray(appIds)) {
+      return res.status(400).json({
+        error: 'Invalid request format',
+        details: 'Request body must contain an "appIds" array'
+      });
+    }
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({
+        error: 'Invalid isActive value',
+        details: 'isActive must be a boolean (true or false)'
+      });
+    }
+
+    if (appIds.length === 0) {
+      return res.status(400).json({
+        error: 'No apps to toggle',
+        details: 'appIds array is empty'
+      });
+    }
+
+    if (appIds.length > 50) {
+      return res.status(400).json({
+        error: 'Too many apps',
+        details: 'Maximum 50 apps can be toggled at once'
+      });
+    }
+
+    // Validate all IDs are strings
+    const invalidIds = appIds.filter(id => typeof id !== 'string' || !id.trim());
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid app IDs',
+        details: 'All app IDs must be non-empty strings'
+      });
+    }
+
+    const results: {
+      success: Array<{ id: string; appName?: string; isActive: boolean }>;
+      errors: Array<{ id: string; error: string }>;
+      total: number;
+    } = {
+      success: [],
+      errors: [],
+      total: appIds.length
+    };
+
+    // Pre-fetch existing apps for validation
+    const existingApps = await storage.getAllFacebookApps();
+    const existingAppsMap = new Map(existingApps.map(app => [app.id, app]));
+
+    // Process each app toggle
+    for (const appId of appIds) {
+      try {
+        const existingApp = existingAppsMap.get(appId);
+        
+        if (!existingApp) {
+          results.errors.push({
+            id: appId,
+            error: 'App not found'
+          });
+          continue;
+        }
+
+        const updatedApp = await storage.updateFacebookApp(appId, { isActive });
+        
+        if (updatedApp) {
+          results.success.push({
+            id: appId,
+            appName: existingApp.appName,
+            isActive: updatedApp.isActive
+          });
+        } else {
+          results.errors.push({
+            id: appId,
+            error: 'Failed to update app status'
+          });
+        }
+
+      } catch (error) {
+        results.errors.push({
+          id: appId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Return results with summary
+    res.json({
+      message: `Bulk toggle completed. ${results.success.length} apps ${isActive ? 'enabled' : 'disabled'}, ${results.errors.length} errors`,
+      summary: {
+        total: results.total,
+        success: results.success.length,
+        errors: results.errors.length,
+        action: isActive ? 'enabled' : 'disabled'
+      },
+      results
+    });
+
+  } catch (error) {
+    console.error('Error during bulk toggle:', error);
+    res.status(500).json({ 
+      error: 'Bulk toggle failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 🏷️ Bulk update tags for Facebook apps
+router.post('/bulk-update-tags', requireAdminAuth, async (req, res) => {
+  try {
+    const { appIds, tagIds, operation = 'replace' } = req.body;
+    
+    // Validate request format
+    if (!Array.isArray(appIds)) {
+      return res.status(400).json({
+        error: 'Invalid request format',
+        details: 'Request body must contain an "appIds" array'
+      });
+    }
+
+    if (!Array.isArray(tagIds)) {
+      return res.status(400).json({
+        error: 'Invalid tagIds format',
+        details: 'tagIds must be an array of tag IDs'
+      });
+    }
+
+    if (!['replace', 'add', 'remove'].includes(operation)) {
+      return res.status(400).json({
+        error: 'Invalid operation',
+        details: 'operation must be "replace", "add", or "remove"'
+      });
+    }
+
+    if (appIds.length === 0) {
+      return res.status(400).json({
+        error: 'No apps to update',
+        details: 'appIds array is empty'
+      });
+    }
+
+    if (appIds.length > 50) {
+      return res.status(400).json({
+        error: 'Too many apps',
+        details: 'Maximum 50 apps can be updated at once'
+      });
+    }
+
+    // Validate all IDs are strings
+    const invalidAppIds = appIds.filter(id => typeof id !== 'string' || !id.trim());
+    if (invalidAppIds.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid app IDs',
+        details: 'All app IDs must be non-empty strings'
+      });
+    }
+
+    const invalidTagIds = tagIds.filter(id => typeof id !== 'string' || !id.trim());
+    if (invalidTagIds.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid tag IDs',
+        details: 'All tag IDs must be non-empty strings'
+      });
+    }
+
+    const results: {
+      success: Array<{ id: string; appName?: string; tagIds: string[] }>;
+      errors: Array<{ id: string; error: string }>;
+      total: number;
+    } = {
+      success: [],
+      errors: [],
+      total: appIds.length
+    };
+
+    // Pre-fetch existing apps for validation
+    const existingApps = await storage.getAllFacebookApps();
+    const existingAppsMap = new Map(existingApps.map(app => [app.id, app]));
+
+    // Process each app tag update
+    for (const appId of appIds) {
+      try {
+        const existingApp = existingAppsMap.get(appId);
+        
+        if (!existingApp) {
+          results.errors.push({
+            id: appId,
+            error: 'App not found'
+          });
+          continue;
+        }
+
+        let newTagIds: string[] = [];
+        const currentTagIds = existingApp.tagIds || [];
+
+        // Determine new tag IDs based on operation
+        switch (operation) {
+          case 'replace':
+            newTagIds = [...tagIds];
+            break;
+          case 'add':
+            newTagIds = [...new Set([...currentTagIds, ...tagIds])];
+            break;
+          case 'remove':
+            newTagIds = currentTagIds.filter(tagId => !tagIds.includes(tagId));
+            break;
+        }
+
+        const updatedApp = await storage.updateFacebookApp(appId, { tagIds: newTagIds });
+        
+        if (updatedApp) {
+          results.success.push({
+            id: appId,
+            appName: existingApp.appName,
+            tagIds: newTagIds
+          });
+        } else {
+          results.errors.push({
+            id: appId,
+            error: 'Failed to update app tags'
+          });
+        }
+
+      } catch (error) {
+        results.errors.push({
+          id: appId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Return results with summary
+    res.json({
+      message: `Bulk tag update completed. ${results.success.length} apps updated, ${results.errors.length} errors`,
+      summary: {
+        total: results.total,
+        success: results.success.length,
+        errors: results.errors.length,
+        operation
+      },
+      results
+    });
+
+  } catch (error) {
+    console.error('Error during bulk tag update:', error);
+    res.status(500).json({ 
+      error: 'Bulk tag update failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Export functions for use in webhook handling
 export { encryptSecret, decryptSecret };
 export default router;
