@@ -171,10 +171,24 @@ export function ScheduledPostsMiniManager({ className }: ScheduledPostsMiniManag
 
   if (scheduledPosts.length === 0) {
     return (
-      <div className="p-3">
+      <div className="p-3 border-t border-border/50">
         <div className="text-sm font-medium mb-2">📅 Lịch đăng sắp tới</div>
-        <div className="text-xs text-gray-500 text-center py-4">
-          Không có bài đăng nào trong 24h tới
+        <div className="text-center py-6 text-muted-foreground bg-gray-50/50 rounded-lg border-2 border-dashed border-gray-200">
+          <Clock className="mx-auto w-8 h-8 mb-2 opacity-50" />
+          <p className="text-xs mb-1 font-medium">Chưa có lịch đăng nào</p>
+          <p className="text-xs opacity-75">Tạo bài đăng để theo dõi tại đây</p>
+        </div>
+        
+        {/* Action Button */}
+        <div className="mt-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs"
+            onClick={() => window.open('/post-scheduler', '_blank')}
+          >
+            📋 Tạo lịch đăng mới
+          </Button>
         </div>
       </div>
     );
@@ -191,8 +205,8 @@ export function ScheduledPostsMiniManager({ className }: ScheduledPostsMiniManag
       
       <ScrollArea className="h-64">
         <div className="space-y-1">
-          {scheduledPosts.map((post) => {
-            const { timeDisplay, statusColor, StatusIcon } = getStatusDisplay(post.status, post.scheduledTime);
+          {scheduledPosts.map((post: ScheduledPost) => {
+            const { timeDisplay, statusColor, StatusIcon } = getStatusDisplay(post.status, new Date(post.scheduledTime).toISOString());
             const timeFormatted = format(new Date(post.scheduledTime), 'HH:mm', { locale: vi });
             const isToday = format(new Date(post.scheduledTime), 'dd/MM') === format(new Date(), 'dd/MM');
             
