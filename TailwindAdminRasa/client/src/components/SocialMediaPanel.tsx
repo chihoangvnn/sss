@@ -9,6 +9,7 @@ const TikTokIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 import { FacebookChatManager } from "./FacebookChatManager";
+import { FacebookConnectButton } from "./FacebookConnectButton";
 import { TikTokShopOrdersPanel } from "./TikTokShopOrdersPanel";
 import { TikTokShopSellerDashboard } from "./TikTokShopSellerDashboard";
 import { TikTokShopFulfillmentPanel } from "./TikTokShopFulfillmentPanel";
@@ -314,26 +315,15 @@ export function SocialMediaPanel({
     }
   }, [toast, queryClient]);
 
-  // Connect Facebook mutation
-  const connectFacebookMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/facebook/connect', { redirectUrl: '/social-media' });
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Redirect to Facebook OAuth
-      window.location.href = data.authUrl;
-    },
-    onError: (error: any) => {
-      console.error('Facebook connect error:', error);
-      toast({
-        variant: "destructive",
-        title: "Connection Failed",
-        description: "Failed to initiate Facebook connection. Please try again.",
-      });
-      setConnectingPlatform(null);
-    },
-  });
+  // Facebook OAuth success handler - updated for new OAuth flow
+  const handleFacebookOAuthSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/social-accounts'] });
+    queryClient.invalidateQueries({ queryKey: ['facebook-auth-status'] });
+    toast({
+      title: "✅ Facebook OAuth Successful!",
+      description: "Your Facebook pages are now connected and ready for auto-posting.",
+    });
+  };
 
   // Disconnect Facebook mutation
   const disconnectFacebookMutation = useMutation({
@@ -424,10 +414,8 @@ export function SocialMediaPanel({
   });
 
   const handleConnectAccount = (platform: string) => {
-    if (platform === 'facebook') {
-      setConnectingPlatform('facebook');
-      connectFacebookMutation.mutate();
-    } else if (platform === 'tiktok-business') {
+    // Facebook now uses FacebookConnectButton component with OAuth flow
+    if (platform === 'tiktok-business') {
       setConnectingPlatform('tiktok-business');
       connectTikTokBusinessMutation.mutate();
     } else if (platform === 'tiktok-shop') {
@@ -514,15 +502,17 @@ export function SocialMediaPanel({
         <div className="flex gap-2">
           {/* Facebook Connect Button - Only show on Facebook page */}
           {currentPlatform === 'facebook' && (
-            <Button 
-              data-testid="button-connect-facebook" 
-              onClick={() => handleConnectAccount('facebook')}
-              disabled={connectingPlatform === 'facebook' || connectFacebookMutation.isPending}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-            >
-              <Facebook className="h-4 w-4 mr-2" />
-              {connectingPlatform === 'facebook' ? 'Đang kết nối...' : 'Kết nối Facebook'}
-            </Button>
+            <FacebookConnectButton 
+              accounts={accounts}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ['/api/social-accounts'] });
+                toast({
+                  title: "✅ Facebook Connected!",
+                  description: "Your Facebook pages are now connected for auto-posting.",
+                });
+              }}
+              compact
+            />
           )}
           
           {/* TikTok Business Connect Button - Only show on TikTok Business page */}
@@ -698,7 +688,6 @@ export function SocialMediaPanel({
                       size="sm" 
                       onClick={() => handleConnectAccount(account.platform)}
                       disabled={connectingPlatform === account.platform || 
-                               (account.platform === 'facebook' && connectFacebookMutation.isPending) ||
                                (account.platform === 'tiktok-business' && connectTikTokBusinessMutation.isPending) ||
                                (account.platform === 'tiktok-shop' && connectTikTokShopMutation.isPending)}
                       data-testid={`button-connect-${account.id}`}

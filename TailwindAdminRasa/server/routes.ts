@@ -3781,6 +3781,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/ai", aiContentRouter);
 
   // ==========================================
+  // FACEBOOK OAUTH AUTHENTICATION ROUTES
+  // ==========================================
+  const facebookAuthRouter = await import("./api/facebook-auth");
+  app.use("/api/auth", facebookAuthRouter.default);
+
+  // ==========================================
   // ANALYTICS & MONITORING API ROUTES
   // ==========================================
   app.use("/api/analytics", analyticsRouter);
