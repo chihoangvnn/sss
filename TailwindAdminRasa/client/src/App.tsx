@@ -86,17 +86,9 @@ function App() {
           <div className="flex h-screen w-full">
             <AppSidebar />
             <div className="flex flex-col flex-1">
-              <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="flex items-center gap-4">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <div>
-                    <h1 className="text-lg font-semibold">Facebook Chat & Pipeline Manager</h1>
-                    <p className="text-sm text-muted-foreground">Quản lý khách hàng và pipeline bán hàng trực tiếp</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ThemeToggle />
-                </div>
+              <header className="flex items-center justify-between p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <ThemeToggle />
               </header>
               <main className="flex-1 overflow-auto bg-background mobile-content-padding">
                 <Router />
