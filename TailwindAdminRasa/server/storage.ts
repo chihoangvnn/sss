@@ -393,6 +393,9 @@ export class DatabaseStorage implements IStorage {
       image: products.image,
       images: products.images,
       videos: products.videos,
+      // 🤖 Include AI-generated descriptions for RASA
+      descriptions: products.descriptions,
+      defaultImageIndex: products.defaultImageIndex,
       createdAt: products.createdAt,
       updatedAt: products.updatedAt,
       categoryName: categories.name
