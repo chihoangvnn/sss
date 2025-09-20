@@ -66,6 +66,7 @@ function Router() {
       <Route path="/facebook" component={SocialMedia} />
       <Route path="/instagram" component={SocialMedia} />
       <Route path="/twitter" component={SocialMedia} />
+      <Route path="/social-media" component={SocialMedia} />
       <Route path="/tiktok-business" component={TikTokBusiness} />
       <Route path="/tiktok-shop" component={TikTokShop} />
       <Route path="/api-management" component={ApiManagement} />
