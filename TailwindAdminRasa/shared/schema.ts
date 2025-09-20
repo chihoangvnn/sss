@@ -134,11 +134,29 @@ export const categories = pgTable("categories", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// RASA Description Variations Type
+export interface RasaDescriptions {
+  primary: string; // Main description for listings
+  rasa_variations: {
+    [key: string]: string; // "0": "safety focused", "1": "convenience focused", etc.
+  };
+  contexts: {
+    [key: string]: string; // "safety": "0", "convenience": "1", etc.
+  };
+  analytics?: {
+    [key: string]: {
+      views: number;
+      conversions: number;
+      last_used: string;
+    };
+  };
+}
+
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  description: text("description"),
+  description: text("description"), // Primary description for general use
   sku: text("sku").unique(), // Auto-generated: 2 chữ đầu ngành hàng + 4 số random
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
@@ -147,6 +165,10 @@ export const products = pgTable("products", {
   image: text("image"), // Deprecated - kept for backward compatibility
   images: jsonb("images").$type<CloudinaryImage[]>().default(sql`'[]'::jsonb`), // Array of Cloudinary image URLs with metadata
   videos: jsonb("videos").$type<CloudinaryVideo[]>().default(sql`'[]'::jsonb`), // Array of Cloudinary video URLs with metadata
+  
+  // 🤖 RASA Description Management
+  descriptions: jsonb("descriptions").$type<RasaDescriptions>().default(sql`'{}'::jsonb`), // Multiple context-aware descriptions for RASA
+  defaultImageIndex: integer("default_image_index").default(0), // Index of default image for RASA/Facebook
   
   // Organization  
   tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
