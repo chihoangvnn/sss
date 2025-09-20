@@ -1332,3 +1332,83 @@ export const updateContentLibrarySchema = insertContentLibrarySchema.partial();
 export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
 export type UpdateContentLibrary = z.infer<typeof updateContentLibrarySchema>;
 export type ContentLibrary = typeof contentLibrary.$inferSelect;
+
+// ===========================================
+// API MANAGEMENT SYSTEM
+// ===========================================
+
+// API Configurations - Centralized API enable/disable management
+export const apiConfigurations = pgTable("api_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Core API Info  
+  endpoint: text("endpoint").notNull(), // e.g., "/api/content/categories"
+  method: text("method", { enum: ["GET", "POST", "PUT", "DELETE", "PATCH"] }).notNull().default("GET"),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // e.g., "content", "facebook", "tiktok", "rasa", "core"
+  
+  // Status Management
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  maintenanceMessage: text("maintenance_message").default("API temporarily unavailable for maintenance"),
+  
+  // Rate Limiting
+  rateLimitEnabled: boolean("rate_limit_enabled").notNull().default(false),
+  rateLimitRequests: integer("rate_limit_requests").default(100), // requests per window
+  rateLimitWindowSeconds: integer("rate_limit_window_seconds").default(60), // window in seconds
+  
+  // Circuit Breaker
+  circuitBreakerEnabled: boolean("circuit_breaker_enabled").notNull().default(false),
+  circuitBreakerThreshold: integer("circuit_breaker_threshold").default(5), // failures before opening circuit
+  circuitBreakerTimeout: integer("circuit_breaker_timeout").default(60), // seconds to wait before retry
+  
+  // Monitoring & Analytics
+  accessCount: integer("access_count").notNull().default(0),
+  errorCount: integer("error_count").notNull().default(0),
+  avgResponseTime: decimal("avg_response_time", { precision: 10, scale: 3 }).default("0"), // milliseconds
+  lastAccessed: timestamp("last_accessed"),
+  lastToggled: timestamp("last_toggled"),
+  lastError: timestamp("last_error"),
+  
+  // Metadata
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`), // for grouping/filtering
+  priority: text("priority", { enum: ["critical", "high", "normal", "low"] }).notNull().default("normal"),
+  owner: text("owner"), // team/person responsible
+  
+  // Security
+  requiresAuth: boolean("requires_auth").notNull().default(true),
+  adminOnly: boolean("admin_only").notNull().default(false),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Composite unique constraint - one config per endpoint+method combination
+  endpointMethodUnique: unique().on(table.endpoint, table.method),
+  // Performance indexes
+  categoryIndex: index().on(table.category),
+  enabledIndex: index().on(table.isEnabled),
+  accessedIndex: index().on(table.lastAccessed),
+}));
+
+// Validation schemas for API configurations
+export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations, {
+  endpoint: z.string().min(1, "Endpoint là bắt buộc").regex(/^\/api\//, "Endpoint phải bắt đầu với /api/"),
+  method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH"]),
+  description: z.string().min(1, "Mô tả là bắt buộc").max(500),
+  category: z.string().min(1, "Danh mục là bắt buộc"),
+  rateLimitRequests: z.number().int().min(1).max(10000).optional(),
+  rateLimitWindowSeconds: z.number().int().min(1).max(3600).optional(),
+  circuitBreakerThreshold: z.number().int().min(1).max(100).optional(),
+  circuitBreakerTimeout: z.number().int().min(10).max(3600).optional(),
+  priority: z.enum(["critical", "high", "normal", "low"]).optional(),
+  owner: z.string().max(100).optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const updateApiConfigurationSchema = insertApiConfigurationSchema.partial();
+
+// TypeScript types
+export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema>;
+export type UpdateApiConfiguration = z.infer<typeof updateApiConfigurationSchema>;
+export type ApiConfiguration = typeof apiConfigurations.$inferSelect;

@@ -4,7 +4,7 @@ import {
   productLandingPages, productReviews, facebookConversations, facebookMessages, pageTags,
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
   contentCategories, contentAssets, scheduledPosts, unifiedTags, contentLibrary,
-  facebookApps, facebookWebhookEvents, botSettings,
+  facebookApps, facebookWebhookEvents, botSettings, apiConfigurations,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -28,7 +28,8 @@ import {
   type ContentLibrary, type InsertContentLibrary, type UpdateContentLibrary,
   type FacebookApp, type InsertFacebookApp,
   type FacebookWebhookEvent, type InsertFacebookWebhookEvent,
-  type BotSettings, type InsertBotSettings
+  type BotSettings, type InsertBotSettings,
+  type ApiConfiguration, type InsertApiConfiguration, type UpdateApiConfiguration
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
@@ -175,6 +176,20 @@ export interface IStorage {
   createBotSettings(settings: InsertBotSettings): Promise<BotSettings>;
   updateBotSettings(id: string, settings: Partial<InsertBotSettings>): Promise<BotSettings | undefined>;
   getBotSettingsOrDefault(): Promise<BotSettings>;
+
+  // API Management methods
+  getApiConfigurations(): Promise<ApiConfiguration[]>;
+  getApiConfiguration(id: string): Promise<ApiConfiguration | undefined>;
+  getApiConfigurationByEndpoint(endpoint: string, method?: string): Promise<ApiConfiguration | undefined>;
+  getApiConfigurationsByCategory(category: string): Promise<ApiConfiguration[]>;
+  createApiConfiguration(config: InsertApiConfiguration): Promise<ApiConfiguration>;
+  updateApiConfiguration(id: string, config: Partial<UpdateApiConfiguration>): Promise<ApiConfiguration | undefined>;
+  deleteApiConfiguration(id: string): Promise<boolean>;
+  toggleApiEnabled(id: string, enabled: boolean): Promise<ApiConfiguration | undefined>;
+  incrementApiAccess(id: string, responseTime?: number): Promise<void>;
+  incrementApiError(id: string): Promise<void>;
+  getEnabledApiConfigurations(): Promise<ApiConfiguration[]>;
+  updateApiStats(id: string, stats: { accessCount?: number; errorCount?: number; avgResponseTime?: number }): Promise<void>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -831,6 +846,122 @@ export class DatabaseStorage implements IStorage {
     if (!settings) return null;
     const { apiKey, ...publicSettings } = settings;
     return publicSettings;
+  }
+
+  // API Management methods
+  async getApiConfigurations(): Promise<ApiConfiguration[]> {
+    return await db.select().from(apiConfigurations).orderBy(desc(apiConfigurations.createdAt));
+  }
+
+  async getApiConfiguration(id: string): Promise<ApiConfiguration | undefined> {
+    const [config] = await db.select().from(apiConfigurations).where(eq(apiConfigurations.id, id));
+    return config || undefined;
+  }
+
+  async getApiConfigurationByEndpoint(endpoint: string, method?: string): Promise<ApiConfiguration | undefined> {
+    const conditions = [eq(apiConfigurations.endpoint, endpoint)];
+    if (method) {
+      conditions.push(eq(apiConfigurations.method, method));
+    }
+    
+    const [config] = await db.select().from(apiConfigurations).where(and(...conditions));
+    return config || undefined;
+  }
+
+  async getApiConfigurationsByCategory(category: string): Promise<ApiConfiguration[]> {
+    return await db.select().from(apiConfigurations)
+      .where(eq(apiConfigurations.category, category))
+      .orderBy(desc(apiConfigurations.createdAt));
+  }
+
+  async createApiConfiguration(config: InsertApiConfiguration): Promise<ApiConfiguration> {
+    const [newConfig] = await db.insert(apiConfigurations).values(config).returning();
+    return newConfig;
+  }
+
+  async updateApiConfiguration(id: string, config: Partial<UpdateApiConfiguration>): Promise<ApiConfiguration | undefined> {
+    const [updatedConfig] = await db
+      .update(apiConfigurations)
+      .set({ ...config, updatedAt: new Date() })
+      .where(eq(apiConfigurations.id, id))
+      .returning();
+    return updatedConfig || undefined;
+  }
+
+  async deleteApiConfiguration(id: string): Promise<boolean> {
+    const result = await db.delete(apiConfigurations).where(eq(apiConfigurations.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async toggleApiEnabled(id: string, enabled: boolean): Promise<ApiConfiguration | undefined> {
+    const [updatedConfig] = await db
+      .update(apiConfigurations)
+      .set({ 
+        isEnabled: enabled, 
+        lastToggled: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(apiConfigurations.id, id))
+      .returning();
+    return updatedConfig || undefined;
+  }
+
+  async incrementApiAccess(id: string, responseTime?: number): Promise<void> {
+    if (responseTime !== undefined) {
+      // Atomic update with response time averaging
+      await db
+        .update(apiConfigurations)
+        .set({
+          accessCount: sql`${apiConfigurations.accessCount} + 1`,
+          avgResponseTime: sql`((${apiConfigurations.avgResponseTime}::numeric * ${apiConfigurations.accessCount}) + ${responseTime}) / (${apiConfigurations.accessCount} + 1)`,
+          lastAccessed: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(apiConfigurations.id, id));
+    } else {
+      // Atomic update without response time
+      await db
+        .update(apiConfigurations)
+        .set({
+          accessCount: sql`${apiConfigurations.accessCount} + 1`,
+          lastAccessed: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(apiConfigurations.id, id));
+    }
+  }
+
+  async incrementApiError(id: string): Promise<void> {
+    await db
+      .update(apiConfigurations)
+      .set({ 
+        errorCount: sql`${apiConfigurations.errorCount} + 1`,
+        lastError: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(apiConfigurations.id, id));
+  }
+
+  async getEnabledApiConfigurations(): Promise<ApiConfiguration[]> {
+    return await db.select().from(apiConfigurations)
+      .where(and(
+        eq(apiConfigurations.isEnabled, true),
+        eq(apiConfigurations.maintenanceMode, false)
+      ))
+      .orderBy(apiConfigurations.priority, apiConfigurations.category);
+  }
+
+  async updateApiStats(id: string, stats: { accessCount?: number; errorCount?: number; avgResponseTime?: number }): Promise<void> {
+    const updates: any = { updatedAt: new Date() };
+    
+    if (stats.accessCount !== undefined) updates.accessCount = stats.accessCount;
+    if (stats.errorCount !== undefined) updates.errorCount = stats.errorCount;
+    if (stats.avgResponseTime !== undefined) updates.avgResponseTime = stats.avgResponseTime;
+
+    await db
+      .update(apiConfigurations)
+      .set(updates)
+      .where(eq(apiConfigurations.id, id));
   }
 
   // Dashboard stats
