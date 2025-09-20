@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Badge } from './ui/badge';
 import { useToast } from '../hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -23,7 +23,7 @@ import {
   Target
 } from 'lucide-react';
 
-// 🎯 Group Interface
+// 🎯 Group Interface with Custom Quantities
 interface AppGroup {
   id: string;
   name: string;
@@ -33,7 +33,22 @@ interface AppGroup {
   formulaId?: string;
   formulaName?: string;
   isActive: boolean;
+  
+  // Group-level settings
+  weight: number; // Default weight for distribution
+  platform: string; // "facebook", "instagram", etc.
+  
+  // Custom quantities per account in this group
+  customQuantities: {
+    defaultWeight: number; // Default weight for new accounts
+    allowCustomWeight: boolean; // Can accounts have custom weights?
+    defaultDailyCapOverride?: number; // Default daily cap override
+    defaultCooldownMinutes?: number; // Default cooldown between posts
+  };
+  
+  // Stats
   appsCount: number;
+  accountsCount: number; // How many accounts in this group
   todayPosts: number;
   weekPosts: number;
   monthPosts: number;
@@ -47,13 +62,47 @@ interface AppGroup {
   updatedAt?: string;
 }
 
-// 🎯 Create Group Data
+// 🎯 Create Group Data with Custom Quantities
 interface CreateGroupData {
   name: string;
   description?: string;
   priority: number;
   color: string;
   formulaId?: string;
+  
+  // Custom quantities settings
+  weight: number;
+  platform: string;
+  customQuantities: {
+    defaultWeight: number;
+    allowCustomWeight: boolean;
+    defaultDailyCapOverride?: number;
+    defaultCooldownMinutes?: number;
+  };
+}
+
+// 🎯 Account in Group with Custom Quantities
+interface GroupAccount {
+  id: string;
+  groupId: string;
+  socialAccountId: string;
+  accountName: string;
+  platform: string;
+  
+  // Custom overrides per account
+  weight: number; // Custom weight for this account
+  dailyCapOverride?: number; // Override daily limit
+  cooldownMinutes?: number; // Custom cooldown between posts
+  isActive: boolean;
+  
+  // Stats
+  todayPosts: number;
+  weekPosts: number;
+  monthPosts: number;
+  lastPostAt?: string;
+  
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export function GroupsManagerPanel() {
@@ -72,7 +121,15 @@ export function GroupsManagerPanel() {
     description: "",
     priority: 2,
     color: "#22c55e",
-    formulaId: ""
+    formulaId: "",
+    weight: 1.0,
+    platform: "facebook",
+    customQuantities: {
+      defaultWeight: 1.0,
+      allowCustomWeight: true,
+      defaultDailyCapOverride: undefined,
+      defaultCooldownMinutes: undefined
+    }
   });
 
   // 🎯 Load Groups (demo data for now)
@@ -90,7 +147,16 @@ export function GroupsManagerPanel() {
           formulaId: "formula-vip",
           formulaName: "Formula VIP",
           isActive: true,
+          weight: 2.0,
+          platform: "facebook",
+          customQuantities: {
+            defaultWeight: 2.0,
+            allowCustomWeight: true,
+            defaultDailyCapOverride: 50,
+            defaultCooldownMinutes: 10
+          },
           appsCount: 3,
+          accountsCount: 8,
           todayPosts: 15,
           weekPosts: 89,
           monthPosts: 312,
@@ -107,7 +173,16 @@ export function GroupsManagerPanel() {
           formulaId: "formula-standard",
           formulaName: "Formula Standard",
           isActive: true,
+          weight: 1.0,
+          platform: "facebook",
+          customQuantities: {
+            defaultWeight: 1.0,
+            allowCustomWeight: true,
+            defaultDailyCapOverride: 30,
+            defaultCooldownMinutes: 15
+          },
           appsCount: 5,
+          accountsCount: 12,
           todayPosts: 28,
           weekPosts: 156,
           monthPosts: 543,
@@ -124,7 +199,16 @@ export function GroupsManagerPanel() {
           formulaId: "formula-safe",
           formulaName: "Formula Safe",
           isActive: true,
+          weight: 0.5,
+          platform: "facebook",
+          customQuantities: {
+            defaultWeight: 0.5,
+            allowCustomWeight: false,
+            defaultDailyCapOverride: 10,
+            defaultCooldownMinutes: 30
+          },
           appsCount: 2,
+          accountsCount: 4,
           todayPosts: 8,
           weekPosts: 34,
           monthPosts: 98,
@@ -155,7 +239,15 @@ export function GroupsManagerPanel() {
       description: "",
       priority: 2,
       color: "#22c55e",
-      formulaId: ""
+      formulaId: "",
+      weight: 1.0,
+      platform: "facebook",
+      customQuantities: {
+        defaultWeight: 1.0,
+        allowCustomWeight: true,
+        defaultDailyCapOverride: undefined,
+        defaultCooldownMinutes: undefined
+      }
     });
   };
 
@@ -167,7 +259,10 @@ export function GroupsManagerPanel() {
       description: group.description || "",
       priority: group.priority,
       color: group.color,
-      formulaId: group.formulaId || ""
+      formulaId: group.formulaId || "",
+      weight: group.weight,
+      platform: group.platform,
+      customQuantities: group.customQuantities
     });
     setIsEditDialogOpen(true);
   };
@@ -341,6 +436,9 @@ export function GroupsManagerPanel() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Create New Group</DialogTitle>
+              <DialogDescription>
+                Configure group settings, custom quantities, and posting limits for Facebook app management.
+              </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">
@@ -387,6 +485,150 @@ export function GroupsManagerPanel() {
                   value={formData.color}
                   onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                 />
+              </div>
+
+              {/* 🎯 Custom Quantities Section */}
+              <div className="border-t pt-4 space-y-4">
+                <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Custom Quantities & Limits
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="weight">Group Weight</Label>
+                    <Input
+                      id="weight"
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="10"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 1.0 })}
+                      placeholder="1.0"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Distribution weight (0.1-10.0)</p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="platform">Platform</Label>
+                    <Select value={formData.platform} onValueChange={(value) => setFormData({ ...formData, platform: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="facebook">Facebook</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                        <SelectItem value="twitter">Twitter</SelectItem>
+                        <SelectItem value="tiktok">TikTok</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="defaultWeight">Default Account Weight</Label>
+                    <Input
+                      id="defaultWeight"
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="5"
+                      value={formData.customQuantities.defaultWeight}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        customQuantities: { 
+                          ...formData.customQuantities, 
+                          defaultWeight: parseFloat(e.target.value) || 1.0 
+                        }
+                      })}
+                      placeholder="1.0"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Weight for new accounts</p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="dailyCapOverride">Daily Cap Override</Label>
+                    <Input
+                      id="dailyCapOverride"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={formData.customQuantities.defaultDailyCapOverride || ""}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        customQuantities: { 
+                          ...formData.customQuantities, 
+                          defaultDailyCapOverride: e.target.value ? parseInt(e.target.value) : undefined 
+                        }
+                      })}
+                      placeholder="Optional"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Override daily posting limit</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cooldownMinutes">Cooldown Minutes</Label>
+                    <Input
+                      id="cooldownMinutes"
+                      type="number"
+                      min="1"
+                      max="1440"
+                      value={formData.customQuantities.defaultCooldownMinutes || ""}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        customQuantities: { 
+                          ...formData.customQuantities, 
+                          defaultCooldownMinutes: e.target.value ? parseInt(e.target.value) : undefined 
+                        }
+                      })}
+                      placeholder="Optional"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Rest time between posts</p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="allowCustomWeight"
+                      checked={formData.customQuantities.allowCustomWeight}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        customQuantities: { 
+                          ...formData.customQuantities, 
+                          allowCustomWeight: e.target.checked 
+                        }
+                      })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="allowCustomWeight" className="text-sm">
+                      Allow Custom Account Weights
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 🎯 Posting Formula Selection */}
+              <div className="border-t pt-4">
+                <div>
+                  <Label htmlFor="formulaId">Posting Formula</Label>
+                  <Select value={formData.formulaId || ""} onValueChange={(value) => setFormData({ ...formData, formulaId: value || undefined })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select formula (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Formula</SelectItem>
+                      <SelectItem value="formula-vip">Formula VIP - High Priority</SelectItem>
+                      <SelectItem value="formula-standard">Formula Standard - Normal Limits</SelectItem>
+                      <SelectItem value="formula-safe">Formula Safe - Conservative</SelectItem>
+                      <SelectItem value="formula-aggressive">Formula Aggressive - Maximum Posts</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">Choose posting limits and timing rules</p>
+                </div>
               </div>
               
               <div className="flex justify-end gap-2 pt-4">
@@ -587,6 +829,9 @@ export function GroupsManagerPanel() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Group</DialogTitle>
+            <DialogDescription>
+              Modify group settings, custom quantities, and posting limits for this Facebook app group.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -633,6 +878,150 @@ export function GroupsManagerPanel() {
                 value={formData.color}
                 onChange={(e) => setFormData({ ...formData, color: e.target.value })}
               />
+            </div>
+
+            {/* 🎯 Custom Quantities Section */}
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Custom Quantities & Limits
+              </h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-weight">Group Weight</Label>
+                  <Input
+                    id="edit-weight"
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="10"
+                    value={formData.weight}
+                    onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 1.0 })}
+                    placeholder="1.0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Distribution weight (0.1-10.0)</p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="edit-platform">Platform</Label>
+                  <Select value={formData.platform} onValueChange={(value) => setFormData({ ...formData, platform: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="twitter">Twitter</SelectItem>
+                      <SelectItem value="tiktok">TikTok</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-defaultWeight">Default Account Weight</Label>
+                  <Input
+                    id="edit-defaultWeight"
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="5"
+                    value={formData.customQuantities.defaultWeight}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      customQuantities: { 
+                        ...formData.customQuantities, 
+                        defaultWeight: parseFloat(e.target.value) || 1.0 
+                      }
+                    })}
+                    placeholder="1.0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Weight for new accounts</p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="edit-dailyCapOverride">Daily Cap Override</Label>
+                  <Input
+                    id="edit-dailyCapOverride"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={formData.customQuantities.defaultDailyCapOverride || ""}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      customQuantities: { 
+                        ...formData.customQuantities, 
+                        defaultDailyCapOverride: e.target.value ? parseInt(e.target.value) : undefined 
+                      }
+                    })}
+                    placeholder="Optional"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Override daily posting limit</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-cooldownMinutes">Cooldown Minutes</Label>
+                  <Input
+                    id="edit-cooldownMinutes"
+                    type="number"
+                    min="1"
+                    max="1440"
+                    value={formData.customQuantities.defaultCooldownMinutes || ""}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      customQuantities: { 
+                        ...formData.customQuantities, 
+                        defaultCooldownMinutes: e.target.value ? parseInt(e.target.value) : undefined 
+                      }
+                    })}
+                    placeholder="Optional"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Rest time between posts</p>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-allowCustomWeight"
+                    checked={formData.customQuantities.allowCustomWeight}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      customQuantities: { 
+                        ...formData.customQuantities, 
+                        allowCustomWeight: e.target.checked 
+                      }
+                    })}
+                    className="rounded"
+                  />
+                  <Label htmlFor="edit-allowCustomWeight" className="text-sm">
+                    Allow Custom Account Weights
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            {/* 🎯 Posting Formula Selection */}
+            <div className="border-t pt-4">
+              <div>
+                <Label htmlFor="edit-formulaId">Posting Formula</Label>
+                <Select value={formData.formulaId || ""} onValueChange={(value) => setFormData({ ...formData, formulaId: value || undefined })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select formula (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Formula</SelectItem>
+                    <SelectItem value="formula-vip">Formula VIP - High Priority</SelectItem>
+                    <SelectItem value="formula-standard">Formula Standard - Normal Limits</SelectItem>
+                    <SelectItem value="formula-safe">Formula Safe - Conservative</SelectItem>
+                    <SelectItem value="formula-aggressive">Formula Aggressive - Maximum Posts</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">Choose posting limits and timing rules</p>
+              </div>
             </div>
             
             <div className="flex justify-end gap-2 pt-4">
