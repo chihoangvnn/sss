@@ -90,46 +90,48 @@ router.get('/', requireAdminAuth, async (req, res) => {
   try {
     const apps = await storage.getAllFacebookApps();
     
-    // 🎯 DEMO: Add group info and posting stats to each app
+    // Mask app secrets for security and prepare response
     const enhancedApps = apps.map((app, index) => {
-      // Generate demo group info
-      const demoGroups = [
-        { groupId: 'group-vip', groupName: 'VIP Group', priority: 1, formulaName: 'Formula VIP' },
-        { groupId: 'group-normal', groupName: 'Normal Group', priority: 2, formulaName: 'Formula Standard' },
-        { groupId: 'group-test', groupName: 'Test Group', priority: 3, formulaName: 'Formula Safe' }
-      ];
-      
-      // Generate demo posting stats
-      const demoStats = [
-        {
-          todayPosts: 5, weekPosts: 23, monthPosts: 89,
-          lastPostAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          remainingQuota: { daily: 3, weekly: 27, monthly: 161 },
-          status: 'active' as const
-        },
-        {
-          todayPosts: 8, weekPosts: 31, monthPosts: 124,
-          lastPostAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          remainingQuota: { daily: 2, weekly: 19, monthly: 126 },
-          status: 'active' as const
-        },
-        {
-          todayPosts: 12, weekPosts: 45, monthPosts: 180,
-          lastPostAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          remainingQuota: { daily: 0, weekly: 5, monthly: 70 },
-          status: 'limit_reached' as const
-        }
-      ];
-      
-      const maskedApp = {
+      const maskedApp: any = {
         ...app,
-        appSecret: app.appSecret ? `${app.appSecret.substring(0, 8)}****` : '',
-        appSecretSet: !!app.appSecret,
-        
-        // Add demo group info and stats
-        groupInfo: demoGroups[index % demoGroups.length],
-        postingStats: demoStats[index % demoStats.length]
+        appSecret: undefined, // 🔒 SECURITY: Never return app secrets, even masked
+        appSecretSet: !!app.appSecret
       };
+      
+      // 🎯 DEVELOPMENT ONLY: Add demo group info and posting stats
+      if (process.env.NODE_ENV === 'development') {
+        const demoGroups = [
+          { groupId: 'group-vip', groupName: 'VIP Group', priority: 1, formulaName: 'Formula VIP' },
+          { groupId: 'group-normal', groupName: 'Normal Group', priority: 2, formulaName: 'Formula Standard' },
+          { groupId: 'group-test', groupName: 'Test Group', priority: 3, formulaName: 'Formula Safe' }
+        ];
+        
+        const demoStats = [
+          {
+            todayPosts: 5, weekPosts: 23, monthPosts: 89,
+            lastPostAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            remainingQuota: { daily: 3, weekly: 27, monthly: 161 },
+            status: 'active' as const
+          },
+          {
+            todayPosts: 8, weekPosts: 31, monthPosts: 124,
+            lastPostAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+            remainingQuota: { daily: 2, weekly: 19, monthly: 126 },
+            status: 'active' as const
+          },
+          {
+            todayPosts: 12, weekPosts: 45, monthPosts: 180,
+            lastPostAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+            remainingQuota: { daily: 0, weekly: 5, monthly: 70 },
+            status: 'limit_reached' as const
+          }
+        ];
+        
+        // Add demo data only in development
+        maskedApp.groupInfo = demoGroups[index % demoGroups.length];
+        maskedApp.postingStats = demoStats[index % demoStats.length];
+      }
+      // In production, real groupInfo/postingStats would come from limits management system
       
       return maskedApp;
     });
@@ -183,7 +185,7 @@ router.post('/', requireAdminAuth, async (req, res) => {
     // Return without exposing secret
     res.status(201).json({
       ...newApp,
-      appSecret: `${appSecret.substring(0, 8)}****`,
+      appSecret: undefined, // 🔒 SECURITY: Never return app secrets
       appSecretSet: true
     });
 
@@ -235,7 +237,7 @@ router.put('/:id', requireAdminAuth, async (req, res) => {
     // Return without exposing secret
     res.json({
       ...updatedApp,
-      appSecret: updatedApp.appSecret ? `${updatedApp.appSecret.substring(0, 8)}****` : '',
+      appSecret: undefined, // 🔒 SECURITY: Never return app secrets
       appSecretSet: !!updatedApp.appSecret
     });
 

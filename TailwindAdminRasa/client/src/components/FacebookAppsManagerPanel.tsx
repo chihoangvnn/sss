@@ -86,7 +86,7 @@ interface FacebookApp {
   id: string;
   appName: string;
   appId: string;
-  appSecret: string;
+  appSecret?: string; // 🔒 SECURITY: Optional since never returned from API
   appSecretSet: boolean;
   webhookUrl: string;
   verifyToken: string;
