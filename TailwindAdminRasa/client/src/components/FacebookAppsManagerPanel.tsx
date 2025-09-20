@@ -73,6 +73,7 @@ import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { FacebookAppTemplateDownload } from "./FacebookAppTemplateDownload";
+import { secureFetch } from '../utils/csrf';
 
 interface UnifiedTag {
   id: string;
@@ -185,7 +186,7 @@ export function FacebookAppsManagerPanel() {
   // Create Facebook app mutation
   const createAppMutation = useMutation({
     mutationFn: async (data: CreateAppData) => {
-      const response = await fetch('/api/facebook-apps', {
+      const response = await secureFetch('/api/facebook-apps', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +223,7 @@ export function FacebookAppsManagerPanel() {
   // Update Facebook app mutation
   const updateAppMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CreateAppData> }) => {
-      const response = await fetch(`/api/facebook-apps/${id}`, {
+      const response = await secureFetch(`/api/facebook-apps/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +261,7 @@ export function FacebookAppsManagerPanel() {
   // Delete Facebook app mutation
   const deleteAppMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/facebook-apps/${id}`, {
+      const response = await secureFetch(`/api/facebook-apps/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -291,7 +292,7 @@ export function FacebookAppsManagerPanel() {
   // Toggle app status mutation
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const response = await fetch(`/api/facebook-apps/${id}`, {
+      const response = await secureFetch(`/api/facebook-apps/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -358,7 +359,7 @@ export function FacebookAppsManagerPanel() {
   // Update Facebook app group mutation
   const updateAppGroupMutation = useMutation({
     mutationFn: async ({ appId, groupId }: { appId: string; groupId?: string }) => {
-      const response = await fetch(`/api/facebook-apps/${appId}/group`, {
+      const response = await secureFetch(`/api/facebook-apps/${appId}/group`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -393,7 +394,7 @@ export function FacebookAppsManagerPanel() {
   // Update Facebook app tags mutation
   const updateAppTagsMutation = useMutation({
     mutationFn: async ({ id, tagIds }: { id: string; tagIds: string[] }) => {
-      const response = await fetch(`/api/facebook-apps/${id}/tags`, {
+      const response = await secureFetch(`/api/facebook-apps/${id}/tags`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
