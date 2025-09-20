@@ -26,7 +26,11 @@ import {
   Play,
   Pause,
   Lock,
-  Tags
+  Tags,
+  Webhook,
+  TestTube,
+  CheckCircle2,
+  Activity
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -110,6 +114,8 @@ interface FacebookApp {
   subscriptionFields: string[];
   isActive: boolean;
   tagIds?: string[]; // References to unified_tags.id
+  totalEvents?: number;
+  lastWebhookEvent?: string;
   createdAt: string;
   updatedAt?: string;
   
@@ -147,9 +153,12 @@ export function FacebookAppsManagerPanel() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isTagEditDialogOpen, setIsTagEditDialogOpen] = useState(false);
+  const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
   const [editingApp, setEditingApp] = useState<FacebookApp | null>(null);
   const [editingAppForTags, setEditingAppForTags] = useState<FacebookApp | null>(null);
+  const [selectedApp, setSelectedApp] = useState<FacebookApp | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [environmentFilter, setEnvironmentFilter] = useState<string>("all");
@@ -284,6 +293,56 @@ export function FacebookAppsManagerPanel() {
       toast({
         title: "Lỗi",
         description: error.message || "Không thể xóa Facebook App",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Webhook info query
+  const { data: webhookInfo, refetch: refetchWebhookInfo } = useQuery({
+    queryKey: ['webhook-info', selectedApp?.id],
+    queryFn: async () => {
+      if (!selectedApp?.id) return null;
+      const response = await fetch(`/api/facebook-apps/${selectedApp.id}/webhook-info`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch webhook info');
+      }
+      
+      return await response.json();
+    },
+    enabled: !!selectedApp?.id && isWebhookDialogOpen,
+  });
+
+  // Test webhook mutation
+  const testWebhookMutation = useMutation({
+    mutationFn: async (appId: string) => {
+      const response = await secureFetch(`/api/facebook-apps/${appId}/test-webhook`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to test webhook');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Webhook Test",
+        description: "Webhook configuration retrieved successfully",
+      });
+      // Refetch webhook info to update UI with latest status
+      refetchWebhookInfo();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể test webhook",
         variant: "destructive",
       });
     },
@@ -515,6 +574,33 @@ export function FacebookAppsManagerPanel() {
     setEditingAppForTags(app);
     setSelectedTagIds(app.tagIds || []);
     setIsTagEditDialogOpen(true);
+  };
+
+  const handleOpenWebhookDialog = (app: FacebookApp) => {
+    setSelectedApp(app);
+    setIsWebhookDialogOpen(true);
+  };
+
+  const handleTestWebhook = async (appId: string) => {
+    setTestingWebhook(appId);
+    try {
+      await testWebhookMutation.mutateAsync(appId);
+    } finally {
+      setTestingWebhook(null);
+    }
+  };
+
+  const getWebhookStatus = (app: FacebookApp) => {
+    const hasWebhookUrl = !!app.webhookUrl;
+    const hasVerifyToken = !!app.verifyToken;
+    
+    if (hasWebhookUrl && hasVerifyToken) {
+      return { status: 'configured', color: 'bg-green-500', text: 'Ready' };
+    } else if (hasWebhookUrl || hasVerifyToken) {
+      return { status: 'partial', color: 'bg-yellow-500', text: 'Partial' };
+    } else {
+      return { status: 'not-configured', color: 'bg-gray-400', text: 'None' };
+    }
   };
 
   const handleTagToggle = (tagId: string) => {
@@ -1100,17 +1186,17 @@ export function FacebookAppsManagerPanel() {
                     </div>
                     
                     {/* Tags Column - Từ phải sang trái */}
-                    <div className="w-[140px] shrink-0 flex items-center justify-end gap-1 overflow-hidden">
+                    <div className="w-[120px] shrink-0 flex items-center justify-end gap-1 overflow-hidden">
                       {app.tagIds && app.tagIds.length > 0 ? (
                         <div className="flex items-center gap-1 flex-wrap-reverse justify-end">
-                          {app.tagIds.slice(0, 3).reverse().map((tagId) => {
+                          {app.tagIds.slice(0, 2).reverse().map((tagId) => {
                             const tag = getTagById(tagId);
                             if (!tag) return null;
                             return (
                               <Badge
                                 key={tagId}
                                 variant="outline"
-                                className="text-[9px] px-1.5 py-0 h-4 leading-4 truncate max-w-[50px]"
+                                className="text-[9px] px-1.5 py-0 h-4 leading-4 truncate max-w-[40px]"
                                 style={{ 
                                   backgroundColor: `${tag.color}15`, 
                                   borderColor: tag.color,
@@ -1122,13 +1208,43 @@ export function FacebookAppsManagerPanel() {
                               </Badge>
                             );
                           })}
-                          {app.tagIds.length > 3 && (
-                            <span className="text-[9px] text-gray-500 ml-1">+{app.tagIds.length - 3}</span>
+                          {app.tagIds.length > 2 && (
+                            <span className="text-[9px] text-gray-500 ml-1">+{app.tagIds.length - 2}</span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-[9px] text-gray-400 italic">Chưa có tags</span>
+                        <span className="text-[9px] text-gray-400 italic">No tags</span>
                       )}
+                    </div>
+                    
+                    {/* 🍇 NEW: Webhook Status Column */}
+                    <div className="w-[100px] shrink-0 flex items-center gap-1">
+                      {(() => {
+                        const webhookStatus = getWebhookStatus(app);
+                        return (
+                          <>
+                            <div className={`w-2 h-2 rounded-full ${webhookStatus.color}`} title={`Webhook: ${webhookStatus.text}`}></div>
+                            <span className="text-[10px] text-gray-600 truncate" title={`Webhook: ${webhookStatus.text}`}>
+                              {webhookStatus.text}
+                            </span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenWebhookDialog(app)}
+                                  className="h-5 w-5 p-0 ml-1"
+                                >
+                                  <Webhook className="h-3 w-3 text-blue-600" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Webhook Settings</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        );
+                      })()} 
                     </div>
                     
                     {/* Actions Column */}
@@ -1472,6 +1588,234 @@ export function FacebookAppsManagerPanel() {
               ) : (
                 'Lưu Tags'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 🔗 Webhook Management Dialog */}
+      <Dialog open={isWebhookDialogOpen} onOpenChange={setIsWebhookDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Webhook className="h-5 w-5" />
+              Webhook Management - {selectedApp?.appName}
+            </DialogTitle>
+            <DialogDescription>
+              Quản lý cấu hình webhook cho Facebook App này
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Webhook Status Overview */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const status = selectedApp ? getWebhookStatus(selectedApp) : { status: 'not-configured', color: 'bg-gray-400', text: 'Unknown' };
+                      return (
+                        <>
+                          <div className={`w-3 h-3 rounded-full ${status.color}`}></div>
+                          <span className="font-medium">Status: {status.text}</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedApp && getWebhookStatus(selectedApp).status === 'configured' 
+                      ? 'Webhook is fully configured and ready for use'
+                      : 'Webhook needs configuration to receive events'
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium">Events: {selectedApp?.totalEvents || 0}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedApp?.lastWebhookEvent 
+                      ? `Last event: ${new Date(selectedApp.lastWebhookEvent).toLocaleString()}`
+                      : 'No events received yet'
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Webhook Configuration */}
+            <div className="space-y-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Configuration Details
+              </h3>
+              
+              {!webhookInfo && !selectedApp ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-600">Loading webhook information...</p>
+                </div>
+              ) : webhookInfo ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium">Webhook URL</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        value={webhookInfo.webhookUrl || 'Not configured'}
+                        readOnly
+                        className="font-mono text-xs bg-gray-50"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => webhookInfo.webhookUrl && copyToClipboard(webhookInfo.webhookUrl, 'Webhook URL')}
+                        disabled={!webhookInfo.webhookUrl}
+                      >
+                        {copied === 'Webhook URL' ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Verify Token</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        value={webhookInfo.verifyToken || 'Not configured'}
+                        readOnly
+                        className="font-mono text-xs bg-gray-50"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => webhookInfo.verifyToken && copyToClipboard(webhookInfo.verifyToken, 'Verify Token')}
+                        disabled={!webhookInfo.verifyToken}
+                      >
+                        {copied === 'Verify Token' ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium">Subscription Fields</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {webhookInfo.subscriptionFields && webhookInfo.subscriptionFields.length > 0 ? (
+                        webhookInfo.subscriptionFields.map((field: string) => (
+                          <Badge key={field} variant="secondary" className="text-xs">
+                            {field}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-sm text-gray-500">No fields configured</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <Label className="text-sm font-medium">App ID</Label>
+                      <p className="font-mono text-xs text-gray-600 mt-1">{webhookInfo.appId}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Active Status</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className={`w-2 h-2 rounded-full ${
+                          webhookInfo.isActive ? 'bg-green-500' : 'bg-gray-400'
+                        }`}></div>
+                        <span className="text-xs">{webhookInfo.isActive ? 'Active' : 'Inactive'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <XCircle className="h-6 w-6 text-red-400 mx-auto mb-2" />
+                  <p className="text-gray-600">Failed to load webhook information</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchWebhookInfo()}
+                    className="mt-2"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="space-y-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <TestTube className="w-4 h-4" />
+                Quick Actions
+              </h3>
+              
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => selectedApp && handleTestWebhook(selectedApp.id)}
+                  disabled={testingWebhook === selectedApp?.id}
+                  className="flex items-center gap-2"
+                >
+                  {testingWebhook === selectedApp?.id ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <TestTube className="h-4 w-4" />
+                  )}
+                  Test Webhook
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => selectedApp && window.open(`https://developers.facebook.com/apps/${selectedApp.appId}/webhooks/`, '_blank')}
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Facebook Console
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => refetchWebhookInfo()}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh Info
+                </Button>
+              </div>
+            </div>
+
+            {/* Setup Instructions */}
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="font-medium text-blue-900 mb-2">Setup Instructions</h4>
+              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <li>Copy the Webhook URL and Verify Token above</li>
+                <li>Go to Facebook Developer Console → App → Webhooks</li>
+                <li>Add webhook with URL and verify token</li>
+                <li>Subscribe to: messages, messaging_postbacks, messaging_optins</li>
+                <li>Test the webhook configuration</li>
+              </ol>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsWebhookDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

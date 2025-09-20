@@ -418,7 +418,7 @@ router.get('/:id/webhook-info', requireAdminAuth, async (req, res) => {
  * POST /api/facebook-apps/:id/test-webhook
  * Test webhook configuration
  */
-router.post('/:id/test-webhook', requireAdminAuth, async (req, res) => {
+router.post('/:id/test-webhook', requireAdminAuth, requireCSRFProtection, async (req, res) => {
   try {
     const { id } = req.params;
     
