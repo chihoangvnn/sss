@@ -220,6 +220,13 @@ const adminItems = [
     gradient: "gradient-mint"
   },
   {
+    title: "Groups Manager",
+    url: "/groups-manager",
+    icon: Users,
+    description: "Quản lý groups và posting limits",
+    gradient: "gradient-purple"
+  },
+  {
     title: "Landing Pages",
     url: "/landing-page-manager",
     icon: Palette,
