@@ -121,10 +121,20 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       });
       
       // 🤖 Load existing AI descriptions if available
+      console.log('🔍 DEBUG - Product loaded:', { 
+        productId: product.id, 
+        productName: product.name, 
+        hasDescriptions: !!product.descriptions,
+        descriptionsType: typeof product.descriptions,
+        descriptions: product.descriptions 
+      });
+      
       if (product.descriptions && typeof product.descriptions === 'object') {
+        console.log('✅ DEBUG - Setting descriptions from product:', product.descriptions);
         setGeneratedDescriptions(product.descriptions);
         setShowDescriptionPreview(true); // Show preview if descriptions exist
       } else {
+        console.log('❌ DEBUG - No descriptions found or invalid type');
         setGeneratedDescriptions(null);
         setShowDescriptionPreview(false);
       }
