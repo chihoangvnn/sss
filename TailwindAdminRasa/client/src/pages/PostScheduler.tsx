@@ -421,7 +421,7 @@ export function PostScheduler({}: PostSchedulerProps) {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {filteredPosts.map((post) => {
               const account = socialAccounts.find(acc => acc.id === post.socialAccountId);
               const isScheduled = post.status === 'scheduled';
@@ -430,157 +430,101 @@ export function PostScheduler({}: PostSchedulerProps) {
               return (
                 <div
                   key={post.id}
-                  className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                  className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-sm transition-all group"
                 >
-                  <div className="flex items-start gap-4">
-                    {/* Platform Icon */}
-                    <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                      {getPlatformIcon(post.platform)}
+                  {/* 🎯 COMPACT 1-LINE LAYOUT */}
+                  <div className="flex items-center gap-3">
+                    {/* Status & Platform Icon */}
+                    <div className="flex items-center gap-2 min-w-[60px]">
+                      {getStatusIcon(post.status)}
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        {getPlatformIcon(post.platform)}
+                      </div>
                     </div>
 
-                    {/* Post Content */}
+                    {/* Time */}
+                    <div className="min-w-[100px] text-xs font-mono text-gray-600">
+                      {formatDate(String(post.scheduledTime)).split(' ')[1]} {/* Only time */}
+                      <div className="text-[10px] text-gray-500">
+                        {formatDate(String(post.scheduledTime)).split(' ')[0]} {/* Only date */}
+                      </div>
+                    </div>
+
+                    {/* Content Preview */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium text-gray-900">
-                              {account?.name || 'Unknown Account'}
-                            </h3>
-                            <span className="text-sm text-gray-500">
-                              • {post.platform}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            {getStatusIcon(post.status)}
-                            <span>{getStatusText(post.status)}</span>
-                            <span>•</span>
-                            <span>{formatDate(String(post.scheduledTime))}</span>
-                            {isPast && isScheduled && (
-                              <span className="text-orange-600 font-medium">• Quá hạn</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          {post.platformUrl && (
-                            <button
-                              onClick={() => window.open(post.platformUrl!, '_blank')}
-                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Xem bài đăng"
-                            >
-                              <Eye className="w-4 h-4 text-gray-600" />
-                            </button>
-                          )}
-                          
-                          {(post.status === 'scheduled' || post.status === 'failed') && (
-                            <button
-                              onClick={() => triggerPostMutation.mutate(post.id)}
-                              disabled={triggerPostMutation.isPending}
-                              className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
-                              title="Đăng ngay"
-                            >
-                              <Send className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          {post.status === 'draft' && (
-                            <button
-                              onClick={() => setEditingPost(post)}
-                              className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
-                              title="Chỉnh sửa"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => {
-                              if (confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
-                                deletePostMutation.mutate(post.id);
-                              }
-                            }}
-                            className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                            title="Xóa"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                      <div className="truncate text-sm font-medium text-gray-900">
+                        {post.caption.length > 50 ? `${post.caption.substring(0, 50)}...` : post.caption}
                       </div>
-
-                      {/* Caption */}
-                      <div className="mb-3">
-                        <p className="text-gray-900 line-clamp-3">{post.caption}</p>
+                      <div className="text-xs text-gray-500 truncate">
+                        @{account?.name || 'Unknown'} • {post.platform}
+                        {post.hashtags && post.hashtags.length > 0 && (
+                          <span> • {post.hashtags.slice(0, 2).join(' ')}</span>
+                        )}
                       </div>
+                    </div>
 
-                      {/* Hashtags */}
-                      {post.hashtags && post.hashtags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {post.hashtags.map((hashtag, index) => (
-                            <span
-                              key={index}
-                              className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"
-                            >
-                              #{hashtag}
-                            </span>
-                          ))}
-                        </div>
+                    {/* Status Badge */}
+                    <div className="min-w-[80px] text-center">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        post.status === 'scheduled' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : post.status === 'posted' 
+                          ? 'bg-green-100 text-green-800'
+                          : post.status === 'failed'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {getStatusText(post.status)}
+                      </span>
+                      {isPast && isScheduled && (
+                        <div className="text-[10px] text-orange-600 font-medium mt-1">Quá hạn</div>
                       )}
+                    </div>
 
-                      {/* Media Preview */}
-                      {post.assetIds && post.assetIds.length > 0 && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                          <Image className="w-4 h-4" />
-                          <span>{post.assetIds.length} tệp đính kèm</span>
-                        </div>
+                    {/* Quick Actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {post.platformUrl && (
+                        <button
+                          onClick={() => window.open(post.platformUrl!, '_blank')}
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                          title="Xem bài đăng"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-gray-600" />
+                        </button>
                       )}
-
-                      {/* Error Message */}
-                      {post.errorMessage && (
-                        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium text-red-800">Lỗi đăng bài:</p>
-                            <p className="text-sm text-red-700">{post.errorMessage}</p>
-                            {(post.retryCount || 0) > 0 && (
-                              <p className="text-xs text-red-600 mt-1">
-                                Đã thử lại {post.retryCount || 0} lần
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                      
+                      {(post.status === 'scheduled' || post.status === 'failed') && (
+                        <button
+                          onClick={() => triggerPostMutation.mutate(post.id)}
+                          disabled={triggerPostMutation.isPending}
+                          className="p-1.5 hover:bg-green-100 rounded transition-colors text-green-600"
+                          title="Đăng ngay"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
                       )}
-
-                      {/* Analytics */}
-                      {post.analytics && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 p-3 bg-gray-50 rounded-lg">
-                          {post.analytics.likes !== undefined && (
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-gray-900">{post.analytics.likes}</p>
-                              <p className="text-xs text-gray-600">Lượt thích</p>
-                            </div>
-                          )}
-                          {post.analytics.comments !== undefined && (
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-gray-900">{post.analytics.comments}</p>
-                              <p className="text-xs text-gray-600">Bình luận</p>
-                            </div>
-                          )}
-                          {post.analytics.shares !== undefined && (
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-gray-900">{post.analytics.shares}</p>
-                              <p className="text-xs text-gray-600">Chia sẻ</p>
-                            </div>
-                          )}
-                          {post.analytics.reach !== undefined && (
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-gray-900">{post.analytics.reach}</p>
-                              <p className="text-xs text-gray-600">Tiếp cận</p>
-                            </div>
-                          )}
-                        </div>
+                      
+                      {post.status === 'draft' && (
+                        <button
+                          onClick={() => setEditingPost(post)}
+                          className="p-1.5 hover:bg-blue-100 rounded transition-colors text-blue-600"
+                          title="Chỉnh sửa"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
                       )}
+                      
+                      <button
+                        onClick={() => {
+                          if (confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
+                            deletePostMutation.mutate(post.id);
+                          }
+                        }}
+                        className="p-1.5 hover:bg-red-100 rounded transition-colors text-red-600"
+                        title="Xóa"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
