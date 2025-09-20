@@ -310,18 +310,6 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
     <div className={cn("flex h-[800px] bg-white rounded-xl border shadow-lg overflow-hidden", className)}>
       {/* Conversations Sidebar */}
       <div className="w-1/3 border-r bg-gray-50/30 flex flex-col">
-        {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <Facebook className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Facebook Messenger</h2>
-              <p className="text-xs text-blue-100">Quản lý tin nhắn</p>
-            </div>
-          </div>
-        </div>
 
         {/* Search and Filter */}
         <div className="p-4 space-y-3">
