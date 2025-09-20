@@ -17,7 +17,8 @@ import {
   Palette,
   Image,
   Calendar,
-  Activity
+  Activity,
+  Share2
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -126,6 +127,13 @@ const contentMenuItems = [
     icon: Store,
     gradient: "gradient-purple",
     description: "Quản lý cửa hàng trực tuyến"
+  },
+  {
+    title: "Social Media",
+    url: "/social-media",
+    icon: Share2,
+    gradient: "gradient-mint",
+    description: "Quản lý các tài khoản mạng xã hội"
   },
 ];
 

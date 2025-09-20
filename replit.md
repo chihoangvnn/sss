@@ -6,6 +6,12 @@ This is a comprehensive e-commerce management system with admin dashboard, store
 
 ## Recent Changes
 
+**September 20, 2025** - Navigation & Social Media Management Enhancement:
+- Added "Social Media" navigation link to sidebar in "Nội dung & Social" section linking to /social-media route
+- Enhanced FacebookAppsManagerPanel with proper SPA navigation using navigate() instead of window.location.href
+- Fixed import conflicts between lucide-react Link icon and wouter Link router by removing unused RouterLink import
+- Improved workflow between Facebook Apps Management and Social Facebook Management with seamless navigation
+
 **September 20, 2025** - ProductForm AI Content Generation Enhancement:
 - Enhanced ProductForm with comprehensive AI-powered product description generation
 - Added beautiful UI with 🪄 AI generation button, loading states, and success/error handling
