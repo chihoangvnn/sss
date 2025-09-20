@@ -1720,6 +1720,61 @@ export function FacebookAppsManagerPanel() {
                       )}
                     </div>
                   </div>
+
+                  {/* 🧪 Test Verification Endpoint */}
+                  <div className="border-t pt-4">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      Test Verification Endpoint
+                    </Label>
+                    <p className="text-xs text-gray-600 mt-1 mb-3">
+                      Test webhook verification endpoint trước khi cấu hình Facebook Developer Console
+                    </p>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs text-gray-600">Verification URL (GET request):</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            value={webhookInfo.webhookUrl ? 
+                              `${webhookInfo.webhookUrl}?hub.mode=subscribe&hub.verify_token=${webhookInfo.verifyToken}&hub.challenge=test123` : 
+                              'Not configured'
+                            }
+                            readOnly
+                            className="font-mono text-xs bg-blue-50 text-blue-700"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const testUrl = `${webhookInfo.webhookUrl}?hub.mode=subscribe&hub.verify_token=${webhookInfo.verifyToken}&hub.challenge=test123`;
+                              copyToClipboard(testUrl, 'Test URL');
+                            }}
+                            disabled={!webhookInfo.webhookUrl || !webhookInfo.verifyToken}
+                            title="Copy test URL"
+                          >
+                            {copied === 'Test URL' ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                          <div className="text-xs text-gray-700">
+                            <p className="font-medium mb-1">✅ Successful Response:</p>
+                            <p className="font-mono">Status: 200, Body: "test123"</p>
+                            <p className="font-medium mt-2 mb-1">❌ Failed Response:</p>
+                            <p className="font-mono">Status: 403 (token mismatch) hoặc 400 (missing params)</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
