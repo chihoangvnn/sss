@@ -18,11 +18,15 @@ const router = Router();
 // 🔒 Authentication middleware  
 const requireAuth = (req: any, res: any, next: any) => {
   // For development, allow all requests (production would check session)
+  console.log('🔍 Analytics Auth Check - NODE_ENV:', process.env.NODE_ENV, 'Session:', !!req.session, 'UserId:', !!req.session?.userId);
+  
   if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Development mode - bypassing auth for analytics');
     return next();
   }
   
   if (!req.session || !req.session.userId) {
+    console.log('❌ Analytics auth failed - no valid session');
     return res.status(401).json({ 
       error: "Unauthorized. Please log in to access analytics.",
       code: "AUTH_REQUIRED"
@@ -43,60 +47,42 @@ router.get('/dashboard/overview', requireAuth, async (req, res) => {
     const thisWeek = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
     const thisMonth = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
 
-    // Parallel queries for efficiency
+    // Parallel queries for efficiency - ONLY EXISTING TABLES
     const [
       totalGroups,
       totalAccounts,
-      activeFormulas,
       todayPosts,
       weeklyPosts,
       monthlyPosts,
-      failedPosts,
-      activeRestPeriods,
-      recentViolations
+      failedPosts
     ] = await Promise.all([
-      // Total account groups
+      // Total account groups (EXISTING TABLE)
       db.select({ count: count() }).from(accountGroups).where(eq(accountGroups.isActive, true)),
       
-      // Total social accounts
+      // Total social accounts (EXISTING TABLE)
       db.select({ count: count() }).from(socialAccounts).where(eq(socialAccounts.isActive, true)),
       
-      // Active posting formulas
-      db.select({ count: count() }).from(postingFormulas).where(eq(postingFormulas.isActive, true)),
-      
-      // Today's posts
+      // Today's posts (EXISTING TABLE)
       db.select({ count: count() }).from(scheduledPosts)
         .where(and(
           sql`${scheduledPosts.scheduledTime} >= ${today.toISOString()}`,
           sql`${scheduledPosts.scheduledTime} <= ${new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString()}`
         )),
       
-      // Weekly posts
+      // Weekly posts (EXISTING TABLE)
       db.select({ count: count() }).from(scheduledPosts)
         .where(sql`${scheduledPosts.scheduledTime} >= ${thisWeek.toISOString()}`),
       
-      // Monthly posts 
+      // Monthly posts (EXISTING TABLE)
       db.select({ count: count() }).from(scheduledPosts)
         .where(sql`${scheduledPosts.scheduledTime} >= ${thisMonth.toISOString()}`),
       
-      // Failed posts (last 7 days)
+      // Failed posts (last 7 days) (EXISTING TABLE)
       db.select({ count: count() }).from(scheduledPosts)
         .where(and(
           eq(scheduledPosts.status, 'failed'),
           sql`${scheduledPosts.scheduledTime} >= ${thisWeek.toISOString()}`
-        )),
-      
-      // Active rest periods
-      db.select({ count: count() }).from(restPeriods)
-        .where(and(
-          eq(restPeriods.status, 'active'),
-          sql`${restPeriods.startAt} <= ${now.toISOString()}`,
-          sql`${restPeriods.endAt} >= ${now.toISOString()}`
-        )),
-      
-      // Recent violations (last 24 hours)
-      db.select({ count: count() }).from(violationsLog)
-        .where(sql`${violationsLog.eventTime} >= ${today.toISOString()}`)
+        ))
     ]);
 
     // Calculate success rate
@@ -109,13 +95,13 @@ router.get('/dashboard/overview', requireAuth, async (req, res) => {
       summary: {
         totalGroups: totalGroups[0]?.count || 0,
         totalAccounts: totalAccounts[0]?.count || 0,
-        activeFormulas: activeFormulas[0]?.count || 0,
+        activeFormulas: 0, // TODO: Add when posting_formulas table exists
         todayPosts: todayPosts[0]?.count || 0,
         weeklyPosts: weeklyPosts[0]?.count || 0,
         monthlyPosts: monthlyPosts[0]?.count || 0,
         successRate: parseFloat(successRate),
-        activeRestPeriods: activeRestPeriods[0]?.count || 0,
-        recentViolations: recentViolations[0]?.count || 0
+        activeRestPeriods: 0, // TODO: Add when rest_periods table exists
+        recentViolations: 0 // TODO: Add when violations_log table exists
       },
       timestamp: now.toISOString()
     });
