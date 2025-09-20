@@ -432,32 +432,52 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                   </div>
                 </div>
                 
-                {/* Pipeline Filter - Same line as user */}
-                <div className="flex flex-wrap gap-1">
-                  <Button
-                    variant={filterPipeline === "all" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setFilterPipeline("all")}
-                    className="text-xs h-7"
-                  >
-                    Tất cả
-                  </Button>
-                  {pipelineTags.map((tag: any) => (
+                {/* Pipeline Filter - 2 rows, right aligned */}
+                <div className="flex flex-col items-end gap-1 max-w-xs">
+                  <div className="flex flex-wrap gap-1 justify-end">
                     <Button
-                      key={tag.id}
-                      variant={filterPipeline === tag.id ? "default" : "outline"}
+                      variant={filterPipeline === "all" ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setFilterPipeline(tag.id)}
+                      onClick={() => setFilterPipeline("all")}
                       className="text-xs h-7"
-                      style={{
-                        backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
-                        borderColor: tag.color,
-                        color: filterPipeline === tag.id ? 'white' : tag.color
-                      }}
                     >
-                      {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                      Tất cả
                     </Button>
-                  ))}
+                    {pipelineTags.slice(0, 2).map((tag: any) => (
+                      <Button
+                        key={tag.id}
+                        variant={filterPipeline === tag.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFilterPipeline(tag.id)}
+                        className="text-xs h-7"
+                        style={{
+                          backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
+                          borderColor: tag.color,
+                          color: filterPipeline === tag.id ? 'white' : tag.color
+                        }}
+                      >
+                        {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {pipelineTags.slice(2).map((tag: any) => (
+                      <Button
+                        key={tag.id}
+                        variant={filterPipeline === tag.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setFilterPipeline(tag.id)}
+                        className="text-xs h-7"
+                        style={{
+                          backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
+                          borderColor: tag.color,
+                          color: filterPipeline === tag.id ? 'white' : tag.color
+                        }}
+                      >
+                        {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
