@@ -176,6 +176,10 @@ export function FacebookAppsManagerPanel() {
     description: ""
   });
 
+  // Webhook helper state
+  const [webhookHelperAppId, setWebhookHelperAppId] = useState("");
+  const [webhookHelperToken, setWebhookHelperToken] = useState("");
+
   // Load Facebook apps
   const { data: apps = [], isLoading, error } = useQuery({
     queryKey: ['facebook-apps'],
@@ -765,6 +769,197 @@ export function FacebookAppsManagerPanel() {
                 <Upload className="h-4 w-4 mr-2" />
                 Import Apps
               </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 🪝 WEBHOOK CONFIGURATION SECTION */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-green-600" />
+            Webhook Configuration Helper
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Tạo và test webhook URL cho Facebook Apps để setup Facebook Developer Console
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* App ID Input */}
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="webhookAppId" className="text-sm font-medium">Facebook App ID</Label>
+                  <Input
+                    id="webhookAppId"
+                    placeholder="123456789012345"
+                    className="font-mono"
+                    value={webhookHelperAppId}
+                    onChange={(e) => setWebhookHelperAppId(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="webhookVerifyToken" className="text-sm font-medium">Verify Token (tùy chọn)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhookVerifyToken"
+                      placeholder="Để trống để tự động tạo"
+                      className="font-mono"
+                      value={webhookHelperToken}
+                      onChange={(e) => setWebhookHelperToken(e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWebhookHelperToken(`verify_${Date.now()}`)}
+                      title="Tạo token ngẫu nhiên"
+                    >
+                      <Shuffle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Generated URLs */}
+              {webhookHelperAppId && webhookHelperAppId.length >= 10 && (
+                <div className="space-y-3 bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-medium text-green-800 flex items-center gap-2">
+                    <Link className="h-4 w-4" />
+                    Generated URLs
+                  </h4>
+                  
+                  {/* Webhook URL */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-green-700 font-medium">📍 Webhook URL:</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={`https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}`}
+                        readOnly
+                        className="text-xs font-mono bg-white border-green-300 text-green-700"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const url = `https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}`;
+                          copyToClipboard(url, 'Webhook Helper URL');
+                        }}
+                        className="border-green-300 hover:bg-green-100"
+                      >
+                        {copied === 'Webhook Helper URL' ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Verify Token */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-green-700 font-medium">🔑 Verify Token:</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={webhookHelperToken || `verify_${Date.now()}`}
+                        readOnly
+                        className="text-xs font-mono bg-white border-green-300 text-green-700"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const token = webhookHelperToken || `verify_${Date.now()}`;
+                          copyToClipboard(token, 'Webhook Helper Token');
+                        }}
+                        className="border-green-300 hover:bg-green-100"
+                      >
+                        {copied === 'Webhook Helper Token' ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Test URL */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-blue-700 font-medium">🧪 Test Verification URL:</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={`https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}?hub.mode=subscribe&hub.verify_token=${webhookHelperToken || `verify_${Date.now()}`}&hub.challenge=test123`}
+                        readOnly
+                        className="text-xs font-mono bg-blue-50 border-blue-300 text-blue-700"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const testUrl = `https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${webhookHelperAppId}?hub.mode=subscribe&hub.verify_token=${webhookHelperToken || `verify_${Date.now()}`}&hub.challenge=test123`;
+                          copyToClipboard(testUrl, 'Webhook Test URL');
+                        }}
+                        className="border-blue-300 hover:bg-blue-100"
+                      >
+                        {copied === 'Webhook Test URL' ? (
+                          <Check className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Direct Facebook Console Links */}
+                  <div className="border-t border-green-300 pt-3 mt-3">
+                    <Label className="text-xs text-green-700 font-medium mb-2 block">🔗 Direct Facebook Console Links:</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`https://developers.facebook.com/apps/${webhookHelperAppId}/webhooks/`, '_blank')}
+                          className="text-xs border-blue-300 hover:bg-blue-50"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          Open Webhook Setup
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`https://developers.facebook.com/apps/${webhookHelperAppId}/settings/basic/`, '_blank')}
+                          className="text-xs border-orange-300 hover:bg-orange-50"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          App Settings
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <h4 className="font-medium mb-2">📝 Setup Instructions:</h4>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Nhập <strong>Facebook App ID</strong> để tạo webhook URLs</li>
+                    <li>Copy <strong>Webhook URL</strong> vào Facebook Developer Console</li>
+                    <li>Copy <strong>Verify Token</strong> vào Facebook Developer Console</li>
+                    <li>Chọn events: <code>messages</code>, <code>messaging_postbacks</code>, <code>feed</code></li>
+                    <li>Click "Verify and Save" để activate webhook</li>
+                    <li>Test với <strong>Test URL</strong> để đảm bảo verification hoạt động</li>
+                  </ol>
+                  <p className="mt-2 text-xs"><strong>✅ Expected response:</strong> Status 200, Body: "test123"</p>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
