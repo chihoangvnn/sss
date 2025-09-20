@@ -36,7 +36,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OrderForm } from "./OrderForm";
-import { useNewOrderNotification, TestNewOrderNotification } from "./NewOrderNotification";
+import { useNewOrderNotification } from "./NewOrderNotification";
 import type { Order } from "@shared/schema";
 
 interface OrderWithCustomerInfo extends Order {
@@ -400,10 +400,6 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
       {/* 🌿 Gentle Green Notifications for Main Orders */}
       <NewOrderNotificationComponent />
       
-      {/* 🧪 Test Notification (Dev Only) */}
-      <div className="flex justify-end">
-        <TestNewOrderNotification />
-      </div>
 
       <Card data-testid="order-table">
         <CardHeader>

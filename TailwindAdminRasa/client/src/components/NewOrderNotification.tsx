@@ -146,31 +146,3 @@ export function useNewOrderNotification() {
   };
 }
 
-// 🎨 Sample usage and testing function
-export function TestNewOrderNotification() {
-  const { triggerNewOrderNotification, NewOrderNotificationComponent } = useNewOrderNotification();
-  
-  const testNotification = () => {
-    triggerNewOrderNotification({
-      id: 'test-order-123',
-      orderNumber: 'TTS-2024-001',
-      customerName: 'Nguyễn Minh Anh',
-      totalAmount: 450000,
-      currency: 'VND',
-      itemCount: 3,
-      timeAgo: 'Vừa xong'
-    });
-  };
-  
-  return (
-    <div className="space-y-4 p-4">
-      <NewOrderNotificationComponent />
-      <Button 
-        onClick={testNotification}
-        className="bg-gentle-mint hover:bg-gentle-sparkle text-white"
-      >
-        🧪 Test Gentle Notification
-      </Button>
-    </div>
-  );
-}

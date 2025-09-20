@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
-import { useNewOrderNotification, TestNewOrderNotification } from './NewOrderNotification';
+import { useNewOrderNotification } from './NewOrderNotification';
 
 const statusColors = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', badge: 'bg-yellow-500' },
@@ -368,11 +368,6 @@ export function TikTokShopOrdersPanel({ businessAccountId }: { businessAccountId
     <div className="space-y-6">
       {/* 🌿 Gentle Green Notifications */}
       <NewOrderNotificationComponent />
-      
-      {/* 🧪 Test Notification (Dev Only) */}
-      <div className="flex justify-end">
-        <TestNewOrderNotification />
-      </div>
       
       {/* Analytics Overview */}
       {analytics && (
