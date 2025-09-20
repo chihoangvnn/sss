@@ -1,11 +1,9 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Package2,
   ShoppingCart,
   Users,
   BarChart3,
-  MessageSquare,
   Facebook,
   Instagram,
   Twitter,
@@ -13,16 +11,13 @@ import {
   Home,
   Zap,
   Store,
-  Bot,
   Tags,
   Hash,
   Building2,
-  FileText,
   Palette,
   Image,
   Calendar,
-  Activity,
-  TrendingUp
+  Activity
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -134,30 +129,6 @@ const contentMenuItems = [
   },
 ];
 
-// Chatbot management với modern styling
-const chatbotMenuItems = [
-  {
-    title: "Test Bot",
-    url: "/chatbot",
-    icon: MessageSquare,
-    description: "Chat và test bot trực tiếp",
-    gradient: "gradient-teal"
-  },
-  {
-    title: "Cài đặt Bot",
-    url: "/chatbot",
-    icon: Bot,
-    description: "Cấu hình bot, tên, avatar",
-    gradient: "gradient-pink"
-  },
-  {
-    title: "Thống kê Bot",
-    url: "/chatbot",
-    icon: TrendingUp,
-    description: "Analytics cuộc hội thoại",
-    gradient: "gradient-purple"
-  },
-];
 
 // Integration items với activity status
 const integrationItems = [
@@ -391,47 +362,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* AI Chatbot Section */}
-        <SidebarGroup className="px-4 py-2">
-          <SidebarGroupLabel className="text-xs font-semibold tracking-wide text-muted-foreground/60 uppercase mb-3">
-            🤖 AI Assistant
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
-              {chatbotMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location === item.url}
-                    className={`group relative overflow-hidden rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-md ${
-                      location === item.url 
-                        ? 'bg-primary/10 text-primary border-primary/20 border shadow-sm' 
-                        : 'hover:bg-card/80 hover:shadow-sm'
-                    }`}
-                  >
-                    <Link href={item.url} className="flex items-center gap-3 p-3">
-                      <div className={`
-                        relative flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200
-                        ${location === item.url 
-                          ? 'bg-primary text-primary-foreground shadow-sm' 
-                          : 'bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
-                        }
-                      `}>
-                        <item.icon className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-sm">{item.title}</span>
-                        <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
-                          {item.description}
-                        </p>
-                      </div>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
         {/* Social Platforms với live status */}
         <SidebarGroup className="px-4 py-2">
