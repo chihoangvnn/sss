@@ -97,6 +97,26 @@ interface FacebookApp {
   tagIds?: string[]; // References to unified_tags.id
   createdAt: string;
   updatedAt?: string;
+  
+  // 🎯 NEW: Limits Management fields
+  groupInfo?: {
+    groupId: string;
+    groupName: string;
+    priority: number;
+    formulaName?: string;
+  };
+  postingStats?: {
+    todayPosts: number;
+    weekPosts: number;
+    monthPosts: number;
+    lastPostAt?: string;
+    remainingQuota: {
+      daily: number;
+      weekly: number;
+      monthly: number;
+    };
+    status: "active" | "resting" | "limit_reached" | "paused";
+  };
 }
 
 interface CreateAppData {
@@ -846,10 +866,12 @@ export function FacebookAppsManagerPanel() {
               {/* Table Header */}
               <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
                 <div className="flex items-center text-xs font-medium text-gray-600 gap-2">
-                  <div className="w-[200px]">Tên App</div>
-                  <div className="w-[140px]">App ID</div>
+                  <div className="w-[160px]">Tên App</div>
+                  <div className="w-[120px]">App ID</div>
                   <div className="w-[80px]">Status</div>
-                  <div className="w-[180px]">Tags</div>
+                  <div className="w-[120px]">Group</div>
+                  <div className="w-[140px]">Stats (T/W/M)</div>
+                  <div className="w-[140px]">Tags</div>
                   <div className="flex-1">Actions</div>
                 </div>
               </div>
@@ -859,7 +881,7 @@ export function FacebookAppsManagerPanel() {
                 {filteredApps.map((app) => (
                   <div key={app.id} className="flex items-center gap-2 h-9 text-xs px-4 hover:bg-gray-50 transition-colors">
                     {/* Name Column */}
-                    <div className="w-[200px] flex items-center gap-2 min-w-0">
+                    <div className="w-[160px] flex items-center gap-2 min-w-0">
                       <span className="font-medium truncate" title={app.appName}>{app.appName}</span>
                       <span className={`shrink-0 w-4 h-4 rounded text-[9px] leading-4 text-center font-bold ${
                         app.environment === 'production' 
@@ -874,7 +896,7 @@ export function FacebookAppsManagerPanel() {
                     </div>
                     
                     {/* App ID Column */}
-                    <div className="w-[140px] shrink-0">
+                    <div className="w-[120px] shrink-0">
                       <button
                         onClick={() => copyToClipboard(app.appId, app.id)}
                         className="font-mono text-[10px] bg-slate-50 hover:bg-slate-100 rounded px-2 py-0.5 truncate max-w-full cursor-pointer transition-colors"
@@ -907,8 +929,50 @@ export function FacebookAppsManagerPanel() {
                       )}
                     </div>
                     
+                    {/* 🎯 NEW: Group Column */}
+                    <div className="w-[120px] shrink-0">
+                      {app.groupInfo ? (
+                        <div className="flex items-center gap-1">
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            app.groupInfo.priority === 1 ? 'bg-purple-500' :
+                            app.groupInfo.priority === 2 ? 'bg-blue-500' : 
+                            'bg-green-500'
+                          }`} title={`Priority: ${app.groupInfo.priority}`}></div>
+                          <span className="truncate text-[10px] font-medium" title={app.groupInfo.groupName}>
+                            {app.groupInfo.groupName}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-gray-400 italic">No group</span>
+                      )}
+                    </div>
+                    
+                    {/* 🎯 NEW: Posting Stats Column */}
+                    <div className="w-[140px] shrink-0">
+                      {app.postingStats ? (
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-[9px]" title="Today/Week/Month posts">
+                            {app.postingStats.todayPosts}/{app.postingStats.weekPosts}/{app.postingStats.monthPosts}
+                          </span>
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            app.postingStats.status === 'active' ? 'bg-green-500' :
+                            app.postingStats.status === 'resting' ? 'bg-yellow-500' :
+                            app.postingStats.status === 'limit_reached' ? 'bg-red-500' :
+                            'bg-gray-400'
+                          }`} title={`Status: ${app.postingStats.status}`}></div>
+                          {app.postingStats.remainingQuota.daily < 5 && (
+                            <span className="text-[8px] text-orange-600 font-bold" title={`Remaining daily quota: ${app.postingStats.remainingQuota.daily}`}>
+                              !{app.postingStats.remainingQuota.daily}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-gray-400 italic">No stats</span>
+                      )}
+                    </div>
+                    
                     {/* Tags Column - Từ phải sang trái */}
-                    <div className="w-[180px] shrink-0 flex items-center justify-end gap-1 overflow-hidden">
+                    <div className="w-[140px] shrink-0 flex items-center justify-end gap-1 overflow-hidden">
                       {app.tagIds && app.tagIds.length > 0 ? (
                         <div className="flex items-center gap-1 flex-wrap-reverse justify-end">
                           {app.tagIds.slice(0, 3).reverse().map((tagId) => {

@@ -1412,3 +1412,217 @@ export const updateApiConfigurationSchema = insertApiConfigurationSchema.partial
 export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema>;
 export type UpdateApiConfiguration = z.infer<typeof updateApiConfigurationSchema>;
 export type ApiConfiguration = typeof apiConfigurations.$inferSelect;
+
+// =============================================================================
+// FACEBOOK APP LIMITS MANAGEMENT SYSTEM
+// =============================================================================
+
+// Account Groups - Nhóm tài khoản Facebook với limit rules
+export const accountGroups = pgTable("account_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // "Group VIP", "Group Thường", etc.
+  description: text("description"),
+  platform: text("platform").notNull().default("facebook"), // Chỉ support Facebook
+  priority: integer("priority").default(1), // 1 = cao nhất, 5 = thấp nhất
+  weight: decimal("weight", { precision: 5, scale: 2 }).default("1.0"), // Weight trong distribution
+  isActive: boolean("is_active").default(true),
+  formulaId: varchar("formula_id").references(() => postingFormulas.id), // FK to posting formula
+  
+  // Tracking
+  totalPosts: integer("total_posts").default(0), // Total posts đã đăng
+  lastPostAt: timestamp("last_post_at"), // Post cuối cùng
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Group Accounts - Junction table: nhóm nào có account nào
+export const groupAccounts = pgTable("group_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  groupId: varchar("group_id").notNull().references(() => accountGroups.id, { onDelete: "cascade" }),
+  socialAccountId: varchar("social_account_id").notNull().references(() => socialAccounts.id, { onDelete: "cascade" }),
+  
+  // Per-account overrides
+  weight: decimal("weight", { precision: 5, scale: 2 }).default("1.0"), // Weight riêng của account này
+  dailyCapOverride: integer("daily_cap_override"), // Override daily limit cho account này
+  cooldownMinutes: integer("cooldown_minutes"), // Thời gian nghỉ riêng
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Ensure unique group-account relationship
+  uniqueGroupAccount: unique().on(table.groupId, table.socialAccountId),
+}));
+
+// Posting Formulas - Công thức đăng bài với limits
+export const postingFormulas = pgTable("posting_formulas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // "Formula VIP", "Formula An Toàn", etc.
+  description: text("description"),
+  
+  // Formula Configuration (JSONB)
+  config: jsonb("config").$type<{
+    // Caps per time period
+    caps: {
+      perHour?: number;
+      perDay?: number;
+      perWeek?: number;
+      perMonth?: number;
+      perYear?: number;
+    };
+    
+    // Timing constraints
+    minGapMinutes: number; // Khoảng cách tối thiểu giữa 2 posts
+    maxPerHour: number; // Tối đa bao nhiêu posts/giờ
+    
+    // Schedule restrictions
+    quietHours: { start: string; end: string }[]; // Giờ không được đăng
+    allowedDays: number[]; // 0=CN, 1=T2, ... 6=T7
+    peakSlots: { hour: number; minute: number; weight: number }[]; // Giờ vàng
+    
+    // Randomization
+    jitterSeconds: number; // Random delay để tránh detect
+    
+    // Distribution strategy
+    distributionMode: "even" | "weighted" | "performance"; // Cách phân phối
+    
+    // Error handling
+    backoffOnFail: boolean; // Có nghỉ khi fail không
+    
+    // Rest strategy
+    restStrategy: {
+      threshold: number; // Đạt bao nhiêu % limit thì nghỉ
+      restDurationHours: number; // Nghỉ bao lâu
+      resumePolicy: "auto" | "manual"; // Tự động tiếp tục hay manual
+    };
+  }>().notNull(),
+  
+  // Preset templates
+  isSystemDefault: boolean("is_system_default").default(false), // Có phải template hệ thống
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Limit Counters - Đếm usage theo thời gian
+export const limitCounters = pgTable("limit_counters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Scope: app-wide, group, hoặc individual account
+  scope: text("scope", { enum: ["app", "group", "account"] }).notNull(),
+  scopeId: varchar("scope_id").notNull(), // ID của app/group/account
+  
+  // Action type
+  action: text("action").notNull().default("post"), // "post", "comment", etc.
+  
+  // Time window
+  window: text("window", { enum: ["hour", "day", "week", "month", "year"] }).notNull(),
+  windowStart: timestamp("window_start").notNull(),
+  windowEnd: timestamp("window_end").notNull(),
+  
+  // Counters
+  used: integer("used").default(0), // Đã dùng
+  limit: integer("limit").notNull(), // Giới hạn
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Ensure unique counter per scope/action/window
+  uniqueCounter: unique().on(table.scope, table.scopeId, table.action, table.window, table.windowStart),
+}));
+
+// Rest Periods - Thời gian nghỉ ngơi
+export const restPeriods = pgTable("rest_periods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Scope
+  scope: text("scope", { enum: ["app", "group", "account"] }).notNull(),
+  scopeId: varchar("scope_id").notNull(),
+  
+  // Rest period
+  startAt: timestamp("start_at").notNull(),
+  endAt: timestamp("end_at").notNull(),
+  
+  // Reason & status
+  reason: text("reason").notNull(), // "daily_limit_reached", "manual_pause", etc.
+  status: text("status", { enum: ["active", "completed", "cancelled"] }).default("active"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Schedule Assignments - Bài đăng được assign vào account nào
+export const scheduleAssignments = pgTable("schedule_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // References
+  scheduledPostId: varchar("scheduled_post_id").notNull().references(() => scheduledPosts.id, { onDelete: "cascade" }),
+  socialAccountId: varchar("social_account_id").notNull().references(() => socialAccounts.id),
+  groupId: varchar("group_id").references(() => accountGroups.id),
+  
+  // Assignment details
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  status: text("status", { enum: ["assigned", "executing", "completed", "failed"] }).default("assigned"),
+  
+  // Concurrency control
+  lockVersion: integer("lock_version").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Ensure unique assignment per post
+  uniqueAssignment: unique().on(table.scheduledPostId),
+}));
+
+// Violations Log - Log các vi phạm limits
+export const violationsLog = pgTable("violations_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Scope
+  scope: text("scope", { enum: ["app", "group", "account"] }).notNull(),
+  scopeId: varchar("scope_id").notNull(),
+  
+  // Violation details
+  code: text("code").notNull(), // "DAILY_LIMIT_EXCEEDED", "MIN_GAP_VIOLATION", etc.
+  message: text("message").notNull(),
+  eventTime: timestamp("event_time").defaultNow(),
+  
+  // Context data
+  metadata: jsonb("metadata").$type<{
+    attemptedAction?: string;
+    currentUsage?: number;
+    limit?: number;
+    timeSinceLastPost?: number;
+    additionalInfo?: Record<string, any>;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// =============================================================================
+// TYPES FOR FACEBOOK LIMITS MANAGEMENT
+// =============================================================================
+
+export type AccountGroup = typeof accountGroups.$inferSelect;
+export type InsertAccountGroup = typeof accountGroups.$inferInsert;
+
+export type GroupAccount = typeof groupAccounts.$inferSelect;
+export type InsertGroupAccount = typeof groupAccounts.$inferInsert;
+
+export type PostingFormula = typeof postingFormulas.$inferSelect;
+export type InsertPostingFormula = typeof postingFormulas.$inferInsert;
+
+export type LimitCounter = typeof limitCounters.$inferSelect;
+export type InsertLimitCounter = typeof limitCounters.$inferInsert;
+
+export type RestPeriod = typeof restPeriods.$inferSelect;
+export type InsertRestPeriod = typeof restPeriods.$inferInsert;
+
+export type ScheduleAssignment = typeof scheduleAssignments.$inferSelect;
+export type InsertScheduleAssignment = typeof scheduleAssignments.$inferInsert;
+
+export type ViolationLog = typeof violationsLog.$inferSelect;
+export type InsertViolationLog = typeof violationsLog.$inferInsert;

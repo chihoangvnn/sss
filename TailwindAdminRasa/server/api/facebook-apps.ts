@@ -90,14 +90,51 @@ router.get('/', requireAdminAuth, async (req, res) => {
   try {
     const apps = await storage.getAllFacebookApps();
     
-    // Mask app secrets for security
-    const maskedApps = apps.map(app => ({
-      ...app,
-      appSecret: app.appSecret ? `${app.appSecret.substring(0, 8)}****` : '',
-      appSecretSet: !!app.appSecret
-    }));
+    // 🎯 DEMO: Add group info and posting stats to each app
+    const enhancedApps = apps.map((app, index) => {
+      // Generate demo group info
+      const demoGroups = [
+        { groupId: 'group-vip', groupName: 'VIP Group', priority: 1, formulaName: 'Formula VIP' },
+        { groupId: 'group-normal', groupName: 'Normal Group', priority: 2, formulaName: 'Formula Standard' },
+        { groupId: 'group-test', groupName: 'Test Group', priority: 3, formulaName: 'Formula Safe' }
+      ];
+      
+      // Generate demo posting stats
+      const demoStats = [
+        {
+          todayPosts: 5, weekPosts: 23, monthPosts: 89,
+          lastPostAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          remainingQuota: { daily: 3, weekly: 27, monthly: 161 },
+          status: 'active' as const
+        },
+        {
+          todayPosts: 8, weekPosts: 31, monthPosts: 124,
+          lastPostAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+          remainingQuota: { daily: 2, weekly: 19, monthly: 126 },
+          status: 'active' as const
+        },
+        {
+          todayPosts: 12, weekPosts: 45, monthPosts: 180,
+          lastPostAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+          remainingQuota: { daily: 0, weekly: 5, monthly: 70 },
+          status: 'limit_reached' as const
+        }
+      ];
+      
+      const maskedApp = {
+        ...app,
+        appSecret: app.appSecret ? `${app.appSecret.substring(0, 8)}****` : '',
+        appSecretSet: !!app.appSecret,
+        
+        // Add demo group info and stats
+        groupInfo: demoGroups[index % demoGroups.length],
+        postingStats: demoStats[index % demoStats.length]
+      };
+      
+      return maskedApp;
+    });
 
-    res.json(maskedApps);
+    res.json(enhancedApps);
   } catch (error) {
     console.error('Error fetching Facebook apps:', error);
     res.status(500).json({ 
