@@ -206,6 +206,13 @@ const integrationItems = [
 // Admin items
 const adminItems = [
   {
+    title: "Quản lý API",
+    url: "/api-management",
+    icon: Zap,
+    description: "Giám sát và quản lý API endpoints",
+    gradient: "gradient-purple"
+  },
+  {
     title: "Facebook Apps",
     url: "/facebook-apps",
     icon: Settings,
