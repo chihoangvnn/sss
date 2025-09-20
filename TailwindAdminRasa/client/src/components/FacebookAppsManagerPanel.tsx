@@ -923,6 +923,121 @@ export function FacebookAppsManagerPanel() {
                   rows={3}
                 />
               </div>
+
+              {/* 🪝 WEBHOOK CONFIGURATION SECTION */}
+              {formData.appId && formData.appId.length >= 10 && (
+                <div className="border-t pt-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-green-600" />
+                      <Label className="text-sm font-medium text-green-700">🔗 Webhook Configuration</Label>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      Webhook URL và verify token sẽ được tự động tạo. Copy thông tin này vào Facebook Developer Console.
+                    </p>
+                    
+                    <div className="space-y-3 bg-green-50 p-3 rounded-lg border border-green-200">
+                      {/* Generated Webhook URL */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-green-700">📍 Webhook URL (auto-generated):</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={`https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${formData.appId}`}
+                            readOnly
+                            className="text-xs bg-white font-mono text-green-700 border-green-300"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const webhookUrl = `https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${formData.appId}`;
+                              copyToClipboard(webhookUrl, 'Generated Webhook URL');
+                            }}
+                            className="shrink-0 border-green-300 hover:bg-green-100"
+                            title="Copy webhook URL"
+                          >
+                            {copied === 'Generated Webhook URL' ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Current Verify Token */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-green-700">🔑 Verify Token:</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={formData.verifyToken || `verify_${Date.now()}`}
+                            readOnly
+                            className="text-xs bg-white font-mono text-green-700 border-green-300"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const token = formData.verifyToken || `verify_${Date.now()}`;
+                              copyToClipboard(token, 'Generated Verify Token');
+                            }}
+                            className="shrink-0 border-green-300 hover:bg-green-100"
+                            title="Copy verify token"
+                          >
+                            {copied === 'Generated Verify Token' ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Test Verification URL */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-green-700">🧪 Test Verification URL:</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={`https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${formData.appId}?hub.mode=subscribe&hub.verify_token=${formData.verifyToken || `verify_${Date.now()}`}&hub.challenge=test123`}
+                            readOnly
+                            className="text-xs bg-white font-mono text-blue-700 border-blue-300"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const testUrl = `https://${process.env.REPLIT_DEV_DOMAIN || window.location.host}/api/webhooks/facebook/${formData.appId}?hub.mode=subscribe&hub.verify_token=${formData.verifyToken || `verify_${Date.now()}`}&hub.challenge=test123`;
+                              copyToClipboard(testUrl, 'Test Verification URL');
+                            }}
+                            className="shrink-0 border-blue-300 hover:bg-blue-100"
+                            title="Copy test URL"
+                          >
+                            {copied === 'Test Verification URL' ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Quick Instructions */}
+                      <div className="bg-white p-2 rounded border border-green-300">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-3 h-3 text-green-600 mt-0.5 shrink-0" />
+                          <div className="text-xs text-green-700">
+                            <p className="font-medium mb-1">📝 Setup Steps:</p>
+                            <p>1. Copy Webhook URL vào Facebook Console</p>
+                            <p>2. Copy Verify Token vào Facebook Console</p>
+                            <p>3. Select events: messages, messaging_postbacks, feed</p>
+                            <p>4. Click "Verify and Save" để activate webhook</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
