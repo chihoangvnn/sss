@@ -115,54 +115,63 @@ router.get('/limits/current', requireAuth, async (req, res) => {
   try {
     // Mock data structure matching frontend expectations
     // TODO: Implement when limit_counters table exists
-    const mockLimits = {
-      byScope: {
-        app: [
-          {
-            scope: 'app',
-            scopeId: 'global',
-            window: 'hourly',
-            used: 45,
-            limit: 100,
-            usagePercent: 45,
-            windowStart: new Date(Date.now() - 60*60*1000).toISOString(),
-            windowEnd: new Date().toISOString(),
-            timeRemaining: 15*60 // 15 minutes
-          }
-        ],
-        group: [
-          {
-            scope: 'group',
-            scopeId: 'group-1',
-            window: 'daily',
-            used: 23,
-            limit: 50,
-            usagePercent: 46,
-            windowStart: new Date().toISOString().split('T')[0] + 'T00:00:00.000Z',
-            windowEnd: new Date().toISOString().split('T')[0] + 'T23:59:59.999Z',
-            timeRemaining: 8*60*60 // 8 hours
-          }
-        ],
-        account: [
-          {
-            scope: 'account',
-            scopeId: 'account-1',
-            window: 'hourly',
-            used: 8,
-            limit: 15,
-            usagePercent: 53,
-            windowStart: new Date(Date.now() - 60*60*1000).toISOString(),
-            windowEnd: new Date().toISOString(),
-            timeRemaining: 28*60 // 28 minutes
-          }
-        ]
-      },
-      all: [], // Will be populated from byScope
-      timestamp: new Date().toISOString()
+    type LimitData = {
+      scope: string;
+      scopeId: string;
+      window: string;
+      used: number;
+      limit: number;
+      usagePercent: number;
+      windowStart: string;
+      windowEnd: string;
+      timeRemaining: number;
     };
 
-    // Flatten all limits into 'all' array
-    mockLimits.all = Object.values(mockLimits.byScope).flat();
+    const limitDataItems: LimitData[] = [
+      {
+        scope: 'app',
+        scopeId: 'global',
+        window: 'hourly',
+        used: 45,
+        limit: 100,
+        usagePercent: 45,
+        windowStart: new Date(Date.now() - 60*60*1000).toISOString(),
+        windowEnd: new Date().toISOString(),
+        timeRemaining: 15*60 // 15 minutes
+      },
+      {
+        scope: 'group',
+        scopeId: 'group-1',
+        window: 'daily',
+        used: 23,
+        limit: 50,
+        usagePercent: 46,
+        windowStart: new Date().toISOString().split('T')[0] + 'T00:00:00.000Z',
+        windowEnd: new Date().toISOString().split('T')[0] + 'T23:59:59.999Z',
+        timeRemaining: 8*60*60 // 8 hours
+      },
+      {
+        scope: 'account',
+        scopeId: 'account-1',
+        window: 'hourly',
+        used: 8,
+        limit: 15,
+        usagePercent: 53,
+        windowStart: new Date(Date.now() - 60*60*1000).toISOString(),
+        windowEnd: new Date().toISOString(),
+        timeRemaining: 28*60 // 28 minutes
+      }
+    ];
+
+    const mockLimits = {
+      byScope: {
+        app: [limitDataItems[0]],
+        group: [limitDataItems[1]],
+        account: [limitDataItems[2]]
+      },
+      all: limitDataItems,
+      timestamp: new Date().toISOString()
+    };
 
     res.json(mockLimits);
   } catch (error) {
@@ -264,7 +273,15 @@ router.get('/posts/timeline', requireAuth, async (req, res) => {
     daysAgo.setDate(daysAgo.getDate() - Number(days));
 
     // Build query using only existing tables
-    let timeline;
+    type TimelineData = {
+      date: string;
+      scheduled: number;
+      posted: number;
+      failed: number;
+      total: number;
+    };
+
+    let timeline: TimelineData[];
     
     if (groupId && groupId !== 'all') {
       // TODO: Filter by group when schedule_assignments table exists
