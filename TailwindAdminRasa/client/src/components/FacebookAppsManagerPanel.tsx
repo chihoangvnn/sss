@@ -1661,18 +1661,22 @@ export function FacebookAppsManagerPanel() {
               ) : webhookInfo ? (
                 <div className="space-y-3">
                   <div>
-                    <Label className="text-sm font-medium">Webhook URL</Label>
-                    <div className="flex items-center gap-2 mt-1">
+                    <Label className="text-sm font-medium">🔗 Webhook URL (cho Facebook Developer Console)</Label>
+                    <p className="text-xs text-gray-600 mt-1 mb-2">
+                      Copy URL này vào Facebook App → Products → Webhooks → Callback URL
+                    </p>
+                    <div className="flex items-center gap-2">
                       <Input
                         value={webhookInfo.webhookUrl || 'Not configured'}
                         readOnly
-                        className="font-mono text-xs bg-gray-50"
+                        className="font-mono text-xs bg-green-50 text-green-700 border-green-200"
                       />
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => webhookInfo.webhookUrl && copyToClipboard(webhookInfo.webhookUrl, 'Webhook URL')}
                         disabled={!webhookInfo.webhookUrl}
+                        className="border-green-300 hover:bg-green-50"
                       >
                         {copied === 'Webhook URL' ? (
                           <Check className="h-4 w-4 text-green-600" />
