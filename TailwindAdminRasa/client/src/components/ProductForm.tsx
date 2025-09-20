@@ -34,6 +34,9 @@ interface Product {
   image?: string; // Deprecated - kept for backward compatibility
   images?: CloudinaryImage[];
   videos?: CloudinaryVideo[];
+  // 🤖 AI-generated descriptions for RASA  
+  descriptions?: RasaDescriptions;
+  defaultImageIndex?: number;
 }
 
 interface Category {
@@ -116,6 +119,15 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         images: product.images || [],
         videos: product.videos || [],
       });
+      
+      // 🤖 Load existing AI descriptions if available
+      if (product.descriptions && typeof product.descriptions === 'object') {
+        setGeneratedDescriptions(product.descriptions);
+        setShowDescriptionPreview(true); // Show preview if descriptions exist
+      } else {
+        setGeneratedDescriptions(null);
+        setShowDescriptionPreview(false);
+      }
     }
   }, [product]);
 
@@ -297,8 +309,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       image: formData.image.trim() || undefined,
       images: formData.images || [],
       videos: formData.videos || [],
-      // 🤖 Include AI generated descriptions for RASA
-      descriptions: generatedDescriptions || {},
+      // 🤖 Include AI generated descriptions for RASA (only if exists)
+      descriptions: generatedDescriptions ?? undefined,
       defaultImageIndex: 0, // Default to first image
     };
 
