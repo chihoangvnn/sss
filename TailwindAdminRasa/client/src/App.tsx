@@ -14,7 +14,7 @@ import Orders from "@/pages/Orders";
 import OrderDetails from "@/pages/OrderDetails";
 import Customers from "@/pages/Customers";
 import CustomerDetails from "@/pages/CustomerDetails";
-import Analytics from "@/pages/Analytics";
+import { AnalyticsDashboard as Analytics } from "@/pages/AnalyticsDashboard";
 import Chatbot from "@/pages/Chatbot";
 import SocialMedia from "@/pages/SocialMedia";
 import LandingPage from "@/pages/LandingPage";

@@ -101,11 +101,11 @@ const mainMenuItems = [
     description: "Quản lý thông tin khách hàng"
   },
   {
-    title: "Báo cáo",
+    title: "Analytics",
     url: "/analytics",
     icon: BarChart3,
     gradient: "gradient-mint",
-    description: "Analytics và insights chi tiết"
+    description: "Real-time monitoring & insights"
   },
 ];
 
