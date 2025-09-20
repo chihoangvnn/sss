@@ -5,6 +5,7 @@ import { storage } from '../storage';
 import { postScheduler } from '../services/post-scheduler';
 import { aiContentGenerator } from '../services/ai-content-generator';
 import { facebookPostingService } from '../services/facebook-posting-service';
+import { limitEngine } from '../services/limit-management-engine';
 import { insertContentCategorySchema, insertContentAssetSchema, insertScheduledPostSchema, insertContentLibrarySchema, updateContentLibrarySchema } from '../../shared/schema';
 import { smartSchedulerService } from '../services/smart-scheduler';
 import type { SmartSchedulingConfig } from '../services/smart-scheduler';
@@ -367,13 +368,63 @@ router.delete('/scheduled-posts/:id', requireAdminAuth, async (req, res) => {
 // Manually trigger a scheduled post (requires admin auth - highly sensitive)
 router.post('/scheduled-posts/:id/trigger', requireAdminAuth, async (req, res) => {
   try {
+    // 🛡️ SERVER-SIDE LIMIT ENFORCEMENT: Check posting capacity before triggering
+    const post = await storage.getScheduledPost(req.params.id);
+    if (!post) {
+      return res.status(404).json({ error: 'Scheduled post not found' });
+    }
+
+    // 🔒 SECURITY: Derive group/app information server-side - NEVER trust client input
+    // Get social account to determine app/group associations
+    const socialAccount = await storage.getSocialAccountById(post.socialAccountId);
+    if (!socialAccount) {
+      return res.status(404).json({ error: 'Social account not found' });
+    }
+
+    // TODO: When group_accounts table is implemented, derive groupId from DB:
+    // const groupAssignment = await storage.getGroupAssignmentByAccountId(post.socialAccountId);
+    // const groupId = groupAssignment?.groupId;
+    
+    // For now, use undefined to ensure account-level checking (most restrictive)
+    const groupId = undefined; // Will check account-level limits only (safest approach)
+    const appId = undefined;   // TODO: Derive from social account's app association when available
+    
+    // Check posting capacity using limit management engine
+    const capacity = await limitEngine.checkPostingCapacity(
+      post.socialAccountId,
+      groupId,
+      appId
+    );
+
+    if (!capacity.canPost) {
+      const violation = capacity.violations[0];
+      const suggestedTime = capacity.suggestedScheduleTimes[0];
+      
+      console.log(`🚫 Server-side limit violation prevented for post ${req.params.id}:`, violation);
+      
+      return res.status(429).json({ 
+        error: `Posting limit exceeded: ${violation?.violatedRule.scope} limit (${violation?.currentUsage}/${violation?.maxAllowed})`,
+        code: 'LIMIT_EXCEEDED',
+        violations: capacity.violations,
+        suggestedRetryTime: suggestedTime,
+        priority: capacity.priority,
+        message: `🚫 Limit violation detected! ${violation?.violatedRule.scope} limit exceeded. Suggested retry time: ${suggestedTime ? new Date(suggestedTime).toLocaleString('vi-VN') : 'later'}`
+      });
+    }
+
+    // Proceed with posting if capacity check passes
+    console.log(`✅ Server-side limit check passed for post ${req.params.id}, proceeding with posting`);
     const result = await postScheduler.triggerPost(req.params.id);
     
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
     
-    res.json({ message: 'Post triggered successfully' });
+    res.json({ 
+      message: 'Post triggered successfully',
+      priority: capacity.priority,
+      remainingCapacity: capacity.remainingSlots
+    });
   } catch (error) {
     console.error('Error triggering post:', error);
     res.status(500).json({ error: 'Failed to trigger post' });
@@ -458,7 +509,47 @@ router.post('/scheduled-posts/:id/post-now', requireAuth, async (req, res) => {
       });
     }
     
-    // Use the post scheduler to trigger immediate posting
+    // 🛡️ SERVER-SIDE LIMIT ENFORCEMENT: Check posting capacity before immediate posting
+    // 🔒 SECURITY: Derive group/app information server-side - NEVER trust client input
+    // Get social account to determine app/group associations  
+    const socialAccountForPosting = await storage.getSocialAccountById(post.socialAccountId);
+    if (!socialAccountForPosting) {
+      return res.status(404).json({ error: 'Social account not found' });
+    }
+
+    // TODO: When group_accounts table is implemented, derive groupId from DB:
+    // const groupAssignment = await storage.getGroupAssignmentByAccountId(post.socialAccountId);
+    // const groupId = groupAssignment?.groupId;
+    
+    // For now, use undefined to ensure account-level checking (most restrictive)
+    const groupId = undefined; // Will check account-level limits only (safest approach)  
+    const appId = undefined;   // TODO: Derive from social account's app association when available
+    
+    // Check posting capacity using limit management engine
+    const capacity = await limitEngine.checkPostingCapacity(
+      post.socialAccountId,
+      groupId,
+      appId
+    );
+
+    if (!capacity.canPost) {
+      const violation = capacity.violations[0];
+      const suggestedTime = capacity.suggestedScheduleTimes[0];
+      
+      console.log(`🚫 Server-side limit violation prevented for immediate post ${id}:`, violation);
+      
+      return res.status(429).json({ 
+        error: `Posting limit exceeded: ${violation?.violatedRule.scope} limit (${violation?.currentUsage}/${violation?.maxAllowed})`,
+        code: 'LIMIT_EXCEEDED',
+        violations: capacity.violations,
+        suggestedRetryTime: suggestedTime,
+        priority: capacity.priority,
+        message: `🚫 Limit violation detected! ${violation?.violatedRule.scope} limit exceeded. Suggested retry time: ${suggestedTime ? new Date(suggestedTime).toLocaleString('vi-VN') : 'later'}`
+      });
+    }
+
+    // Use the post scheduler to trigger immediate posting if capacity check passes
+    console.log(`✅ Server-side limit check passed for immediate post ${id}, proceeding with posting`);
     const result = await postScheduler.triggerPost(id);
     
     if (result.success) {
@@ -467,7 +558,9 @@ router.post('/scheduled-posts/:id/post-now', requireAuth, async (req, res) => {
         success: true,
         message: 'Post triggered for immediate posting',
         postId: id,
-        result: result
+        result: result,
+        priority: capacity.priority,
+        remainingCapacity: capacity.remainingSlots
       });
     } else {
       res.status(500).json({
