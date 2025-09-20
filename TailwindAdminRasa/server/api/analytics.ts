@@ -348,4 +348,101 @@ router.get('/formulas', requireAuth, async (req, res) => {
   }
 });
 
+// ===========================================
+// GROUP ASSIGNMENT MANAGEMENT
+// ===========================================
+
+// Assign social account to group
+router.post('/groups/assign', requireAuth, async (req, res) => {
+  try {
+    const { socialAccountId, groupId, weight = 1.0, isActive = true } = req.body;
+
+    // Validate required fields
+    if (!socialAccountId || !groupId) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: socialAccountId and groupId are required'
+      });
+    }
+
+    // 🔒 SECURITY: Verify the social account exists and user has access to it
+    // TODO: Add proper ownership/admin checks when authentication is enhanced
+    const socialAccount = await db.select()
+      .from(socialAccounts)
+      .where(eq(socialAccounts.id, socialAccountId))
+      .limit(1);
+
+    if (socialAccount.length === 0) {
+      return res.status(404).json({ error: 'Social account not found' });
+    }
+
+    // Verify the group exists
+    const group = await db.select()
+      .from(accountGroups)
+      .where(eq(accountGroups.id, groupId))
+      .limit(1);
+
+    if (group.length === 0) {
+      return res.status(404).json({ error: 'Account group not found' });
+    }
+
+    // Check if assignment already exists
+    const existingAssignment = await db.select()
+      .from(groupAccounts)
+      .where(and(
+        eq(groupAccounts.socialAccountId, socialAccountId),
+        eq(groupAccounts.groupId, groupId)
+      ))
+      .limit(1);
+
+    if (existingAssignment.length > 0) {
+      // Update existing assignment
+      const updatedAssignment = await db.update(groupAccounts)
+        .set({
+          weight: weight.toString(),
+          isActive,
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(groupAccounts.socialAccountId, socialAccountId),
+          eq(groupAccounts.groupId, groupId)
+        ))
+        .returning();
+
+      console.log(`✅ Updated group assignment: account ${socialAccountId} → group ${groupId}`);
+      
+      return res.json({
+        success: true,
+        assignment: updatedAssignment[0],
+        message: 'Group assignment updated successfully'
+      });
+    } else {
+      // Create new assignment
+      const newAssignment = await db.insert(groupAccounts)
+        .values({
+          socialAccountId,
+          groupId,
+          weight: weight.toString(),
+          isActive,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+
+      console.log(`✅ Created group assignment: account ${socialAccountId} → group ${groupId}`);
+      
+      return res.status(201).json({
+        success: true,
+        assignment: newAssignment[0],
+        message: 'Account assigned to group successfully'
+      });
+    }
+  } catch (error) {
+    console.error('Error assigning account to group:', error);
+    res.status(500).json({ 
+      error: 'Failed to assign account to group',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
