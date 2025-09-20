@@ -629,7 +629,57 @@ export function FacebookAppsManagerPanel() {
           {/* Template Downloads */}
           <FacebookAppTemplateDownload variant="compact" />
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      </div>
+
+      {/* 📤 BULK IMPORT SECTION */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            Bulk Import Facebook Apps
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Upload CSV or JSON file để import nhiều Facebook Apps cùng lúc
+            </p>
+            
+            {/* File Upload Area */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+              <input
+                type="file"
+                accept=".csv,.json"
+                className="hidden"
+                id="bulk-upload"
+                onChange={() => {/* TODO: Handle file upload */}}
+              />
+              <label htmlFor="bulk-upload" className="cursor-pointer">
+                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-lg font-medium text-gray-900 mb-2">
+                  Click to upload hoặc drag & drop
+                </p>
+                <p className="text-sm text-gray-500">
+                  CSV, JSON files (max 10MB)
+                </p>
+              </label>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-500">
+                Tải template: 
+                <FacebookAppTemplateDownload variant="compact" />
+              </div>
+              <Button disabled className="opacity-50">
+                <Upload className="h-4 w-4 mr-2" />
+                Import Apps
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -806,9 +856,8 @@ export function FacebookAppsManagerPanel() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
 
-      {/* Stats Overview */}
+        {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
