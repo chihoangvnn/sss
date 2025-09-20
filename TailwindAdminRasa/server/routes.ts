@@ -1731,6 +1731,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Groups API
+  app.get("/api/groups", requireSessionAuth, async (req, res) => {
+    try {
+      const { platform } = req.query;
+      
+      // Import accountGroups from schema
+      const { accountGroups } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, desc } = await import("drizzle-orm");
+      
+      // Build query with platform filter and execute
+      const groups = platform 
+        ? await db.select().from(accountGroups)
+            .where(eq(accountGroups.platform, platform as string))
+            .orderBy(desc(accountGroups.createdAt))
+        : await db.select().from(accountGroups)
+            .orderBy(desc(accountGroups.createdAt));
+      
+      res.json(groups);
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Update Facebook app group
+  app.patch("/api/facebook-apps/:id/group", requireSessionAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { groupId } = req.body;
+      
+      // Import facebookApps from schema
+      const { facebookApps } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      
+      // Update Facebook app group assignment
+      const updatedApp = await db.update(facebookApps)
+        .set({ 
+          groupId: groupId || null,
+          updatedAt: new Date()
+        })
+        .where(eq(facebookApps.id, id))
+        .returning();
+      
+      if (updatedApp.length === 0) {
+        return res.status(404).json({ error: "Facebook app not found" });
+      }
+      
+      res.json({ success: true, app: updatedApp[0] });
+    } catch (error) {
+      console.error("Error updating Facebook app group:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Facebook Chat API
   app.get("/api/facebook/conversations", requireSessionAuth, async (req, res) => {
     try {

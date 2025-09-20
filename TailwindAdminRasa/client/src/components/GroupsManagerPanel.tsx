@@ -615,12 +615,12 @@ export function GroupsManagerPanel() {
               <div className="border-t pt-4">
                 <div>
                   <Label htmlFor="formulaId">Posting Formula</Label>
-                  <Select value={formData.formulaId || ""} onValueChange={(value) => setFormData({ ...formData, formulaId: value || undefined })}>
+                  <Select value={formData.formulaId || "none"} onValueChange={(value) => setFormData({ ...formData, formulaId: value === 'none' ? undefined : value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select formula (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Formula</SelectItem>
+                      <SelectItem value="none">No Formula</SelectItem>
                       <SelectItem value="formula-vip">Formula VIP - High Priority</SelectItem>
                       <SelectItem value="formula-standard">Formula Standard - Normal Limits</SelectItem>
                       <SelectItem value="formula-safe">Formula Safe - Conservative</SelectItem>
@@ -1008,12 +1008,12 @@ export function GroupsManagerPanel() {
             <div className="border-t pt-4">
               <div>
                 <Label htmlFor="edit-formulaId">Posting Formula</Label>
-                <Select value={formData.formulaId || ""} onValueChange={(value) => setFormData({ ...formData, formulaId: value || undefined })}>
+                <Select value={formData.formulaId || "none"} onValueChange={(value) => setFormData({ ...formData, formulaId: value === 'none' ? undefined : value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select formula (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Formula</SelectItem>
+                    <SelectItem value="none">No Formula</SelectItem>
                     <SelectItem value="formula-vip">Formula VIP - High Priority</SelectItem>
                     <SelectItem value="formula-standard">Formula Standard - Normal Limits</SelectItem>
                     <SelectItem value="formula-safe">Formula Safe - Conservative</SelectItem>

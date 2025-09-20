@@ -318,6 +318,7 @@ export const facebookApps = pgTable("facebook_apps", {
   
   // Organization
   tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
+  groupId: varchar("group_id").references(() => accountGroups.id), // References account_groups.id
   
   // Tracking
   lastWebhookEvent: timestamp("last_webhook_event"), // Last received webhook

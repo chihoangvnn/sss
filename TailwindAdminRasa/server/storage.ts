@@ -5,6 +5,7 @@ import {
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
   contentCategories, contentAssets, scheduledPosts, unifiedTags, contentLibrary,
   facebookApps, facebookWebhookEvents, botSettings, apiConfigurations,
+  accountGroups, groupAccounts,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -29,7 +30,8 @@ import {
   type FacebookApp, type InsertFacebookApp,
   type FacebookWebhookEvent, type InsertFacebookWebhookEvent,
   type BotSettings, type InsertBotSettings,
-  type ApiConfiguration, type InsertApiConfiguration, type UpdateApiConfiguration
+  type ApiConfiguration, type InsertApiConfiguration, type UpdateApiConfiguration,
+  type AccountGroup, type InsertAccountGroup
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";

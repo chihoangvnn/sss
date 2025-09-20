@@ -90,51 +90,53 @@ router.get('/', requireAdminAuth, async (req, res) => {
   try {
     const apps = await storage.getAllFacebookApps();
     
-    // Mask app secrets for security and prepare response
-    const enhancedApps = apps.map((app, index) => {
+    // Get account groups data for real group info
+    const { accountGroups } = await import("../../shared/schema");
+    const { db } = await import("../db");
+    const { eq } = await import("drizzle-orm");
+    
+    const groups = await db.select().from(accountGroups);
+    const groupsMap = new Map(groups.map(group => [group.id, group]));
+    
+    // Mask app secrets for security and prepare response with real group data
+    const enhancedApps = await Promise.all(apps.map(async (app) => {
+      // Use whitelist approach to avoid demo data pollution
       const maskedApp: any = {
-        ...app,
+        id: app.id,
+        appName: app.appName,
+        appId: app.appId,
+        webhookUrl: app.webhookUrl,
+        verifyToken: app.verifyToken,
+        subscriptionFields: app.subscriptionFields,
+        isActive: app.isActive,
+        environment: app.environment,
+        description: app.description,
+        tagIds: app.tagIds,
+        groupId: app.groupId,
+        lastWebhookEvent: app.lastWebhookEvent,
+        totalEvents: app.totalEvents,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
         appSecret: undefined, // 🔒 SECURITY: Never return app secrets, even masked
         appSecretSet: !!app.appSecret
       };
       
-      // 🎯 DEVELOPMENT ONLY: Add demo group info and posting stats
-      if (process.env.NODE_ENV === 'development') {
-        const demoGroups = [
-          { groupId: 'group-vip', groupName: 'VIP Group', priority: 1, formulaName: 'Formula VIP' },
-          { groupId: 'group-normal', groupName: 'Normal Group', priority: 2, formulaName: 'Formula Standard' },
-          { groupId: 'group-test', groupName: 'Test Group', priority: 3, formulaName: 'Formula Safe' }
-        ];
-        
-        const demoStats = [
-          {
-            todayPosts: 5, weekPosts: 23, monthPosts: 89,
-            lastPostAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            remainingQuota: { daily: 3, weekly: 27, monthly: 161 },
-            status: 'active' as const
-          },
-          {
-            todayPosts: 8, weekPosts: 31, monthPosts: 124,
-            lastPostAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            remainingQuota: { daily: 2, weekly: 19, monthly: 126 },
-            status: 'active' as const
-          },
-          {
-            todayPosts: 12, weekPosts: 45, monthPosts: 180,
-            lastPostAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-            remainingQuota: { daily: 0, weekly: 5, monthly: 70 },
-            status: 'limit_reached' as const
-          }
-        ];
-        
-        // Add demo data only in development
-        maskedApp.groupInfo = demoGroups[index % demoGroups.length];
-        maskedApp.postingStats = demoStats[index % demoStats.length];
+      // Add real group info if app is assigned to a group
+      if (app.groupId && groupsMap.has(app.groupId)) {
+        const group = groupsMap.get(app.groupId)!;
+        maskedApp.groupInfo = {
+          groupId: group.id,
+          groupName: group.name,
+          priority: group.priority,
+          formulaName: group.formulaId ? `Formula ${group.priority}` : undefined // TODO: Add formula lookup
+        };
       }
-      // In production, real groupInfo/postingStats would come from limits management system
+      
+      // TODO: Add real posting stats from limits management system
+      // For now, no demo stats to avoid confusion
       
       return maskedApp;
-    });
+    }));
 
     res.json(enhancedApps);
   } catch (error) {

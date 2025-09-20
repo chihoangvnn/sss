@@ -82,6 +82,19 @@ interface UnifiedTag {
   description?: string;
 }
 
+interface AppGroup {
+  id: string;
+  name: string;
+  description?: string;
+  platform: string;
+  priority: number;
+  weight: string;
+  isActive: boolean;
+  formulaId?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 interface FacebookApp {
   id: string;
   appName: string;
@@ -322,6 +335,57 @@ export function FacebookAppsManagerPanel() {
       }
       
       return await response.json() as UnifiedTag[];
+    },
+  });
+
+  // Load Facebook groups  
+  const { data: facebookGroups = [] } = useQuery({
+    queryKey: ['groups', 'facebook'],
+    queryFn: async () => {
+      const response = await fetch('/api/groups?platform=facebook', {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch Facebook groups');
+      }
+      
+      return await response.json() as AppGroup[];
+    },
+  });
+
+  // Update Facebook app group mutation
+  const updateAppGroupMutation = useMutation({
+    mutationFn: async ({ appId, groupId }: { appId: string; groupId?: string }) => {
+      const response = await fetch(`/api/facebook-apps/${appId}/group`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ groupId }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update app group');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facebook-apps'] });
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật nhóm cho Facebook App thành công",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể cập nhật nhóm cho Facebook App",
+        variant: "destructive",
+      });
     },
   });
 
@@ -929,22 +993,31 @@ export function FacebookAppsManagerPanel() {
                       )}
                     </div>
                     
-                    {/* 🎯 NEW: Group Column */}
+                    {/* 🎯 NEW: Group Selector */}
                     <div className="w-[120px] shrink-0">
-                      {app.groupInfo ? (
-                        <div className="flex items-center gap-1">
-                          <div className={`w-1.5 h-1.5 rounded-full ${
-                            app.groupInfo.priority === 1 ? 'bg-purple-500' :
-                            app.groupInfo.priority === 2 ? 'bg-blue-500' : 
-                            'bg-green-500'
-                          }`} title={`Priority: ${app.groupInfo.priority}`}></div>
-                          <span className="truncate text-[10px] font-medium" title={app.groupInfo.groupName}>
-                            {app.groupInfo.groupName}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[9px] text-gray-400 italic">No group</span>
-                      )}
+                      <Select 
+                        value={app.groupInfo?.groupId || "none"} 
+                        onValueChange={(groupId) => updateAppGroupMutation.mutate({ appId: app.id, groupId: groupId === 'none' ? undefined : groupId })}
+                      >
+                        <SelectTrigger className="h-6 text-[10px] border-gray-200 bg-white/50">
+                          <SelectValue placeholder="No Group" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Group</SelectItem>
+                          {facebookGroups.map(group => (
+                            <SelectItem key={group.id} value={group.id}>
+                              <div className="flex items-center gap-1">
+                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                  group.priority === 1 ? 'bg-purple-500' :
+                                  group.priority === 2 ? 'bg-blue-500' : 
+                                  'bg-green-500'
+                                }`}></div>
+                                <span className="truncate">{group.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     {/* 🎯 NEW: Posting Stats Column */}
