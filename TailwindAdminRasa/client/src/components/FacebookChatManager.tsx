@@ -412,40 +412,6 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
       <div className="flex-1 flex flex-col">
         {selectedConv ? (
           <>
-            {/* Pipeline Filter - Above Chat Header */}
-            <div className="p-3 border-b bg-gray-50/50">
-              <div className="flex items-center gap-2 mb-3">
-                <Filter className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">Pipeline khách hàng</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                <Button
-                  variant={filterPipeline === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterPipeline("all")}
-                  className="text-xs h-7"
-                >
-                  Tất cả
-                </Button>
-                {pipelineTags.map((tag: any) => (
-                  <Button
-                    key={tag.id}
-                    variant={filterPipeline === tag.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setFilterPipeline(tag.id)}
-                    className="text-xs h-7"
-                    style={{
-                      backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
-                      borderColor: tag.color,
-                      color: filterPipeline === tag.id ? 'white' : tag.color
-                    }}
-                  >
-                    {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
             {/* Chat Header */}
             <div className="p-4 border-b bg-white">
               <div className="flex items-center justify-between">
@@ -466,63 +432,32 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
-                    <Star className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Tag className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Pipeline Tags */}
-              <div className="space-y-2 mt-2">
+                {/* Pipeline Filter - Same line as user */}
                 <div className="flex flex-wrap gap-1">
-                  {selectedConv.tagIds && selectedConv.tagIds.length > 0 && 
-                    pipelineTags.filter((tag: any) => selectedConv.tagIds.includes(tag.id)).map((tag: any) => (
-                      <Badge 
-                        key={tag.id} 
-                        variant="secondary" 
-                        className="text-xs px-2 py-1"
-                        style={{ backgroundColor: tag.color, color: 'white' }}
-                      >
-                        {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
-                      </Badge>
-                    ))
-                  }
-                </div>
-
-                {/* Quick Pipeline Stage Assignment (Exclusive) */}
-                <div className="flex flex-wrap gap-1">
-                  {pipelineTags.map((tag: any) => {
-                    const isAssigned = selectedConv.tagIds && selectedConv.tagIds.includes(tag.id);
-                    return (
-                      <Button
-                        key={tag.id}
-                        variant={isAssigned ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          if (isAssigned) {
-                            handleRemovePipelineStage(selectedConv.id, tag.id);
-                          } else {
-                            handleAssignPipelineStage(selectedConv.id, tag.id);
-                          }
-                        }}
-                        className="text-xs h-6 px-2"
-                        style={{
-                          backgroundColor: isAssigned ? tag.color : 'transparent',
-                          borderColor: tag.color,
-                          color: isAssigned ? 'white' : tag.color
-                        }}
-                      >
-                        {tag.icon}
-                      </Button>
-                    );
-                  })}
+                  <Button
+                    variant={filterPipeline === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterPipeline("all")}
+                    className="text-xs h-7"
+                  >
+                    Tất cả
+                  </Button>
+                  {pipelineTags.map((tag: any) => (
+                    <Button
+                      key={tag.id}
+                      variant={filterPipeline === tag.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFilterPipeline(tag.id)}
+                      className="text-xs h-7"
+                      style={{
+                        backgroundColor: filterPipeline === tag.id ? tag.color : 'transparent',
+                        borderColor: tag.color,
+                        color: filterPipeline === tag.id ? 'white' : tag.color
+                      }}
+                    >
+                      {tag.icon} {tag.name.replace(/🎯|💬|⏰|⭐|🔄/g, '').trim()}
+                    </Button>
+                  ))}
                 </div>
               </div>
             </div>
