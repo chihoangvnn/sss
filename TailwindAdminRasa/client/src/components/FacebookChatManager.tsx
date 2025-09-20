@@ -323,14 +323,6 @@ export function FacebookChatManager({ className }: FacebookChatManagerProps) {
             />
           </div>
           
-          <Tabs value={filterStatus} onValueChange={(value) => setFilterStatus(value as any)}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all" className="text-xs">Tất cả</TabsTrigger>
-              <TabsTrigger value="active" className="text-xs">Hoạt động</TabsTrigger>
-              <TabsTrigger value="pending" className="text-xs">Chờ</TabsTrigger>
-              <TabsTrigger value="resolved" className="text-xs">Xong</TabsTrigger>
-            </TabsList>
-          </Tabs>
 
         </div>
 
