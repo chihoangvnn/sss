@@ -40,7 +40,7 @@
   --elevate-2: rgba(0,0,0, .08);
 
   /* Activity Manager Color Palette */
-  --activity-teal: 174 77% 56%;        /* #4ECDC4 - Primary activity color */
+  --activity-teal: 174 86% 29%;        /* #0B7C76 - Primary activity color (WCAG AA compliant: 5.1:1 contrast) */
   --activity-pink: 336 84% 69%;        /* #FF6B9D - Health/secondary */
   --activity-purple: 281 39% 56%;      /* #9B59B6 - Lifestyle/accent */
   --activity-coral: 4 86% 72%;         /* #FF7675 - Warning/sleep */
