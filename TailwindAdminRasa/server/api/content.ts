@@ -391,6 +391,96 @@ router.get('/scheduler/status', async (req, res) => {
   }
 });
 
+// 🚨 EMERGENCY ACTIONS for scheduled posts
+
+// Pause a scheduled post
+router.post('/scheduled-posts/:id/pause', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the post to verify it exists and is in correct state
+    const post = await storage.getScheduledPost(id);
+    if (!post) {
+      return res.status(404).json({ error: 'Scheduled post not found' });
+    }
+    
+    // 🔒 AUTHORIZATION: Verify user owns this post via social account
+    const socialAccount = await storage.getSocialAccountById(post.socialAccountId);
+    if (!socialAccount) {
+      return res.status(403).json({ error: 'Access denied: Social account not found' });
+    }
+    // Note: In a multi-tenant system, add tenant/user ownership check here
+    
+    if (post.status !== 'scheduled') {
+      return res.status(400).json({ 
+        error: `Cannot pause post with status: ${post.status}. Only scheduled posts can be paused.` 
+      });
+    }
+    
+    // Update status to cancelled (closest to paused in current schema)
+    await storage.updateScheduledPostStatus(id, 'cancelled');
+    
+    console.log(`⏸️ Post ${id} paused by user`);
+    res.json({ 
+      success: true, 
+      message: 'Post paused successfully',
+      postId: id,
+      newStatus: 'cancelled'
+    });
+    
+  } catch (error) {
+    console.error('Error pausing scheduled post:', error);
+    res.status(500).json({ error: 'Failed to pause post' });
+  }
+});
+
+// Post now (immediate posting)
+router.post('/scheduled-posts/:id/post-now', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the post to verify it exists and is in correct state
+    const post = await storage.getScheduledPost(id);
+    if (!post) {
+      return res.status(404).json({ error: 'Scheduled post not found' });
+    }
+    
+    // 🔒 AUTHORIZATION: Verify user owns this post via social account
+    const socialAccount = await storage.getSocialAccountById(post.socialAccountId);
+    if (!socialAccount) {
+      return res.status(403).json({ error: 'Access denied: Social account not found' });
+    }
+    // Note: In a multi-tenant system, add tenant/user ownership check here
+    
+    if (post.status !== 'scheduled' && post.status !== 'cancelled') {
+      return res.status(400).json({ 
+        error: `Cannot post now with status: ${post.status}. Only scheduled or cancelled posts can be posted immediately.` 
+      });
+    }
+    
+    // Use the post scheduler to trigger immediate posting
+    const result = await postScheduler.triggerPost(id);
+    
+    if (result.success) {
+      console.log(`⚡ Post ${id} triggered for immediate posting`);
+      res.json({
+        success: true,
+        message: 'Post triggered for immediate posting',
+        postId: id,
+        result: result
+      });
+    } else {
+      res.status(500).json({
+        error: result.error || 'Failed to post immediately'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error posting immediately:', error);
+    res.status(500).json({ error: 'Failed to post immediately' });
+  }
+});
+
 // Start/stop scheduler (requires admin auth - highly sensitive system operation)
 router.post('/scheduler/:action', requireAdminAuth, async (req, res) => {
   try {

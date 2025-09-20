@@ -33,7 +33,7 @@ export function ScheduledPostsMiniManager({ className }: ScheduledPostsMiniManag
         const postTime = new Date(post.scheduledTime);
         const now = new Date();
         const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        return postTime >= now && postTime <= in24Hours && post.status === 'scheduled';
+        return postTime >= now && postTime <= in24Hours && (post.status === 'scheduled' || post.status === 'cancelled');
       });
       return upcoming.slice(0, 5); // Max 5 posts
     },
@@ -112,7 +112,7 @@ export function ScheduledPostsMiniManager({ className }: ScheduledPostsMiniManag
         statusColor = 'text-blue-500';
         StatusIcon = Loader2;
         break;
-      case 'published':
+      case 'posted':
         statusColor = 'text-green-500';
         StatusIcon = CheckCircle;
         break;
@@ -120,7 +120,7 @@ export function ScheduledPostsMiniManager({ className }: ScheduledPostsMiniManag
         statusColor = 'text-red-500';
         StatusIcon = AlertTriangle;
         break;
-      case 'paused':
+      case 'cancelled':
         statusColor = 'text-gray-500';
         StatusIcon = Pause;
         break;
@@ -227,7 +227,7 @@ export function ScheduledPostsMiniManager({ className }: ScheduledPostsMiniManag
 
                 {/* Quick Actions */}
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {post.status === 'scheduled' && (
+                  {(post.status === 'scheduled' || post.status === 'cancelled') && (
                     <>
                       <Button
                         size="sm"
