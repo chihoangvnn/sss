@@ -24,7 +24,6 @@ import {
   Activity,
   TrendingUp
 } from "lucide-react";
-import { ScheduledPostsMiniManager } from './ScheduledPostsMiniManager';
 
 // TikTok Icon Component with enhanced styling
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -517,10 +516,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Scheduled Posts Mini Manager */}
-        <SidebarGroup className="px-0 py-0">
-          <ScheduledPostsMiniManager className="border-t border-border/50" />
-        </SidebarGroup>
       </SidebarContent>
 
       {/* Modern Footer với user profile */}
