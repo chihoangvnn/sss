@@ -18,7 +18,10 @@ import {
   Calendar,
   Activity,
   Share2,
-  Satellite
+  Satellite,
+  Server,
+  Monitor,
+  Cloud
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -222,6 +225,13 @@ const adminTechnicalItems = [
     icon: Settings,
     description: "Cấu hình cửa hàng",
     gradient: "gradient-pink"
+  },
+  {
+    title: "Worker Management",
+    url: "/worker-management",
+    icon: Server,
+    description: "Quản lý Vercel Functions workers",
+    gradient: "gradient-teal"
   },
 ];
 
