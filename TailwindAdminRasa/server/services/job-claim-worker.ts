@@ -1,6 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import RedisService from './redis';
 import { PostJobPayload } from './queue';
+import { SUPPORTED_REGIONS, SUPPORTED_PLATFORMS } from './regions';
 
 /**
  * BullMQ Worker-based Job Claiming Service
@@ -263,20 +264,28 @@ class JobClaimWorker {
 
   /**
    * Start all claim workers for active queues
+   * Expanded to support global regions for new places
    */
   static async startAllClaimWorkers(): Promise<void> {
-    const platforms = ['facebook', 'instagram', 'twitter'];
-    const regions = ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-southeast-1'];
+    const platforms = SUPPORTED_PLATFORMS;
+    const regions = SUPPORTED_REGIONS;
 
     console.log('🚀 Starting BullMQ claim workers for all platform/region combinations...');
+    console.log(`📍 Supporting ${regions.length} global regions for better coverage`);
 
+    let workersStarted = 0;
     for (const platform of platforms) {
       for (const region of regions) {
-        await this.startClaimWorker(platform, region);
+        try {
+          await this.startClaimWorker(platform, region);
+          workersStarted++;
+        } catch (error) {
+          console.warn(`⚠️ Failed to start claim worker for ${platform}:${region}:`, error);
+        }
       }
     }
 
-    console.log(`✅ Started ${platforms.length * regions.length} claim workers`);
+    console.log(`✅ Started ${workersStarted}/${platforms.length * regions.length} claim workers across global regions`);
   }
 
   /**

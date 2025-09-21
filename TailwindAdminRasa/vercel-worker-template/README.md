@@ -68,33 +68,64 @@ npx vercel --prod
 
 ## 🌍 Multi-Region Deployment
 
-Deploy multiple workers across different regions for IP diversity:
+Deploy multiple workers across different regions for IP diversity and global coverage:
 
 ### Americas
-- `us-east-1` (Virginia) - Primary
-- `us-west-2` (Oregon) - Secondary  
-- `sa-east-1` (São Paulo) - South America
+- `us-east-1` (N. Virginia) - Primary North America
+- `us-west-2` (Oregon) - Secondary North America  
+- `sa-east-1` (São Paulo) - South America, Caribbean
 
 ### Europe
-- `eu-west-1` (Dublin) - Primary
-- `eu-central-1` (Frankfurt) - Secondary
-- `eu-north-1` (Stockholm) - Nordic
+- `eu-west-1` (Ireland) - Western Europe, UK, Nordics
+- `eu-central-1` (Frankfurt) - Central/Eastern Europe
+- `eu-south-1` (Milan) - Southern Europe, Mediterranean
+- `eu-north-1` (Stockholm) - Nordic countries
 
 ### Asia Pacific
-- `ap-southeast-1` (Singapore) - Primary
-- `ap-northeast-1` (Tokyo) - Secondary
-- `ap-south-1` (Mumbai) - India
+- `ap-southeast-1` (Singapore) - Southeast Asia
+- `ap-southeast-2` (Sydney) - Australia, New Zealand, Pacific
+- `ap-northeast-1` (Tokyo) - East Asia, Japan, Korea
+- `ap-south-1` (Mumbai) - South Asia, Central Asia
+
+### Middle East & Africa
+- `me-south-1` (Bahrain) - Middle East, Gulf states
+- `af-south-1` (Cape Town) - Africa
 
 ### Deployment Commands
 
-```bash
-# Deploy to multiple regions
-vercel --prod --regions us-east-1,us-west-2,eu-west-1
+⚠️ **Important**: The region codes below (us-east-1, eu-west-1, etc.) are **logical identifiers** for the Brain-Arms-Satellites system, not Vercel infrastructure regions. Set them via the `WORKER_REGION` environment variable.
 
-# Or deploy separate instances with different configs
-WORKER_REGION=us-east-1 vercel --prod
-WORKER_REGION=eu-west-1 vercel --prod  
-WORKER_REGION=ap-southeast-1 vercel --prod
+```bash
+# Deploy to single region (recommended approach)
+# Set WORKER_REGION in Vercel dashboard environment variables
+vercel --prod
+
+# Deploy multiple instances for different logical regions
+# Each deployment needs proper environment variable configuration:
+
+# Method 1: Use Vercel CLI with environment overrides (recommended)
+vercel --prod -e WORKER_REGION=us-east-1 -e WORKER_ID=autoposting-worker-us-east --name autoposting-worker-us-east
+vercel --prod -e WORKER_REGION=us-west-2 -e WORKER_ID=autoposting-worker-us-west --name autoposting-worker-us-west
+vercel --prod -e WORKER_REGION=sa-east-1 -e WORKER_ID=autoposting-worker-sa --name autoposting-worker-sa
+
+vercel --prod -e WORKER_REGION=eu-west-1 -e WORKER_ID=autoposting-worker-eu-west --name autoposting-worker-eu-west
+vercel --prod -e WORKER_REGION=eu-central-1 -e WORKER_ID=autoposting-worker-eu-central --name autoposting-worker-eu-central
+vercel --prod -e WORKER_REGION=eu-south-1 -e WORKER_ID=autoposting-worker-eu-south --name autoposting-worker-eu-south
+vercel --prod -e WORKER_REGION=eu-north-1 -e WORKER_ID=autoposting-worker-eu-north --name autoposting-worker-eu-north
+
+vercel --prod -e WORKER_REGION=ap-southeast-1 -e WORKER_ID=autoposting-worker-ap-se1 --name autoposting-worker-ap-se1
+vercel --prod -e WORKER_REGION=ap-southeast-2 -e WORKER_ID=autoposting-worker-ap-se2 --name autoposting-worker-ap-se2
+vercel --prod -e WORKER_REGION=ap-northeast-1 -e WORKER_ID=autoposting-worker-ap-ne1 --name autoposting-worker-ap-ne1
+vercel --prod -e WORKER_REGION=ap-south-1 -e WORKER_ID=autoposting-worker-ap-south --name autoposting-worker-ap-south
+
+vercel --prod -e WORKER_REGION=me-south-1 -e WORKER_ID=autoposting-worker-me --name autoposting-worker-me
+vercel --prod -e WORKER_REGION=af-south-1 -e WORKER_ID=autoposting-worker-af --name autoposting-worker-af
+
+# Method 2: Set environment variables in Vercel Dashboard per project
+# 1. Deploy: vercel --prod --name autoposting-worker-us-east  
+# 2. Go to Vercel Dashboard → Project Settings → Environment Variables
+# 3. Add: WORKER_REGION=us-east-1, WORKER_ID=autoposting-worker-us-east
+# 4. Redeploy: vercel --prod
 ```
 
 ## 🔧 Development
