@@ -98,7 +98,8 @@ const fetchWorkers = async (): Promise<Worker[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch workers');
   }
-  return response.json();
+  const data = await response.json();
+  return data.workers || [];
 };
 
 const fetchWorkerStats = async (): Promise<WorkerStats> => {
