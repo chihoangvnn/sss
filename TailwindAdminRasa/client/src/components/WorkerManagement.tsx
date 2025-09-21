@@ -31,6 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 // Types
 interface Worker {
@@ -48,6 +49,7 @@ interface Worker {
   ipAddress?: string;  // Worker IP for diversity tracking
   ipCountry?: string;  // IP geolocation country
   ipRegion?: string;   // IP geolocation region
+  isEnabled?: boolean; // Enable/disable toggle state
   capabilities?: {
     maxConcurrentJobs: number;
     supportedJobTypes: string[];
@@ -177,8 +179,28 @@ const refreshWorkerIPs = async (workerIds?: string[]) => {
   return response.json();
 };
 
+const toggleWorker = async (workerId: string, enabled: boolean) => {
+  const response = await fetch(`/api/workers/${workerId}/toggle`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ enabled }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to toggle worker');
+  }
+  
+  return response.json();
+};
+
 // Worker List Component
-function WorkerList({ workers }: { workers: Worker[] }) {
+function WorkerList({ workers, onToggleWorker, isToggling }: { 
+  workers: Worker[]; 
+  onToggleWorker: (workerId: string, enabled: boolean) => void;
+  isToggling: boolean;
+}) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active':
@@ -223,11 +245,22 @@ function WorkerList({ workers }: { workers: Worker[] }) {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {getStatusIcon(worker.status)}
-                <Badge variant="outline" className={getStatusColor(worker.status)}>
-                  {worker.status}
-                </Badge>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Enable</span>
+                  <Switch
+                    checked={worker.isEnabled ?? true}
+                    disabled={isToggling}
+                    onCheckedChange={(checked) => onToggleWorker(worker.workerId, checked)}
+                    aria-label={`Toggle ${worker.workerId}`}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(worker.status)}
+                  <Badge variant="outline" className={getStatusColor(worker.status)}>
+                    {worker.status}
+                  </Badge>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -559,6 +592,15 @@ export function WorkerManagement() {
     },
   });
 
+  const toggleWorkerMutation = useMutation({
+    mutationFn: ({ workerId, enabled }: { workerId: string; enabled: boolean }) => 
+      toggleWorker(workerId, enabled),
+    onSuccess: () => {
+      // Refresh workers data to get updated state
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
+    },
+  });
+
   const {
     data: workerStats,
     isLoading: statsLoading,
@@ -723,7 +765,13 @@ export function WorkerManagement() {
                     Debug: Found {workers?.length || 0} workers
                   </p>
                   {workers && workers.length > 0 ? (
-                    <WorkerList workers={workers} />
+                    <WorkerList 
+                      workers={workers} 
+                      onToggleWorker={(workerId, enabled) => 
+                        toggleWorkerMutation.mutate({ workerId, enabled })
+                      }
+                      isToggling={toggleWorkerMutation.isPending}
+                    />
                   ) : (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />

@@ -1074,6 +1074,59 @@ async function detectWorkerIP(endpointUrl: string): Promise<{
   }
 }
 
+/**
+ * 🔧 Toggle Worker Enable/Disable State
+ * PUT /api/workers/:workerId/toggle
+ * Body: { enabled: boolean }
+ */
+router.put('/:workerId/toggle', requireAuth, async (req, res) => {
+  try {
+    const { workerId } = req.params;
+    const { enabled } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        error: 'enabled field must be a boolean'
+      });
+    }
+
+    // Find worker by workerId
+    const workers = await workerManager.listWorkers({});
+    const worker = workers.find(w => w.workerId === workerId);
+    
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        error: `Worker ${workerId} not found`
+      });
+    }
+
+    // Update worker enabled state
+    await workerStorage.updateWorker(worker.id, {
+      isEnabled: enabled,
+      updatedAt: new Date()
+    });
+
+    console.log(`🔧 ${enabled ? 'Enabled' : 'Disabled'} worker: ${workerId}`);
+
+    res.json({
+      success: true,
+      message: `Worker ${workerId} ${enabled ? 'enabled' : 'disabled'}`,
+      workerId,
+      enabled,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('🚨 Worker toggle error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle worker state'
+    });
+  }
+});
+
 // Extend Express Request type to include worker info
 declare global {
   namespace Express {
