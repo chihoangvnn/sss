@@ -124,12 +124,12 @@ const fetchSystemHealth = async (): Promise<SystemHealth> => {
     status: data.status,
     components: {
       database: {
-        status: data.components?.healthy > 0 ? 'healthy' : 'unhealthy',
+        status: data.status === 'unhealthy' ? 'degraded' : 'healthy',
         checkedAt: data.timestamp,
         responseTime: 0
       },
       workers: {
-        status: data.status === 'unhealthy' ? 'unhealthy' : 'healthy',
+        status: 'unhealthy', // Workers are always unhealthy when no workers deployed
         checkedAt: data.timestamp,
         responseTime: 0
       }
