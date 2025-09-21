@@ -544,4 +544,112 @@ router.post('/deploy', async (req, res) => {
   }
 });
 
+// 📋 GET /api/satellites/templates - Get available satellite templates
+router.get('/templates', requireAuth, async (req, res) => {
+  try {
+    console.log('🛰️ Fetching satellite templates');
+    
+    // Define satellite templates with full configuration data
+    const templates = [
+      {
+        id: 'beauty-content',
+        name: 'Beauty Content Satellite',
+        category: 'content',
+        description: 'Automated beauty and skincare content management',
+        icon: '💄',
+        color: '#EC4899',
+        platforms: ['facebook', 'instagram', 'tiktok'],
+        features: ['AI content generation', 'Trend analysis', 'Product recommendations'],
+        targetTags: ['làm-đẹp', 'skincare', 'makeup'],
+        estimatedReach: '10K-50K',
+        contentTypes: ['tutorials', 'reviews', 'tips']
+      },
+      {
+        id: 'fitness-content',
+        name: 'Fitness Content Satellite',
+        category: 'content', 
+        description: 'Automated fitness and wellness content distribution',
+        icon: '💪',
+        color: '#F97316',
+        platforms: ['facebook', 'instagram', 'tiktok'],
+        features: ['Workout scheduling', 'Progress tracking', 'Motivation content'],
+        targetTags: ['gym', 'thể-thao', 'fitness'],
+        estimatedReach: '5K-25K',
+        contentTypes: ['workouts', 'nutrition', 'motivation']
+      },
+      {
+        id: 'health-content',
+        name: 'Health Content Satellite',
+        category: 'content',
+        description: 'Automated health and lifestyle content management',
+        icon: '🏥',
+        color: '#10B981',
+        platforms: ['facebook', 'instagram', 'twitter'],
+        features: ['Health tips', 'Wellness tracking', 'Expert advice'],
+        targetTags: ['sống-khỏe', 'health', 'wellness'],
+        estimatedReach: '15K-75K',
+        contentTypes: ['tips', 'advice', 'news']
+      },
+      {
+        id: 'mindfulness-content',
+        name: 'Mindfulness Content Satellite',
+        category: 'content',
+        description: 'Automated meditation and mindfulness content',
+        icon: '🧘',
+        color: '#8B5CF6',
+        platforms: ['facebook', 'instagram'],
+        features: ['Daily meditation', 'Stress management', 'Mindful living'],
+        targetTags: ['thiền', 'meditation', 'mindfulness'],
+        estimatedReach: '3K-15K',
+        contentTypes: ['meditations', 'quotes', 'guidance']
+      },
+      {
+        id: 'vip-management',
+        name: 'VIP Customer Management',
+        category: 'customer_pipeline',
+        description: 'Automated VIP customer relationship management',
+        icon: '⭐',
+        color: '#8B5CF6',
+        platforms: ['facebook', 'instagram', 'tiktok'],
+        features: ['Personalized content', 'Priority support', 'Exclusive offers'],
+        targetTags: ['khách-vip', 'vip-customers'],
+        estimatedReach: '500-2K',
+        contentTypes: ['exclusive', 'personalized', 'premium']
+      },
+      {
+        id: 'followup-hub',
+        name: 'Follow-up Hub Satellite',
+        category: 'customer_pipeline',
+        description: 'Automated customer follow-up and nurturing',
+        icon: '🔄',
+        color: '#EF4444',
+        platforms: ['facebook', 'instagram', 'tiktok'],
+        features: ['Auto follow-up', 'Lead nurturing', 'Conversion tracking'],
+        targetTags: ['cần-follow-up', 'đang-tư-vấn', 'khách-tiềm-năng'],
+        estimatedReach: '1K-10K',
+        contentTypes: ['follow-up', 'nurturing', 'conversion']
+      }
+    ];
+
+    res.json({
+      success: true,
+      templates: templates,
+      totalCount: templates.length,
+      categories: {
+        content: templates.filter(t => t.category === 'content').length,
+        customer_pipeline: templates.filter(t => t.category === 'customer_pipeline').length
+      }
+    });
+
+    console.log(`✅ Returned ${templates.length} satellite templates`);
+
+  } catch (error) {
+    console.error('Error fetching satellite templates:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch templates', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
