@@ -128,23 +128,7 @@ export class WorkerManagementService {
     return { token, expiresAt };
   }
 
-  /**
-   * 🔐 Verify worker authentication token
-   */
-  private verifyWorkerAuthToken(token: string): { valid: boolean; workerId?: string; error?: string } {
-    try {
-      const secret = process.env.JWT_SECRET || 'fallback-dev-secret-change-in-production';
-      const decoded = jwt.verify(token, secret) as any;
-      
-      if (decoded.type !== 'worker_auth') {
-        return { valid: false, error: 'Invalid token type' };
-      }
-      
-      return { valid: true, workerId: decoded.workerId };
-    } catch (error) {
-      return { valid: false, error: 'Token verification failed' };
-    }
-  }
+  // NOTE: Token verification is handled by the authenticateWorker middleware in workers.ts API
 
   constructor() {
     // Start periodic health checks
