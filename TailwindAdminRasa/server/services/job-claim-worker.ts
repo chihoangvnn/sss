@@ -20,7 +20,20 @@ import { SUPPORTED_REGIONS, SUPPORTED_PLATFORMS } from './regions';
 class JobClaimWorker {
   private static workers: Map<string, Worker> = new Map();
   private static claimedJobs: Map<string, ClaimedJobData> = new Map();
-  private static redis = RedisService.getInstance();
+  private static redis: any = null;
+
+  /**
+   * Get Redis instance lazily (only when needed)
+   */
+  private static getRedis() {
+    if (!this.redis) {
+      if (!process.env.REDIS_URL && !process.env.UPSTASH_REDIS_URL) {
+        throw new Error('Redis configuration required for distributed job management. Use Simple Mode (Auto) for non-distributed operations.');
+      }
+      this.redis = RedisService.getInstance();
+    }
+    return this.redis;
+  }
 
   /**
    * Start a claiming worker for a specific platform/region queue
@@ -56,7 +69,7 @@ class JobClaimWorker {
 
         // Store in memory and Redis for retrieval
         this.claimedJobs.set(job.id!, claimData);
-        await this.redis.setex(
+        await this.getRedis().setex(
           `claimed-job:${job.id}`,
           300, // 5 minute TTL
           JSON.stringify(claimData)
@@ -68,7 +81,7 @@ class JobClaimWorker {
         return { claimed: true, claimedAt: claimData.claimedAt };
       },
       {
-        connection: RedisService.getInstance(),
+        connection: this.getRedis(),
         concurrency: 10, // Process up to 10 jobs concurrently
         autorun: true,   // Start processing immediately
         removeOnComplete: { count: 100 },
@@ -85,7 +98,7 @@ class JobClaimWorker {
       console.error(`❌ Failed to claim job ${job?.id}:`, err);
       if (job?.id) {
         this.claimedJobs.delete(job.id);
-        this.redis.del(`claimed-job:${job.id}`);
+        this.getRedis().del(`claimed-job:${job.id}`);
       }
     });
 
@@ -138,7 +151,7 @@ class JobClaimWorker {
         claimData.status = 'assigned';
 
         // Update in Redis
-        await this.redis.setex(
+        await this.getRedis().setex(
           `claimed-job:${jobId}`,
           300,
           JSON.stringify(claimData)
@@ -188,7 +201,7 @@ class JobClaimWorker {
 
       // Cleanup
       this.claimedJobs.delete(jobId);
-      await this.redis.del(`claimed-job:${jobId}`);
+      await this.getRedis().del(`claimed-job:${jobId}`);
 
       console.log(`✅ Job ${jobId} completed using real BullMQ token`);
       return { success: true };
@@ -235,7 +248,7 @@ class JobClaimWorker {
 
       // Cleanup
       this.claimedJobs.delete(jobId);
-      await this.redis.del(`claimed-job:${jobId}`);
+      await this.getRedis().del(`claimed-job:${jobId}`);
 
       console.log(`❌ Job ${jobId} failed using real BullMQ token`);
       return { success: true };
@@ -253,7 +266,7 @@ class JobClaimWorker {
     try {
       // Import Queue dynamically to avoid circular dependencies
       const { Queue } = await import('bullmq');
-      const queue = new Queue(queueName, { connection: RedisService.getInstance() });
+      const queue = new Queue(queueName, { connection: this.getRedis() });
       const job = await queue.getJob(jobId);
       return job || null;
     } catch (error) {

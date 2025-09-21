@@ -147,6 +147,22 @@ export function PostScheduler({}: PostSchedulerProps) {
     },
   });
 
+  // Helper function to determine account priority level (moved before usage)
+  const getAccountPriorityLevel = (account: SocialAccount): number => {
+    // This is a temporary implementation for group filtering
+    // In production, this would come from the group_accounts junction table
+    
+    // Example logic: determine priority based on account characteristics
+    const followers = Number(account.followers) || 0;
+    const engagement = Number(account.engagement) || 0;
+    
+    if (followers > 100000 && engagement > 5) return 1; // VIP
+    if (followers > 50000 && engagement > 3) return 2;  // High priority  
+    if (followers > 10000 && engagement > 1) return 3;  // Standard
+    if (followers > 1000) return 4;                     // Low priority
+    return 5; // Basic
+  };
+
   // Filter posts by status and group  
   const filteredPosts = scheduledPosts.filter(post => {
     if (filterStatus !== 'all' && post.status !== filterStatus) return false;
@@ -176,22 +192,6 @@ export function PostScheduler({}: PostSchedulerProps) {
     
     return true;
   });
-
-  // Helper function to determine account priority level
-  const getAccountPriorityLevel = (account: SocialAccount): number => {
-    // This is a temporary implementation for group filtering
-    // In production, this would come from the group_accounts junction table
-    
-    // Example logic: determine priority based on account characteristics
-    const followers = Number(account.followers) || 0;
-    const engagement = Number(account.engagement) || 0;
-    
-    if (followers > 100000 && engagement > 5) return 1; // VIP
-    if (followers > 50000 && engagement > 3) return 2;  // High priority  
-    if (followers > 10000 && engagement > 1) return 3;  // Standard
-    if (followers > 1000) return 4;                     // Low priority
-    return 5; // Basic
-  };
 
   // Group posts by status
   const postsByStatus = {
