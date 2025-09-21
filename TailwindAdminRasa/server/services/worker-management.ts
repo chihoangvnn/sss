@@ -109,16 +109,17 @@ export class WorkerManagementService {
   }
 
   /**
-   * 🔐 Generate secure authentication token for worker
+   * 🔐 Generate secure authentication token for worker (ALIGNED with API middleware)
    */
-  private generateWorkerAuthToken(workerId: string): { token: string; expiresAt: Date } {
-    const secret = process.env.JWT_SECRET || 'fallback-dev-secret-change-in-production';
-    const expiresIn = '30d'; // 30 days
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  private generateWorkerAuthToken(workerId: string, region: string, platforms: WorkerPlatform[]): { token: string; expiresAt: Date } {
+    const secret = process.env.WORKER_JWT_SECRET || 'dev-worker-secret-change-in-production';
+    const expiresIn = '24h'; // Match existing auth endpoint
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     
     const payload = {
       workerId,
-      type: 'worker_auth',
+      region,
+      platforms,
       iat: Math.floor(Date.now() / 1000)
     };
     
@@ -192,7 +193,11 @@ export class WorkerManagementService {
       }
 
       // Generate authentication token
-      const authToken = this.generateWorkerAuthToken(registrationData.workerId, registrationData.platforms);
+      const { token: authToken } = this.generateWorkerAuthToken(
+        registrationData.workerId, 
+        registrationData.region, 
+        registrationData.platforms
+      );
 
       // Create worker record
       const workerData: InsertWorker = {
@@ -213,7 +218,7 @@ export class WorkerManagementService {
         status: 'active',
         isOnline: true,
         lastPingAt: new Date(),
-        registrationSecret: registrationData.registrationSecret,
+        // registrationSecret: Do not store the secret in the database for security
         authToken,
         tokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         tags: registrationData.tags || [],
@@ -546,17 +551,7 @@ export class WorkerManagementService {
     return score;
   }
 
-  private generateWorkerAuthToken(workerId: string, platforms: WorkerPlatform[]): string {
-    // In production, use proper JWT with proper secret
-    const payload = {
-      workerId,
-      platforms,
-      type: 'worker',
-      generatedAt: Date.now()
-    };
-    
-    return Buffer.from(JSON.stringify(payload)).toString('base64');
-  }
+  // NOTE: Duplicate function removed - using the secure JWT version above
 
   private startHealthMonitoring(): void {
     if (this.healthCheckInterval) {

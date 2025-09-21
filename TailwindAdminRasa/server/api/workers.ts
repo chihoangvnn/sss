@@ -68,17 +68,40 @@ const authenticateWorker = (req: express.Request, res: express.Response, next: e
  */
 router.post('/register', async (req, res) => {
   try {
-    const registrationData = req.body;
+    const { registrationSecret, ...registrationData } = req.body;
+    
+    // ⚠️ SECURITY: Validate registration secret
+    if (!registrationSecret || registrationSecret !== WORKER_REGISTRATION_SECRET) {
+      console.error('❌ Invalid worker registration attempt');
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid registration secret'
+      });
+    }
+    
+    // Register worker without storing the secret
     const result = await workerManager.registerWorker(registrationData);
     
     if (!result.success) {
       return res.status(400).json(result);
     }
     
+    // Generate proper JWT token with all required fields
+    const token = jwt.sign(
+      {
+        workerId: registrationData.workerId,
+        region: registrationData.region,
+        platforms: registrationData.platforms
+      },
+      WORKER_JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
     res.json({
       success: true,
       worker: result.worker,
-      authToken: result.authToken,
+      token, // Use consistent field name
+      expiresIn: '24h',
       message: 'Worker registered successfully'
     });
   } catch (error) {
