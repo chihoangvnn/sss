@@ -277,72 +277,72 @@ export default function Satellites() {
 
   const getMainSystemGuide = () => {
     return {
-      title: 'Satellite System Complete Guide',
-      description: 'Master your automated social media management system',
+      title: 'Hướng Dẫn Hoàn Chỉnh Hệ Thống Vệ Tinh',
+      description: 'Làm chủ hệ thống quản lý truyền thông xã hội tự động của bạn',
       icon: '🚀',
       sections: [
         {
-          title: 'Getting Started',
+          title: 'Bắt Đầu',
           icon: '🌟',
           steps: [
-            'Navigate to the Satellite Hub to see your automated content satellites',
-            'Browse available satellite templates in the Templates section',
-            'Each satellite represents automated content management for specific niches',
-            'Templates are pre-configured for different industries and customer segments'
+            'Truy cập Satellite Hub để xem các vệ tinh content tự động của bạn',
+            'Duyệt qua các mẫu vệ tinh có sẵn trong phần Templates',
+            'Mỗi vệ tinh đại diện cho quản lý content tự động theo từng lĩnh vực chuyên biệt',
+            'Các mẫu được cấu hình sẵn cho các ngành và nhóm khách hàng khác nhau'
           ]
         },
         {
-          title: 'Choosing Your Satellite',
+          title: 'Chọn Vệ Tinh Phù Hợp',
           icon: '🎯',
           steps: [
-            'Content Satellites: Beauty, Fitness, Health, Mindfulness - for niche content automation',
-            'Customer Pipeline Satellites: VIP Management, Follow-up Hub - for customer relationship automation',
-            'Click the info (📖) icon on any template to see detailed setup instructions',
-            'Consider your target audience and business goals when selecting'
+            'Vệ Tinh Content: Làm Đẹp, Thể Thao, Sức Khỏe, Thiền Định - cho tự động hóa content theo từng chuyên ngành',
+            'Vệ Tinh Chăm Sóc Khách Hàng: Quản Lý VIP, Hub Follow-up - cho tự động hóa quan hệ khách hàng',
+            'Nhấp vào biểu tượng thông tin (📖) trên bất kỳ mẫu nào để xem hướng dẫn chi tiết',
+            'Cân nhắc đối tượng mục tiêu và mục tiêu kinh doanh khi lựa chọn'
           ]
         },
         {
-          title: 'Customization & Setup',
+          title: 'Tùy Chỉnh & Thiết Lập',
           icon: '⚙️',
           steps: [
-            'Click "Deploy Satellite" to start customization process',
-            'Choose your theme: Modern, Classic, or Minimal design',
-            'Select primary color to match your brand identity',
-            'Pick target platforms: Facebook, Instagram, Twitter, TikTok',
-            'Set posting frequency: Hourly, Daily, Weekly, or Custom schedule',
-            'Enable auto-optimization for best posting times'
+            'Nhấp "Triển Khai Vệ Tinh" để bắt đầu quá trình tùy chỉnh',
+            'Chọn theme: Hiện đại, Cổ điển hoặc Tối giản',
+            'Chọn màu chính phù hợp với nhận diện thương hiệu của bạn',
+            'Chọn nền tảng mục tiêu: Facebook, Instagram, Twitter, TikTok',
+            'Thiết lập tần suất đăng: Theo giờ, Hàng ngày, Hàng tuần hoặc Lịch tùy chỉnh',
+            'Bật tối ưu hóa tự động cho thời gian đăng tốt nhất'
           ]
         },
         {
-          title: 'Content Management',
+          title: 'Quản Lý Content',
           icon: '📝',
           steps: [
-            'Satellites automatically filter content by "Nội dung" (content) category tags',
-            'Upload your content to the Content Library with appropriate tags',
-            'Each satellite pulls relevant content based on its specialization',
-            'AI variations are generated automatically for different platforms'
+            'Vệ tinh tự động lọc content theo thẻ category "Nội dung"',
+            'Tải content của bạn lên Content Library với các thẻ phù hợp',
+            'Mỗi vệ tinh sẽ kéo content liên quan dựa trên chuyên môn của nó',
+            'AI tự động tạo các biến thể cho các nền tảng khác nhau'
           ]
         },
         {
-          title: 'Deployment & Monitoring',
+          title: 'Triển Khai & Giám Sát',
           icon: '🚀',
           steps: [
-            'Review your configuration in the preview section',
-            'Click "Deploy Satellite" to activate automated posting',
-            'Monitor performance in the Satellite Hub dashboard',
-            'Adjust settings anytime through the customization interface',
-            'Track engagement, reach, and conversion metrics'
+            'Xem lại cấu hình của bạn trong phần xem trước',
+            'Nhấp "Triển Khai Vệ Tinh" để kích hoạt đăng bài tự động',
+            'Giám sát hiệu suất trong dashboard Satellite Hub',
+            'Điều chỉnh cài đặt bất cứ lúc nào qua giao diện tùy chỉnh',
+            'Theo dõi engagement, reach và các metric chuyển đổi'
           ]
         },
         {
-          title: 'Best Practices',
+          title: 'Thực Hành Tốt Nhất',
           icon: '💡',
           steps: [
-            'Start with 1-2 satellites to learn the system before scaling',
-            'Use high-quality, tagged content for best results',
-            'Monitor audience engagement and adjust posting schedules',
-            'Combine content satellites with customer pipeline satellites for complete automation',
-            'Review and update your satellite configurations monthly'
+            'Bắt đầu với 1-2 vệ tinh để học hệ thống trước khi mở rộng',
+            'Sử dụng content chất lượng cao, có thẻ đầy đủ để có kết quả tốt nhất',
+            'Theo dõi engagement của audience và điều chỉnh lịch đăng',
+            'Kết hợp vệ tinh content với vệ tinh chăm sóc khách hàng để tự động hoàn toàn',
+            'Xem lại và cập nhật cấu hình vệ tinh hàng tháng'
           ]
         }
       ]
@@ -772,7 +772,7 @@ export default function Satellites() {
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
                 <Play className="w-4 h-4" />
-                Quick Start Guide
+                Hướng Dẫn Nhanh
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-5xl max-h-[85vh]">
@@ -806,16 +806,16 @@ export default function Satellites() {
                     </div>
                   ))}
                   <div className="mt-8 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                    <h3 className="font-semibold text-blue-900 mb-2">Ready to get started?</h3>
+                    <h3 className="font-semibold text-blue-900 mb-2">Sẵn sàng bắt đầu chưa?</h3>
                     <p className="text-blue-800 text-sm mb-3">
-                      Begin by exploring the Satellite Hub to see your current satellites, then visit Templates to deploy your first automated content satellite.
+                      Bắt đầu bằng cách khám phá Satellite Hub để xem các vệ tinh hiện tại của bạn, sau đó ghé thăm Templates để triển khai vệ tinh tự động content đầu tiên.
                     </p>
                     <div className="flex gap-2">
                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setActiveView('hub')}>
-                        View Satellite Hub
+                        Xem Satellite Hub
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setActiveView('templates')}>
-                        Browse Templates
+                        Duyệt Templates
                       </Button>
                     </div>
                   </div>
