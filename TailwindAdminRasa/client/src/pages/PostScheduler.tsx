@@ -255,10 +255,10 @@ export function PostScheduler({}: PostSchedulerProps) {
         if (scheduledDate < now && !errorMessage) {
           return 'Quá hạn';
         }
-        // Trạng thái bình thường
-        return 'Đã lên lịch';
+        // Trạng thái bình thường - chỉ mới lưu trong database, chưa gửi đến cánh tay
+        return 'Đang đợi';
       case 'posting': return 'Đang đăng';
-      case 'posted': return 'Đã đăng thành công';
+      case 'posted': return 'Đã lên';
       case 'failed': 
         // Hiển thị lỗi chi tiết nếu có
         if (errorMessage) {
