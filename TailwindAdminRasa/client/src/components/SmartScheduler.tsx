@@ -243,10 +243,23 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
     }
   };
 
-  // Auto-update content types when platform changes
+  // Auto-update content types when platform changes + clear incompatible tags
   const handlePlatformChange = (platform: string) => {
     setSelectedPlatform(platform);
     setSimpleContentTypes(getPlatformContentTypeDefaults(platform));
+    
+    // Clear incompatible selected tags when platform changes (except for 'all')
+    if (platform !== 'all') {
+      const compatibleTagIds = selectedSimpleTags.filter(tagId => {
+        const tag = (tags as UnifiedTag[]).find(t => t.id === tagId);
+        if (!tag || !tag.platforms) return true; // Keep tags without platform info
+        return tag.platforms.includes(platform);
+      });
+      
+      if (compatibleTagIds.length !== selectedSimpleTags.length) {
+        setSelectedSimpleTags(compatibleTagIds);
+      }
+    }
   };
 
   const getMatchingContent = () => {
@@ -527,7 +540,22 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {tags
-                        .filter((tag: UnifiedTag) => tag.isActive)
+                        .filter((tag: UnifiedTag) => {
+                          if (!tag.isActive) return false;
+                          
+                          // Platform validation - only show compatible tags
+                          if (selectedPlatform === 'all') {
+                            return true; // Show all tags when "all platforms" is selected
+                          }
+                          
+                          // Check if tag supports the selected platform
+                          if (tag.platforms && tag.platforms.length > 0) {
+                            return tag.platforms.includes(selectedPlatform);
+                          }
+                          
+                          // If tag has no platform info, show it (legacy support)
+                          return true;
+                        })
                         .map((tag: UnifiedTag) => (
                           <label 
                             key={tag.id} 
@@ -567,6 +595,31 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                   <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2">
                     💡 Đã chọn {selectedSimpleTags.length} tags. Content sẽ được lọc theo những tags này.
                   </div>
+                )}
+                
+                {/* Platform validation feedback */}
+                {selectedPlatform !== 'all' && tags.length > 0 && (
+                  (() => {
+                    const totalActiveTags = (tags as UnifiedTag[]).filter(tag => tag.isActive).length;
+                    const compatibleTags = (tags as UnifiedTag[]).filter(tag => {
+                      if (!tag.isActive) return false;
+                      if (!tag.platforms || tag.platforms.length === 0) return true;
+                      return tag.platforms.includes(selectedPlatform);
+                    }).length;
+                    
+                    if (compatibleTags < totalActiveTags) {
+                      return (
+                        <div className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2 flex items-center gap-2">
+                          <span>⚠️</span>
+                          <span>
+                            Hiển thị {compatibleTags}/{totalActiveTags} tags tương thích với {selectedPlatform}. 
+                            Chọn "Tất cả platforms" để xem tất cả tags.
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()
                 )}
               </div>
 
