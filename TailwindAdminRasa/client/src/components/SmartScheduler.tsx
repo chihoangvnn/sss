@@ -543,6 +543,9 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                         .filter((tag: UnifiedTag) => {
                           if (!tag.isActive) return false;
                           
+                          // Category filter - only show "content" category tags
+                          if (tag.category && tag.category !== 'content') return false;
+                          
                           // Platform validation - only show compatible tags
                           if (selectedPlatform === 'all') {
                             return true; // Show all tags when "all platforms" is selected
@@ -600,19 +603,23 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                 {/* Platform validation feedback */}
                 {selectedPlatform !== 'all' && tags.length > 0 && (
                   (() => {
-                    const totalActiveTags = (tags as UnifiedTag[]).filter(tag => tag.isActive).length;
+                    const totalActiveContentTags = (tags as UnifiedTag[]).filter(tag => 
+                      tag.isActive && (!tag.category || tag.category === 'content')
+                    ).length;
                     const compatibleTags = (tags as UnifiedTag[]).filter(tag => {
                       if (!tag.isActive) return false;
+                      // Only count content category tags
+                      if (tag.category && tag.category !== 'content') return false;
                       if (!tag.platforms || tag.platforms.length === 0) return true;
                       return tag.platforms.includes(selectedPlatform);
                     }).length;
                     
-                    if (compatibleTags < totalActiveTags) {
+                    if (compatibleTags < totalActiveContentTags) {
                       return (
                         <div className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2 flex items-center gap-2">
                           <span>⚠️</span>
                           <span>
-                            Hiển thị {compatibleTags}/{totalActiveTags} tags tương thích với {selectedPlatform}. 
+                            Hiển thị {compatibleTags}/{totalActiveContentTags} tags Nội Dung tương thích với {selectedPlatform}. 
                             Chọn "Tất cả platforms" để xem tất cả tags.
                           </span>
                         </div>
