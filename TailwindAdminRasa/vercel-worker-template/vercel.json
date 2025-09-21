@@ -4,5 +4,13 @@
     "api/worker.js": {
       "maxDuration": 60
     }
+  },
+  "env": {
+    "BRAIN_BASE_URL": "https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev",
+    "WORKER_REGISTRATION_SECRET": "dev-registration-secret-change-in-production",
+    "WORKER_ID": "vercel-worker-ixauvzxfs",
+    "WORKER_REGION": "us-east-1",
+    "WORKER_PLATFORMS": "facebook,instagram,twitter",
+    "VERCEL_BYPASS_TOKEN": "@vercel-bypass-token"
   }
 }
