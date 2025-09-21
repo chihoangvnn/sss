@@ -52,8 +52,12 @@ export default function SatelliteHub({
     },
   });
 
-  // Generate satellite configurations from tags
-  const satellites: SatelliteConfig[] = tags.map((tag: any) => ({
+  // Filter only content category tags, then generate satellite configurations
+  const contentTags = tags.filter((tag: any) => 
+    tag.category === 'Nội dung' || tag.category === 'content'
+  );
+  
+  const satellites: SatelliteConfig[] = contentTags.map((tag: any) => ({
     id: tag.id,
     name: `${tag.name} Satellite`,
     description: `Automated content management for ${tag.name.toLowerCase()} category`,
@@ -93,7 +97,7 @@ export default function SatelliteHub({
       return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['satellites-overview']);
+      queryClient.invalidateQueries({ queryKey: ['satellites-overview'] });
     }
   });
 
@@ -108,7 +112,7 @@ export default function SatelliteHub({
   };
 
   const handleSatelliteRefresh = (satelliteId: string) => {
-    queryClient.invalidateQueries(['satellite-data', satelliteId]);
+    queryClient.invalidateQueries({ queryKey: ['satellite-data', satelliteId] });
   };
 
   const handleSatelliteConfig = (satelliteId: string) => {
