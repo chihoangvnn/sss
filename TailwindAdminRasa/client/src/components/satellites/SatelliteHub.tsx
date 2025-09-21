@@ -12,7 +12,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  Pause
+  Pause,
+  Zap,
+  Users,
+  Play
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -98,6 +101,63 @@ export default function SatelliteHub({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['satellites-overview'] });
+    }
+  });
+
+  // Mutation for creating orchestration campaign from satellite
+  const createCampaignMutation = useMutation({
+    mutationFn: async (satellite: SatelliteConfig) => {
+      // First, get content and accounts by tag
+      const response = await fetch(`/api/satellites/by-tag/${satellite.tag.slug}?platform=all&status=all`);
+      if (!response.ok) throw new Error('Failed to fetch satellite data');
+      const tagData = await response.json();
+
+      // Create strategy from satellite configuration
+      const strategy = {
+        templateName: satellite.name,
+        templateType: 'content' as const,
+        targetContent: tagData.data.contentLibrary || [],
+        targetAccounts: tagData.data.socialAccounts || [],
+        customizations: {
+          theme: 'default',
+          primaryColor: satellite.tag.color,
+          platforms: ['facebook', 'instagram'], // Default platforms
+          contentFrequency: 'normal' as const
+        },
+        schedulingRules: {
+          maxPostsPerDay: 10,
+          cooldownMinutes: 30,
+          timezone: 'UTC'
+        }
+      };
+
+      // Plan campaign with orchestrator
+      const planResponse = await fetch('/api/orchestrator/plan-from-satellite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategy })
+      });
+      
+      if (!planResponse.ok) throw new Error('Failed to create campaign plan');
+      const planData = await planResponse.json();
+
+      // Execute the campaign
+      const executeResponse = await fetch('/api/orchestrator/execute-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planData.plan })
+      });
+
+      if (!executeResponse.ok) throw new Error('Failed to execute campaign');
+      return executeResponse.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['orchestrator-campaigns'] });
+      // Show success message
+      console.log('Campaign created successfully:', data);
+    },
+    onError: (error) => {
+      console.error('Failed to create campaign:', error);
     }
   });
 
@@ -310,6 +370,7 @@ export default function SatelliteHub({
                 setSelectedSatellite(satellite.id);
                 onSatelliteClick?.(satellite);
               }}
+              onCreateCampaign={(satellite) => createCampaignMutation.mutate(satellite)}
             />
           ))}
         </div>
@@ -324,9 +385,10 @@ interface SatelliteCardProps {
   viewMode: 'grid' | 'list';
   onStatusChange: (status: 'active' | 'paused') => void;
   onClick: () => void;
+  onCreateCampaign?: (satellite: SatelliteConfig) => void;
 }
 
-function SatelliteCard({ satellite, viewMode, onStatusChange, onClick }: SatelliteCardProps) {
+function SatelliteCard({ satellite, viewMode, onStatusChange, onClick, onCreateCampaign }: SatelliteCardProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active': return <CheckCircle2 className="w-4 h-4 text-green-600" />;
@@ -376,6 +438,20 @@ function SatelliteCard({ satellite, viewMode, onStatusChange, onClick }: Satelli
                 {getStatusIcon(satellite.status)}
                 {satellite.status}
               </Badge>
+              
+              {/* Orchestrator Campaign Button */}
+              <Button 
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreateCampaign?.(satellite);
+                }}
+                className="bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+              >
+                <Zap className="w-3 h-3 mr-1" />
+                Campaign
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -421,7 +497,7 @@ function SatelliteCard({ satellite, viewMode, onStatusChange, onClick }: Satelli
           {satellite.description}
         </CardDescription>
         
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
           <div>
             <p className="font-medium">{satellite.metrics.totalContent}</p>
             <p className="text-muted-foreground">Content Items</p>
@@ -431,6 +507,20 @@ function SatelliteCard({ satellite, viewMode, onStatusChange, onClick }: Satelli
             <p className="text-muted-foreground">Active Accounts</p>
           </div>
         </div>
+
+        {/* Orchestrator Campaign Button */}
+        <Button 
+          size="sm"
+          variant="outline"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCreateCampaign?.(satellite);
+          }}
+          className="w-full bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+        >
+          <Zap className="w-4 h-4 mr-2" />
+          Tạo Campaign với Trợ lý Giám đốc
+        </Button>
       </CardContent>
     </Card>
   );
