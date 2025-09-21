@@ -570,7 +570,6 @@ function JobDispatchInterface() {
 
 // Main WorkerManagement Component
 export function WorkerManagement() {
-  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
   const queryClient = useQueryClient();
 
   const {
@@ -581,7 +580,6 @@ export function WorkerManagement() {
   } = useQuery({
     queryKey: ['workers'],
     queryFn: fetchWorkers,
-    refetchInterval: refreshInterval,
   });
 
   const refreshIPsMutation = useMutation({
@@ -608,7 +606,6 @@ export function WorkerManagement() {
   } = useQuery({
     queryKey: ['workerStats'],
     queryFn: fetchWorkerStats,
-    refetchInterval: refreshInterval,
   });
 
   const {
@@ -618,7 +615,6 @@ export function WorkerManagement() {
   } = useQuery({
     queryKey: ['systemHealth'],
     queryFn: fetchSystemHealth,
-    refetchInterval: refreshInterval,
   });
 
   return (
