@@ -1649,3 +1649,220 @@ export type InsertScheduleAssignment = typeof scheduleAssignments.$inferInsert;
 
 export type ViolationLog = typeof violationsLog.$inferSelect;
 export type InsertViolationLog = typeof violationsLog.$inferInsert;
+
+// ============================================
+// MULTI-PLATFORM WORKER MANAGEMENT SYSTEM
+// ============================================
+
+// Worker platforms enum for extensibility
+export const SUPPORTED_WORKER_PLATFORMS = ['facebook', 'instagram', 'twitter', 'tiktok', 'youtube', 'linkedin'] as const;
+export type WorkerPlatform = typeof SUPPORTED_WORKER_PLATFORMS[number];
+
+// Worker capabilities and specialties
+export interface WorkerCapability {
+  platform: WorkerPlatform;
+  actions: ('post_text' | 'post_image' | 'post_video' | 'post_story' | 'post_reel')[];
+  maxConcurrent: number;
+  avgExecutionTime: number; // milliseconds
+}
+
+// Workers table - Cánh Tay management
+export const workers = pgTable("workers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Basic worker info
+  workerId: text("worker_id").notNull().unique(), // e.g., "vercel-us-east-1"
+  name: text("name").notNull(), // Human-readable name
+  description: text("description"),
+  
+  // Platform capabilities
+  platforms: jsonb("platforms").notNull().$type<WorkerPlatform[]>(), // ["facebook", "instagram"]
+  capabilities: jsonb("capabilities").notNull().$type<WorkerCapability[]>(), // Platform-specific capabilities
+  specialties: jsonb("specialties").$type<string[]>(), // ["video_posts", "high_volume", "regions"]
+  
+  // Performance configuration
+  maxConcurrentJobs: integer("max_concurrent_jobs").notNull().default(3),
+  minJobInterval: integer("min_job_interval").notNull().default(300), // seconds (5 minutes)
+  maxJobsPerHour: integer("max_jobs_per_hour").notNull().default(12),
+  avgExecutionTime: integer("avg_execution_time").notNull().default(5000), // milliseconds
+  
+  // Deployment info
+  region: text("region").notNull(), // e.g., "us-east-1", "eu-west-1"
+  environment: text("environment").notNull().default('production'), // production, staging, development
+  deploymentPlatform: text("deployment_platform").notNull(), // "vercel", "railway", "render"
+  endpointUrl: text("endpoint_url").notNull(), // Worker webhook URL
+  
+  // Status and health
+  status: text("status").notNull().default('active'), // active, paused, maintenance, failed
+  isOnline: boolean("is_online").notNull().default(false),
+  lastPingAt: timestamp("last_ping_at"),
+  lastJobAt: timestamp("last_job_at"),
+  currentLoad: integer("current_load").notNull().default(0), // Current concurrent jobs
+  
+  // Performance metrics
+  totalJobsCompleted: integer("total_jobs_completed").notNull().default(0),
+  totalJobsFailed: integer("total_jobs_failed").notNull().default(0),
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }).default('0.00'), // percentage
+  avgResponseTime: integer("avg_response_time").default(0), // milliseconds
+  
+  // Authentication
+  registrationSecret: text("registration_secret").notNull(),
+  authToken: text("auth_token"), // JWT token for authentication
+  tokenExpiresAt: timestamp("token_expires_at"),
+  
+  // Configuration
+  tags: jsonb("tags").$type<string[]>(), // For filtering and grouping
+  priority: integer("priority").notNull().default(1), // 1 = highest priority
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  
+  // Metadata
+  metadata: jsonb("metadata").$type<Record<string, any>>(), // Flexible metadata storage
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Worker job assignments - Track active jobs per worker
+export const workerJobs = pgTable("worker_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Job relationships
+  workerId: varchar("worker_id").notNull().references(() => workers.id, { onDelete: 'cascade' }),
+  jobId: text("job_id").notNull(), // BullMQ job ID
+  scheduledPostId: varchar("scheduled_post_id").references(() => scheduledPosts.id, { onDelete: 'cascade' }),
+  
+  // Job details
+  platform: text("platform").notNull().$type<WorkerPlatform>(),
+  jobType: text("job_type").notNull(), // post_text, post_image, post_video
+  priority: integer("priority").notNull().default(1),
+  
+  // Timing
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  
+  // Status tracking
+  status: text("status").notNull().default('assigned'), // assigned, started, completed, failed, timeout
+  result: jsonb("result").$type<{
+    success: boolean;
+    platformPostId?: string;
+    platformUrl?: string;
+    error?: string;
+    executionTime?: number;
+    metrics?: Record<string, any>;
+  }>(),
+  
+  // Performance data
+  executionTime: integer("execution_time"), // milliseconds
+  retryCount: integer("retry_count").notNull().default(0),
+  maxRetries: integer("max_retries").notNull().default(3),
+  
+  // Metadata
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Worker health checks and monitoring
+export const workerHealthChecks = pgTable("worker_health_checks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  workerId: varchar("worker_id").notNull().references(() => workers.id, { onDelete: 'cascade' }),
+  
+  // Health status
+  status: text("status").notNull(), // healthy, degraded, unhealthy, offline
+  responseTime: integer("response_time"), // milliseconds
+  
+  // System metrics
+  cpuUsage: decimal("cpu_usage", { precision: 5, scale: 2 }), // percentage
+  memoryUsage: decimal("memory_usage", { precision: 5, scale: 2 }), // percentage
+  networkLatency: integer("network_latency"), // milliseconds
+  
+  // Platform-specific health data
+  platformStatus: jsonb("platform_status").$type<Record<WorkerPlatform, {
+    status: 'healthy' | 'degraded' | 'error';
+    lastSuccessAt?: string;
+    errorCount: number;
+    avgResponseTime: number;
+  }>>(),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  errorCode: text("error_code"),
+  errorCount: integer("error_count").notNull().default(0),
+  
+  // Metadata
+  checkedAt: timestamp("checked_at").defaultNow(),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+});
+
+// Worker performance analytics (aggregated data)
+export const workerAnalytics = pgTable("worker_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  workerId: varchar("worker_id").notNull().references(() => workers.id, { onDelete: 'cascade' }),
+  
+  // Time period
+  period: text("period").notNull(), // hourly, daily, weekly, monthly
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Performance metrics
+  totalJobs: integer("total_jobs").notNull().default(0),
+  successfulJobs: integer("successful_jobs").notNull().default(0),
+  failedJobs: integer("failed_jobs").notNull().default(0),
+  avgExecutionTime: integer("avg_execution_time").default(0),
+  avgResponseTime: integer("avg_response_time").default(0),
+  
+  // Platform-specific analytics
+  platformMetrics: jsonb("platform_metrics").$type<Record<WorkerPlatform, {
+    totalJobs: number;
+    successfulJobs: number;
+    avgExecutionTime: number;
+    errorRate: number;
+  }>>(),
+  
+  // Capacity utilization
+  maxConcurrentJobs: integer("max_concurrent_jobs").notNull(),
+  avgConcurrentJobs: decimal("avg_concurrent_jobs", { precision: 5, scale: 2 }),
+  utilizationRate: decimal("utilization_rate", { precision: 5, scale: 2 }), // percentage
+  
+  // Quality metrics
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
+  errorRate: decimal("error_rate", { precision: 5, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Create indexes for better performance
+export const workerIndexes = {
+  workerIdIndex: index("workers_worker_id_idx").on(workers.workerId),
+  workerStatusIndex: index("workers_status_idx").on(workers.status),
+  workerPlatformsIndex: index("workers_platforms_idx").on(workers.platforms),
+  workerRegionIndex: index("workers_region_idx").on(workers.region),
+  
+  workerJobsStatusIndex: index("worker_jobs_status_idx").on(workerJobs.status),
+  workerJobsWorkerIdIndex: index("worker_jobs_worker_id_idx").on(workerJobs.workerId),
+  workerJobsPlatformIndex: index("worker_jobs_platform_idx").on(workerJobs.platform),
+  
+  healthChecksWorkerIdIndex: index("worker_health_checks_worker_id_idx").on(workerHealthChecks.workerId),
+  healthChecksStatusIndex: index("worker_health_checks_status_idx").on(workerHealthChecks.status),
+  
+  analyticsWorkerIdIndex: index("worker_analytics_worker_id_idx").on(workerAnalytics.workerId),
+  analyticsPeriodIndex: index("worker_analytics_period_idx").on(workerAnalytics.period),
+};
+
+// Zod schemas for validation
+export const insertWorkerSchema = createInsertSchema(workers);
+export const insertWorkerJobSchema = createInsertSchema(workerJobs);
+export const insertWorkerHealthCheckSchema = createInsertSchema(workerHealthChecks);
+export const insertWorkerAnalyticsSchema = createInsertSchema(workerAnalytics);
+
+// Type exports
+export type Worker = typeof workers.$inferSelect;
+export type InsertWorker = z.infer<typeof insertWorkerSchema>;
+export type WorkerJob = typeof workerJobs.$inferSelect;
+export type InsertWorkerJob = z.infer<typeof insertWorkerJobSchema>;
+export type WorkerHealthCheck = typeof workerHealthChecks.$inferSelect;
+export type InsertWorkerHealthCheck = z.infer<typeof insertWorkerHealthCheckSchema>;
+export type WorkerAnalytics = typeof workerAnalytics.$inferSelect;
+export type InsertWorkerAnalytics = z.infer<typeof insertWorkerAnalyticsSchema>;

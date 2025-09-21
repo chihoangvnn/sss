@@ -1,0 +1,78 @@
+1. Backend ("Bộ Não" / Control Plane)
+Đây là dịch vụ trung tâm, xử lý toàn bộ logic nghiệp vụ và điều phối.
+
+Nền tảng đề xuất: Railway (hoặc Render).
+
+Nhiệm vụ:
+
+Xây dựng một REST API bằng Node.js (sử dụng Express.js hoặc NestJS).
+
+Quản lý cơ sở dữ liệu chính bằng PostgreSQL.
+
+Tích hợp hàng đợi (job queue) bằng Redis (kết nối tới dịch vụ ngoài như Upstash).
+
+Xử lý logic Scheduler để trigger các job đúng giờ.
+
+Quản lý xác thực người dùng (ví dụ: JWT).
+
+Nguyên tắc vàng: "Bộ Não" TUYỆT ĐỐI KHÔNG được phép gọi trực tiếp ra API của Facebook/TikTok. Mọi tác vụ bên ngoài đều phải thông qua "Các Cánh Tay".
+
+2.2. Lớp Thực Thi ("Các Cánh Tay" / Execution Layer)
+Đây là lớp thực thi phân tán, có nhiệm vụ duy nhất là gửi request tới các nền tảng mạng xã hội.
+
+Nền tảng đề xuất: Vercel Functions.
+
+Nhiệm vụ:
+
+Là các serverless function cực kỳ đơn giản và độc lập.
+
+Nhận một request HTTP trigger từ "Bộ Não", chứa jobId.
+
+Dùng jobId để lấy thông tin chi tiết của công việc từ Redis.
+
+Thực hiện lệnh gọi API tới Facebook/TikTok với các thông tin đã lấy.
+
+Thực hiện một lệnh gọi API ngược lại về "Bộ Não" để báo cáo kết quả (thành công/thất bại).
+
+Thiết kế: Mỗi "Cánh Tay" (hoặc một cụm "Cánh Tay") sẽ được triển khai trên một region khác nhau của Vercel và được cấu hình để sử dụng một App API riêng biệt nhằm tối đa hóa sự phân tán.
+
+2.3. Frontend ("Các Vệ Tinh" / Satellite Dashboards)
+Đây là các giao diện quản trị cho người dùng cuối.
+
+Nền tảng đề xuất: Vercel.
+
+Nhiệm vụ:
+
+Là một ứng dụng Single-Page Application (SPA) đơn giản, xây dựng bằng Next.js.
+
+Giao diện người dùng được lắp ráp từ thư viện component có sẵn như MUI hoặc Ant Design.
+
+Toàn bộ logic nghiệp vụ nằm ở Backend. Frontend chỉ có nhiệm vụ hiển thị dữ liệu lấy từ API của "Bộ Não" và gửi dữ liệu người dùng nhập lên cho "Bộ Não".
+
+Thiết kế: Xây dựng một Frontend template ("khuôn mẫu"). Các vệ tinh khác sẽ được "clone" từ template này và được cấu hình lại qua các biến môi trường (Environment Variables) để hiển thị đúng dữ liệu (theo tag, group...).
+
+3. Luồng Hoạt Động Cốt Lõi (Đăng bài)
+Admin sử dụng Frontend Vệ tinh để tạo và lên lịch một bài viết.
+
+Frontend gửi request POST /api/posts/schedule tới Backend (Não).
+
+Não lưu bài viết vào PostgreSQL và đẩy một job vào hàng đợi Redis.
+
+Scheduler của Não, khi đến giờ, sẽ lấy job từ Redis.
+
+Não xác định "Cánh Tay" phù hợp và gửi một request HTTP tới URL của Cánh Tay đó trên Vercel, truyền vào jobId.
+
+Cánh Tay được Vercel kích hoạt, dùng jobId để lấy toàn bộ thông tin từ Redis.
+
+Cánh Tay gọi tới API Facebook/TikTok để đăng bài.
+
+Cánh Tay gọi tới API của Não (POST /api/jobs/update-status) để báo cáo kết quả.
+
+Não cập nhật trạng thái bài viết trong PostgreSQL.
+
+4. Yêu Cầu Chính & Triết Lý Thiết Kế
+Bảo mật & Phân tán: Ưu tiên hàng đầu là che giấu dấu vết kỹ thuật. Lớp thực thi phải được phân tán tối đa qua các serverless function ở nhiều region và sử dụng nhiều App API.
+
+Khả năng Mở rộng: Kiến trúc phải cho phép dễ dàng thêm "Cánh Tay" và "Vệ tinh" mới mà không cần thay đổi logic cốt lõi của "Bộ Não".
+
+Tách biệt Trách nhiệm (Separation of Concerns): Mỗi thành phần chỉ làm một việc và làm tốt việc đó. Não lo logic, Cánh Tay lo thực thi, Vệ tinh lo hiển thị.
