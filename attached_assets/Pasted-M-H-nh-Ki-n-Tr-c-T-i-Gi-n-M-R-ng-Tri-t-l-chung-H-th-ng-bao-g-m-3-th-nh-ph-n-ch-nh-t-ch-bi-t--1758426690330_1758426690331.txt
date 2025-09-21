@@ -1,0 +1,75 @@
+Mô Hình Kiến Trúc Tối Giản & Mở Rộng
+Triết lý chung: Hệ thống bao gồm 3 thành phần chính, tách biệt rõ ràng:
+
+1 "Bộ Não" (Backend): Nơi xử lý mọi logic và lưu trữ dữ liệu.
+
+Nhiều "Cánh Tay" (Execution Layer): Nơi thực thi, giao tiếp với bên ngoài.
+
+Nhiều "Vệ Tinh" (Frontend): Nơi người dùng tương tác và ra lệnh.
+
+Phần 1: Backend - "Bộ Não" Trung Tâm (Control Plane)
+Mục tiêu: Là nguồn chân lý duy nhất (Single Source of Truth), quản lý và điều phối toàn bộ hệ thống.
+
+Nhiệm vụ chính:
+
+Cung cấp API nội bộ (Internal REST/GraphQL API) cho các Frontend Vệ tinh.
+
+Quản lý Database: Nội dung, lịch đăng, tài khoản, cấu hình các "Cánh Tay", và keys của các App API.
+
+Xử lý Logic điều phối (Scheduler): Quyết định "Cánh Tay" nào sẽ thực thi nhiệm vụ vào thời điểm nào.
+
+Điều cấm kỵ: TUYỆT ĐỐI KHÔNG gọi trực tiếp ra API của Facebook hay bất kỳ dịch vụ bên ngoài nào.
+
+Công nghệ đề xuất: Node.js (Express/NestJS), PostgreSQL/MongoDB.
+
+Phần 2: Lớp Thực Thi - "Các Cánh Tay" Phân Tán (Execution Layer)
+Mục tiêu: Thực thi các lệnh gọi API cuối cùng tới Facebook một cách an toàn và phân tán.
+
+Cấu trúc:
+
+Mỗi "Cánh Tay" là một cụm Serverless Function (trên Vercel hoặc Cloudflare).
+
+Mỗi "Cánh Tay" được gán với một App API Facebook riêng.
+
+Mỗi "Cánh Tay" được triển khai (deploy) trên một Region địa lý khác nhau (ví dụ: Cánh Tay 1 ở Singapore, Cánh Tay 2 ở Tokyo).
+
+Nhiệm vụ: Nhận một "mệnh lệnh" đơn giản từ "Bộ Não" (ví dụ: {"action": "post", "pageId": "...", "content": "..."}) và thực hiện nó.
+
+Công nghệ đề xuất: Vercel Functions hoặc Cloudflare Workers.
+
+Phần 3: Frontend - "Các Vệ Tinh" Quản Trị (Satellite Dashboards)
+Mục tiêu: Là các giao diện quản trị đơn nhiệm, gọn nhẹ và độc lập.
+
+Đặc điểm:
+
+Giao diện "ngốc": Logic xử lý gần như bằng không.
+
+Chỉ biết và chỉ gọi đến API của "Bộ Não".
+
+Được xây dựng từ một template (khuôn mẫu) duy nhất để dễ dàng "clone".
+
+Công nghệ đề xuất: Next.js, MUI / Ant Design, TanStack Query / SWR.
+
+Luồng Hoạt Động Chuẩn (1 phút để hiểu)
+Vệ Tinh (Frontend) gửi lệnh (ví dụ: "Tạo bài viết mới") tới API của Bộ Não (Backend).
+
+Bộ Não nhận lệnh, xử lý logic, lưu vào database.
+
+Đến giờ đăng, Bộ Não xác định bài viết này thuộc "Cụm A" và gửi lệnh thực thi tới Cánh Tay A (Function ở Singapore).
+
+Cánh Tay A nhận lệnh và gọi tới API Facebook bằng App API A.
+
+Quy trình Mở Rộng (Clone thêm Vệ tinh & Cánh Tay)
+Khi cần quản lý một nhóm chủ đề mới (ví dụ: "Ẩm thực"), quy trình chỉ gồm các bước sau:
+
+Frontend: Clone thư mục code của một "Vệ tinh" có sẵn, đổi lại vài dòng config (tên chủ đề, màu sắc...). Deploy lên Vercel. (15 phút)
+
+Backend: Thêm một vài record mới vào database để định danh cho nhóm "Ẩm thực". (5 phút)
+
+Facebook & Execution (Nếu cần cụm mới):
+
+Tạo một App API mới trên Facebook.
+
+Deploy một "Cánh Tay" mới trên một Region mới, cấu hình nó với App API vừa tạo. (30 phút)
+
+Mô hình này biến việc mở rộng từ một bài toán kỹ thuật phức tạp thành một quy trình vận hành đơn giản, lặp đi lặp lại.

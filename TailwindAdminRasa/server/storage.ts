@@ -94,6 +94,10 @@ export interface IStorage {
   getSocialAccountByPlatform(platform: string): Promise<SocialAccount | undefined>;
   getSocialAccountsByPlatform(platform: string): Promise<SocialAccount[]>;
   createSocialAccount(account: InsertSocialAccount): Promise<SocialAccount>;
+  
+  // Account Groups methods
+  getAccountGroups(): Promise<any[]>;
+  getGroupAccounts(groupId: string): Promise<SocialAccount[]>;
 
   // Page tag methods
   getPageTags(): Promise<PageTag[]>;
@@ -2031,6 +2035,38 @@ export class DatabaseStorage implements IStorage {
   // Account Groups methods
   async getAccountGroups(): Promise<any[]> {
     return await db.select().from(accountGroups).orderBy(desc(accountGroups.createdAt));
+  }
+
+  async getGroupAccounts(groupId: string): Promise<SocialAccount[]> {
+    return await db
+      .select({
+        id: socialAccounts.id,
+        platform: socialAccounts.platform,
+        name: socialAccounts.name,
+        accountId: socialAccounts.accountId,
+        accessToken: socialAccounts.accessToken,
+        refreshToken: socialAccounts.refreshToken,
+        tokenExpiresAt: socialAccounts.tokenExpiresAt,
+        pageAccessTokens: socialAccounts.pageAccessTokens,
+        webhookSubscriptions: socialAccounts.webhookSubscriptions,
+        tagIds: socialAccounts.tagIds,
+        contentPreferences: socialAccounts.contentPreferences,
+        schedulingRules: socialAccounts.schedulingRules,
+        performanceScore: socialAccounts.performanceScore,
+        lastOptimization: socialAccounts.lastOptimization,
+        followers: socialAccounts.followers,
+        connected: socialAccounts.connected,
+        lastPost: socialAccounts.lastPost,
+        engagement: socialAccounts.engagement,
+        lastSync: socialAccounts.lastSync,
+        isActive: socialAccounts.isActive,
+        createdAt: socialAccounts.createdAt,
+        updatedAt: socialAccounts.updatedAt
+      })
+      .from(socialAccounts)
+      .leftJoin(groupAccounts, eq(groupAccounts.socialAccountId, socialAccounts.id))
+      .where(and(eq(groupAccounts.groupId, groupId), eq(groupAccounts.isActive, true)))
+      .orderBy(desc(socialAccounts.createdAt));
   }
 }
 
