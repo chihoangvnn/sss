@@ -654,7 +654,24 @@ export function WorkerManagement() {
                   <AlertDescription>Failed to load workers</AlertDescription>
                 </Alert>
               )}
-              {workers && <WorkerList workers={workers} />}
+              {!workersLoading && !workersError && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Debug: Found {workers?.length || 0} workers
+                  </p>
+                  {workers && workers.length > 0 ? (
+                    <WorkerList workers={workers} />
+                  ) : (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No Workers Found</AlertTitle>
+                      <AlertDescription>
+                        No workers are currently registered. Workers will appear here when registered.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
