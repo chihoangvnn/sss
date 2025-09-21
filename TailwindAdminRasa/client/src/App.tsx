@@ -35,6 +35,7 @@ import TikTokBusiness from "@/pages/TikTokBusiness";
 import TikTokShop from "@/pages/TikTokShop";
 import Satellites from "@/pages/Satellites";
 import ApiManagement from "@/pages/ApiManagement";
+import WorkerManagement from "@/components/WorkerManagement";
 import NotFound from "@/pages/not-found";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SocialMediaHub } from "@/components/SocialMediaHub";
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/tiktok-shop" component={TikTokShop} />
       <Route path="/satellites" component={Satellites} />
       <Route path="/api-management" component={ApiManagement} />
+      <Route path="/worker-management" component={WorkerManagement} />
       <Route component={NotFound} />
     </Switch>
   );
