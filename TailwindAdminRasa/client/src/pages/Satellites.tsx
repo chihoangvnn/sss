@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Satellite, Rocket, BookOpen, Users2, Target, Clock, CheckCircle, Settings, Palette, Globe, Calendar, HelpCircle, Play } from 'lucide-react';
+import { Satellite, Rocket, BookOpen, Users2, Target, Clock, CheckCircle, Settings, Palette, Globe, Calendar, HelpCircle, Play, Link, User, ArrowRight } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
