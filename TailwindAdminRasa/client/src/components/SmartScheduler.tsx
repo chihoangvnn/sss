@@ -93,6 +93,7 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
   
   // Initialize content types based on default platform (Facebook defaults to all types)
   const [simpleContentTypes, setSimpleContentTypes] = useState<('image' | 'video' | 'text')[]>(['image', 'video', 'text']);
+  const [selectedSimpleTags, setSelectedSimpleTags] = useState<string[]>([]);
   const [simplePreviewData, setSimplePreviewData] = useState<any>(null);
   const [isGeneratingSimplePreview, setIsGeneratingSimplePreview] = useState(false);
 
@@ -170,6 +171,7 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
       startDate: string;
       endDate: string;
       contentTypes?: ('image' | 'video' | 'text')[];
+      selectedTags?: string[];
     }) => {
       const response = await fetch('/api/automation/simple/preview', {
         method: 'POST',
@@ -197,6 +199,7 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
       startDate: string;
       endDate: string;
       contentTypes?: ('image' | 'video' | 'text')[];
+      selectedTags?: string[];
     }) => {
       const response = await fetch('/api/automation/simple', {
         method: 'POST',
@@ -509,6 +512,64 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                 </div>
               </div>
 
+              {/* Tag Selection */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  Chọn Tags Nội Dung
+                  <span className="text-xs text-gray-500">(Chọn tags để lọc content)</span>
+                </label>
+                <div className="border border-gray-200 rounded-lg p-4 max-h-48 overflow-y-auto">
+                  {tags.length === 0 ? (
+                    <div className="text-center text-gray-500 py-4">
+                      Chưa có tags nào. Vui lòng tạo tags trong Tag Management.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {tags
+                        .filter((tag: UnifiedTag) => tag.isActive)
+                        .map((tag: UnifiedTag) => (
+                          <label 
+                            key={tag.id} 
+                            className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSimpleTags.includes(tag.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSimpleTags(prev => [...prev, tag.id]);
+                                } else {
+                                  setSelectedSimpleTags(prev => prev.filter(id => id !== tag.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                            />
+                            <div 
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: tag.color }}
+                            />
+                            <span className="text-sm font-medium text-gray-700 truncate">
+                              {tag.name}
+                            </span>
+                            {tag.platforms && tag.platforms.length > 0 && (
+                              <span className="text-xs text-gray-500 ml-auto">
+                                {tag.platforms.join(', ')}
+                              </span>
+                            )}
+                          </label>
+                        ))}
+                    </div>
+                  )}
+                </div>
+                
+                {selectedSimpleTags.length > 0 && (
+                  <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2">
+                    💡 Đã chọn {selectedSimpleTags.length} tags. Content sẽ được lọc theo những tags này.
+                  </div>
+                )}
+              </div>
+
               {/* Time Period */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
@@ -545,7 +606,8 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                       numberOfPages: numberOfPages,
                       startDate,
                       endDate,
-                      contentTypes: simpleContentTypes
+                      contentTypes: simpleContentTypes,
+                      selectedTags: selectedSimpleTags
                     });
                   }}
                   disabled={simpleAutomationMutation.isPending}
@@ -567,7 +629,8 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                       numberOfPages: numberOfPages,
                       startDate,
                       endDate,
-                      contentTypes: simpleContentTypes
+                      contentTypes: simpleContentTypes,
+                      selectedTags: selectedSimpleTags
                     });
                   }}
                   disabled={isGeneratingSimplePreview}

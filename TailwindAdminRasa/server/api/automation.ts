@@ -24,7 +24,7 @@ const router = Router();
 // Simple automation endpoint - tự động tạo lịch đăng dựa trên platform, số bài, số page
 router.post('/simple', requireAuth, async (req, res) => {
   try {
-    const { platform, numberOfPosts, numberOfPages, startDate, endDate, contentTypes } = req.body;
+    const { platform, numberOfPosts, numberOfPages, startDate, endDate, contentTypes, selectedTags } = req.body;
     
     // Validate input
     if (!platform || !numberOfPosts || !numberOfPages || !startDate || !endDate) {
@@ -54,7 +54,20 @@ router.post('/simple', requireAuth, async (req, res) => {
     // 3. Get content library
     let contentLibrary = await storage.getContentLibraryItems();
     
-    // 3.1. Filter by content types if specified
+    // 3.1. Filter by selected tags if specified
+    if (selectedTags && selectedTags.length > 0) {
+      contentLibrary = contentLibrary.filter((content: ContentLibrary) => {
+        // Check if content has any of the selected tags
+        if (!content.tagIds || content.tagIds.length === 0) {
+          return false; // Exclude content without tags when tags are specified
+        }
+        
+        // Check if any of the content's tags match the selected tags
+        return content.tagIds.some(tagId => selectedTags.includes(tagId));
+      });
+    }
+    
+    // 3.2. Filter by content types if specified
     if (contentTypes && contentTypes.length > 0) {
       contentLibrary = contentLibrary.filter((content: ContentLibrary) => {
         // Check if content matches any of the requested types
@@ -91,8 +104,12 @@ router.post('/simple', requireAuth, async (req, res) => {
     }
     
     if (contentLibrary.length === 0) {
+      const filters = [];
+      if (selectedTags && selectedTags.length > 0) filters.push(`selected tags: ${selectedTags.length} tags`);
+      if (contentTypes && contentTypes.length > 0) filters.push(`content types: ${contentTypes.join(', ')}`);
+      
       return res.status(400).json({ 
-        error: `No content found matching the criteria for platform: ${platform}${contentTypes ? ' and content types: ' + contentTypes.join(', ') : ''}` 
+        error: `No content found matching the criteria for platform: ${platform}${filters.length > 0 ? ' and ' + filters.join(' and ') : ''}` 
       });
     }
     
@@ -252,7 +269,7 @@ router.post('/simple', requireAuth, async (req, res) => {
 // Preview automation endpoint
 router.post('/simple/preview', requireAuth, async (req, res) => {
   try {
-    const { platform, numberOfPosts, numberOfPages, startDate, endDate, contentTypes } = req.body;
+    const { platform, numberOfPosts, numberOfPages, startDate, endDate, contentTypes, selectedTags } = req.body;
     
     const storage = req.app.get('storage') as DatabaseStorage;
     
@@ -267,6 +284,19 @@ router.post('/simple/preview', requireAuth, async (req, res) => {
     
     const selectedAccounts = accounts.slice(0, numberOfPages);
     let contentLibrary = await storage.getContentLibraryItems();
+    
+    // Apply tag filtering for preview (same logic as main endpoint)
+    if (selectedTags && selectedTags.length > 0) {
+      contentLibrary = contentLibrary.filter((content: ContentLibrary) => {
+        // Check if content has any of the selected tags
+        if (!content.tagIds || content.tagIds.length === 0) {
+          return false; // Exclude content without tags when tags are specified
+        }
+        
+        // Check if any of the content's tags match the selected tags
+        return content.tagIds.some(tagId => selectedTags.includes(tagId));
+      });
+    }
     
     // Apply content type filtering for preview
     if (contentTypes && contentTypes.length > 0) {
