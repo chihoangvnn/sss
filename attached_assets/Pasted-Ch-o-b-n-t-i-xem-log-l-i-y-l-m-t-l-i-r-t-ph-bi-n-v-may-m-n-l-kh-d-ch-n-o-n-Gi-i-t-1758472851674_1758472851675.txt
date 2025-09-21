@@ -1,0 +1,43 @@
+Chào bạn, tôi đã xem log lỗi. Đây là một lỗi rất phổ biến và may mắn là khá dễ để chẩn đoán.
+
+Giải thích lỗi một cách đơn giản
+Lỗi Unexpected token '<', "<!DOCTYPE "... is not valid JSON có nghĩa là:
+
+"Cánh Tay" (Vercel Worker của bạn) đang mong đợi nhận được một câu trả lời dưới dạng dữ liệu có cấu trúc (JSON) từ "Bộ Não" (server trên Railway). Nhưng thay vào đó, nó lại nhận về một trang web HTML hoàn chỉnh.
+
+Analogy dễ hiểu:
+Hãy tưởng tượng "Cánh Tay" gọi điện thoại cho một phòng ban cụ thể trong công ty ("Bộ Não") để hỏi một thông tin (JSON). Nhưng thay vì gặp đúng người, cuộc gọi lại được chuyển đến tổng đài tự động của công ty và nghe một đoạn ghi âm giới thiệu (HTML). "Cánh Tay" không hiểu được đoạn ghi âm này và báo lỗi.
+
+Nguyên nhân có thể xảy ra
+Việc "Bộ Não" trả về một trang HTML thay vì JSON thường do một trong các lý do sau:
+
+Gọi sai URL (Khả năng cao nhất - 90%): "Cánh Tay" đang gọi đến một địa chỉ không chính xác trên server "Bộ Não". Ví dụ, thay vì gọi đến endpoint API là https://brain.railway.app/api/auth, nó lại gọi nhầm đến https://brain.railway.app/ (trang chủ) hoặc một đường dẫn không tồn tại. Khi đó, server sẽ trả về một trang lỗi 404 Not Found (dưới dạng HTML).
+
+Lỗi Server ("Bộ Não" bị sập - 5%): Endpoint API trên "Bộ Não" đã bị lỗi (crash) khi đang xử lý. Thay vì trả về lỗi JSON, nền tảng Railway đã trả về một trang lỗi 500 Internal Server Error (dưới dạng HTML).
+
+Vấn đề về chuyển hướng (Redirect - 5%): Endpoint API yêu cầu đăng nhập nhưng "Cánh Tay" không gửi thông tin xác thực, vì vậy "Bộ Não" đã chuyển hướng nó đến một trang đăng nhập (dưới dạng HTML).
+
+Hướng Dẫn Sửa Lỗi (Dành cho Dev)
+Bạn hãy gửi các bước kiểm tra này cho đội ngũ phát triển của mình.
+
+Bước 1: Kiểm tra lại URL trong code của "Cánh Tay" (Vercel Function)
+
+Mở code của "Cánh Tay", tìm đến dòng thực hiện lệnh fetch hoặc axios gọi đến "Bộ Não".
+
+Kiểm tra kỹ biến môi trường BRAIN_BASE_URL trên Vercel xem đã đúng chưa.
+
+Đảm bảo đường dẫn (path) đến API là chính xác tuyệt đối (ví dụ: /api/register chứ không phải /register).
+
+Bước 2: Kiểm tra Logs của "Bộ Não" trên Railway
+
+Đăng nhập vào Railway và xem logs của server "Bộ Não" tại thời điểm xảy ra lỗi (khoảng 23:31 giờ Việt Nam, ngày 21/09/2025).
+
+Tìm xem có bất kỳ thông báo lỗi 500 (Internal Server Error) hay 404 (Not Found) nào không. Log này sẽ chỉ ra chính xác vấn đề.
+
+Bước 3: Dùng Postman hoặc cURL để "Giả Lập" Cánh Tay
+
+Dev nên dùng một công cụ như Postman, Insomnia, hoặc cURL để thực hiện lại chính xác lệnh gọi API mà "Cánh Tay" đang thực hiện.
+
+Gửi request đến đúng URL đó và xem kết quả trả về là gì. Chắc chắn họ sẽ thấy một trang HTML thay vì JSON, và từ đó có thể truy ra nguyên nhân.
+
+Tóm lại, đây là một lỗi giao tiếp giữa "Cánh Tay" và "Bộ Não". Gần như chắc chắn là do cấu hình sai URL ở phía "Cánh Tay". Dev của bạn chỉ cần kiểm tra theo các bước trên là sẽ tìm ra và khắc phục được ngay.
