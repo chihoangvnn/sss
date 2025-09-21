@@ -84,6 +84,12 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
   const [previewData, setPreviewData] = useState<ContentMatch[]>([]);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [expandedFanpage, setExpandedFanpage] = useState<string | null>(null);
+  
+  // Simple Automation States
+  const [automationMode, setAutomationMode] = useState<'smart' | 'simple'>('smart');
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('facebook');
+  const [numberOfPosts, setNumberOfPosts] = useState<number>(10);
+  const [numberOfPages, setNumberOfPages] = useState<number>(3);
 
   // API Queries
   const { data: socialAccounts = [] } = useQuery({
@@ -142,6 +148,29 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
         body: JSON.stringify(config),
       });
       if (!response.ok) throw new Error('Failed to schedule posts');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-posts'] });
+      onClose();
+    },
+  });
+
+  // Simple Automation Mutation
+  const simpleAutomationMutation = useMutation({
+    mutationFn: async (config: {
+      platform: string;
+      numberOfPosts: number;
+      numberOfPages: number;
+      startDate: string;
+      endDate: string;
+    }) => {
+      const response = await fetch('/api/content/automation/simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      if (!response.ok) throw new Error('Failed to create automation');
       return response.json();
     },
     onSuccess: () => {
@@ -254,32 +283,189 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
           </button>
         </div>
 
-        {/* Progress Steps */}
+        {/* Mode Selection */}
         <div className="flex items-center justify-center p-4 bg-gray-50 border-b">
           <div className="flex items-center gap-4">
-            {[
-              { step: 1, label: 'Tags & Content', icon: Tag },
-              { step: 2, label: 'Fanpage Selection', icon: Users },
-              { step: 3, label: 'Schedule Setup', icon: Calendar },
-              { step: 4, label: 'Preview & Confirm', icon: Eye },
-            ].map(({ step, label, icon: Icon }) => (
-              <div key={step} className="flex items-center gap-2">
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-                  currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </div>
-                {step < 4 && <ChevronRight className="w-4 h-4 text-gray-400" />}
-              </div>
-            ))}
+            <button
+              onClick={() => setAutomationMode('smart')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                automationMode === 'smart'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Brain className="w-4 h-4 inline mr-2" />
+              Smart Mode (Advanced)
+            </button>
+            <button
+              onClick={() => setAutomationMode('simple')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                automationMode === 'simple'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Zap className="w-4 h-4 inline mr-2" />
+              Simple Mode (Auto)
+            </button>
           </div>
         </div>
+        
+        {/* Progress Steps for Smart Mode */}
+        {automationMode === 'smart' && (
+          <div className="flex items-center justify-center p-4 bg-gray-50 border-b">
+            <div className="flex items-center gap-4">
+              {[
+                { step: 1, label: 'Tags & Content', icon: Tag },
+                { step: 2, label: 'Fanpage Selection', icon: Users },
+                { step: 3, label: 'Schedule Setup', icon: Calendar },
+                { step: 4, label: 'Preview & Confirm', icon: Eye },
+              ].map(({ step, label, icon: Icon }) => (
+                <div key={step} className="flex items-center gap-2">
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                    currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </div>
+                  {step < 4 && <ChevronRight className="w-4 h-4 text-gray-400" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Step 1: Tags & Content Selection */}
-          {currentStep === 1 && (
+          {/* Simple Mode Interface */}
+          {automationMode === 'simple' && (
+            <div className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-green-800 mb-2 flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Tự Động Lên Lịch Đăng Bài
+                </h3>
+                <p className="text-green-700 text-sm">
+                  Hệ thống sẽ tự động chọn content từ thư viện dựa trên tag matching và respect group limits
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Platform Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Chọn Nền Tảng
+                  </label>
+                  <select
+                    value={selectedPlatform}
+                    onChange={(e) => setSelectedPlatform(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="tiktok-business">TikTok Business</option>
+                    <option value="tiktok-shop">TikTok Shop</option>
+                    <option value="all">Tất Cả Platforms</option>
+                  </select>
+                </div>
+
+                {/* Number of Posts */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Số Bài Cần Đăng
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={numberOfPosts}
+                    onChange={(e) => setNumberOfPosts(parseInt(e.target.value) || 1)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Ví dụ: 10"
+                  />
+                </div>
+
+                {/* Number of Pages */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Số Page Cần Đăng
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={numberOfPages}
+                    onChange={(e) => setNumberOfPages(parseInt(e.target.value) || 1)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Ví dụ: 3"
+                  />
+                </div>
+              </div>
+
+              {/* Time Period */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Từ Ngày
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Đến Ngày
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={() => {
+                    simpleAutomationMutation.mutate({
+                      platform: selectedPlatform,
+                      numberOfPosts: numberOfPosts,
+                      numberOfPages: numberOfPages,
+                      startDate,
+                      endDate
+                    });
+                  }}
+                  disabled={simpleAutomationMutation.isPending}
+                  className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {simpleAutomationMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Zap className="w-5 h-5" />
+                  )}
+                  {simpleAutomationMutation.isPending ? 'Đang Tạo...' : 'Tạo Lịch Tự Động'}
+                </button>
+                <button
+                  onClick={() => {
+                    // Generate preview for simple mode
+                    console.log('Preview simple automation');
+                  }}
+                  className="px-6 py-3 border border-green-600 text-green-600 rounded-lg font-medium hover:bg-green-50 transition-colors flex items-center gap-2"
+                >
+                  <Eye className="w-5 h-5" />
+                  Preview
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Smart Mode - Step 1: Tags & Content Selection */}
+          {automationMode === 'smart' && currentStep === 1 && (
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">

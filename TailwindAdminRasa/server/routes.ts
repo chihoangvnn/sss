@@ -35,6 +35,7 @@ import facebookAppsRouter from './api/facebook-apps';
 import aiContentRouter from './api/ai-content';
 import analyticsRouter from './api/analytics';
 import limitManagementRouter from './api/limit-management';
+import automationRouter from './api/automation';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3791,6 +3792,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.use("/api/analytics", analyticsRouter);
   app.use("/api/limits", limitManagementRouter);
+
+  // ==========================================
+  // AUTOMATION API ROUTES
+  // ==========================================
+  app.use("/api/automation", automationRouter);
 
   // ==========================================
   // API CONFIGURATIONS MANAGEMENT ROUTES
