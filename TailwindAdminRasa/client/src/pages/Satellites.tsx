@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Satellite, Rocket, BookOpen, Users2, Target } from 'lucide-react';
+import { Satellite, Rocket, BookOpen, Users2, Target, Clock, CheckCircle } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import SatelliteHub from '../components/satellites/SatelliteHub';
+import SatelliteHub from '@/components/satellites/SatelliteHub';
 import { 
   BeautyContentSatellite,
   FitnessSportsSatellite,
@@ -18,6 +19,8 @@ import {
 export default function Satellites() {
   const [activeView, setActiveView] = useState<'hub' | 'templates' | 'deploy'>('hub');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploySuccess, setDeploySuccess] = useState(false);
 
   const satelliteConfigs = getSatelliteConfigsByCategory();
 
@@ -28,6 +31,61 @@ export default function Satellites() {
   const handleDeployTemplate = (templateName: string) => {
     setSelectedTemplate(templateName);
     setActiveView('deploy');
+    setDeploySuccess(false);
+  };
+
+  // Deployment mutation
+  const deployMutation = useMutation({
+    mutationFn: async (templateData: any) => {
+      const response = await fetch('/api/satellites/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateName: selectedTemplate,
+          templateData,
+          timestamp: new Date().toISOString()
+        })
+      });
+      if (!response.ok) throw new Error('Deployment failed');
+      return response.json();
+    },
+    onSuccess: () => {
+      setDeploySuccess(true);
+      setIsDeploying(false);
+      // Auto redirect back to hub after 3 seconds
+      setTimeout(() => {
+        setActiveView('hub');
+        setSelectedTemplate(null);
+        setDeploySuccess(false);
+      }, 3000);
+    },
+    onError: () => {
+      setIsDeploying(false);
+    }
+  });
+
+  const handleActualDeploy = async () => {
+    if (!selectedTemplate || isDeploying) return;
+    
+    setIsDeploying(true);
+    // Simulate deployment with template configuration
+    const templateConfig = satelliteConfigs.content.find(c => c.name === selectedTemplate) ||
+                          satelliteConfigs.customer_pipeline.find(c => c.name === selectedTemplate);
+    
+    deployMutation.mutate({
+      template: selectedTemplate,
+      config: templateConfig,
+      settings: {
+        autoStart: true,
+        contentFiltering: 'Nội dung',
+        platforms: ['facebook', 'instagram'],
+      }
+    });
+  };
+
+  const handleSaveDraft = () => {
+    console.log('Saving as draft:', selectedTemplate);
+    // TODO: Implement draft saving functionality
   };
 
   const renderTemplateView = () => (
@@ -197,11 +255,20 @@ export default function Satellites() {
         </div>
 
         <div className="flex items-center gap-4 pt-4 border-t">
-          <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
-            <Rocket className="w-4 h-4" />
-            Deploy Satellite
+          <Button 
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            onClick={handleActualDeploy}
+            disabled={isDeploying || deploySuccess}
+          >
+            {isDeploying ? (
+              <><Clock className="w-4 h-4 animate-spin" />Deploying...</>
+            ) : deploySuccess ? (
+              <><CheckCircle className="w-4 h-4" />Deployed!</>
+            ) : (
+              <><Rocket className="w-4 h-4" />Deploy Satellite</>
+            )}
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleSaveDraft} disabled={isDeploying}>
             Save as Draft
           </Button>
         </div>
