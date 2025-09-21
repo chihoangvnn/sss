@@ -38,7 +38,7 @@ import limitManagementRouter from './api/limit-management';
 import automationRouter from './api/automation';
 import satellitesRouter from './api/satellites';
 import postsRouter from './api/posts';
-import workersRouter from './api/worker-management';
+import workersRouter from './api/workers';
 import regionAssignmentRouter from './api/region-assignment';
 import jobCallbacksRouter from './api/job-callbacks';
 

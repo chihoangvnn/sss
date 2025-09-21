@@ -5,8 +5,11 @@ import JobDistributionEngine from '../services/job-distribution-engine';
 import JobClaimWorker from '../services/job-claim-worker';
 import StartupService from '../services/startup';
 import { storage } from '../storage';
+import { WorkerManagementService } from '../services/worker-management';
+import type { WorkerPlatform } from '@shared/schema';
 
 const router = express.Router();
+const workerManager = WorkerManagementService.getInstance();
 
 // JWT secret for worker authentication (REQUIRED in production)
 const WORKER_JWT_SECRET = (() => {
@@ -59,7 +62,36 @@ const authenticateWorker = (req: express.Request, res: express.Response, next: e
 };
 
 /**
- * Generate worker authentication token
+ * 🚀 ENHANCED: Register new worker with full platform capabilities
+ * POST /api/workers/register  
+ * Body: { workerId, name, platforms[], capabilities[], region, deploymentPlatform, endpointUrl, registrationSecret }
+ */
+router.post('/register', async (req, res) => {
+  try {
+    const registrationData = req.body;
+    const result = await workerManager.registerWorker(registrationData);
+    
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    
+    res.json({
+      success: true,
+      worker: result.worker,
+      authToken: result.authToken,
+      message: 'Worker registered successfully'
+    });
+  } catch (error) {
+    console.error('Worker registration error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to register worker'
+    });
+  }
+});
+
+/**
+ * Generate worker authentication token (Legacy endpoint for existing workers)
  * POST /api/workers/auth
  * Body: { workerId, region, platforms[], registrationSecret }
  */
@@ -515,7 +547,7 @@ router.post('/jobs/:jobId/fail', authenticateWorker, async (req, res) => {
 });
 
 /**
- * Get worker status and stats
+ * 🔍 ENHANCED: Get comprehensive worker status and health metrics  
  * GET /api/workers/status
  */
 router.get('/status', authenticateWorker, async (req, res) => {
@@ -559,6 +591,100 @@ router.get('/status', authenticateWorker, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get worker status'
+    });
+  }
+});
+
+/**
+ * 🏥 Worker Health Ping 
+ * POST /api/workers/health
+ * Body: { status, systemMetrics?, platformStatus? }
+ */
+router.post('/health', authenticateWorker, async (req, res) => {
+  try {
+    const worker = req.worker!;
+    const healthData = req.body;
+    
+    const result = await workerManager.updateWorkerHealth(worker.workerId, healthData);
+    
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    
+    res.json({
+      success: true,
+      workerId: worker.workerId,
+      status: healthData.status,
+      checkedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Worker health ping error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update worker health'
+    });
+  }
+});
+
+/**
+ * 📊 Get Worker Performance Metrics (Admin endpoint)
+ * GET /api/workers/:workerId/metrics
+ */
+router.get('/:workerId/metrics', async (req, res) => {
+  try {
+    const { workerId } = req.params;
+    const metrics = await workerManager.getWorkerMetrics(workerId);
+    
+    if (!metrics) {
+      return res.status(404).json({
+        success: false,
+        error: 'Worker not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      metrics,
+      retrievedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Worker metrics error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve worker metrics'
+    });
+  }
+});
+
+/**
+ * 🏗️ List All Workers (Admin endpoint)
+ * GET /api/workers
+ * Query: ?platform=facebook&region=us-east-1&status=active
+ */
+router.get('/', async (req, res) => {
+  try {
+    const { platform, region, status, isOnline } = req.query;
+    
+    const filters: any = {};
+    if (platform) filters.platform = platform as WorkerPlatform;
+    if (region) filters.region = region as string;
+    if (status) filters.status = status as string;  
+    if (isOnline !== undefined) filters.isOnline = isOnline === 'true';
+    
+    const workers = await workerManager.listWorkers(filters);
+    
+    res.json({
+      success: true,
+      workers,
+      totalCount: workers.length,
+      filters,
+      retrievedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Workers list error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve workers'
     });
   }
 });

@@ -13,6 +13,8 @@ import { storage } from '../storage';
 import workerStorage from '../storage/worker-storage';
 import QueueService from './queue';
 import { SUPPORTED_REGIONS } from './regions';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import type { 
   Worker, 
   InsertWorker, 
@@ -104,6 +106,43 @@ export class WorkerManagementService {
       WorkerManagementService.instance = new WorkerManagementService();
     }
     return WorkerManagementService.instance;
+  }
+
+  /**
+   * 🔐 Generate secure authentication token for worker
+   */
+  private generateWorkerAuthToken(workerId: string): { token: string; expiresAt: Date } {
+    const secret = process.env.JWT_SECRET || 'fallback-dev-secret-change-in-production';
+    const expiresIn = '30d'; // 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    
+    const payload = {
+      workerId,
+      type: 'worker_auth',
+      iat: Math.floor(Date.now() / 1000)
+    };
+    
+    const token = jwt.sign(payload, secret, { expiresIn });
+    
+    return { token, expiresAt };
+  }
+
+  /**
+   * 🔐 Verify worker authentication token
+   */
+  private verifyWorkerAuthToken(token: string): { valid: boolean; workerId?: string; error?: string } {
+    try {
+      const secret = process.env.JWT_SECRET || 'fallback-dev-secret-change-in-production';
+      const decoded = jwt.verify(token, secret) as any;
+      
+      if (decoded.type !== 'worker_auth') {
+        return { valid: false, error: 'Invalid token type' };
+      }
+      
+      return { valid: true, workerId: decoded.workerId };
+    } catch (error) {
+      return { valid: false, error: 'Token verification failed' };
+    }
   }
 
   constructor() {
