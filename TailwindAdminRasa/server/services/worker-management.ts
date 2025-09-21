@@ -202,7 +202,7 @@ export class WorkerManagementService {
         status: 'active',
         isOnline: true,
         lastPingAt: new Date(),
-        // registrationSecret: Do not store the secret in the database for security
+        registrationSecret: registrationData.registrationSecret, // Store secret as required by schema
         authToken,
         tokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         tags: registrationData.tags || [],
