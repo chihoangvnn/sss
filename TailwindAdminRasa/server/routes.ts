@@ -41,6 +41,7 @@ import postsRouter from './api/posts';
 import workersRouter from './api/workers';
 import regionAssignmentRouter from './api/region-assignment';
 import jobCallbacksRouter from './api/job-callbacks';
+import systemHealthRouter from './api/system-health';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3827,6 +3828,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JOB CALLBACK & RESULT PROCESSING ROUTES
   // ==========================================
   app.use("/api/callbacks", jobCallbacksRouter);
+
+  // ==========================================
+  // SYSTEM HEALTH MONITORING API ROUTES  
+  // ==========================================
+  app.use("/api/health", systemHealthRouter);
 
   // ==========================================
   // API CONFIGURATIONS MANAGEMENT ROUTES

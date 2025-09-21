@@ -6,10 +6,12 @@ import JobClaimWorker from '../services/job-claim-worker';
 import StartupService from '../services/startup';
 import { storage } from '../storage';
 import { WorkerManagementService } from '../services/worker-management';
+import JobDispatchService from '../services/job-dispatch-service';
 import type { WorkerPlatform } from '@shared/schema';
 
 const router = express.Router();
 const workerManager = WorkerManagementService.getInstance();
+const jobDispatcher = JobDispatchService.getInstance();
 
 // JWT secret for worker authentication (REQUIRED in production)
 const WORKER_JWT_SECRET = (() => {
@@ -26,6 +28,32 @@ const WORKER_REGISTRATION_SECRET = (() => {
   }
   return process.env.WORKER_REGISTRATION_SECRET || 'dev-registration-secret-change-in-production';
 })();
+
+// Dispatch secret for job signing (REQUIRED in production)
+const WORKER_DISPATCH_SECRET = (() => {
+  if (process.env.NODE_ENV === 'production' && !process.env.WORKER_DISPATCH_SECRET) {
+    throw new Error('WORKER_DISPATCH_SECRET environment variable must be set in production');
+  }
+  return process.env.WORKER_DISPATCH_SECRET || 'dev-dispatch-secret-change-in-production';
+})();
+
+/**
+ * 🔐 Admin authentication middleware for worker management
+ */
+const requireAuth = (req: any, res: any, next: any) => {
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Unauthorized. Please log in to access worker management.",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  next();
+};
 
 /**
  * Middleware to authenticate worker requests
@@ -708,6 +736,129 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve workers'
+    });
+  }
+});
+
+/**
+ * 🚀 Dispatch Job to Vercel Function Worker (ADMIN ONLY)
+ * POST /api/workers/dispatch-job
+ * Body: { jobId, platform, jobType, priority, targetAccount, content, callbacks }
+ */
+router.post('/dispatch-job', requireAuth, async (req, res) => {
+  try {
+    const jobPayload = {
+      ...req.body,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+    };
+    
+    const result = await jobDispatcher.dispatchJob(jobPayload);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        result,
+        dispatchedAt: new Date().toISOString()
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Job dispatch endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to dispatch job'
+    });
+  }
+});
+
+/**
+ * 📞 Handle Job Callbacks from Vercel Function Workers (SECURED)
+ * POST /api/workers/callback
+ * Body: { jobId, workerId, status, result?, error?, progress?, signature }
+ */
+router.post('/callback', async (req, res) => {
+  try {
+    const callbackData = req.body;
+    
+    // 🔐 SECURITY: Verify callback signature
+    const signature = req.headers['x-callback-signature'] as string;
+    const timestamp = req.headers['x-callback-timestamp'] as string;
+    
+    if (!signature || !timestamp) {
+      return res.status(401).json({
+        success: false,
+        error: 'Missing callback signature or timestamp'
+      });
+    }
+    
+    // Verify timestamp is recent (within 5 minutes)
+    const requestTime = parseInt(timestamp);
+    const currentTime = Date.now();
+    if (Math.abs(currentTime - requestTime) > 300000) { // 5 minutes
+      return res.status(401).json({
+        success: false,
+        error: 'Callback timestamp is too old'
+      });
+    }
+    
+    // Verify HMAC signature
+    const secret = WORKER_DISPATCH_SECRET;
+    const expectedSignature = require('crypto')
+      .createHmac('sha256', secret)
+      .update(JSON.stringify(callbackData) + timestamp)
+      .digest('hex');
+    
+    if (signature !== expectedSignature) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid callback signature'
+      });
+    }
+    
+    const result = await jobDispatcher.handleJobCallback(callbackData);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Callback processed successfully'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Callback handling error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process callback'
+    });
+  }
+});
+
+/**
+ * 📊 Get Job Dispatch Statistics
+ * GET /api/workers/dispatch-stats
+ */
+router.get('/dispatch-stats', async (req, res) => {
+  try {
+    const stats = await jobDispatcher.getDispatchStats();
+    
+    res.json({
+      success: true,
+      stats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Dispatch stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve dispatch statistics'
     });
   }
 });
