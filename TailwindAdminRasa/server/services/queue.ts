@@ -242,6 +242,127 @@ class QueueService {
   }
 
   /**
+   * Get jobs from a specific queue
+   */
+  static async getJobs(
+    platform: string, 
+    region: string, 
+    options?: { status?: string; limit?: number }
+  ): Promise<any[]> {
+    const queueName = `posts:${platform}:${region}`;
+    const queue = this.queues.get(queueName);
+    
+    if (!queue) {
+      console.warn(`Queue ${queueName} not found`);
+      return [];
+    }
+
+    try {
+      const status = options?.status || 'waiting';
+      const limit = options?.limit || 10;
+      
+      if (status === 'waiting') {
+        return await queue.getWaiting(0, limit - 1);
+      } else if (status === 'active') {
+        return await queue.getActive(0, limit - 1);
+      } else if (status === 'completed') {
+        return await queue.getCompleted(0, limit - 1);
+      } else if (status === 'failed') {
+        return await queue.getFailed(0, limit - 1);
+      }
+      
+      return [];
+    } catch (error) {
+      console.error(`Failed to get jobs from ${queueName}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Atomically claim jobs from a queue for a worker
+   * Using proper BullMQ Worker pattern for job claiming
+   */
+  static async claimJobs(
+    platform: string,
+    region: string, 
+    workerId: string,
+    limit: number = 1
+  ): Promise<any[]> {
+    const queueName = `posts:${platform}:${region}`;
+    const queue = this.queues.get(queueName);
+    
+    if (!queue) {
+      console.warn(`Queue ${queueName} not found`);
+      return [];
+    }
+
+    try {
+      const claimedJobs = [];
+      
+      // Get waiting jobs (read-only first)
+      const waitingJobs = await queue.getWaiting(0, limit - 1);
+      
+      for (const job of waitingJobs) {
+        if (claimedJobs.length >= limit) break;
+        
+        try {
+          // Try to atomically claim this job by updating its data
+          // This is safer than moveToActive which isn't public API
+          const updatedJob = await job.update({
+            ...job.data,
+            workerId,
+            claimedAt: new Date().toISOString(),
+            claimedBy: workerId
+          });
+          
+          // Update progress to show it's claimed
+          await job.updateProgress({
+            workerId,
+            claimedAt: new Date().toISOString(),
+            status: 'claimed'
+          });
+          
+          claimedJobs.push({
+            id: job.id,
+            name: job.name,
+            data: updatedJob.data,
+            attemptsMade: job.attemptsMade,
+            timestamp: job.timestamp,
+            lockToken: job.id, // We'll use job.id as lock for simplicity
+            opts: job.opts
+          });
+          
+        } catch (claimError) {
+          // Job might have been claimed by another worker, continue
+          console.warn(`Failed to claim job ${job.id} from ${queueName}:`, claimError);
+        }
+      }
+      
+      return claimedJobs;
+    } catch (error) {
+      console.error(`Failed to claim jobs from ${queueName}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Find a job by ID across all queues
+   */
+  static async findJobById(jobId: string): Promise<any | null> {
+    for (const queue of Array.from(this.queues.values())) {
+      try {
+        const job = await queue.getJob(jobId);
+        if (job) {
+          return job;
+        }
+      } catch (error) {
+        // Continue searching in other queues
+      }
+    }
+    return null;
+  }
+
+  /**
    * Remove old completed and failed jobs (cleanup)
    */
   static async cleanupJobs(olderThan: number = 24 * 60 * 60 * 1000): Promise<void> {

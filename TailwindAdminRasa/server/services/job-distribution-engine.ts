@@ -126,28 +126,15 @@ class JobDistributionEngine {
     scheduledPost: ScheduledPost,
     socialAccount: SocialAccount
   ): Promise<PostJobPayload> {
-    // Generate page access token for the specific account
-    let pageAccessToken: string | undefined;
-    
-    if (scheduledPost.platform === 'facebook' && socialAccount.pageAccessTokens) {
-      // Get page access token from stored tokens
-      const pageTokens = socialAccount.pageAccessTokens as any;
-      if (Array.isArray(pageTokens)) {
-        // Handle array format
-        const tokenObj = pageTokens.find((token: any) => token.pageId === socialAccount.accountId);
-        pageAccessToken = tokenObj?.accessToken;
-      } else {
-        // Handle object format
-        pageAccessToken = pageTokens[socialAccount.accountId] || pageTokens.default;
-      }
-    }
+    // DO NOT include credentials in job payload for security
+    // Credentials will be fetched via /api/workers/credentials when needed
 
     return {
       jobId: uuidv4(),
       scheduledPostId: scheduledPost.id,
       platform: scheduledPost.platform as 'facebook' | 'instagram' | 'twitter' | 'tiktok',
       accountId: socialAccount.accountId,
-      region: 'default', // Will be set by enqueuePost
+      region: region, // Set to computed region
       content: {
         caption: scheduledPost.caption,
         hashtags: (scheduledPost.hashtags as string[]) || [],
@@ -155,10 +142,10 @@ class JobDistributionEngine {
       },
       targetAccount: {
         id: socialAccount.accountId,
-        name: socialAccount.name,
-        pageAccessToken
+        name: socialAccount.name
+        // pageAccessToken REMOVED for security - fetch via /credentials endpoint
       },
-      idempotencyKey: `${scheduledPost.id}-${Date.now()}`,
+      idempotencyKey: `${scheduledPost.id}`, // Stable key for deduplication
       attempt: 1,
       maxRetries: 3,
       scheduledTime: typeof scheduledPost.scheduledTime === 'string' 

@@ -38,6 +38,7 @@ import limitManagementRouter from './api/limit-management';
 import automationRouter from './api/automation';
 import satellitesRouter from './api/satellites';
 import postsRouter from './api/posts';
+import workersRouter from './api/workers';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3809,6 +3810,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POSTS API ROUTES (Unified Scheduling)
   // ==========================================
   app.use("/api/posts", postsRouter);
+
+  // ==========================================
+  // WORKER COMMUNICATION API ROUTES
+  // ==========================================
+  app.use("/api/workers", workersRouter);
 
   // ==========================================
   // API CONFIGURATIONS MANAGEMENT ROUTES
