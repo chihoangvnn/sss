@@ -1,6 +1,7 @@
 import { DatabaseStorage } from '../storage';
 import { facebookPostingService } from './facebook-posting-service';
 import { ScheduledPost, ContentAsset, SocialAccount, ContentLibrary } from '../../shared/schema';
+import { jobOrchestrator } from './job-orchestrator';
 
 export interface PostJobResult {
   success: boolean;
@@ -82,6 +83,7 @@ export class PostScheduler {
 
   /**
    * Main method to process all scheduled posts
+   * Enhanced to work with Job Orchestrator campaigns
    */
   private async processScheduledPosts(): Promise<void> {
     try {
@@ -93,8 +95,28 @@ export class PostScheduler {
 
       console.log(`📅 Found ${scheduledPosts.length} posts ready to publish`);
 
-      // Process each post
-      for (const post of scheduledPosts) {
+      // Separate orchestrator-managed and regular posts
+      const orchestratorPosts = scheduledPosts.filter(post => 
+        post.analytics && (post.analytics as any).orchestratorManaged
+      );
+      const regularPosts = scheduledPosts.filter(post => 
+        !post.analytics || !(post.analytics as any).orchestratorManaged
+      );
+
+      console.log(`🎭 Orchestrator posts: ${orchestratorPosts.length}, Regular posts: ${regularPosts.length}`);
+
+      // Process orchestrator-managed posts with campaign tracking
+      for (const post of orchestratorPosts) {
+        try {
+          await this.processOrchestratorPost(post);
+        } catch (error) {
+          console.error(`❌ Failed to process orchestrator post ${post.id}:`, error);
+          await this.handleOrchestratorPostFailure(post, error as Error);
+        }
+      }
+
+      // Process regular posts
+      for (const post of regularPosts) {
         try {
           await this.processPost(post);
         } catch (error) {
@@ -123,6 +145,55 @@ export class PostScheduler {
       post.status === 'scheduled' && 
       (post.retryCount || 0) < this.maxRetries
     );
+  }
+
+  /**
+   * Process a single orchestrator-managed post with campaign tracking
+   */
+  private async processOrchestratorPost(post: ScheduledPost): Promise<void> {
+    console.log(`🎭 Processing orchestrator post ${post.id} for platform ${post.platform}`);
+    
+    const campaignId = (post.analytics as any)?.orchestrationPlan;
+    const assignedWorker = (post.analytics as any)?.assignedWorker;
+    
+    // Update status to 'posting' to prevent duplicate processing
+    await this.storage.updateScheduledPostStatus(post.id, 'posting');
+
+    try {
+      const result = await this.executePostInternal(post);
+      
+      if (result.success) {
+        // Update post as completed
+        await this.storage.updateScheduledPost(post.id, {
+          status: 'posted',
+          publishedAt: new Date(),
+          analytics: {
+            ...post.analytics,
+            postedAt: new Date().toISOString(),
+            workerExecuted: assignedWorker,
+            campaignCompleted: true
+          }
+        });
+
+        console.log(`✅ Orchestrator post ${post.id} published successfully`);
+        
+        // Notify orchestrator of completion
+        if (campaignId) {
+          await this.notifyOrchestratorCompletion(campaignId, post.id, true);
+        }
+      } else {
+        throw new Error(result.error || 'Unknown posting error');
+      }
+    } catch (error) {
+      console.error(`❌ Orchestrator post ${post.id} failed:`, error);
+      
+      // Notify orchestrator of failure
+      if (campaignId) {
+        await this.notifyOrchestratorCompletion(campaignId, post.id, false);
+      }
+      
+      throw error;
+    }
   }
 
   /**
@@ -676,6 +747,154 @@ export class PostScheduler {
         recentPerformance: []
       };
     }
+  }
+
+  // =====================================
+  // ORCHESTRATOR INTEGRATION METHODS
+  // =====================================
+
+  /**
+   * Execute post using the same logic as processPost but return result
+   */
+  private async executePostInternal(post: ScheduledPost): Promise<PostJobResult> {
+    try {
+      // Get social account details
+      const socialAccount = await this.storage.getSocialAccountById(post.socialAccountId);
+      if (!socialAccount) {
+        return { success: false, error: `Social account ${post.socialAccountId} not found` };
+      }
+
+      // Check if platform is supported
+      const supportedPlatforms = ['facebook'];
+      if (!supportedPlatforms.includes(post.platform)) {
+        return { 
+          success: false, 
+          error: `Platform ${post.platform} is not yet implemented. Supported: ${supportedPlatforms.join(', ')}` 
+        };
+      }
+
+      // Get content assets if any
+      const assets: ContentAsset[] = [];
+      if (post.assetIds && post.assetIds.length > 0) {
+        for (const assetId of post.assetIds) {
+          const asset = await this.storage.getContentAsset(assetId);
+          if (asset) assets.push(asset);
+        }
+      }
+
+      // Build post message with hashtags
+      const message = facebookPostingService.buildPostMessage(
+        post.caption, 
+        post.hashtags || []
+      );
+
+      // Post based on platform
+      switch (post.platform) {
+        case 'facebook':
+          return await this.postToFacebook(socialAccount, message, assets);
+        default:
+          return { success: false, error: `Unsupported platform: ${post.platform}` };
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error during post execution' 
+      };
+    }
+  }
+
+  /**
+   * Notify orchestrator of post completion/failure
+   */
+  private async notifyOrchestratorCompletion(
+    campaignId: string, 
+    postId: string, 
+    success: boolean
+  ): Promise<void> {
+    try {
+      // Get current campaign status from orchestrator
+      const campaign = jobOrchestrator.getCampaignStatus(campaignId);
+      if (!campaign) {
+        console.warn(`Campaign ${campaignId} not found in orchestrator`);
+        return;
+      }
+
+      // Calculate updated progress
+      const currentCompleted = campaign.progress.completedJobs;
+      const currentFailed = campaign.progress.failedJobs;
+      
+      const updates = {
+        completedJobs: success ? currentCompleted + 1 : currentCompleted,
+        failedJobs: success ? currentFailed : currentFailed + 1,
+        currentPhase: success ? 'execution' : 'execution_with_errors'
+      };
+
+      // Update orchestrator with progress
+      await jobOrchestrator.updateCampaignProgress(campaignId, updates);
+      
+      console.log(`🎭 Notified orchestrator: Campaign ${campaignId}, Post ${postId}, Success: ${success}`);
+    } catch (error) {
+      console.error(`❌ Failed to notify orchestrator for campaign ${campaignId}:`, error);
+    }
+  }
+
+  /**
+   * Handle orchestrator post failure with campaign tracking
+   */
+  private async handleOrchestratorPostFailure(post: ScheduledPost, error: Error): Promise<void> {
+    const campaignId = (post.analytics as any)?.orchestrationPlan;
+    const retryCount = (post.retryCount || 0) + 1;
+    
+    if (retryCount < this.maxRetries) {
+      // Schedule retry with orchestrator-aware logic
+      const retryDelay = this.calculateRetryDelay(retryCount);
+      const nextRetryAt = new Date(Date.now() + retryDelay * 60 * 1000);
+      
+      await this.storage.updateScheduledPost(post.id, {
+        status: 'scheduled',
+        retryCount,
+        lastRetryAt: new Date(),
+        scheduledTime: nextRetryAt,
+        analytics: {
+          ...post.analytics,
+          lastError: error.message,
+          retryHistory: [...((post.analytics as any)?.retryHistory || []), {
+            attempt: retryCount,
+            error: error.message,
+            timestamp: new Date().toISOString()
+          }]
+        }
+      });
+
+      console.log(`🔄 Orchestrator post ${post.id} scheduled for retry ${retryCount}/${this.maxRetries} at ${nextRetryAt}`);
+    } else {
+      // Max retries exceeded - mark as failed
+      await this.storage.updateScheduledPost(post.id, {
+        status: 'failed',
+        lastRetryAt: new Date(),
+        analytics: {
+          ...post.analytics,
+          lastError: error.message,
+          maxRetriesExceeded: true,
+          failedAt: new Date().toISOString()
+        }
+      });
+
+      console.error(`❌ Orchestrator post ${post.id} failed permanently after ${this.maxRetries} retries`);
+      
+      // Notify orchestrator of permanent failure
+      if (campaignId) {
+        await this.notifyOrchestratorCompletion(campaignId, post.id, false);
+      }
+    }
+  }
+
+  /**
+   * Calculate retry delay for orchestrator posts (with exponential backoff)
+   */
+  private calculateRetryDelay(retryCount: number): number {
+    // Exponential backoff: 2^retryCount minutes, max 60 minutes
+    return Math.min(Math.pow(2, retryCount), 60);
   }
 }
 
