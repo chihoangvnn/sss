@@ -741,6 +741,101 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * 📊 Get Worker Statistics Summary (Admin endpoint)
+ * GET /api/workers/stats
+ */
+router.get('/stats', requireAuth, async (req, res) => {
+  try {
+    const allWorkers = await workerManager.listWorkers({});
+    const queueStats = await QueueService.getQueueStats();
+    
+    // Calculate comprehensive stats
+    const stats = {
+      totalWorkers: allWorkers.length,
+      activeWorkers: allWorkers.filter(w => w.status === 'active').length,
+      totalJobsProcessed: 0,
+      avgSuccessRate: 0,
+      totalExecutionTime: 0,
+      regions: {} as Record<string, number>,
+      platforms: {} as Record<string, number>
+    };
+    
+    // Aggregate worker metrics
+    let successRateSum = 0;
+    let executionTimeSum = 0;
+    let metricsCount = 0;
+    
+    for (const worker of allWorkers) {
+      // Count by region
+      stats.regions[worker.region] = (stats.regions[worker.region] || 0) + 1;
+      
+      // Count by platforms
+      for (const platform of worker.platforms || []) {
+        stats.platforms[platform] = (stats.platforms[platform] || 0) + 1;
+      }
+      
+      // Get detailed metrics if available
+      try {
+        const workerMetrics = await workerManager.getWorkerMetrics(worker.workerId);
+        if (workerMetrics) {
+          stats.totalJobsProcessed += (workerMetrics as any).jobsProcessed || 0;
+          if (workerMetrics.successRate !== undefined) {
+            successRateSum += workerMetrics.successRate;
+            metricsCount++;
+          }
+          if (workerMetrics.averageExecutionTime !== undefined) {
+            executionTimeSum += workerMetrics.averageExecutionTime;
+          }
+        }
+      } catch (metricsError) {
+        // Skip metrics for this worker if unavailable
+      }
+    }
+    
+    // Calculate averages
+    if (metricsCount > 0) {
+      stats.avgSuccessRate = successRateSum / metricsCount;
+      stats.totalExecutionTime = executionTimeSum;
+    }
+    
+    // Add queue statistics
+    const queueInfo = {
+      totalQueues: Object.keys(queueStats).length,
+      totalJobs: 0,
+      waitingJobs: 0,
+      activeJobs: 0,
+      completedJobs: 0,
+      failedJobs: 0
+    };
+    
+    for (const [queueName, stats_queue] of Object.entries(queueStats)) {
+      if (typeof stats_queue === 'object' && stats_queue) {
+        queueInfo.totalJobs += stats_queue.total || 0;
+        queueInfo.waitingJobs += stats_queue.waiting || 0;
+        queueInfo.activeJobs += stats_queue.active || 0;
+        queueInfo.completedJobs += stats_queue.completed || 0;
+        queueInfo.failedJobs += stats_queue.failed || 0;
+      }
+    }
+    
+    res.json({
+      success: true,
+      stats: {
+        ...stats,
+        queue: queueInfo
+      },
+      retrievedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Worker stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve worker statistics'
+    });
+  }
+});
+
+/**
  * 🚀 Dispatch Job to Vercel Function Worker (ADMIN ONLY)
  * POST /api/workers/dispatch-job
  * Body: { jobId, platform, jobType, priority, targetAccount, content, callbacks }

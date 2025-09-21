@@ -107,15 +107,39 @@ const fetchWorkerStats = async (): Promise<WorkerStats> => {
   if (!response.ok) {
     throw new Error('Failed to fetch worker stats');
   }
-  return response.json();
+  const data = await response.json();
+  return data.stats || data;
 };
 
 const fetchSystemHealth = async (): Promise<SystemHealth> => {
   const response = await fetch('/api/health/check');
-  if (!response.ok) {
+  // Accept both 2xx and 503 responses - 503 means unhealthy but still valid data
+  if (!response.ok && response.status !== 503) {
     throw new Error('Failed to fetch system health');
   }
-  return response.json();
+  const data = await response.json();
+  
+  // Transform the simple health check format to match our SystemHealth interface
+  return {
+    status: data.status,
+    components: {
+      database: {
+        status: data.components?.healthy > 0 ? 'healthy' : 'unhealthy',
+        checkedAt: data.timestamp,
+        responseTime: 0
+      },
+      workers: {
+        status: data.status === 'unhealthy' ? 'unhealthy' : 'healthy',
+        checkedAt: data.timestamp,
+        responseTime: 0
+      }
+    },
+    overall: {
+      healthy: data.components?.healthy || 0,
+      degraded: data.components?.degraded || 0,
+      unhealthy: data.components?.unhealthy || 0
+    }
+  };
 };
 
 const dispatchJob = async (jobData: JobDispatchRequest) => {
