@@ -1,0 +1,33 @@
+{
+  "name": "distributed-autoposting-worker",
+  "version": "1.0.0",
+  "description": "Vercel serverless worker for distributed auto-posting system - The 'Arms' in Brain-Arms-Satellites architecture",
+  "main": "api/worker.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "test": "node test-worker.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "keywords": [
+    "vercel",
+    "serverless",
+    "facebook",
+    "instagram", 
+    "twitter",
+    "auto-posting",
+    "distributed-system",
+    "social-media"
+  ],
+  "author": "Distributed Auto-Posting System",
+  "license": "MIT"
+}

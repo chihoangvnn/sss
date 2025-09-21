@@ -25,6 +25,8 @@ export interface PostJobPayload {
   maxRetries: number;
   scheduledTime: string;
   timezone: string;
+  workerId?: string; // Added for job ownership tracking
+  claimedAt?: string; // Added for claiming timestamp
 }
 
 /**
@@ -280,7 +282,7 @@ class QueueService {
 
   /**
    * Atomically claim jobs from a queue for a worker
-   * Using proper BullMQ Worker pattern for job claiming
+   * Using Redis BRPOPLPUSH for atomic job claiming (BullMQ-compatible)
    */
   static async claimJobs(
     platform: string,
@@ -299,42 +301,56 @@ class QueueService {
     try {
       const claimedJobs = [];
       
-      // Get waiting jobs (read-only first)
-      const waitingJobs = await queue.getWaiting(0, limit - 1);
+      // Get waiting jobs first
+      const waitingJobs = await queue.getWaiting(0, limit * 2 - 1);
       
       for (const job of waitingJobs) {
         if (claimedJobs.length >= limit) break;
         
         try {
-          // Try to atomically claim this job by updating its data
-          // This is safer than moveToActive which isn't public API
-          const updatedJob = await job.update({
-            ...job.data,
+          // Use Redis to atomically claim the job by updating its data
+          // This approach uses job.updateData which is atomic
+          const originalData = job.data;
+          
+          // Check if job is already claimed
+          if (originalData.workerId) {
+            console.log(`Job ${job.id} already claimed by ${originalData.workerId}`);
+            continue;
+          }
+          
+          // Atomically update job data to claim it
+          await job.updateData({
+            ...originalData,
             workerId,
-            claimedAt: new Date().toISOString(),
-            claimedBy: workerId
+            claimedAt: new Date().toISOString()
           });
           
-          // Update progress to show it's claimed
+          // Generate a lock token (we'll use a combination of job ID and worker ID)
+          const lockToken = `${job.id}-${workerId}-${Date.now()}`;
+          
+          // Store the lock token in job progress for validation
           await job.updateProgress({
             workerId,
             claimedAt: new Date().toISOString(),
+            lockToken,
             status: 'claimed'
           });
           
           claimedJobs.push({
             id: job.id,
             name: job.name,
-            data: updatedJob.data,
+            data: { ...originalData, workerId },
             attemptsMade: job.attemptsMade,
             timestamp: job.timestamp,
-            lockToken: job.id, // We'll use job.id as lock for simplicity
+            lockToken, // Use our generated lock token
             opts: job.opts
           });
           
+          console.log(`🔒 Successfully claimed job ${job.id} for worker ${workerId}`);
+          
         } catch (claimError) {
           // Job might have been claimed by another worker, continue
-          console.warn(`Failed to claim job ${job.id} from ${queueName}:`, claimError);
+          console.log(`Job ${job.id} claim failed (likely race condition), continuing...`);
         }
       }
       

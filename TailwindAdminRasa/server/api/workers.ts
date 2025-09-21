@@ -2,6 +2,8 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import QueueService from '../services/queue';
 import JobDistributionEngine from '../services/job-distribution-engine';
+import JobClaimWorker from '../services/job-claim-worker';
+import StartupService from '../services/startup';
 import { storage } from '../storage';
 
 const router = express.Router();
@@ -140,28 +142,28 @@ router.get('/jobs/pull', authenticateWorker, async (req, res) => {
       if (claimedJobs.length >= jobLimit) break;
       
       try {
-        // Use atomic job claiming instead of reading then updating
+        // Use proper atomic job claiming via BullMQ Worker
         const remainingSlots: number = jobLimit - claimedJobs.length;
-        const claimedJobsFromPlatform: any[] = await QueueService.claimJobs(
-          plt, 
-          worker.region, 
+        const claimedJobsFromPlatform = await JobClaimWorker.getClaimedJobsForWorker(
           worker.workerId,
+          [plt], // Single platform for this iteration
+          worker.region,
           remainingSlots
         );
         
-        for (const job of claimedJobsFromPlatform) {
+        for (const claimData of claimedJobsFromPlatform) {
           claimedJobs.push({
-            jobId: job.id,
-            platform: plt,
-            region: worker.region,
-            data: job.data,
-            attempts: job.attemptsMade,
-            createdAt: job.timestamp,
-            lockToken: job.lockToken // Include lock token for completion
+            jobId: claimData.jobId,
+            platform: claimData.platform,
+            region: claimData.region,
+            data: claimData.jobData,
+            attempts: 0, // Reset since this is first assignment
+            createdAt: claimData.claimedAt,
+            lockToken: `${claimData.jobId}-${worker.workerId}-claimed` // Simple worker-specific token
           });
         }
       } catch (queueError) {
-        console.error(`Failed to claim jobs from ${plt}:${worker.region}:`, queueError);
+        console.error(`Failed to get claimed jobs from ${plt}:${worker.region}:`, queueError);
       }
     }
 

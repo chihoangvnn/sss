@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "name": "autoposting-worker",
+  "functions": {
+    "api/worker.js": {
+      "runtime": "nodejs18.x",
+      "maxDuration": 60
+    }
+  },
+  "regions": ["us-east-1"],
+  "env": {
+    "BRAIN_BASE_URL": "@brain-base-url",
+    "WORKER_ID": "@worker-id", 
+    "WORKER_REGION": "@worker-region",
+    "WORKER_PLATFORMS": "@worker-platforms",
+    "WORKER_REGISTRATION_SECRET": "@worker-registration-secret",
+    "FACEBOOK_APP_ID": "@facebook-app-id",
+    "FACEBOOK_APP_SECRET": "@facebook-app-secret"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  }
+}
