@@ -1,0 +1,683 @@
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Server, 
+  Monitor, 
+  Cloud, 
+  Activity, 
+  Zap, 
+  AlertCircle, 
+  CheckCircle, 
+  Clock,
+  Play,
+  Pause,
+  RefreshCw,
+  Users,
+  Globe,
+  Database,
+  Send,
+  Plus,
+  TrendingUp,
+  BarChart3
+} from 'lucide-react';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Types
+interface Worker {
+  id: string;
+  workerId: string;
+  region: string;
+  platforms: string[];
+  status: 'active' | 'inactive' | 'error';
+  lastSeen: string;
+  totalJobsProcessed: number;
+  successRate: number;
+  avgExecutionTime: number;
+  isHealthy: boolean;
+  endpointUrl: string;
+  capabilities: {
+    maxConcurrentJobs: number;
+    supportedJobTypes: string[];
+  };
+}
+
+interface WorkerStats {
+  totalWorkers: number;
+  activeWorkers: number;
+  totalJobsProcessed: number;
+  avgSuccessRate: number;
+  totalExecutionTime: number;
+}
+
+interface SystemHealth {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  components: {
+    [key: string]: {
+      status: 'healthy' | 'degraded' | 'unhealthy';
+      responseTime?: number;
+      error?: string;
+      checkedAt: string;
+    };
+  };
+  overall: {
+    healthy: number;
+    degraded: number;
+    unhealthy: number;
+  };
+}
+
+interface JobDispatchRequest {
+  platform: string;
+  jobType: string;
+  priority: 'low' | 'medium' | 'high';
+  targetAccount: {
+    id: string;
+    name: string;
+    platform: string;
+  };
+  content: {
+    caption: string;
+    hashtags: string[];
+    assetIds: string[];
+  };
+}
+
+// API Functions
+const fetchWorkers = async (): Promise<Worker[]> => {
+  const response = await fetch('/api/workers');
+  if (!response.ok) {
+    throw new Error('Failed to fetch workers');
+  }
+  return response.json();
+};
+
+const fetchWorkerStats = async (): Promise<WorkerStats> => {
+  const response = await fetch('/api/workers/stats');
+  if (!response.ok) {
+    throw new Error('Failed to fetch worker stats');
+  }
+  return response.json();
+};
+
+const fetchSystemHealth = async (): Promise<SystemHealth> => {
+  const response = await fetch('/api/health/check');
+  if (!response.ok) {
+    throw new Error('Failed to fetch system health');
+  }
+  return response.json();
+};
+
+const dispatchJob = async (jobData: JobDispatchRequest) => {
+  const response = await fetch('/api/workers/dispatch-job', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(jobData),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to dispatch job');
+  }
+  
+  return response.json();
+};
+
+// Worker List Component
+function WorkerList({ workers }: { workers: Worker[] }) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'inactive':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'inactive':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'error':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {workers.map((worker) => (
+        <Card key={worker.id} className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Server className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <CardTitle className="text-lg">{worker.workerId}</CardTitle>
+                    <CardDescription className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      {worker.region}
+                    </CardDescription>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(worker.status)}
+                <Badge variant="outline" className={getStatusColor(worker.status)}>
+                  {worker.status}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <div className="font-medium text-muted-foreground">Platforms</div>
+                <div className="flex gap-1 mt-1">
+                  {worker.platforms.map((platform) => (
+                    <Badge key={platform} variant="secondary" className="text-xs">
+                      {platform}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="font-medium text-muted-foreground">Jobs Processed</div>
+                <div className="font-semibold">{worker.totalJobsProcessed.toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="font-medium text-muted-foreground">Success Rate</div>
+                <div className="font-semibold">{(worker.successRate * 100).toFixed(1)}%</div>
+              </div>
+              <div>
+                <div className="font-medium text-muted-foreground">Avg Time</div>
+                <div className="font-semibold">{worker.avgExecutionTime.toFixed(0)}ms</div>
+              </div>
+            </div>
+            <Separator className="my-3" />
+            <div className="text-xs text-muted-foreground">
+              Last seen: {new Date(worker.lastSeen).toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// System Health Component
+function SystemHealthMonitor({ health }: { health: SystemHealth }) {
+  const getHealthColor = (status: string) => {
+    switch (status) {
+      case 'healthy':
+        return 'text-green-600 bg-green-100 border-green-200';
+      case 'degraded':
+        return 'text-yellow-600 bg-yellow-100 border-yellow-200';
+      case 'unhealthy':
+        return 'text-red-600 bg-red-100 border-red-200';
+      default:
+        return 'text-gray-600 bg-gray-100 border-gray-200';
+    }
+  };
+
+  const getHealthIcon = (status: string) => {
+    switch (status) {
+      case 'healthy':
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'degraded':
+        return <AlertCircle className="h-5 w-5 text-yellow-600" />;
+      case 'unhealthy':
+        return <AlertCircle className="h-5 w-5 text-red-600" />;
+      default:
+        return <AlertCircle className="h-5 w-5 text-gray-600" />;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Alert className={`border-2 ${getHealthColor(health.status)}`}>
+        <div className="flex items-center gap-2">
+          {getHealthIcon(health.status)}
+          <AlertTitle>System Status: {health.status.toUpperCase()}</AlertTitle>
+        </div>
+        <AlertDescription>
+          {health.overall.healthy} healthy, {health.overall.degraded} degraded, {health.overall.unhealthy} unhealthy components
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid gap-4">
+        {Object.entries(health.components).map(([component, status]) => (
+          <Card key={component}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="h-4 w-4" />
+                  <CardTitle className="text-base capitalize">{component.replace('_', ' ')}</CardTitle>
+                </div>
+                <Badge variant="outline" className={getHealthColor(status.status)}>
+                  {status.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm space-y-1">
+                {status.responseTime && (
+                  <div>Response time: {status.responseTime}ms</div>
+                )}
+                {status.error && (
+                  <div className="text-red-600">Error: {status.error}</div>
+                )}
+                <div className="text-muted-foreground">
+                  Checked: {new Date(status.checkedAt).toLocaleString()}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Job Dispatch Component
+function JobDispatchInterface() {
+  const [jobData, setJobData] = useState<Partial<JobDispatchRequest>>({
+    platform: '',
+    jobType: '',
+    priority: 'medium',
+    content: {
+      caption: '',
+      hashtags: [],
+      assetIds: []
+    }
+  });
+
+  const queryClient = useQueryClient();
+
+  const dispatchMutation = useMutation({
+    mutationFn: dispatchJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
+      queryClient.invalidateQueries({ queryKey: ['workerStats'] });
+      // Reset form
+      setJobData({
+        platform: '',
+        jobType: '',
+        priority: 'medium',
+        content: {
+          caption: '',
+          hashtags: [],
+          assetIds: []
+        }
+      });
+    },
+  });
+
+  const handleDispatch = () => {
+    if (jobData.platform && jobData.jobType && jobData.content?.caption) {
+      dispatchMutation.mutate({
+        ...jobData,
+        targetAccount: {
+          id: 'manual-dispatch',
+          name: 'Manual Test Account',
+          platform: jobData.platform || 'facebook'
+        }
+      } as JobDispatchRequest);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Send className="h-5 w-5" />
+          Manual Job Dispatch
+        </CardTitle>
+        <CardDescription>
+          Dispatch jobs manually to test worker functionality
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="platform">Platform</Label>
+            <Select
+              value={jobData.platform}
+              onValueChange={(value) => setJobData(prev => ({ ...prev, platform: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="twitter">Twitter</SelectItem>
+                <SelectItem value="tiktok">TikTok</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="jobType">Job Type</Label>
+            <Select
+              value={jobData.jobType}
+              onValueChange={(value) => setJobData(prev => ({ ...prev, jobType: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select job type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="post">Post Content</SelectItem>
+                <SelectItem value="story">Story Upload</SelectItem>
+                <SelectItem value="comment">Comment Reply</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="caption">Content Caption</Label>
+          <Input
+            id="caption"
+            placeholder="Enter content caption..."
+            value={jobData.content?.caption || ''}
+            onChange={(e) => setJobData(prev => ({
+              ...prev,
+              content: { 
+                hashtags: [],
+                assetIds: [],
+                ...prev.content, 
+                caption: e.target.value 
+              }
+            }))}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="priority">Priority</Label>
+          <Select
+            value={jobData.priority}
+            onValueChange={(value: 'low' | 'medium' | 'high') => 
+              setJobData(prev => ({ ...prev, priority: value }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button 
+          onClick={handleDispatch}
+          disabled={dispatchMutation.isPending || !jobData.platform || !jobData.jobType}
+          className="w-full"
+        >
+          {dispatchMutation.isPending ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Dispatching...
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Dispatch Job
+            </>
+          )}
+        </Button>
+
+        {dispatchMutation.isError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Dispatch Failed</AlertTitle>
+            <AlertDescription>
+              {dispatchMutation.error?.message || 'Unknown error occurred'}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {dispatchMutation.isSuccess && (
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-800">Job Dispatched Successfully</AlertTitle>
+            <AlertDescription className="text-green-700">
+              The job has been sent to an available worker for processing.
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Main WorkerManagement Component
+export function WorkerManagement() {
+  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
+
+  const {
+    data: workers,
+    isLoading: workersLoading,
+    error: workersError,
+    refetch: refetchWorkers
+  } = useQuery({
+    queryKey: ['workers'],
+    queryFn: fetchWorkers,
+    refetchInterval: refreshInterval,
+  });
+
+  const {
+    data: workerStats,
+    isLoading: statsLoading,
+    error: statsError
+  } = useQuery({
+    queryKey: ['workerStats'],
+    queryFn: fetchWorkerStats,
+    refetchInterval: refreshInterval,
+  });
+
+  const {
+    data: systemHealth,
+    isLoading: healthLoading,
+    error: healthError
+  } = useQuery({
+    queryKey: ['systemHealth'],
+    queryFn: fetchSystemHealth,
+    refetchInterval: refreshInterval,
+  });
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <Server className="h-8 w-8 text-blue-600" />
+            Worker Management
+          </h1>
+          <p className="text-muted-foreground">
+            Quản lý Vercel Functions workers trong hệ thống "Bộ Não - Cánh Tay - Vệ Tinh"
+          </p>
+        </div>
+        <Button onClick={() => refetchWorkers()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      {workerStats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Total Workers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{workerStats.totalWorkers}</div>
+              <p className="text-xs text-muted-foreground">
+                {workerStats.activeWorkers} active
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Jobs Processed
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{workerStats.totalJobsProcessed.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Total completed
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Success Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{(workerStats.avgSuccessRate * 100).toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">
+                Average across all workers
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Avg Execution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{workerStats.totalExecutionTime.toFixed(0)}ms</div>
+              <p className="text-xs text-muted-foreground">
+                Average response time
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Tabs */}
+      <Tabs defaultValue="workers" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="workers" className="flex items-center gap-2">
+            <Server className="h-4 w-4" />
+            Workers
+          </TabsTrigger>
+          <TabsTrigger value="health" className="flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            Health
+          </TabsTrigger>
+          <TabsTrigger value="dispatch" className="flex items-center gap-2">
+            <Send className="h-4 w-4" />
+            Dispatch
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Statistics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="workers">
+          <Card>
+            <CardHeader>
+              <CardTitle>Registered Workers</CardTitle>
+              <CardDescription>
+                List of all Vercel Functions workers and their status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {workersLoading && <div>Loading workers...</div>}
+              {workersError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>Failed to load workers</AlertDescription>
+                </Alert>
+              )}
+              {workers && <WorkerList workers={workers} />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="health">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Health</CardTitle>
+              <CardDescription>
+                Real-time system health monitoring
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {healthLoading && <div>Loading health data...</div>}
+              {healthError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>Failed to load health data</AlertDescription>
+                </Alert>
+              )}
+              {systemHealth && <SystemHealthMonitor health={systemHealth} />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="dispatch">
+          <JobDispatchInterface />
+        </TabsContent>
+
+        <TabsContent value="stats">
+          <Card>
+            <CardHeader>
+              <CardTitle>Detailed Statistics</CardTitle>
+              <CardDescription>
+                Comprehensive worker performance analytics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center text-muted-foreground py-8">
+                Advanced statistics dashboard coming soon...
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+export default WorkerManagement;
