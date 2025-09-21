@@ -17,10 +17,11 @@ import type {
   WorkerPlatform,
   WorkerCapability
 } from '@shared/schema';
+import { storage } from '../storage';
 
-// In-memory storage
+// Database-backed worker storage
 class WorkerStorage {
-  private workers: Map<string, Worker> = new Map();
+  // Keep worker jobs and health checks in memory for now (can be moved to database later)
   private workerJobs: Map<string, WorkerJob> = new Map();
   private healthChecks: Map<string, WorkerHealthCheck[]> = new Map();
   private idCounter = 1;
@@ -41,54 +42,12 @@ class WorkerStorage {
 
   // Worker methods
   async createWorker(data: InsertWorker): Promise<Worker> {
-    const id = this.generateUUID();
-    const worker: Worker = {
-      id,
-      workerId: data.workerId,
-      name: data.name,
-      description: data.description || null,
-      platforms: data.platforms as WorkerPlatform[],
-      capabilities: data.capabilities as WorkerCapability[],
-      specialties: (data.specialties as string[]) || null,
-      maxConcurrentJobs: data.maxConcurrentJobs || 3,
-      minJobInterval: data.minJobInterval || 300,
-      maxJobsPerHour: data.maxJobsPerHour || 12,
-      avgExecutionTime: data.avgExecutionTime || 5000,
-      region: data.region,
-      environment: data.environment || 'production',
-      deploymentPlatform: data.deploymentPlatform,
-      endpointUrl: data.endpointUrl,
-      status: data.status || 'active',
-      isOnline: data.isOnline !== undefined ? data.isOnline : false,
-      lastPingAt: data.lastPingAt || null,
-      lastJobAt: data.lastJobAt || null,
-      currentLoad: data.currentLoad || 0,
-      totalJobsCompleted: data.totalJobsCompleted || 0,
-      totalJobsFailed: data.totalJobsFailed || 0,
-      successRate: data.successRate || '0.00',
-      avgResponseTime: data.avgResponseTime || 0,
-      registrationSecret: data.registrationSecret,
-      authToken: data.authToken || null,
-      tokenExpiresAt: data.tokenExpiresAt || null,
-      tags: data.tags as string[] || null,
-      priority: data.priority || 1,
-      isEnabled: data.isEnabled !== undefined ? data.isEnabled : true,
-      metadata: data.metadata || null,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.workers.set(id, worker);
-    return worker;
+    return await storage.createWorker(data);
   }
 
   async getWorkerByWorkerId(workerId: string): Promise<Worker | null> {
-    for (const worker of Array.from(this.workers.values())) {
-      if (worker.workerId === workerId) {
-        return worker;
-      }
-    }
-    return null;
+    const worker = await storage.getWorkerByWorkerId(workerId);
+    return worker || null;
   }
 
   async getWorkers(filters?: {
@@ -97,42 +56,36 @@ class WorkerStorage {
     status?: string;
     isOnline?: boolean;
   }): Promise<Worker[]> {
-    let workers = Array.from(this.workers.values());
+    const workers = await storage.getWorkers();
 
-    if (filters) {
-      if (filters.platform) {
-        workers = workers.filter(w => w.platforms.includes(filters.platform!));
-      }
-      if (filters.region) {
-        workers = workers.filter(w => w.region === filters.region);
-      }
-      if (filters.status) {
-        workers = workers.filter(w => w.status === filters.status);
-      }
-      if (filters.isOnline !== undefined) {
-        workers = workers.filter(w => w.isOnline === filters.isOnline);
-      }
+    if (!filters) {
+      return workers;
     }
 
-    return workers;
+    return workers.filter(worker => {
+      if (filters.platform && !worker.platforms.includes(filters.platform)) {
+        return false;
+      }
+      if (filters.region && worker.region !== filters.region) {
+        return false;
+      }
+      if (filters.status && worker.status !== filters.status) {
+        return false;
+      }
+      if (filters.isOnline !== undefined && worker.isOnline !== filters.isOnline) {
+        return false;
+      }
+      return true;
+    });
   }
 
   async updateWorker(id: string, updates: Partial<Worker>): Promise<Worker | null> {
-    const worker = this.workers.get(id);
-    if (!worker) return null;
-
-    const updatedWorker = { 
-      ...worker, 
-      ...updates, 
-      updatedAt: new Date() 
-    };
-    
-    this.workers.set(id, updatedWorker);
-    return updatedWorker;
+    const updatedWorker = await storage.updateWorker(id, updates);
+    return updatedWorker || null;
   }
 
   async deleteWorker(id: string): Promise<boolean> {
-    return this.workers.delete(id);
+    return await storage.deleteWorker(id);
   }
 
   // Worker job methods
@@ -241,22 +194,23 @@ class WorkerStorage {
     activeWorkers: number;
     totalJobsInProgress: number;
   }> {
-    const workers = Array.from(this.workers.values());
-    const jobsInProgress = Array.from(this.workerJobs.values()).filter(
-      job => ['assigned', 'started'].includes(job.status)
-    );
-
+    const workers = await storage.getWorkers();
+    
+    // For jobs, we'll use a simple count since we don't have a dedicated jobs table yet
+    // TODO: Implement proper worker jobs table when needed
+    
     return {
       totalWorkers: workers.length,
       onlineWorkers: workers.filter(w => w.isOnline).length,
       activeWorkers: workers.filter(w => w.status === 'active').length,
-      totalJobsInProgress: jobsInProgress.length
+      totalJobsInProgress: 0 // Will be implemented when worker jobs table is added
     };
   }
 
   // Cleanup and reset (for testing)
   async reset(): Promise<void> {
-    this.workers.clear();
+    // Note: This only resets in-memory data (jobs and health checks)
+    // Workers are now stored in database and would need to be deleted there
     this.workerJobs.clear();
     this.healthChecks.clear();
     this.idCounter = 1;
@@ -268,8 +222,9 @@ class WorkerStorage {
     jobs: WorkerJob[];
     healthChecks: Map<string, WorkerHealthCheck[]>;
   }> {
+    const workers = await storage.getWorkers();
     return {
-      workers: Array.from(this.workers.values()),
+      workers,
       jobs: Array.from(this.workerJobs.values()),
       healthChecks: this.healthChecks
     };

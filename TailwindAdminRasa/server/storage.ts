@@ -5,7 +5,7 @@ import {
   tiktokBusinessAccounts, tiktokShopOrders, tiktokShopProducts, tiktokVideos,
   contentCategories, contentAssets, scheduledPosts, unifiedTags, contentLibrary,
   facebookApps, facebookWebhookEvents, botSettings, apiConfigurations,
-  accountGroups, groupAccounts,
+  accountGroups, groupAccounts, workers, workerJobs, workerHealthChecks,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -31,7 +31,8 @@ import {
   type FacebookWebhookEvent, type InsertFacebookWebhookEvent,
   type BotSettings, type InsertBotSettings,
   type ApiConfiguration, type InsertApiConfiguration, type UpdateApiConfiguration,
-  type AccountGroup, type InsertAccountGroup
+  type AccountGroup, type InsertAccountGroup,
+  type Worker, type InsertWorker, type WorkerJob, type InsertWorkerJob
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
@@ -263,6 +264,15 @@ export interface IStorage {
   addAIVariation(id: string, variation: { content: string; tone: string; style: string }): Promise<ContentLibrary | undefined>;
   getContentLibraryByTags(tagIds: string[]): Promise<ContentLibrary[]>;
   getContentLibraryByPriority(priority: string): Promise<ContentLibrary[]>;
+
+  // Worker methods
+  getWorkers(): Promise<Worker[]>;
+  getWorker(id: string): Promise<Worker | undefined>;
+  getWorkerByWorkerId(workerId: string): Promise<Worker | undefined>;
+  createWorker(worker: InsertWorker): Promise<Worker>;
+  updateWorker(id: string, worker: Partial<InsertWorker>): Promise<Worker | undefined>;
+  deleteWorker(id: string): Promise<boolean>;
+  updateWorkerStatus(workerId: string, isOnline: boolean, lastPingAt?: Date): Promise<Worker | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2067,6 +2077,51 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(groupAccounts, eq(groupAccounts.socialAccountId, socialAccounts.id))
       .where(and(eq(groupAccounts.groupId, groupId), eq(groupAccounts.isActive, true)))
       .orderBy(desc(socialAccounts.createdAt));
+  }
+
+  // Worker methods
+  async getWorkers(): Promise<Worker[]> {
+    return await db.select().from(workers).orderBy(desc(workers.createdAt));
+  }
+
+  async getWorker(id: string): Promise<Worker | undefined> {
+    const [worker] = await db.select().from(workers).where(eq(workers.id, id));
+    return worker || undefined;
+  }
+
+  async getWorkerByWorkerId(workerId: string): Promise<Worker | undefined> {
+    const [worker] = await db.select().from(workers).where(eq(workers.workerId, workerId));
+    return worker || undefined;
+  }
+
+  async createWorker(worker: InsertWorker): Promise<Worker> {
+    const [created] = await db.insert(workers).values(worker).returning();
+    return created;
+  }
+
+  async updateWorker(id: string, worker: Partial<InsertWorker>): Promise<Worker | undefined> {
+    const [updated] = await db.update(workers)
+      .set({ ...worker, updatedAt: new Date() })
+      .where(eq(workers.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteWorker(id: string): Promise<boolean> {
+    const result = await db.delete(workers).where(eq(workers.id, id));
+    return result.rowCount > 0;
+  }
+
+  async updateWorkerStatus(workerId: string, isOnline: boolean, lastPingAt?: Date): Promise<Worker | undefined> {
+    const [updated] = await db.update(workers)
+      .set({ 
+        isOnline, 
+        lastPingAt: lastPingAt || new Date(), 
+        updatedAt: new Date() 
+      })
+      .where(eq(workers.workerId, workerId))
+      .returning();
+    return updated || undefined;
   }
 }
 

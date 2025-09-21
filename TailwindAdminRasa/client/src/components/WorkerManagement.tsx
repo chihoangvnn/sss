@@ -39,13 +39,13 @@ interface Worker {
   region: string;
   platforms: string[];
   status: 'active' | 'inactive' | 'error';
-  lastSeen: string;
-  totalJobsProcessed: number;
-  successRate: number;
-  avgExecutionTime: number;
-  isHealthy: boolean;
-  endpointUrl: string;
-  capabilities: {
+  lastPingAt?: string;  // Database field name
+  totalJobsCompleted?: number;  // Database field name
+  successRate?: string;  // Database returns string
+  avgExecutionTime?: number;
+  isHealthy?: boolean;
+  endpointUrl?: string;
+  capabilities?: {
     maxConcurrentJobs: number;
     supportedJobTypes: string[];
   };
@@ -226,20 +226,20 @@ function WorkerList({ workers }: { workers: Worker[] }) {
               </div>
               <div>
                 <div className="font-medium text-muted-foreground">Jobs Processed</div>
-                <div className="font-semibold">{worker.totalJobsProcessed.toLocaleString()}</div>
+                <div className="font-semibold">{(worker.totalJobsCompleted || 0).toLocaleString()}</div>
               </div>
               <div>
                 <div className="font-medium text-muted-foreground">Success Rate</div>
-                <div className="font-semibold">{(worker.successRate * 100).toFixed(1)}%</div>
+                <div className="font-semibold">{worker.successRate || '0.00'}%</div>
               </div>
               <div>
                 <div className="font-medium text-muted-foreground">Avg Time</div>
-                <div className="font-semibold">{worker.avgExecutionTime.toFixed(0)}ms</div>
+                <div className="font-semibold">{(worker.avgExecutionTime || 0).toFixed(0)}ms</div>
               </div>
             </div>
             <Separator className="my-3" />
             <div className="text-xs text-muted-foreground">
-              Last seen: {new Date(worker.lastSeen).toLocaleString()}
+              Last seen: {worker.lastPingAt ? new Date(worker.lastPingAt).toLocaleString() : 'Never'}
             </div>
           </CardContent>
         </Card>
