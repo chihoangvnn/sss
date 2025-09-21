@@ -1833,24 +1833,6 @@ export const workerAnalytics = pgTable("worker_analytics", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Create indexes for better performance
-export const workerIndexes = {
-  workerIdIndex: index("workers_worker_id_idx").on(workers.workerId),
-  workerStatusIndex: index("workers_status_idx").on(workers.status),
-  workerPlatformsIndex: index("workers_platforms_idx").on(workers.platforms),
-  workerRegionIndex: index("workers_region_idx").on(workers.region),
-  
-  workerJobsStatusIndex: index("worker_jobs_status_idx").on(workerJobs.status),
-  workerJobsWorkerIdIndex: index("worker_jobs_worker_id_idx").on(workerJobs.workerId),
-  workerJobsPlatformIndex: index("worker_jobs_platform_idx").on(workerJobs.platform),
-  
-  healthChecksWorkerIdIndex: index("worker_health_checks_worker_id_idx").on(workerHealthChecks.workerId),
-  healthChecksStatusIndex: index("worker_health_checks_status_idx").on(workerHealthChecks.status),
-  
-  analyticsWorkerIdIndex: index("worker_analytics_worker_id_idx").on(workerAnalytics.workerId),
-  analyticsPeriodIndex: index("worker_analytics_period_idx").on(workerAnalytics.period),
-};
-
 // Zod schemas for validation
 export const insertWorkerSchema = createInsertSchema(workers);
 export const insertWorkerJobSchema = createInsertSchema(workerJobs);
