@@ -45,6 +45,9 @@ interface Worker {
   avgExecutionTime?: number;
   isHealthy?: boolean;
   endpointUrl?: string;
+  ipAddress?: string;  // Worker IP for diversity tracking
+  ipCountry?: string;  // IP geolocation country
+  ipRegion?: string;   // IP geolocation region
   capabilities?: {
     maxConcurrentJobs: number;
     supportedJobTypes: string[];
@@ -213,7 +216,7 @@ function WorkerList({ workers }: { workers: Worker[] }) {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
                 <div className="font-medium text-muted-foreground">Platforms</div>
                 <div className="flex gap-1 mt-1">
@@ -223,6 +226,25 @@ function WorkerList({ workers }: { workers: Worker[] }) {
                     </Badge>
                   ))}
                 </div>
+              </div>
+              
+              <div>
+                <div className="font-medium text-muted-foreground">IP Address</div>
+                <div className="font-mono text-xs mt-1">
+                  {worker.ipAddress ? (
+                    <span className="text-blue-600">{worker.ipAddress}</span>
+                  ) : (
+                    <span className="text-gray-400">Auto-detecting...</span>
+                  )}
+                </div>
+                {worker.ipCountry && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Globe className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {worker.ipCountry}
+                    </span>
+                  </div>
+                )}
               </div>
               <div>
                 <div className="font-medium text-muted-foreground">Jobs Processed</div>

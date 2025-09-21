@@ -1691,6 +1691,9 @@ export const workers = pgTable("workers", {
   environment: text("environment").notNull().default('production'), // production, staging, development
   deploymentPlatform: text("deployment_platform").notNull(), // "vercel", "railway", "render"
   endpointUrl: text("endpoint_url").notNull(), // Worker webhook URL
+  ipAddress: text("ip_address"), // Worker's external IP address for diversity tracking
+  ipCountry: text("ip_country"), // IP geolocation country
+  ipRegion: text("ip_region"), // IP geolocation region
   
   // Status and health
   status: text("status").notNull().default('active'), // active, paused, maintenance, failed

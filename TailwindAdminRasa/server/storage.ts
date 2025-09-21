@@ -2081,7 +2081,44 @@ export class DatabaseStorage implements IStorage {
 
   // Worker methods
   async getWorkers(): Promise<Worker[]> {
-    return await db.select().from(workers).orderBy(desc(workers.createdAt));
+    return await db.select({
+      id: workers.id,
+      workerId: workers.workerId,
+      name: workers.name,
+      description: workers.description,
+      platforms: workers.platforms,
+      capabilities: workers.capabilities,
+      specialties: workers.specialties,
+      maxConcurrentJobs: workers.maxConcurrentJobs,
+      minJobInterval: workers.minJobInterval,
+      maxJobsPerHour: workers.maxJobsPerHour,
+      avgExecutionTime: workers.avgExecutionTime,
+      region: workers.region,
+      environment: workers.environment,
+      deploymentPlatform: workers.deploymentPlatform,
+      endpointUrl: workers.endpointUrl,
+      ipAddress: workers.ipAddress,
+      ipCountry: workers.ipCountry,
+      ipRegion: workers.ipRegion,
+      status: workers.status,
+      isOnline: workers.isOnline,
+      lastPingAt: workers.lastPingAt,
+      lastJobAt: workers.lastJobAt,
+      currentLoad: workers.currentLoad,
+      totalJobsCompleted: workers.totalJobsCompleted,
+      totalJobsFailed: workers.totalJobsFailed,
+      successRate: workers.successRate,
+      avgResponseTime: workers.avgResponseTime,
+      registrationSecret: workers.registrationSecret,
+      authToken: workers.authToken,
+      tokenExpiresAt: workers.tokenExpiresAt,
+      tags: workers.tags,
+      priority: workers.priority,
+      isEnabled: workers.isEnabled,
+      metadata: workers.metadata,
+      createdAt: workers.createdAt,
+      updatedAt: workers.updatedAt
+    }).from(workers).orderBy(desc(workers.createdAt));
   }
 
   async getWorker(id: string): Promise<Worker | undefined> {
