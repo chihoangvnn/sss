@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { DatabaseStorage } from '../storage';
+import { storage } from '../storage';
 import { SocialAccount, ContentLibrary, ScheduledPost } from '../../shared/schema';
 
 // Simple auth middleware for development
@@ -33,8 +33,6 @@ router.post('/simple', requireAuth, async (req, res) => {
       });
     }
 
-    const storage = req.app.get('storage') as DatabaseStorage;
-    
     // 1. Get social accounts for the platform
     let accounts: SocialAccount[] = [];
     if (platform === 'all') {
@@ -270,8 +268,6 @@ router.post('/simple', requireAuth, async (req, res) => {
 router.post('/simple/preview', requireAuth, async (req, res) => {
   try {
     const { platform, numberOfPosts, numberOfPages, startDate, endDate, contentTypes, selectedTags } = req.body;
-    
-    const storage = req.app.get('storage') as DatabaseStorage;
     
     // Get accounts for preview
     let accounts: SocialAccount[] = [];
