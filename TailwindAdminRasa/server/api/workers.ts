@@ -6,6 +6,7 @@ import JobClaimWorker from '../services/job-claim-worker';
 import StartupService from '../services/startup';
 import { storage } from '../storage';
 import { WorkerManagementService } from '../services/worker-management';
+import { workerStorage } from '../storage/worker-storage';
 import JobDispatchService from '../services/job-dispatch-service';
 import type { WorkerPlatform } from '@shared/schema';
 
@@ -989,8 +990,8 @@ router.post('/refresh-ips', requireAuth, async (req, res) => {
         const ipInfo = await detectWorkerIP(worker.endpointUrl);
         
         if (ipInfo.ip) {
-          // Update worker with new IP information
-          await workerManager.updateWorker(worker.id, {
+          // Update worker with new IP information  
+          await workerStorage.updateWorker(worker.id, {
             ipAddress: ipInfo.ip,
             ipCountry: ipInfo.country,
             ipRegion: ipInfo.region,
