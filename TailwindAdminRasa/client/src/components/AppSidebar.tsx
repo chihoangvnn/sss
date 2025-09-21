@@ -17,7 +17,8 @@ import {
   Image,
   Calendar,
   Activity,
-  Share2
+  Share2,
+  Satellite
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -157,6 +158,13 @@ const socialManagementItems = [
     icon: Image,
     gradient: "gradient-teal",
     description: "Quản lý media và nội dung"
+  },
+  {
+    title: "Satellites",
+    url: "/satellites",
+    icon: Satellite,
+    gradient: "gradient-purple",
+    description: "Quản lý hệ thống vệ tinh nội dung tự động"
   },
 ];
 

@@ -33,6 +33,7 @@ import FacebookAppsManager from "@/pages/FacebookAppsManager";
 import GroupsManager from "@/pages/GroupsManager";
 import TikTokBusiness from "@/pages/TikTokBusiness";
 import TikTokShop from "@/pages/TikTokShop";
+import Satellites from "@/pages/Satellites";
 import ApiManagement from "@/pages/ApiManagement";
 import NotFound from "@/pages/not-found";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/social-media" component={SocialMediaHub} />
       <Route path="/tiktok-business" component={TikTokBusiness} />
       <Route path="/tiktok-shop" component={TikTokShop} />
+      <Route path="/satellites" component={Satellites} />
       <Route path="/api-management" component={ApiManagement} />
       <Route component={NotFound} />
     </Switch>
