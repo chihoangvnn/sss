@@ -24,7 +24,7 @@ const router = Router();
 // Simple automation endpoint - tự động tạo lịch đăng dựa trên platform, số bài, số page
 router.post('/simple', requireAuth, async (req, res) => {
   try {
-    const { platform, numberOfPosts, numberOfPages, startDate, endDate } = req.body;
+    const { platform, numberOfPosts, numberOfPages, startDate, endDate, contentTypes } = req.body;
     
     // Validate input
     if (!platform || !numberOfPosts || !numberOfPages || !startDate || !endDate) {
@@ -52,10 +52,61 @@ router.post('/simple', requireAuth, async (req, res) => {
     const selectedAccounts = accounts.slice(0, numberOfPages);
     
     // 3. Get content library
-    const contentLibrary = await storage.getContentLibraryItems();
+    let contentLibrary = await storage.getContentLibraryItems();
+    
+    // 3.1. Filter by content types if specified
+    if (contentTypes && contentTypes.length > 0) {
+      contentLibrary = contentLibrary.filter((content: ContentLibrary) => {
+        // Check if content matches any of the requested types
+        return contentTypes.includes(content.contentType as 'image' | 'video' | 'text');
+      });
+    }
+    
+    // 3.2. Platform-smart content filtering
+    if (platform !== 'all') {
+      contentLibrary = contentLibrary.filter((content: ContentLibrary) => {
+        const contentType = content.contentType;
+        
+        switch (platform) {
+          case 'instagram':
+            // Instagram prefers visual content - filter out text-only posts unless they have assets
+            return contentType !== 'text' || (content.assetIds && content.assetIds.length > 0);
+          case 'tiktok-business':
+            // TikTok Business strictly prefers video content
+            return contentType === 'video';
+          case 'tiktok-shop':
+            // TikTok Shop prefers product videos/images (check for product-related tags or video content)
+            const hasProductTags = content.tagIds?.some(tagId => 
+              ['product', 'shop', 'sale', 'discount', 'buy'].some(keyword => 
+                tagId.toLowerCase().includes(keyword)
+              )
+            );
+            return contentType === 'video' || hasProductTags || (content.assetIds && content.assetIds.length > 0);
+          case 'facebook':
+          default:
+            // Facebook accepts all content types
+            return true;
+        }
+      });
+    }
+    
+    if (contentLibrary.length === 0) {
+      return res.status(400).json({ 
+        error: `No content found matching the criteria for platform: ${platform}${contentTypes ? ' and content types: ' + contentTypes.join(', ') : ''}` 
+      });
+    }
     
     // 4. Auto tag matching - lấy content có tags match với account tags
-    const scheduledPosts: Partial<ScheduledPost>[] = [];
+    const scheduledPosts: Array<{
+      caption: string;
+      hashtags: string[];
+      assetIds: string[];
+      socialAccountId: string;
+      platform: 'facebook' | 'instagram' | 'twitter' | 'tiktok';
+      scheduledTime: Date;
+      timezone: string;
+      status: 'scheduled';
+    }> = [];
     const start = new Date(startDate);
     const end = new Date(endDate);
     const daysBetween = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
@@ -80,12 +131,45 @@ router.post('/simple', requireAuth, async (req, res) => {
         const accountIndex = postCount % selectedAccounts.length;
         const account = selectedAccounts[accountIndex];
         
-        // Find matching content based on account tags
+        // Find matching content based on account tags AND platform-specific rules per account
         let selectedContent: ContentLibrary | null = null;
         let attempts = 0;
         
         while (attempts < contentLibrary.length && !selectedContent) {
           const content = contentLibrary[contentIndex % contentLibrary.length];
+          
+          // Apply per-account platform-specific content filtering
+          const isValidForAccountPlatform = (() => {
+            const contentType = content.contentType;
+            
+            switch (account.platform) {
+              case 'instagram':
+                // Instagram: no text-only content unless it has assets
+                return contentType !== 'text' || (content.assetIds && content.assetIds.length > 0);
+              case 'tiktok-business':
+                // TikTok Business: strictly video content only
+                return contentType === 'video';
+              case 'tiktok-shop':
+                // TikTok Shop: prioritize video content or content with product-related characteristics
+                const hasProductContent = content.title?.toLowerCase().includes('product') || 
+                                         content.title?.toLowerCase().includes('sale') ||
+                                         content.title?.toLowerCase().includes('buy') ||
+                                         content.baseContent?.toLowerCase().includes('product') ||
+                                         content.baseContent?.toLowerCase().includes('sale');
+                
+                return contentType === 'video' || hasProductContent || (content.assetIds && content.assetIds.length > 0);
+              case 'facebook':
+              default:
+                // Facebook: accepts all content types
+                return true;
+            }
+          })();
+          
+          if (!isValidForAccountPlatform) {
+            contentIndex++;
+            attempts++;
+            continue;
+          }
           
           // Tag matching logic
           const accountTags = account.tagIds || [];
@@ -107,16 +191,29 @@ router.post('/simple', requireAuth, async (req, res) => {
         }
         
         if (selectedContent) {
-          scheduledPosts.push({
+          // Map platform types to match schema expectations
+          const platformMapping: Record<string, 'facebook' | 'instagram' | 'twitter' | 'tiktok'> = {
+            'facebook': 'facebook',
+            'instagram': 'instagram', 
+            'twitter': 'twitter',
+            'tiktok-business': 'tiktok',
+            'tiktok-shop': 'tiktok'
+          };
+          
+          const mappedPlatform = platformMapping[account.platform] || 'facebook';
+          
+          const newScheduledPost = {
             caption: selectedContent.title,
             hashtags: [selectedContent.baseContent || ''],
             assetIds: selectedContent.assetIds || [],
             socialAccountId: account.id,
-            platform: account.platform as any,
+            platform: mappedPlatform as 'facebook' | 'instagram' | 'twitter' | 'tiktok',
             scheduledTime: currentDate,
             timezone: 'Asia/Ho_Chi_Minh',
-            status: 'scheduled'
-          });
+            status: 'scheduled' as const
+          };
+          
+          scheduledPosts.push(newScheduledPost);
           
           postCount++;
         }
@@ -155,7 +252,7 @@ router.post('/simple', requireAuth, async (req, res) => {
 // Preview automation endpoint
 router.post('/simple/preview', requireAuth, async (req, res) => {
   try {
-    const { platform, numberOfPosts, numberOfPages, startDate, endDate } = req.body;
+    const { platform, numberOfPosts, numberOfPages, startDate, endDate, contentTypes } = req.body;
     
     const storage = req.app.get('storage') as DatabaseStorage;
     
@@ -169,7 +266,40 @@ router.post('/simple/preview', requireAuth, async (req, res) => {
     }
     
     const selectedAccounts = accounts.slice(0, numberOfPages);
-    const contentLibrary = await storage.getContentLibraryItems();
+    let contentLibrary = await storage.getContentLibraryItems();
+    
+    // Apply content type filtering for preview
+    if (contentTypes && contentTypes.length > 0) {
+      contentLibrary = contentLibrary.filter((content: ContentLibrary) => {
+        return contentTypes.includes(content.contentType as 'image' | 'video' | 'text');
+      });
+    }
+    
+    // Apply platform-smart content filtering for preview
+    if (platform !== 'all') {
+      contentLibrary = contentLibrary.filter((content: ContentLibrary) => {
+        const contentType = content.contentType;
+        
+        switch (platform) {
+          case 'instagram':
+            return contentType !== 'text' || (content.assetIds && content.assetIds.length > 0);
+          case 'tiktok-business':
+            // TikTok Business strictly prefers video content
+            return contentType === 'video';
+          case 'tiktok-shop':
+            // TikTok Shop prefers product videos/images
+            const hasProductTags = content.tagIds?.some(tagId => 
+              ['product', 'shop', 'sale', 'discount', 'buy'].some(keyword => 
+                tagId.toLowerCase().includes(keyword)
+              )
+            );
+            return contentType === 'video' || hasProductTags || (content.assetIds && content.assetIds.length > 0);
+          case 'facebook':
+          default:
+            return true;
+        }
+      });
+    }
     
     // Calculate distribution preview
     const start = new Date(startDate);

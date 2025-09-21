@@ -90,6 +90,11 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('facebook');
   const [numberOfPosts, setNumberOfPosts] = useState<number>(10);
   const [numberOfPages, setNumberOfPages] = useState<number>(3);
+  
+  // Initialize content types based on default platform (Facebook defaults to all types)
+  const [simpleContentTypes, setSimpleContentTypes] = useState<('image' | 'video' | 'text')[]>(['image', 'video', 'text']);
+  const [simplePreviewData, setSimplePreviewData] = useState<any>(null);
+  const [isGeneratingSimplePreview, setIsGeneratingSimplePreview] = useState(false);
 
   // API Queries
   const { data: socialAccounts = [] } = useQuery({
@@ -156,6 +161,33 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
     },
   });
 
+  // Simple Automation Preview Mutation
+  const simplePreviewMutation = useMutation({
+    mutationFn: async (config: {
+      platform: string;
+      numberOfPosts: number;
+      numberOfPages: number;
+      startDate: string;
+      endDate: string;
+      contentTypes?: ('image' | 'video' | 'text')[];
+    }) => {
+      const response = await fetch('/api/automation/simple/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      if (!response.ok) throw new Error('Failed to generate preview');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setSimplePreviewData(data);
+      setIsGeneratingSimplePreview(false);
+    },
+    onError: () => {
+      setIsGeneratingSimplePreview(false);
+    },
+  });
+
   // Simple Automation Mutation
   const simpleAutomationMutation = useMutation({
     mutationFn: async (config: {
@@ -164,8 +196,9 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
       numberOfPages: number;
       startDate: string;
       endDate: string;
+      contentTypes?: ('image' | 'video' | 'text')[];
     }) => {
-      const response = await fetch('/api/content/automation/simple', {
+      const response = await fetch('/api/automation/simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
@@ -188,6 +221,29 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
       categories[category].push(tag);
     });
     return categories;
+  };
+
+  // Get platform-smart content type defaults
+  const getPlatformContentTypeDefaults = (platform: string): ('image' | 'video' | 'text')[] => {
+    switch (platform) {
+      case 'facebook':
+        return ['image', 'video', 'text']; // Facebook supports all types
+      case 'instagram':
+        return ['image', 'video']; // Instagram prefers visual content
+      case 'tiktok-business':
+      case 'tiktok-shop':
+        return ['video']; // TikTok is video-first
+      case 'all':
+        return ['image', 'video', 'text']; // Default to all types
+      default:
+        return ['image', 'video'];
+    }
+  };
+
+  // Auto-update content types when platform changes
+  const handlePlatformChange = (platform: string) => {
+    setSelectedPlatform(platform);
+    setSimpleContentTypes(getPlatformContentTypeDefaults(platform));
   };
 
   const getMatchingContent = () => {
@@ -358,7 +414,7 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                   </label>
                   <select
                     value={selectedPlatform}
-                    onChange={(e) => setSelectedPlatform(e.target.value)}
+                    onChange={(e) => handlePlatformChange(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   >
                     <option value="facebook">Facebook</option>
@@ -402,6 +458,57 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                 </div>
               </div>
 
+              {/* Content Type Selection */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Loại Nội Dung
+                  <span className="text-xs text-gray-500 ml-1">(Tự động chọn theo platform)</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {[
+                    { type: 'text' as const, label: 'Text', icon: FileText, color: 'orange' },
+                    { type: 'image' as const, label: 'Hình Ảnh', icon: Image, color: 'green' },
+                    { type: 'video' as const, label: 'Video', icon: Video, color: 'purple' },
+                  ].map(({ type, label, icon: Icon, color }) => (
+                    <label 
+                      key={type} 
+                      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={simpleContentTypes.includes(type)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSimpleContentTypes(prev => [...prev, type]);
+                          } else {
+                            setSimpleContentTypes(prev => prev.filter(t => t !== type));
+                          }
+                        }}
+                        className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                      />
+                      <Icon className={`w-5 h-5 text-${color}-600`} />
+                      <span className="font-medium text-sm">{label}</span>
+                    </label>
+                  ))}
+                </div>
+                
+                {/* Platform-specific hints */}
+                <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-2">
+                  {selectedPlatform === 'facebook' && (
+                    <span>💡 Facebook: Tất cả loại content đều hiệu quả</span>
+                  )}
+                  {selectedPlatform === 'instagram' && (
+                    <span>💡 Instagram: Hình ảnh và video sẽ có engagement cao hơn</span>
+                  )}
+                  {(selectedPlatform === 'tiktok-business' || selectedPlatform === 'tiktok-shop') && (
+                    <span>💡 TikTok: Video content sẽ có hiệu quả tốt nhất</span>
+                  )}
+                  {selectedPlatform === 'all' && (
+                    <span>💡 Tất cả platforms: Hệ thống sẽ tự động chọn content phù hợp cho từng platform</span>
+                  )}
+                </div>
+              </div>
+
               {/* Time Period */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
@@ -437,7 +544,8 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                       numberOfPosts: numberOfPosts,
                       numberOfPages: numberOfPages,
                       startDate,
-                      endDate
+                      endDate,
+                      contentTypes: simpleContentTypes
                     });
                   }}
                   disabled={simpleAutomationMutation.isPending}
@@ -452,15 +560,89 @@ export function SmartScheduler({ isOpen, onClose }: SmartSchedulerProps) {
                 </button>
                 <button
                   onClick={() => {
-                    // Generate preview for simple mode
-                    console.log('Preview simple automation');
+                    setIsGeneratingSimplePreview(true);
+                    simplePreviewMutation.mutate({
+                      platform: selectedPlatform,
+                      numberOfPosts: numberOfPosts,
+                      numberOfPages: numberOfPages,
+                      startDate,
+                      endDate,
+                      contentTypes: simpleContentTypes
+                    });
                   }}
-                  className="px-6 py-3 border border-green-600 text-green-600 rounded-lg font-medium hover:bg-green-50 transition-colors flex items-center gap-2"
+                  disabled={isGeneratingSimplePreview}
+                  className="px-6 py-3 border border-green-600 text-green-600 rounded-lg font-medium hover:bg-green-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Eye className="w-5 h-5" />
-                  Preview
+                  {isGeneratingSimplePreview ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                  {isGeneratingSimplePreview ? 'Đang Tạo Preview...' : 'Preview'}
                 </button>
               </div>
+
+              {/* Preview Results */}
+              {simplePreviewData && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                    <Eye className="w-5 h-5" />
+                    Preview Kết Quả
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="bg-white p-3 rounded-lg">
+                      <div className="font-medium text-gray-700 mb-1">Accounts</div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {simplePreviewData.preview?.accounts?.length || 0}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {simplePreviewData.preview?.accounts?.map((acc: any) => acc.name).join(', ')}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-3 rounded-lg">
+                      <div className="font-medium text-gray-700 mb-1">Content Available</div>
+                      <div className="text-lg font-bold text-green-600">
+                        {simplePreviewData.preview?.contentAvailable || 0}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Content phù hợp với {simpleContentTypes.join(', ')}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-3 rounded-lg">
+                      <div className="font-medium text-gray-700 mb-1">Distribution</div>
+                      <div className="text-lg font-bold text-purple-600">
+                        {simplePreviewData.preview?.distribution?.postsPerDay || 0} bài/ngày
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {simplePreviewData.preview?.distribution?.postsPerAccount || 0} bài/account
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content Type Indicators */}
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    <div className="font-medium text-gray-700 mb-2">Content Types Selected:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {simpleContentTypes.map(type => (
+                        <span 
+                          key={type}
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            type === 'text' ? 'bg-orange-100 text-orange-700' :
+                            type === 'image' ? 'bg-green-100 text-green-700' :
+                            'bg-purple-100 text-purple-700'
+                          }`}
+                        >
+                          {type === 'text' ? '📝 Text' : 
+                           type === 'image' ? '🖼️ Images' : '🎥 Videos'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
