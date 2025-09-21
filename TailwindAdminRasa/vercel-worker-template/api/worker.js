@@ -89,7 +89,7 @@ export default async function handler(req, res) {
 }
 
 /**
- * Authenticate with Brain server and get JWT token
+ * Ensure worker is registered and authenticated with Brain server
  */
 async function ensureAuthenticated() {
   // Check if token is still valid
@@ -97,6 +97,75 @@ async function ensureAuthenticated() {
     return;
   }
 
+  // First try authentication (for already registered workers)
+  try {
+    await authenticateWithBrain();
+    return;
+  } catch (error) {
+    console.log(`🔄 Authentication failed, attempting registration: ${error.message}`);
+  }
+
+  // If auth fails, try registration (for new workers)
+  try {
+    await registerWithBrain();
+  } catch (error) {
+    throw new Error(`Failed to register or authenticate: ${error.message}`);
+  }
+}
+
+/**
+ * Register worker with Brain server (for new workers)
+ */
+async function registerWithBrain() {
+  console.log(`📝 Registering new worker ${WORKER_ID} with Brain...`);
+
+  const workerEndpointUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : `https://your-worker.vercel.app`;
+
+  const response = await fetch(`${BRAIN_BASE_URL}/api/workers/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      workerId: WORKER_ID,
+      name: `Vercel Worker ${WORKER_REGION}`,
+      description: `Auto-posting worker deployed on Vercel in ${WORKER_REGION}`,
+      platforms: WORKER_PLATFORMS,
+      capabilities: WORKER_PLATFORMS.map(platform => ({
+        platform,
+        actions: ['post_text', 'post_image'],
+        maxConcurrent: 3,
+        avgExecutionTime: 8000
+      })),
+      region: WORKER_REGION,
+      deploymentPlatform: 'vercel',
+      endpointUrl: workerEndpointUrl,
+      registrationSecret: WORKER_REGISTRATION_SECRET
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Registration failed: ${response.status} - ${error}`);
+  }
+
+  const registration = await response.json();
+  if (!registration.success || !registration.token) {
+    throw new Error('Registration failed - no token received');
+  }
+
+  workerToken = registration.token;
+  tokenExpiry = new Date(Date.now() + 23 * 60 * 60 * 1000);
+  
+  console.log(`✅ Worker ${WORKER_ID} registered and authenticated successfully`);
+}
+
+/**
+ * Authenticate with Brain server (for existing workers)
+ */
+async function authenticateWithBrain() {
   console.log(`🔑 Authenticating worker ${WORKER_ID} with Brain...`);
 
   const response = await fetch(`${BRAIN_BASE_URL}/api/workers/auth`, {
@@ -123,7 +192,6 @@ async function ensureAuthenticated() {
   }
 
   workerToken = auth.token;
-  // Token expires in 24 hours, refresh 1 hour early
   tokenExpiry = new Date(Date.now() + 23 * 60 * 60 * 1000);
   
   console.log(`✅ Worker ${WORKER_ID} authenticated successfully`);
