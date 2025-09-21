@@ -13,9 +13,7 @@
     "WORKER_ID": "@worker-id",
     "WORKER_REGION": "@worker-region",
     "WORKER_PLATFORMS": "@worker-platforms",
-    "WORKER_REGISTRATION_SECRET": "@worker-registration-secret",
-    "FACEBOOK_APP_ID": "@facebook-app-id",
-    "FACEBOOK_APP_SECRET": "@facebook-app-secret"
+    "WORKER_REGISTRATION_SECRET": "@worker-registration-secret"
   },
   "build": {
     "env": {

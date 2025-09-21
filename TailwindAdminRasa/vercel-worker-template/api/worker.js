@@ -14,8 +14,8 @@
  * - WORKER_REGION: AWS region this function runs in (e.g. us-east-1)
  * - WORKER_PLATFORMS: Comma-separated platforms (e.g. facebook,instagram)
  * - WORKER_REGISTRATION_SECRET: Secret for worker registration
- * - FACEBOOK_APP_ID: Facebook App ID for API calls
- * - FACEBOOK_APP_SECRET: Facebook App Secret
+ * 
+ * Note: Facebook credentials are fetched from Brain API per job, not from environment
  */
 
 import fetch from 'node-fetch';
@@ -26,8 +26,6 @@ const WORKER_ID = process.env.WORKER_ID || `vercel-worker-${Math.random().toStri
 const WORKER_REGION = process.env.WORKER_REGION || 'us-east-1';
 const WORKER_PLATFORMS = (process.env.WORKER_PLATFORMS || 'facebook').split(',');
 const WORKER_REGISTRATION_SECRET = process.env.WORKER_REGISTRATION_SECRET;
-const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID;
-const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET;
 
 // Worker state (persisted across invocations in memory)
 let workerToken = null;
