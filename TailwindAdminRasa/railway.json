@@ -1,0 +1,44 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm start",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "${{ RAILWAY_PORT }}",
+        "PUBLIC_URL": "${{ RAILWAY_PUBLIC_DOMAIN }}"
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "brain-server",
+      "source": {
+        "type": "local"
+      },
+      "variables": {
+        "DATABASE_URL": "${{ Postgres.DATABASE_URL }}",
+        "REDIS_URL": "${{ Redis.REDIS_URL }}",
+        "SESSION_SECRET": "${{ SESSION_SECRET }}",
+        "GEMINI_API_KEY": "${{ GEMINI_API_KEY }}",
+        "CLOUDINARY_CLOUD_NAME": "${{ CLOUDINARY_CLOUD_NAME }}",
+        "CLOUDINARY_API_KEY": "${{ CLOUDINARY_API_KEY }}",
+        "CLOUDINARY_API_SECRET": "${{ CLOUDINARY_API_SECRET }}",
+        "FACEBOOK_APP_ID": "${{ FACEBOOK_APP_ID }}",
+        "FACEBOOK_APP_SECRET": "${{ FACEBOOK_APP_SECRET }}",
+        "WORKER_REGISTRATION_SECRET": "${{ WORKER_REGISTRATION_SECRET }}",
+        "WORKER_JWT_SECRET": "${{ WORKER_JWT_SECRET }}"
+      }
+    }
+  ]
+}
