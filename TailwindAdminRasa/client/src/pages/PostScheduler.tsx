@@ -213,10 +213,24 @@ export function PostScheduler({}: PostSchedulerProps) {
     });
   };
 
-  const getStatusIcon = (status: ScheduledPost['status']) => {
+  const getStatusIcon = (post: ScheduledPost) => {
+    const { status, errorMessage, retryCount, scheduledTime } = post;
+    const now = new Date();
+    const scheduledDate = new Date(scheduledTime);
+    
     switch (status) {
       case 'draft': return <Edit className="w-4 h-4 text-gray-500" />;
-      case 'scheduled': return <Clock className="w-4 h-4 text-blue-500" />;
+      case 'scheduled':
+        // Icon cho retry
+        if (errorMessage && retryCount && retryCount > 0) {
+          return <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />;
+        }
+        // Icon cho quá hạn
+        if (scheduledDate < now && !errorMessage) {
+          return <AlertCircle className="w-4 h-4 text-red-500" />;
+        }
+        // Icon bình thường cho scheduled
+        return <Clock className="w-4 h-4 text-blue-500" />;
       case 'posting': return <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />;
       case 'posted': return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'failed': return <XCircle className="w-4 h-4 text-red-500" />;
@@ -225,13 +239,35 @@ export function PostScheduler({}: PostSchedulerProps) {
     }
   };
 
-  const getStatusText = (status: ScheduledPost['status']) => {
+  const getStatusText = (post: ScheduledPost) => {
+    const { status, errorMessage, retryCount, scheduledTime } = post;
+    const now = new Date();
+    const scheduledDate = new Date(scheduledTime);
+    
     switch (status) {
       case 'draft': return 'Nháp';
-      case 'scheduled': return 'Đã lên lịch';
+      case 'scheduled':
+        // Hiển thị trạng thái retry nếu có lỗi và đang retry
+        if (errorMessage && retryCount && retryCount > 0) {
+          return `Đang thử lại (${retryCount}/3)`;
+        }
+        // Hiển thị "Quá hạn" nếu đã qua thời gian lên lịch và không có lỗi
+        if (scheduledDate < now && !errorMessage) {
+          return 'Quá hạn';
+        }
+        // Trạng thái bình thường
+        return 'Đã lên lịch';
       case 'posting': return 'Đang đăng';
-      case 'posted': return 'Đã đăng';
-      case 'failed': return 'Thất bại';
+      case 'posted': return 'Đã đăng thành công';
+      case 'failed': 
+        // Hiển thị lỗi chi tiết nếu có
+        if (errorMessage) {
+          const shortError = errorMessage.length > 30 
+            ? errorMessage.substring(0, 30) + '...' 
+            : errorMessage;
+          return `Thất bại: ${shortError}`;
+        }
+        return 'Thất bại';
       case 'cancelled': return 'Đã hủy';
       default: return status;
     }
@@ -634,7 +670,7 @@ export function PostScheduler({}: PostSchedulerProps) {
                   <div className="flex items-center gap-3">
                     {/* Status & Platform Icon */}
                     <div className="flex items-center gap-2 min-w-[60px]">
-                      {getStatusIcon(post.status)}
+                      {getStatusIcon(post)}
                       <div className="w-6 h-6 flex items-center justify-center">
                         {getPlatformIcon(post.platform)}
                       </div>
@@ -672,7 +708,7 @@ export function PostScheduler({}: PostSchedulerProps) {
                           ? 'bg-red-100 text-red-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {getStatusText(post.status)}
+                        {getStatusText(post)}
                       </span>
                       {isPast && isScheduled && (
                         <div className="text-[10px] text-orange-600 font-medium mt-1">Quá hạn</div>
