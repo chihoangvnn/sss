@@ -161,6 +161,22 @@ const dispatchJob = async (jobData: JobDispatchRequest) => {
   return response.json();
 };
 
+const refreshWorkerIPs = async (workerIds?: string[]) => {
+  const response = await fetch('/api/workers/refresh-ips', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ workerIds }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to refresh worker IPs');
+  }
+  
+  return response.json();
+};
+
 // Worker List Component
 function WorkerList({ workers }: { workers: Worker[] }) {
   const getStatusIcon = (status: string) => {
@@ -522,6 +538,7 @@ function JobDispatchInterface() {
 // Main WorkerManagement Component
 export function WorkerManagement() {
   const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
+  const queryClient = useQueryClient();
 
   const {
     data: workers,
@@ -532,6 +549,14 @@ export function WorkerManagement() {
     queryKey: ['workers'],
     queryFn: fetchWorkers,
     refetchInterval: refreshInterval,
+  });
+
+  const refreshIPsMutation = useMutation({
+    mutationFn: refreshWorkerIPs,
+    onSuccess: () => {
+      // Refresh workers data to get updated IPs
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
+    },
   });
 
   const {
@@ -567,10 +592,26 @@ export function WorkerManagement() {
             Quản lý Vercel Functions workers trong hệ thống "Bộ Não - Cánh Tay - Vệ Tinh"
           </p>
         </div>
-        <Button onClick={() => refetchWorkers()} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={() => refreshIPsMutation.mutate(undefined)}
+            variant="outline"
+            disabled={refreshIPsMutation.isPending}
+          >
+            {refreshIPsMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Globe className="h-4 w-4 mr-2" />
+            )}
+            {refreshIPsMutation.isPending ? 'Refreshing IPs...' : 'Refresh IPs'}
+          </Button>
+          
+          <Button onClick={() => refetchWorkers()} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
