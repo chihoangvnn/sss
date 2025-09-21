@@ -42,6 +42,7 @@ import workersRouter from './api/workers';
 import regionAssignmentRouter from './api/region-assignment';
 import jobCallbacksRouter from './api/job-callbacks';
 import systemHealthRouter from './api/system-health';
+import orchestratorRouter from './api/orchestrator';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3808,6 +3809,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SATELLITE SYSTEM API ROUTES
   // ==========================================
   app.use("/api/satellites", satellitesRouter);
+
+  // ==========================================
+  // JOB ORCHESTRATOR API ROUTES (Trợ lý Giám đốc)
+  // ==========================================
+  app.use("/api/orchestrator", orchestratorRouter);
 
   // ==========================================
   // POSTS API ROUTES (Unified Scheduling)
