@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Satellite, Rocket, BookOpen, Users2, Target, Clock, CheckCircle } from 'lucide-react';
+import { Satellite, Rocket, BookOpen, Users2, Target, Clock, CheckCircle, Settings, Palette, Globe, Calendar } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -21,6 +21,14 @@ export default function Satellites() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploySuccess, setDeploySuccess] = useState(false);
+  const [customSettings, setCustomSettings] = useState({
+    theme: 'modern',
+    primaryColor: '#10B981',
+    platforms: ['facebook', 'instagram'],
+    contentFrequency: 'daily',
+    autoOptimize: true,
+    targetAudience: 'general'
+  });
 
   const satelliteConfigs = getSatelliteConfigsByCategory();
 
@@ -75,10 +83,11 @@ export default function Satellites() {
     deployMutation.mutate({
       template: selectedTemplate,
       config: templateConfig,
+      customizations: customSettings,
       settings: {
         autoStart: true,
         contentFiltering: 'Nội dung',
-        platforms: ['facebook', 'instagram'],
+        ...customSettings
       }
     });
   };
@@ -236,13 +245,144 @@ export default function Satellites() {
           </Button>
         </div>
 
-        <Card className="p-4 bg-blue-50 border-blue-200">
-          <div className="flex items-center gap-3">
-            <Rocket className="w-5 h-5 text-blue-600" />
+        {/* Customization Settings */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Theme Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="w-5 h-5" />
+                Theme & Design
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Theme Style</label>
+                <div className="flex gap-2">
+                  {['modern', 'classic', 'minimal'].map(theme => (
+                    <Button
+                      key={theme}
+                      variant={customSettings.theme === theme ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCustomSettings({...customSettings, theme})}
+                    >
+                      {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Primary Color</label>
+                <div className="flex gap-2">
+                  {['#10B981', '#3B82F6', '#8B5CF6', '#EF4444', '#F59E0B'].map(color => (
+                    <button
+                      key={color}
+                      className={`w-8 h-8 rounded-full border-2 ${
+                        customSettings.primaryColor === color ? 'border-gray-900' : 'border-gray-300'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setCustomSettings({...customSettings, primaryColor: color})}
+                    />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Platform Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Platforms & Targeting
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Active Platforms</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[{id: 'facebook', name: 'Facebook'}, {id: 'instagram', name: 'Instagram'}, {id: 'twitter', name: 'Twitter'}, {id: 'tiktok', name: 'TikTok'}].map(platform => (
+                    <label key={platform.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={customSettings.platforms.includes(platform.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setCustomSettings({...customSettings, platforms: [...customSettings.platforms, platform.id]});
+                          } else {
+                            setCustomSettings({...customSettings, platforms: customSettings.platforms.filter(p => p !== platform.id)});
+                          }
+                        }}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{platform.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Target Audience</label>
+                <select
+                  value={customSettings.targetAudience}
+                  onChange={(e) => setCustomSettings({...customSettings, targetAudience: e.target.value})}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="general">General Audience</option>
+                  <option value="young-adults">Young Adults (18-30)</option>
+                  <option value="professionals">Professionals (25-45)</option>
+                  <option value="seniors">Seniors (50+)</option>
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Content Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Content & Scheduling
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <h3 className="font-semibold text-blue-900">Ready to Deploy</h3>
-              <p className="text-blue-700 text-sm">
-                Your satellite is configured and ready. Click deploy to activate.
+              <label className="text-sm font-medium mb-2 block">Posting Frequency</label>
+              <select
+                value={customSettings.contentFrequency}
+                onChange={(e) => setCustomSettings({...customSettings, contentFrequency: e.target.value})}
+                className="w-full p-2 border rounded-md"
+              >
+                <option value="hourly">Every Hour</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="custom">Custom Schedule</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={customSettings.autoOptimize}
+                onChange={(e) => setCustomSettings({...customSettings, autoOptimize: e.target.checked})}
+                className="rounded"
+              />
+              <label className="text-sm font-medium">Auto-optimize posting times</label>
+            </div>
+            <div className="text-sm">
+              <strong>Content Source:</strong> {selectedTemplate} Tag
+              <br />
+              <span className="text-muted-foreground">Posts will be filtered by content category</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-4 bg-green-50 border-green-200">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <div>
+              <h3 className="font-semibold text-green-900">Configuration Complete</h3>
+              <p className="text-green-700 text-sm">
+                Satellite configured for {customSettings.platforms.length} platform(s) with {customSettings.contentFrequency} posting.
               </p>
             </div>
           </div>

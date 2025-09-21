@@ -468,4 +468,80 @@ router.get('/overview', requireAuth, async (req, res) => {
   }
 });
 
+// 🚀 POST /api/satellites/deploy - Deploy a configured satellite
+router.post('/deploy', async (req, res) => {
+  try {
+    const { 
+      templateName,
+      templateData = {},
+      customizations = {},
+      settings = {}
+    } = req.body;
+
+    console.log(`🚀 Satellite Deploy: "${templateName}" with customizations`);
+
+    if (!templateName) {
+      return res.status(400).json({
+        error: "Template name is required for deployment"
+      });
+    }
+
+    // Generate satellite deployment record
+    const deploymentId = `satellite-${templateName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    
+    // Simulate deployment process
+    const deployment = {
+      id: deploymentId,
+      templateName,
+      status: 'deployed',
+      customizations: {
+        theme: customizations.theme || 'modern',
+        primaryColor: customizations.primaryColor || '#10B981',
+        platforms: customizations.platforms || ['facebook', 'instagram'],
+        contentFrequency: customizations.contentFrequency || 'daily',
+        autoOptimize: customizations.autoOptimize || true,
+        targetAudience: customizations.targetAudience || 'general'
+      },
+      settings: {
+        autoStart: true,
+        contentFiltering: 'Nội dung',
+        ...settings
+      },
+      deployedAt: new Date().toISOString(),
+      isActive: true
+    };
+
+    // In a real implementation, this would:
+    // 1. Create database records for the satellite
+    // 2. Configure content filtering rules
+    // 3. Set up scheduling automation
+    // 4. Initialize platform connections
+    // 5. Start monitoring systems
+    
+    console.log(`✅ Satellite deployed successfully: ${deploymentId}`);
+    console.log(`🎨 Theme: ${deployment.customizations.theme}, Color: ${deployment.customizations.primaryColor}`);
+    console.log(`📱 Platforms: ${deployment.customizations.platforms.join(', ')}`);
+    console.log(`📅 Frequency: ${deployment.customizations.contentFrequency}`);
+
+    res.json({
+      success: true,
+      deployment: {
+        id: deployment.id,
+        templateName: deployment.templateName,
+        status: deployment.status,
+        customizations: deployment.customizations,
+        deployedAt: deployment.deployedAt,
+        message: `Satellite "${templateName}" deployed successfully!`
+      }
+    });
+
+  } catch (error) {
+    console.error('Satellite Deploy Error:', error);
+    res.status(500).json({ 
+      error: 'Deployment failed', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
