@@ -32,6 +32,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FAQLibraryManagement } from '@/components/FAQLibraryManagement';
 import { FAQAssignmentManagement } from '@/components/FAQAssignmentManagement';
+import { ContentWriter } from '@/components/ContentWriter';
 
 interface ContentLibraryItem {
   id: string;
@@ -869,7 +870,11 @@ export function ContentLibrary({}: ContentLibraryProps) {
 
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="content-writer" className="flex items-center gap-2">
+              <Edit2 className="w-4 h-4" />
+              Content Writer
+            </TabsTrigger>
             <TabsTrigger value="content" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
               Social Content
@@ -1287,6 +1292,11 @@ export function ContentLibrary({}: ContentLibraryProps) {
             </div>
           </div>
         )}
+          </TabsContent>
+
+          {/* Content Writer Tab */}
+          <TabsContent value="content-writer" className="mt-6">
+            <ContentWriter />
           </TabsContent>
 
           {/* FAQ Library Tab */}
