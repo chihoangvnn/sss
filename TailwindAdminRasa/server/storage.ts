@@ -162,6 +162,7 @@ export interface IStorage {
 
   // Facebook Management methods
   getPageTags(): Promise<PageTag[]>;
+  getPageTag(id: string): Promise<PageTag | undefined>;
   createPageTag(tag: InsertPageTag): Promise<PageTag>;
   updatePageTag(id: string, tag: Partial<InsertPageTag>): Promise<PageTag | undefined>;
   deletePageTag(id: string): Promise<boolean>;
