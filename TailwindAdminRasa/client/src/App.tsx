@@ -37,6 +37,7 @@ import Satellites from "@/pages/Satellites";
 import ApiManagement from "@/pages/ApiManagement";
 import WorkerManagement from "@/components/WorkerManagement";
 import NotFound from "@/pages/not-found";
+import ProductPage from "@/pages/ProductPage";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SocialMediaHub } from "@/components/SocialMediaHub";
 
@@ -50,6 +51,7 @@ function Router() {
       <Route path="/landing-page-editor/:id" component={LandingPageEditor} />
       <Route path="/lp/:slug" component={PublicLandingPage} />
       <Route path="/sf/:name" component={PublicStorefront} />
+      <Route path="/product/:slug" component={ProductPage} />
       <Route path="/storefront-manager" component={StorefrontManager} />
       <Route path="/products" component={Products} />
       <Route path="/orders" component={Orders} />
