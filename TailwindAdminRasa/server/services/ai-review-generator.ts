@@ -7,11 +7,7 @@ if (!process.env.GEMINI_API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Get stable model for production
-const model = ai.getGenerativeModel({
-  model: "gemini-2.0-flash", // Use stable GA model, not experimental
-  systemInstruction: "Bạn là một chuyên gia tạo đánh giá sản phẩm thực tế cho thị trường Việt Nam."
-});
+// Production-ready Gemini configuration - no model initialization needed
 
 // Enhanced error types for better debugging
 interface AIGenerationError {
@@ -51,6 +47,19 @@ export interface ReviewSeedingResponse {
   reviews: GeneratedReview[];
   productId: string;
   message: string;
+  metadata?: {
+    summary: {
+      requested: number;
+      generated: number;
+      aiGenerated: number;
+      fallbackCount: number;
+      errorCount: number;
+      successRate: string;
+      status: string;
+    };
+    hasErrors: boolean;
+    isPartialSuccess: boolean;
+  };
 }
 
 export class AIReviewGenerator {
@@ -107,50 +116,48 @@ export class AIReviewGenerator {
   ): Promise<GeneratedReview> {
     const maxRetries = 2;
     
-    const systemInstruction = `Bạn là một chuyên gia tạo đánh giá sản phẩm thực tế cho thị trường Việt Nam.
+    // 🎯 SINGLE SMART PROMPT - Mixed Natural Reviews
+    const smartPrompt = `Bạn là chuyên gia tạo đánh giá sản phẩm thực tế cho thị trường Việt Nam.
 
-NHIỆM VỤ:
-Tạo một đánh giá sản phẩm chân thực, tự nhiên bằng tiếng Việt cho sản phẩm được cung cấp.
+🎯 NHIỆM VỤ: Tạo đánh giá tự nhiên, ĐA DẠNG style như người thật:
+
+📊 PHÂN BỐ STYLE (tự động vary):
+• 70% Reviews ngắn gọn, bình thường: "Sản phẩm tốt", "Giao hàng nhanh", "Ổn"  
+• 20% Reviews có context: Đề cập 1-2 feature cụ thể một cách casual
+• 10% Reviews cực ngắn: "Tốt", "Ok", "👍", "Ổn áp"
+
+🗣️ TONE NGƯIỜI VIỆT:
+- Ngôn ngữ đời thường, không formal
+- Mix từ "ổn", "tạm", "khá", "tốt", "ok" 
+- Thỉnh thoảng typo nhẹ như người thật
+- Emoji đôi khi (👍, 😊, ❤️)
+
+⭐ THEO RATING:
+- 5 sao: Positive nhưng không over-praise
+- 4 sao: Hài lòng, đôi khi mention điểm cần cải thiện  
+- 3 sao: Neutral, "tạm được", "bình thường"
+- 1-2 sao: Thất vọng nhưng không extreme
+
+🎨 OUTPUT MIX: Mỗi lần generate tự động tạo ra các style khác nhau, natural và believable.
 
 THÔNG TIN SẢN PHẨM:
 - Tên: ${productName}
 - Mô tả: ${productDescription}
-- Điểm đánh giá mục tiêu: ${targetRating}/5 sao
+- Target Rating: ${targetRating}/5 sao
 
-YÊU CẦU ĐẶC BIỆT:
-1. **Ngôn ngữ Việt Nam**: Sử dụng tiếng Việt tự nhiên, phù hợp văn hóa Việt
-2. **Tính chân thực**: Đánh giá phải nghe như từ khách hàng thật, không quá hoàn hảo
-3. **Phù hợp rating**: 
-   - 5 sao: Rất hài lòng, nhiều lời khen
-   - 4 sao: Hài lòng, có một vài điểm nhỏ cần cải thiện
-   - 3 sao: Ổn, có ưu nhược điểm rõ ràng
-   - 2 sao: Không hài lòng, nhiều vấn đề
-   - 1 sao: Rất thất vọng, nhiều khiếu nại
-4. **Độ dài phù hợp**: 50-300 từ tùy theo rating (rating cao = dài hơn)
-5. **Chi tiết thực tế**: Đề cập đến trải nghiệm sử dụng cụ thể
-
-${customPrompt ? `\nGHI CHÚ THÊM: ${customPrompt}` : ''}
-
-Trả về JSON hợp lệ với format chính xác sau (không bao gồm markdown hay text thêm):
-{
-  "customerName": "tên khách hàng Việt Nam tự nhiên",
-  "rating": ${targetRating},
-  "title": "tiêu đề ngắn gọn cho đánh giá (5-10 từ)",
-  "content": "nội dung đánh giá chi tiết bằng tiếng Việt",
-  "isVerified": boolean (70% true, 30% false),
-  "helpfulCount": số ngẫu nhiên từ 0-15
-}`;
+${customPrompt ? `GHI CHÚ: ${customPrompt}\n` : ''}>> Tự động vary style theo phân bỐ đã nêu, tạo review natural như người Việt thật <<`;
 
     try {
       // Use production-grade API structure with schema enforcement
-      const response = await model.generateContent({
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
         contents: [{
           role: "user",
           parts: [{
-            text: `Tạo đánh giá ${targetRating} sao cho sản phẩm: ${productName}\n\nMô tả sản phẩm: ${productDescription}\n\n${customPrompt ? `Ghi chú thêm: ${customPrompt}\n\n` : ''}Yêu cầu tạo đánh giá chân thực, tự nhiên bằng tiếng Việt phù hợp với ${targetRating} sao.`
+            text: `${smartPrompt}\n\n>> Tạo 1 review ${targetRating} sao theo smart prompt trên <<`
           }]
         }],
-        generationConfig: {
+        config: {
           temperature: 0.7,
           topP: 0.95,
           topK: 40,
@@ -205,7 +212,7 @@ Trả về JSON hợp lệ với format chính xác sau (không bao gồm markdo
       }
 
       // Extract text content
-      const textPart = candidate.content?.parts?.find(part => part.text);
+      const textPart = candidate.content?.parts?.find((part: any) => part.text);
       if (!textPart || !textPart.text) {
         throw this.createError('API_ERROR', 'No text content in response', candidate, true);
       }
@@ -412,7 +419,7 @@ Trả về JSON hợp lệ với format chính xác sau (không bao gồm markdo
               console.error(`🚨 Critical error tracked for review ${reviewIndex}:`, {
                 type: error.type,
                 message: error.message,
-                productName,
+                product: product.name,
                 targetRating: batch[index]
               });
             }
