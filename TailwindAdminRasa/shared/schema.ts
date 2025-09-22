@@ -710,6 +710,54 @@ export const productReviews = pgTable("product_reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// 🙋‍♂️ Product FAQs table - Hỏi & Đáp về sản phẩm
+export const productFAQs = pgTable("product_faqs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  question: text("question").notNull(), // "Nhang này dùng trong phòng máy lạnh được không?"
+  answer: text("answer").notNull(), // "Hoàn toàn được. Sản phẩm an toàn cho mọi không gian..."
+  sortOrder: integer("sort_order").notNull().default(0), // Thứ tự hiển thị
+  isActive: boolean("is_active").notNull().default(true), // Hiển thị hay ẩn
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Index để tối ưu query
+  productIdIdx: index("product_faqs_product_id_idx").on(table.productId),
+  sortOrderIdx: index("product_faqs_sort_order_idx").on(table.sortOrder),
+}));
+
+// 🛡️ Product Policies table - Chính sách sản phẩm (có thể tái sử dụng)
+export const productPolicies = pgTable("product_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(), // "Đổi trả trong 7 ngày"
+  description: text("description").notNull(), // Mô tả chi tiết chính sách
+  icon: text("icon"), // Icon name từ Lucide React: "shield-check", "truck", "refresh-cw"
+  type: text("type", { 
+    enum: ["guarantee", "return", "shipping", "quality", "support"] 
+  }).notNull(), // Loại chính sách
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  typeIdx: index("product_policies_type_idx").on(table.type),
+  sortOrderIdx: index("product_policies_sort_order_idx").on(table.sortOrder),
+}));
+
+// 🔗 Product-Policy Association table - Many-to-Many relationship
+export const productPolicyAssociations = pgTable("product_policy_associations", {
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  policyId: varchar("policy_id").notNull().references(() => productPolicies.id, { onDelete: 'cascade' }),
+  sortOrder: integer("sort_order").notNull().default(0), // Thứ tự hiển thị cho từng sản phẩm
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Composite primary key
+  pk: unique().on(table.productId, table.policyId),
+  // Indexes for performance
+  productIdIdx: index("product_policy_assoc_product_id_idx").on(table.productId),
+  policyIdIdx: index("product_policy_assoc_policy_id_idx").on(table.policyId),
+}));
+
 // Storefront configuration table
 export const storefrontConfig = pgTable("storefront_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
