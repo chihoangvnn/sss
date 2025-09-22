@@ -258,6 +258,27 @@ export interface IStorage {
   deleteProductReview(id: string): Promise<boolean>;
   incrementHelpfulCount(id: string): Promise<boolean>;
 
+  // Product FAQ methods
+  getProductFAQs(productId: string): Promise<ProductFAQ[]>;
+  getProductFAQ(id: string): Promise<ProductFAQ | undefined>;
+  createProductFAQ(faq: InsertProductFAQ): Promise<ProductFAQ>;
+  updateProductFAQ(id: string, faq: Partial<InsertProductFAQ>): Promise<ProductFAQ | undefined>;
+  deleteProductFAQ(id: string): Promise<boolean>;
+  updateProductFAQOrder(productId: string, faqIds: string[]): Promise<boolean>;
+
+  // Product Policy methods
+  getProductPolicies(): Promise<ProductPolicy[]>;
+  getProductPolicy(id: string): Promise<ProductPolicy | undefined>;
+  createProductPolicy(policy: InsertProductPolicy): Promise<ProductPolicy>;
+  updateProductPolicy(id: string, policy: Partial<InsertProductPolicy>): Promise<ProductPolicy | undefined>;
+  deleteProductPolicy(id: string): Promise<boolean>;
+
+  // Product Policy Association methods
+  getProductPolicyAssociations(productId: string): Promise<(ProductPolicyAssociation & { policy: ProductPolicy })[]>;
+  addProductPolicyAssociation(productId: string, policyId: string, sortOrder?: number): Promise<ProductPolicyAssociation>;
+  removeProductPolicyAssociation(productId: string, policyId: string): Promise<boolean>;
+  updateProductPolicyAssociationOrder(productId: string, policyIds: string[]): Promise<boolean>;
+
   // Content Library methods
   getContentLibraryItems(filters?: { tags?: string[]; status?: string; contentType?: string; priority?: string }): Promise<ContentLibrary[]>;
   getContentLibraryItem(id: string): Promise<ContentLibrary | undefined>;
@@ -1541,6 +1562,163 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date()
         })
         .where(eq(productReviews.id, id));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Product FAQ methods
+  async getProductFAQs(productId: string): Promise<ProductFAQ[]> {
+    return await db
+      .select()
+      .from(productFAQs)
+      .where(and(
+        eq(productFAQs.productId, productId),
+        eq(productFAQs.isActive, true)
+      ))
+      .orderBy(productFAQs.sortOrder, productFAQs.createdAt);
+  }
+
+  async getProductFAQ(id: string): Promise<ProductFAQ | undefined> {
+    const [faq] = await db.select().from(productFAQs).where(eq(productFAQs.id, id));
+    return faq || undefined;
+  }
+
+  async createProductFAQ(faq: InsertProductFAQ): Promise<ProductFAQ> {
+    const [newFAQ] = await db.insert(productFAQs).values(faq).returning();
+    return newFAQ;
+  }
+
+  async updateProductFAQ(id: string, faq: Partial<InsertProductFAQ>): Promise<ProductFAQ | undefined> {
+    const [updatedFAQ] = await db
+      .update(productFAQs)
+      .set({ ...faq, updatedAt: new Date() })
+      .where(eq(productFAQs.id, id))
+      .returning();
+    return updatedFAQ || undefined;
+  }
+
+  async deleteProductFAQ(id: string): Promise<boolean> {
+    const result = await db.delete(productFAQs).where(eq(productFAQs.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateProductFAQOrder(productId: string, faqIds: string[]): Promise<boolean> {
+    try {
+      // Update sort order for each FAQ
+      for (let i = 0; i < faqIds.length; i++) {
+        await db
+          .update(productFAQs)
+          .set({ sortOrder: i, updatedAt: new Date() })
+          .where(and(
+            eq(productFAQs.id, faqIds[i]),
+            eq(productFAQs.productId, productId)
+          ));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Product Policy methods
+  async getProductPolicies(): Promise<ProductPolicy[]> {
+    return await db
+      .select()
+      .from(productPolicies)
+      .where(eq(productPolicies.isActive, true))
+      .orderBy(productPolicies.sortOrder, productPolicies.createdAt);
+  }
+
+  async getProductPolicy(id: string): Promise<ProductPolicy | undefined> {
+    const [policy] = await db.select().from(productPolicies).where(eq(productPolicies.id, id));
+    return policy || undefined;
+  }
+
+  async createProductPolicy(policy: InsertProductPolicy): Promise<ProductPolicy> {
+    const [newPolicy] = await db.insert(productPolicies).values(policy).returning();
+    return newPolicy;
+  }
+
+  async updateProductPolicy(id: string, policy: Partial<InsertProductPolicy>): Promise<ProductPolicy | undefined> {
+    const [updatedPolicy] = await db
+      .update(productPolicies)
+      .set({ ...policy, updatedAt: new Date() })
+      .where(eq(productPolicies.id, id))
+      .returning();
+    return updatedPolicy || undefined;
+  }
+
+  async deleteProductPolicy(id: string): Promise<boolean> {
+    const result = await db.delete(productPolicies).where(eq(productPolicies.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Product Policy Association methods
+  async getProductPolicyAssociations(productId: string): Promise<(ProductPolicyAssociation & { policy: ProductPolicy })[]> {
+    const results = await db
+      .select({
+        productId: productPolicyAssociations.productId,
+        policyId: productPolicyAssociations.policyId,
+        sortOrder: productPolicyAssociations.sortOrder,
+        createdAt: productPolicyAssociations.createdAt,
+        policy: {
+          id: productPolicies.id,
+          title: productPolicies.title,
+          description: productPolicies.description,
+          icon: productPolicies.icon,
+          type: productPolicies.type,
+          isActive: productPolicies.isActive,
+          sortOrder: productPolicies.sortOrder,
+          createdAt: productPolicies.createdAt,
+          updatedAt: productPolicies.updatedAt,
+        }
+      })
+      .from(productPolicyAssociations)
+      .leftJoin(productPolicies, eq(productPolicyAssociations.policyId, productPolicies.id))
+      .where(eq(productPolicyAssociations.productId, productId))
+      .orderBy(productPolicyAssociations.sortOrder);
+
+    return results.map(row => ({
+      productId: row.productId,
+      policyId: row.policyId,
+      sortOrder: row.sortOrder,
+      createdAt: row.createdAt,
+      policy: row.policy as ProductPolicy
+    }));
+  }
+
+  async addProductPolicyAssociation(productId: string, policyId: string, sortOrder = 0): Promise<ProductPolicyAssociation> {
+    const [association] = await db
+      .insert(productPolicyAssociations)
+      .values({ productId, policyId, sortOrder })
+      .returning();
+    return association;
+  }
+
+  async removeProductPolicyAssociation(productId: string, policyId: string): Promise<boolean> {
+    const result = await db
+      .delete(productPolicyAssociations)
+      .where(and(
+        eq(productPolicyAssociations.productId, productId),
+        eq(productPolicyAssociations.policyId, policyId)
+      ));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateProductPolicyAssociationOrder(productId: string, policyIds: string[]): Promise<boolean> {
+    try {
+      // Update sort order for each policy association
+      for (let i = 0; i < policyIds.length; i++) {
+        await db
+          .update(productPolicyAssociations)
+          .set({ sortOrder: i })
+          .where(and(
+            eq(productPolicyAssociations.productId, productId),
+            eq(productPolicyAssociations.policyId, policyIds[i])
+          ));
+      }
       return true;
     } catch {
       return false;
