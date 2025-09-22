@@ -73,6 +73,11 @@ export default function Products() {
         console.error('❌ DELETE failed:', errorText);
         throw new Error(`Failed to delete: ${response.status} ${errorText}`);
       }
+      
+      // For 204 No Content, don't try to parse JSON
+      if (response.status === 204) {
+        return { success: true };
+      }
       return response.json();
     },
     onSuccess: () => {
