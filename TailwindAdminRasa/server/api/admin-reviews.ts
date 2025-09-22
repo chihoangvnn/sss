@@ -6,8 +6,59 @@ import { db } from '../db';
 
 const router = Router();
 
+// 🔒 Admin-only authentication middleware
+const requireAdminAuth = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  // Check session first
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Authentication required", 
+      message: "Please log in to access this resource",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  
+  // Check admin role
+  if (!req.session.isAdmin && req.session.role !== 'admin') {
+    return res.status(403).json({ 
+      error: "Admin access required", 
+      message: "Only administrators can manage reviews",
+      code: "ADMIN_REQUIRED"
+    });
+  }
+  
+  next();
+};
+
+// 🛡️ CSRF protection for destructive operations
+const requireCSRFToken = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  const csrfToken = req.headers['x-csrf-token'] || req.body.csrfToken;
+  const sessionCSRF = req.session.csrfToken;
+  
+  if (!csrfToken || !sessionCSRF || csrfToken !== sessionCSRF) {
+    return res.status(403).json({ 
+      error: "CSRF token invalid", 
+      message: "Invalid or missing CSRF token",
+      code: "CSRF_REQUIRED"
+    });
+  }
+  
+  next();
+};
+
 // GET /api/admin/reviews - List all reviews with filtering and pagination
-router.get('/', async (req, res) => {
+router.get('/', requireAdminAuth, async (req, res) => {
   try {
     const {
       page = 1,
@@ -156,7 +207,7 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/admin/reviews/:id - Update review (approval status, moderation)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdminAuth, requireCSRFToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -206,7 +257,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/admin/reviews/:id - Delete a single review
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdminAuth, requireCSRFToken, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -237,7 +288,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/admin/reviews/bulk-approve - Bulk approve reviews
-router.post('/bulk-approve', async (req, res) => {
+router.post('/bulk-approve', requireAdminAuth, requireCSRFToken, async (req, res) => {
   try {
     const { reviewIds } = req.body;
 
@@ -271,7 +322,7 @@ router.post('/bulk-approve', async (req, res) => {
 });
 
 // POST /api/admin/reviews/bulk-delete - Bulk delete reviews
-router.post('/bulk-delete', async (req, res) => {
+router.post('/bulk-delete', requireAdminAuth, requireCSRFToken, async (req, res) => {
   try {
     const { reviewIds, productId, filterBy } = req.body;
 

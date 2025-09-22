@@ -4,8 +4,116 @@ import { storage } from '../storage';
 
 const router = Router();
 
+// 🔒 Admin-only authentication middleware
+const requireAdminAuth = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  // Check session first
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Authentication required", 
+      message: "Please log in to access this resource",
+      code: "AUTH_REQUIRED"
+    });
+  }
+  
+  // Check admin role
+  if (!req.session.isAdmin && req.session.role !== 'admin') {
+    return res.status(403).json({ 
+      error: "Admin access required", 
+      message: "Only administrators can seed reviews",
+      code: "ADMIN_REQUIRED"
+    });
+  }
+  
+  next();
+};
+
+// 🛡️ CSRF protection for destructive operations
+const requireCSRFToken = (req: any, res: any, next: any) => {
+  // For development, allow all requests
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  const csrfToken = req.headers['x-csrf-token'] || req.body.csrfToken;
+  const sessionCSRF = req.session.csrfToken;
+  
+  if (!csrfToken || !sessionCSRF || csrfToken !== sessionCSRF) {
+    return res.status(403).json({ 
+      error: "CSRF token invalid", 
+      message: "Invalid or missing CSRF token",
+      code: "CSRF_REQUIRED"
+    });
+  }
+  
+  next();
+};
+
+// 🚦 Rate limiting for AI review seeding to prevent API abuse
+const reviewSeedingRateLimit = new Map<string, { count: number; resetTime: number; lastRequest: number }>();
+const SEEDING_RATE_LIMIT_WINDOW = 300000; // 5 minutes
+const SEEDING_RATE_LIMIT_MAX = 10; // 10 seeding requests per 5 minutes per IP
+const SEEDING_MIN_INTERVAL = 10000; // 10 seconds between requests
+
+const reviewSeedingRateLimitMiddleware = (req: any, res: any, next: any) => {
+  // For development, allow all requests (bypass rate limiting)
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+  
+  const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+  const now = Date.now();
+  
+  const clientData = reviewSeedingRateLimit.get(clientIP);
+  
+  // Check if this is a new client or if the window has reset
+  if (!clientData || now > clientData.resetTime) {
+    reviewSeedingRateLimit.set(clientIP, { 
+      count: 1, 
+      resetTime: now + SEEDING_RATE_LIMIT_WINDOW,
+      lastRequest: now
+    });
+    next();
+    return;
+  }
+  
+  // Check minimum interval between requests (prevents spam)
+  if (now - clientData.lastRequest < SEEDING_MIN_INTERVAL) {
+    const retryAfter = Math.ceil((SEEDING_MIN_INTERVAL - (now - clientData.lastRequest)) / 1000);
+    return res.status(429).json({
+      error: "Rate limit exceeded",
+      message: `Please wait ${retryAfter} seconds before making another seeding request.`,
+      code: "TOO_FREQUENT",
+      retryAfter
+    });
+  }
+  
+  // Check max requests per window
+  if (clientData.count >= SEEDING_RATE_LIMIT_MAX) {
+    const retryAfter = Math.ceil((clientData.resetTime - now) / 1000);
+    return res.status(429).json({
+      error: "Rate limit exceeded",
+      message: `Too many AI seeding requests. Maximum ${SEEDING_RATE_LIMIT_MAX} requests per ${SEEDING_RATE_LIMIT_WINDOW / 60000} minutes.`,
+      code: "RATE_LIMIT_EXCEEDED",
+      retryAfter
+    });
+  }
+  
+  // Update counters
+  clientData.count++;
+  clientData.lastRequest = now;
+  next();
+};
+
 // POST /api/review-seeding - Generate and seed AI reviews for a product
-router.post('/', async (req, res) => {
+router.post('/', requireAdminAuth, requireCSRFToken, reviewSeedingRateLimitMiddleware, async (req, res) => {
   try {
     const {
       productId,
@@ -108,8 +216,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/review-seeding/preview - Preview what AI reviews would look like
-router.post('/preview', async (req, res) => {
+// POST /api/review-seeding/preview - Preview what AI reviews would look like (requires admin access)
+router.post('/preview', requireAdminAuth, requireCSRFToken, reviewSeedingRateLimitMiddleware, async (req, res) => {
   try {
     const {
       productId,
