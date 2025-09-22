@@ -2011,6 +2011,104 @@ export const insertWorkerJobSchema = createInsertSchema(workerJobs);
 export const insertWorkerHealthCheckSchema = createInsertSchema(workerHealthChecks);
 export const insertWorkerAnalyticsSchema = createInsertSchema(workerAnalytics);
 
+// Template Persistence System - Phase 1 Database Schema
+
+// User Templates table - for saving customized templates
+export const userTemplates = pgTable("user_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // Reference to users table, nullable for anonymous saves
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Template inheritance
+  baseTemplateId: varchar("base_template_id").notNull(), // Reference to built-in template
+  customizations: jsonb("customizations").notNull(), // Theme overrides, color changes, etc.
+  
+  // Targeting
+  platforms: jsonb("platforms").notNull().default('["all"]'), // ['landing-page', 'storefront', 'all']
+  category: varchar("category").notNull().default('custom'), // 'ecommerce', 'navigation', 'custom', etc.
+  
+  // Sharing & visibility
+  isPublic: boolean("is_public").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Metadata
+  tags: jsonb("tags").default('[]'), // ['shopee-style', 'dark-theme', etc.]
+  usageCount: integer("usage_count").notNull().default(0),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default('0.00'),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Template Compilations cache - for storing compiled template code
+export const templateCompilations = pgTable("template_compilations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull(), // Can be built-in or user template ID
+  templateType: varchar("template_type").notNull(), // 'builtin' or 'user'
+  
+  // Compilation parameters
+  framework: varchar("framework").notNull().default('react'), // 'react', 'vue', 'vanilla'
+  customizationHash: varchar("customization_hash").notNull(), // Hash of customizations for cache key
+  
+  // Compiled output
+  compiledCode: text("compiled_code").notNull(),
+  dependencies: jsonb("dependencies").default('[]'), // External dependencies needed
+  devDependencies: jsonb("dev_dependencies").default('[]'),
+  
+  // Applied theme data
+  appliedTheme: jsonb("applied_theme"), // Complete theme object that was applied
+  
+  // Cache management
+  version: varchar("version").notNull().default('1.0.0'),
+  isValid: boolean("is_valid").notNull().default(true),
+  expiresAt: timestamp("expires_at"), // Optional expiration for cache invalidation
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint for cache efficiency
+  uniqueCompilation: unique().on(table.templateId, table.templateType, table.customizationHash, table.framework)
+}));
+
+// Project Templates - tracking template usage in projects
+export const projectTemplates = pgTable("project_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Project references
+  projectId: varchar("project_id").notNull(), // References landing page or storefront ID
+  projectType: varchar("project_type").notNull(), // 'landing_page' or 'storefront'
+  
+  // Template references
+  templateId: varchar("template_id").notNull(), // Can be built-in or user template
+  templateType: varchar("template_type").notNull(), // 'builtin' or 'user'
+  templateName: text("template_name").notNull(), // Snapshot of template name for history
+  
+  // Applied configuration
+  appliedCustomizations: jsonb("applied_customizations").notNull(), // What was actually applied
+  appliedAt: timestamp("applied_at").defaultNow(),
+  
+  // Usage tracking
+  isActive: boolean("is_active").notNull().default(true), // If this template application is current
+  platform: varchar("platform").notNull(), // 'landing-page', 'storefront'
+  
+  // Performance tracking
+  loadTime: integer("load_time"), // Template application time in ms
+  compilationTime: integer("compilation_time"), // How long compilation took
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Index for efficient project lookups
+  projectIndex: index("project_templates_project_idx").on(table.projectId, table.projectType),
+  // Index for template usage analytics
+  templateUsageIndex: index("project_templates_template_idx").on(table.templateId, table.templateType)
+}));
+
+// Zod schemas for new template tables
+export const insertUserTemplateSchema = createInsertSchema(userTemplates);
+export const insertTemplateCompilationSchema = createInsertSchema(templateCompilations);
+export const insertProjectTemplateSchema = createInsertSchema(projectTemplates);
+
 // Type exports
 export type Worker = typeof workers.$inferSelect;
 export type InsertWorker = z.infer<typeof insertWorkerSchema>;
@@ -2020,3 +2118,11 @@ export type WorkerHealthCheck = typeof workerHealthChecks.$inferSelect;
 export type InsertWorkerHealthCheck = z.infer<typeof insertWorkerHealthCheckSchema>;
 export type WorkerAnalytics = typeof workerAnalytics.$inferSelect;
 export type InsertWorkerAnalytics = z.infer<typeof insertWorkerAnalyticsSchema>;
+
+// Template Persistence System types
+export type UserTemplate = typeof userTemplates.$inferSelect;
+export type InsertUserTemplate = z.infer<typeof insertUserTemplateSchema>;
+export type TemplateCompilation = typeof templateCompilations.$inferSelect;
+export type InsertTemplateCompilation = z.infer<typeof insertTemplateCompilationSchema>;
+export type ProjectTemplate = typeof projectTemplates.$inferSelect;
+export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
