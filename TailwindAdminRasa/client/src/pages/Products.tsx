@@ -59,7 +59,7 @@ export default function Products() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       console.log('🗑️ Attempting to delete product with ID:', id);
-      const url = `/api/products?id=${id}`;
+      const url = `/api/products/${id}`;
       console.log('🔗 DELETE URL:', url);
       
       const response = await fetch(url, {

@@ -32,6 +32,7 @@ import express from 'express';
 import { postScheduler } from './services/post-scheduler';
 import bulkUploadRoutes from './routes/bulk-upload';
 import facebookAppsRouter from './api/facebook-apps';
+import productsRouter from './api/products';
 import aiContentRouter from './api/ai-content';
 import analyticsRouter from './api/analytics';
 import limitManagementRouter from './api/limit-management';
@@ -3777,6 +3778,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const contentRoutes = await import("./api/content");
   app.use("/api/content", contentRoutes.default);
   app.use("/api/content", bulkUploadRoutes);
+
+  // ==========================================
+  // PRODUCTS MANAGEMENT API ROUTES
+  // ==========================================
+  app.use("/api/products", productsRouter);
 
   // ==========================================
   // FACEBOOK APPS MANAGEMENT API ROUTES
