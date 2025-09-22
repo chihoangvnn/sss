@@ -4,7 +4,7 @@ import {
   Plus, Search, Filter, Grid, List, Eye, Edit2, Trash2, Wand2,
   Tag, Calendar, MoreVertical, Copy, Sparkles, RefreshCw,
   FileText, Hash, ChevronDown, Settings, Star, Brain, CheckCircle2,
-  HelpCircle, Link, Layers
+  HelpCircle, Link, Layers, Store
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -416,6 +416,47 @@ export function ContentLibrary({}: ContentLibraryProps) {
 
     const variationsToSave = Array.from(selectedVariations).map(index => aiVariations[index]);
     await saveAIVariationsMutation.mutateAsync(variationsToSave);
+  };
+
+  // Cross-system sharing handlers
+  const handleUseInLandingPage = (item: ContentLibraryItem) => {
+    // Store content data for landing page creation
+    const landingPageData = {
+      title: item.title,
+      content: item.baseContent,
+      contentId: item.id
+    };
+    
+    // Store in localStorage for cross-page data transfer
+    localStorage.setItem('landingPageContent', JSON.stringify(landingPageData));
+    
+    // Navigate to landing page editor with content
+    window.open('/landing-page-editor?content=' + item.id, '_blank');
+    
+    toast({
+      title: "🚀 Chuyển đến Landing Page Editor",
+      description: `Content "${item.title}" đã được chuẩn bị sẵn!`,
+    });
+  };
+
+  const handleUseInStorefront = (item: ContentLibraryItem) => {
+    // Store content data for storefront creation
+    const storefrontData = {
+      title: item.title,
+      content: item.baseContent,
+      contentId: item.id
+    };
+    
+    // Store in localStorage for cross-page data transfer
+    localStorage.setItem('storefrontContent', JSON.stringify(storefrontData));
+    
+    // Navigate to storefront manager with content
+    window.open('/storefront-manager?content=' + item.id, '_blank');
+    
+    toast({
+      title: "🏪 Chuyển đến Storefront Manager",
+      description: `Content "${item.title}" đã được chuẩn bị sẵn!`,
+    });
   };
 
   const formatDate = (date: Date | string | null) => {
@@ -1132,6 +1173,26 @@ export function ContentLibrary({}: ContentLibraryProps) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            handleUseInLandingPage(item);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-blue-600"
+                        >
+                          <Layers className="w-4 h-4" />
+                          Dùng cho Landing Page
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUseInStorefront(item);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-green-600"
+                        >
+                          <Store className="w-4 h-4" />
+                          Dùng cho Storefront
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (confirm('Bạn có chắc chắn muốn xóa content này?')) {
                               deleteItemMutation.mutate(item.id);
                             }
@@ -1270,6 +1331,24 @@ export function ContentLibrary({}: ContentLibraryProps) {
                             onClick={() => navigator.clipboard.writeText(item.baseContent)}
                           >
                             <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUseInLandingPage(item)}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="Dùng cho Landing Page"
+                          >
+                            <Layers className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUseInStorefront(item)}
+                            className="text-green-600 hover:text-green-700"
+                            title="Dùng cho Storefront"
+                          >
+                            <Store className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"

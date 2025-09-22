@@ -123,6 +123,80 @@ export default function LandingPageEditor() {
     }
   }, [existingLandingPage, selectedThemeConfig]);
 
+  // Cross-system content sharing receiver logic
+  useEffect(() => {
+    const loadSharedContent = async () => {
+      // Only load shared content if not editing existing landing page
+      if (isEditing) return;
+
+      // Check URL parameters for content ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const contentId = urlParams.get('content');
+
+      if (!contentId) return;
+
+      try {
+        // First try to get content from localStorage (immediate transfer)
+        const storedContent = localStorage.getItem('landingPageContent');
+        let sharedContent = null;
+
+        if (storedContent) {
+          const parsedContent = JSON.parse(storedContent);
+          if (parsedContent.contentId === contentId) {
+            sharedContent = parsedContent;
+            // Clean up localStorage after consumption
+            localStorage.removeItem('landingPageContent');
+          }
+        }
+
+        // Fallback: fetch from API if localStorage is empty
+        if (!sharedContent) {
+          const response = await fetch(`/api/content/library/${contentId}`);
+          if (response.ok) {
+            const contentItem = await response.json();
+            sharedContent = {
+              title: contentItem.title,
+              content: contentItem.baseContent,
+              contentId: contentItem.id
+            };
+          }
+        }
+
+        // Pre-populate form with shared content
+        if (sharedContent) {
+          setFormData(prevData => ({
+            ...prevData,
+            title: sharedContent.title,
+            heroTitle: sharedContent.title,
+            description: sharedContent.content,
+            heroSubtitle: sharedContent.content.length > 100 
+              ? sharedContent.content.substring(0, 100) + "..."
+              : sharedContent.content,
+            slug: sharedContent.title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/^-+|-+$/g, '')
+          }));
+
+          toast({
+            title: "✅ Content loaded successfully!",
+            description: `Content "${sharedContent.title}" has been pre-populated in the form.`,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load shared content:', error);
+        toast({
+          title: "❌ Failed to load content",
+          description: "Could not load the shared content. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadSharedContent();
+  }, [isEditing, toast]);
+
   // Auto-generate slug from title
   useEffect(() => {
     if (!isEditing && formData.title) {

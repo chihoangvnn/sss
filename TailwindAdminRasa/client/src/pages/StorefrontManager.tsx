@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,6 +100,77 @@ export default function StorefrontManager() {
 
   // Watch displayMode to show/hide product selection
   const watchDisplayMode = form.watch("displayMode");
+
+  // Cross-system content sharing receiver logic
+  useEffect(() => {
+    const loadSharedContent = async () => {
+      // Check URL parameters for content ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const contentId = urlParams.get('content');
+
+      if (!contentId) return;
+
+      try {
+        // First try to get content from localStorage (immediate transfer)
+        const storedContent = localStorage.getItem('storefrontContent');
+        let sharedContent = null;
+
+        if (storedContent) {
+          const parsedContent = JSON.parse(storedContent);
+          if (parsedContent.contentId === contentId) {
+            sharedContent = parsedContent;
+            // Clean up localStorage after consumption
+            localStorage.removeItem('storefrontContent');
+          }
+        }
+
+        // Fallback: fetch from API if localStorage is empty
+        if (!sharedContent) {
+          const response = await fetch(`/api/content/library/${contentId}`);
+          if (response.ok) {
+            const contentItem = await response.json();
+            sharedContent = {
+              title: contentItem.title,
+              content: contentItem.baseContent,
+              contentId: contentItem.id
+            };
+          }
+        }
+
+        // Pre-populate form with shared content
+        if (sharedContent) {
+          // Generate storefront name from content title with proper diacritic handling
+          const storefrontName = sharedContent.title
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9\s]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+          form.setValue('name', storefrontName);
+          form.setValue('contactInfo.businessName', sharedContent.title);
+          
+          // Open the create dialog to show the pre-populated form
+          setIsCreateDialogOpen(true);
+
+          toast({
+            title: "✅ Content loaded successfully!",
+            description: `Content "${sharedContent.title}" has been pre-populated for new storefront.`,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load shared content:', error);
+        toast({
+          title: "❌ Failed to load content",
+          description: "Could not load the shared content. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadSharedContent();
+  }, [form, toast]);
 
   const onSubmit = (data: StorefrontConfigForm) => {
     createConfigMutation.mutate(data);
