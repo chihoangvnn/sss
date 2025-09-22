@@ -22,10 +22,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.json(products);
       }
     } else if (req.method === 'POST') {
-      const { name, description, price, image, categoryId, stock, status } = req.body;
+      const { name, description, itemCode, price, image, categoryId, stock, status } = req.body;
       const product = await storage.createProduct({
         name,
         description,
+        itemCode: itemCode || null,
         price: price.toString(),
         categoryId: categoryId || null,
         stock: stock || 0,
@@ -34,10 +35,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
       res.json({ ...product, message: 'Product created successfully' });
     } else if (req.method === 'PUT' && id && typeof id === 'string') {
-      const { name, description, price, image, categoryId, stock, status } = req.body;
+      const { name, description, itemCode, price, image, categoryId, stock, status } = req.body;
       const product = await storage.updateProduct(id, {
         name,
         description,
+        itemCode,
         price: price?.toString(),
         categoryId,
         stock,

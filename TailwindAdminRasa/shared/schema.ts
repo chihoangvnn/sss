@@ -158,6 +158,7 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   description: text("description"), // Primary description for general use
   sku: text("sku").unique(), // Auto-generated: 2 chữ đầu ngành hàng + 4 số random
+  itemCode: text("item_code"), // QR/Barcode scanner input for inventory management
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
   categoryId: varchar("category_id").references(() => categories.id),
