@@ -286,17 +286,17 @@ function WorkerList({ workers, onToggleWorker, isToggling }: {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div className="text-center p-2 bg-slate-50 rounded">
-                <div className="font-semibold text-lg">{(worker.totalJobsCompleted || 0).toLocaleString()}</div>
+            <div className="flex justify-between items-center text-sm">
+              <div className="text-center px-3 py-1.5 bg-slate-50 rounded-md">
+                <div className="font-semibold text-sm">{(worker.totalJobsCompleted || 0).toLocaleString()}</div>
                 <div className="text-xs text-muted-foreground">Jobs</div>
               </div>
-              <div className="text-center p-2 bg-slate-50 rounded">
-                <div className="font-semibold text-lg">{worker.successRate || '0.00'}%</div>
+              <div className="text-center px-3 py-1.5 bg-slate-50 rounded-md">
+                <div className="font-semibold text-sm">{worker.successRate || '0.00'}%</div>
                 <div className="text-xs text-muted-foreground">Success</div>
               </div>
-              <div className="text-center p-2 bg-slate-50 rounded">
-                <div className="font-semibold text-lg">{(worker.avgExecutionTime || 0).toFixed(0)}ms</div>
+              <div className="text-center px-3 py-1.5 bg-slate-50 rounded-md">
+                <div className="font-semibold text-sm">{(worker.avgExecutionTime || 0).toFixed(0)}ms</div>
                 <div className="text-xs text-muted-foreground">Avg Time</div>
               </div>
             </div>
