@@ -416,12 +416,18 @@ export function FAQLibraryManagement({ className = "" }: FAQLibraryManagementPro
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="category">Danh mục *</Label>
-                    <Input
-                      id="category"
-                      placeholder="VD: sản phẩm, dịch vụ..."
-                      value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value)}
-                    />
+                    <Select value={formCategory} onValueChange={setFormCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn danh mục..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">🔧 Tổng quát</SelectItem>
+                        <SelectItem value="product">📦 Sản phẩm</SelectItem>
+                        <SelectItem value="tutorial">📚 Hướng dẫn</SelectItem>
+                        <SelectItem value="policy">📋 Chính sách</SelectItem>
+                        <SelectItem value="technical">⚙️ Kỹ thuật</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div>
