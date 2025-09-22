@@ -168,7 +168,7 @@ export function FAQAssignmentManagement({ className = "" }: FAQAssignmentManagem
   const createAssignmentMutation = useMutation({
     mutationFn: async (data: {
       contentId: string;
-      faqIds: string[];
+      faqId: string;
       isVisible: boolean;
     }) => {
       const response = await fetch('/api/faq-assignments', {
@@ -200,9 +200,8 @@ export function FAQAssignmentManagement({ className = "" }: FAQAssignmentManagem
   // Bulk assignment mutation
   const bulkAssignmentMutation = useMutation({
     mutationFn: async (data: {
-      contentIds: string[];
+      contentId: string;
       faqIds: string[];
-      isVisible: boolean;
     }) => {
       const response = await fetch('/api/faq-assignments/bulk', {
         method: 'POST',
@@ -325,11 +324,14 @@ export function FAQAssignmentManagement({ className = "" }: FAQAssignmentManagem
       return;
     }
 
-    await createAssignmentMutation.mutateAsync({
-      contentId: formContentId,
-      faqIds: formFaqIds,
-      isVisible: formIsVisible,
-    });
+    // Create individual assignments for each FAQ
+    for (const faqId of formFaqIds) {
+      await createAssignmentMutation.mutateAsync({
+        contentId: formContentId,
+        faqId: faqId,
+        isVisible: formIsVisible,
+      });
+    }
   };
 
   const handleBulkSubmit = async () => {
@@ -342,11 +344,13 @@ export function FAQAssignmentManagement({ className = "" }: FAQAssignmentManagem
       return;
     }
 
-    await bulkAssignmentMutation.mutateAsync({
-      contentIds: bulkContentIds,
-      faqIds: bulkFaqIds,
-      isVisible: true,
-    });
+    // Create bulk assignments for each content
+    for (const contentId of bulkContentIds) {
+      await bulkAssignmentMutation.mutateAsync({
+        contentId: contentId,
+        faqIds: bulkFaqIds,
+      });
+    }
   };
 
   const formatDate = (date: Date | string | null) => {
