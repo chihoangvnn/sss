@@ -558,19 +558,6 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               )}
             </div>
 
-            {/* 🎯 Row 6: Quản lý FAQ - Moved inside form */}
-            {isEditing && product?.id && (
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <div className="flex items-center gap-2 mb-3">
-                  <HelpCircle className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-medium text-gray-900">Quản lý FAQ</h3>
-                </div>
-                <FAQManagement 
-                  productId={product.id}
-                  className="bg-white rounded border"
-                />
-              </div>
-            )}
 
             {/* 🎯 Row 7: Mô tả đã tạo bởi AI */}
             {generatedDescriptions && (
@@ -723,6 +710,24 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      {/* 🎯 FAQ Management - Outside form to avoid nested forms */}
+      {isEditing && product?.id && (
+        <Card className="w-full max-w-2xl mt-4">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg">Quản lý FAQ</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <FAQManagement 
+              productId={product.id}
+              className=""
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* QR Scanner Modal */}
       <QRScanner
