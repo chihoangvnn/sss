@@ -51,11 +51,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         res.status(404).json({ error: 'Product not found' });
       }
-    } else if (req.method === 'DELETE' && id && typeof id === 'string') {
+    } else if (req.method === 'DELETE') {
+      console.log('🗑️ DELETE request received');
+      console.log('📋 Query params:', req.query);
+      console.log('🆔 ID from query:', id);
+      
+      if (!id || typeof id !== 'string') {
+        console.error('❌ No valid ID provided for DELETE');
+        return res.status(400).json({ error: 'Product ID is required for deletion' });
+      }
+      
+      console.log('🔄 Attempting to delete product:', id);
       const success = await storage.deleteProduct(id);
+      
       if (success) {
-        res.json({ message: 'Product deleted successfully' });
+        console.log('✅ Product deleted successfully:', id);
+        res.json({ message: 'Product deleted successfully', id });
       } else {
+        console.log('❌ Product not found:', id);
         res.status(404).json({ error: 'Product not found' });
       }
     } else {

@@ -58,10 +58,21 @@ export default function Products() {
   // Delete product mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/products?id=${id}`, {
+      console.log('🗑️ Attempting to delete product with ID:', id);
+      const url = `/api/products?id=${id}`;
+      console.log('🔗 DELETE URL:', url);
+      
+      const response = await fetch(url, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Failed to delete');
+      
+      console.log('📡 DELETE response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ DELETE failed:', errorText);
+        throw new Error(`Failed to delete: ${response.status} ${errorText}`);
+      }
       return response.json();
     },
     onSuccess: () => {
