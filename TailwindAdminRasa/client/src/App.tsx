@@ -39,10 +39,12 @@ import WorkerManagement from "@/components/WorkerManagement";
 import NotFound from "@/pages/not-found";
 import ProductPage from "@/pages/ProductPage";
 import ReviewManagement from "@/pages/ReviewManagement";
+import ShopeeHomePage from "@/pages/ShopeeHomePage";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SocialMediaHub } from "@/components/SocialMediaHub";
 
-function Router() {
+// Admin Routes (inside sidebar layout)
+function AdminRouter() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
@@ -50,9 +52,6 @@ function Router() {
       <Route path="/landing-page-manager" component={ProductLandingPageManager} />
       <Route path="/landing-page-editor" component={LandingPageEditor} />
       <Route path="/landing-page-editor/:id" component={LandingPageEditor} />
-      <Route path="/lp/:slug" component={PublicLandingPage} />
-      <Route path="/sf/:name" component={PublicStorefront} />
-      <Route path="/product/:slug" component={ProductPage} />
       <Route path="/storefront-manager" component={StorefrontManager} />
       <Route path="/products" component={Products} />
       <Route path="/orders" component={Orders} />
@@ -94,17 +93,27 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <main className="flex-1 overflow-auto bg-background mobile-content-padding">
-              <Router />
-            </main>
-          </div>
-        </SidebarProvider>
-        
-        {/* Modern Mobile Bottom Navigation */}
-        <MobileBottomNav />
+        {/* Public Routes (outside admin layout) */}
+        <Switch>
+          <Route path="/shopee" component={ShopeeHomePage} />
+          <Route path="/lp/:slug" component={PublicLandingPage} />
+          <Route path="/sf/:name" component={PublicStorefront} />
+          <Route path="/product/:slug" component={ProductPage} />
+          <Route>
+            {/* Admin Routes (inside sidebar layout) */}
+            <SidebarProvider style={style as React.CSSProperties}>
+              <div className="flex h-screen w-full">
+                <AppSidebar />
+                <main className="flex-1 overflow-auto bg-background mobile-content-padding">
+                  <AdminRouter />
+                </main>
+              </div>
+            </SidebarProvider>
+            
+            {/* Modern Mobile Bottom Navigation - only for admin routes */}
+            <MobileBottomNav />
+          </Route>
+        </Switch>
         
         <Toaster />
       </TooltipProvider>
