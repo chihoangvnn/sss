@@ -228,26 +228,35 @@ function WorkerList({ workers, onToggleWorker, isToggling }: {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {workers.map((worker) => (
-        <Card key={worker.id} className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+        <Card key={worker.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            {/* Header Row */}
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Server className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <CardTitle className="text-lg">{worker.workerId}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Globe className="h-4 w-4" />
-                      {worker.region}
-                    </CardDescription>
+                <Server className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="font-semibold text-lg">{worker.workerId}</h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Globe className="h-3 w-3" />
+                    {worker.region}
+                    <span className="mx-1">•</span>
+                    <span className="font-mono text-xs">
+                      {worker.ipAddress || 'Detecting...'}
+                    </span>
+                    {worker.ipCountry && (
+                      <>
+                        <span className="mx-1">•</span>
+                        <span>{worker.ipCountry}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
+              
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Enable</span>
                   <Switch
                     checked={worker.isEnabled ?? true}
                     disabled={isToggling}
@@ -255,7 +264,7 @@ function WorkerList({ workers, onToggleWorker, isToggling }: {
                     aria-label={`Toggle ${worker.workerId}`}
                   />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   {getStatusIcon(worker.status)}
                   <Badge variant="outline" className={getStatusColor(worker.status)}>
                     {worker.status}
@@ -263,53 +272,37 @@ function WorkerList({ workers, onToggleWorker, isToggling }: {
                 </div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-              <div>
-                <div className="font-medium text-muted-foreground">Platforms</div>
-                <div className="flex gap-1 mt-1">
-                  {worker.platforms.map((platform) => (
-                    <Badge key={platform} variant="secondary" className="text-xs">
-                      {platform}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <div className="font-medium text-muted-foreground">IP Address</div>
-                <div className="font-mono text-xs mt-1">
-                  {worker.ipAddress ? (
-                    <span className="text-blue-600">{worker.ipAddress}</span>
-                  ) : (
-                    <span className="text-gray-400">Auto-detecting...</span>
-                  )}
-                </div>
-                {worker.ipCountry && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Globe className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      {worker.ipCountry}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="font-medium text-muted-foreground">Jobs Processed</div>
-                <div className="font-semibold">{(worker.totalJobsCompleted || 0).toLocaleString()}</div>
-              </div>
-              <div>
-                <div className="font-medium text-muted-foreground">Success Rate</div>
-                <div className="font-semibold">{worker.successRate || '0.00'}%</div>
-              </div>
-              <div>
-                <div className="font-medium text-muted-foreground">Avg Time</div>
-                <div className="font-semibold">{(worker.avgExecutionTime || 0).toFixed(0)}ms</div>
+
+            {/* Platforms Row */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-medium text-muted-foreground">Platforms:</span>
+              <div className="flex gap-1">
+                {worker.platforms.map((platform) => (
+                  <Badge key={platform} variant="secondary" className="text-xs px-2 py-0.5">
+                    {platform}
+                  </Badge>
+                ))}
               </div>
             </div>
-            <Separator className="my-3" />
-            <div className="text-xs text-muted-foreground">
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="text-center p-2 bg-slate-50 rounded">
+                <div className="font-semibold text-lg">{(worker.totalJobsCompleted || 0).toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Jobs</div>
+              </div>
+              <div className="text-center p-2 bg-slate-50 rounded">
+                <div className="font-semibold text-lg">{worker.successRate || '0.00'}%</div>
+                <div className="text-xs text-muted-foreground">Success</div>
+              </div>
+              <div className="text-center p-2 bg-slate-50 rounded">
+                <div className="font-semibold text-lg">{(worker.avgExecutionTime || 0).toFixed(0)}ms</div>
+                <div className="text-xs text-muted-foreground">Avg Time</div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-3 pt-2 border-t text-xs text-muted-foreground text-center">
               Last seen: {worker.lastPingAt ? new Date(worker.lastPingAt).toLocaleString() : 'Never'}
             </div>
           </CardContent>
