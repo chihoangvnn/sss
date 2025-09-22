@@ -10,6 +10,8 @@ interface RichTextEditorProps {
   disabled?: boolean;
   readOnly?: boolean;
   height?: string;
+  id?: string;
+  'data-testid'?: string;
 }
 
 export function RichTextEditor({
@@ -19,7 +21,9 @@ export function RichTextEditor({
   className = "",
   disabled = false,
   readOnly = false,
-  height = "120px"
+  height = "120px",
+  id,
+  'data-testid': dataTestId
 }: RichTextEditorProps) {
   const quillRef = useRef<ReactQuill>(null);
 
@@ -81,6 +85,8 @@ export function RichTextEditor({
         readOnly={readOnly || disabled}
         modules={modules}
         formats={formats}
+        id={id}
+        data-testid={dataTestId}
         style={{
           backgroundColor: disabled ? 'hsl(var(--muted))' : 'white',
           opacity: disabled ? 0.5 : 1,

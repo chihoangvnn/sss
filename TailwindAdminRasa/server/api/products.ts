@@ -60,9 +60,10 @@ router.get('/slug/:slug', async (req, res) => {
 router.get('/:id/faqs', async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('📊 API: Getting FAQs for product:', id);
+    const includeInactive = req.query.includeInactive === 'true';
+    console.log('📊 API: Getting FAQs for product:', id, includeInactive ? '(including inactive)' : '(active only)');
     
-    const faqs = await storage.getProductFAQs(id);
+    const faqs = await storage.getProductFAQs(id, includeInactive);
     res.json(faqs);
   } catch (error) {
     console.error('❌ Error fetching product FAQs:', error);

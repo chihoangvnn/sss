@@ -1576,14 +1576,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Product FAQ methods
-  async getProductFAQs(productId: string): Promise<ProductFAQ[]> {
+  async getProductFAQs(productId: string, includeInactive = false): Promise<ProductFAQ[]> {
+    const whereClause = includeInactive 
+      ? eq(productFAQs.productId, productId)
+      : and(
+          eq(productFAQs.productId, productId),
+          eq(productFAQs.isActive, true)
+        );
+    
     return await db
       .select()
       .from(productFAQs)
-      .where(and(
-        eq(productFAQs.productId, productId),
-        eq(productFAQs.isActive, true)
-      ))
+      .where(whereClause)
       .orderBy(productFAQs.sortOrder, productFAQs.createdAt);
   }
 
@@ -1604,6 +1608,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(productFAQs.id, id))
       .returning();
     return updatedFAQ || undefined;
+  }
+
+  async getMaxProductFAQSortOrder(productId: string): Promise<number> {
+    const result = await db
+      .select({ maxSortOrder: sql<number>`COALESCE(MAX(${productFAQs.sortOrder}), -1)` })
+      .from(productFAQs)
+      .where(eq(productFAQs.productId, productId));
+    
+    return result[0]?.maxSortOrder ?? -1;
   }
 
   async deleteProductFAQ(id: string): Promise<boolean> {

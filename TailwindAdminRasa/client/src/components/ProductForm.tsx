@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
 import { QRScanner } from "./QRScanner";
 import { RichTextEditor } from "./RichTextEditor";
+import { FAQManagement } from "./FAQManagement";
 import type { CloudinaryImage, CloudinaryVideo, RasaDescriptions } from "@shared/schema";
 
 interface Industry {
@@ -451,6 +452,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 </Button>
               </div>
               <RichTextEditor
+                id="description"
+                data-testid="input-product-description"
                 value={formData.description}
                 onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                 placeholder="Nhập mô tả hoặc click 'Tự động tạo mô tả' để AI tạo giúp bạn"
@@ -711,6 +714,14 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      {/* FAQ Management - Only show for existing products */}
+      {isEditing && product?.id && (
+        <FAQManagement 
+          productId={product.id}
+          className="mt-6"
+        />
+      )}
 
       {/* QR Scanner Modal */}
       <QRScanner
