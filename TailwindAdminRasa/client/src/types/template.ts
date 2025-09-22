@@ -314,3 +314,69 @@ export interface TemplateInstallResult {
   instructions: string[];
   errors?: string[];
 }
+
+// ==========================================
+// TEMPLATE CATEGORY SYSTEM TYPES
+// ==========================================
+
+// Business Type Categories
+export type BusinessType = 
+  | 'ecommerce'           // Online stores, marketplaces
+  | 'luxury'              // High-end, premium brands
+  | 'business'            // Corporate, professional
+  | 'startup'             // Tech startups, modern
+  | 'restaurant'          // Food & beverage
+  | 'healthcare'          // Medical, wellness
+  | 'education'           // Schools, courses
+  | 'real-estate'         // Property, housing
+  | 'fashion'             // Clothing, accessories
+  | 'technology'          // SaaS, tech products
+  | 'finance'             // Banking, fintech
+  | 'creative'            // Art, design, photography
+  | 'travel'              // Tourism, hospitality
+  | 'fitness'             // Gym, sports, wellness
+  | 'automotive';         // Cars, vehicles
+
+// Template Collection Definition
+export interface TemplateCollection {
+  id: string;
+  name: string;
+  description: string;
+  businessType: BusinessType;
+  categories: TemplateCategory[];
+  featured: boolean;
+  templates: string[]; // Template IDs
+  colorScheme: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+  };
+  typography: {
+    headingFont: string;
+    bodyFont: string;
+    style: 'modern' | 'classic' | 'elegant' | 'bold' | 'minimal';
+  };
+  designPrinciples: string[];
+  targetAudience: string[];
+  useCases: string[];
+  metadata: {
+    popularity: number;
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    timeToImplement: string; // e.g., "1-2 hours"
+    industry: string[];
+    tags: string[];
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+// Category Filter Options
+export interface CategoryFilterOptions {
+  businessType?: BusinessType;
+  categories?: TemplateCategory[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  industry?: string[];
+  featured?: boolean;
+  tags?: string[];
+}
