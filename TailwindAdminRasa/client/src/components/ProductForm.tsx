@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode } from "lucide-react";
+import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
 import { QRScanner } from "./QRScanner";
@@ -371,38 +371,38 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Product Name */}
-            <div>
-              <Label htmlFor="name">Tên sản phẩm *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nhập tên sản phẩm"
-                data-testid="input-product-name"
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 🎯 OPTIMIZED LAYOUT - Row 1: Tên sản phẩm + Mã SKU */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="name">Tên sản phẩm *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nhập tên sản phẩm"
+                  data-testid="input-product-name"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="sku">Mã SKU</Label>
+                <Input
+                  id="sku"
+                  value={formData.sku || (isEditing ? "Chưa có SKU" : "Auto-gen")}
+                  readOnly
+                  disabled
+                  placeholder="Auto-generated SKU"
+                  className="bg-muted text-muted-foreground text-sm"
+                  data-testid="input-product-sku"
+                />
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground -mt-4">
+              {isEditing ? "SKU đã được tạo" : "SKU sẽ được tạo tự động: 2 chữ đầu ngành hàng + 4 số"}
+            </p>
 
-            {/* SKU Display */}
-            <div>
-              <Label htmlFor="sku">Mã SKU</Label>
-              <Input
-                id="sku"
-                value={formData.sku || (isEditing ? "Chưa có SKU" : "Sẽ tự động tạo khi lưu")}
-                readOnly
-                disabled
-                placeholder="Auto-generated SKU"
-                className="bg-muted text-muted-foreground"
-                data-testid="input-product-sku"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {isEditing ? "SKU đã được tạo" : "SKU sẽ được tạo tự động: 2 chữ đầu ngành hàng + 4 số"}
-              </p>
-            </div>
-
-            {/* Item Code with QR Scanner */}
+            {/* 🎯 Row 2: Mã sản phẩm (Item Code) */}
             <div>
               <Label htmlFor="itemCode">Mã sản phẩm (Item Code)</Label>
               <div className="flex gap-2">
@@ -431,17 +431,103 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </p>
             </div>
 
-            {/* Description with AI Generation */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="description">Mô tả sản phẩm</Label>
+            {/* 🎯 Row 3: Ngành hàng + Danh mục + Status (3 cột) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="industry">Ngành hàng</Label>
+                <Select
+                  value={formData.industryId}
+                  onValueChange={handleIndustryChange}
+                >
+                  <SelectTrigger data-testid="select-product-industry">
+                    <SelectValue placeholder="Chọn ngành hàng" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Không có ngành hàng</SelectItem>
+                    {activeIndustries.map((industry) => (
+                      <SelectItem key={industry.id} value={industry.id}>
+                        {industry.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="category">Danh mục</Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
+                  disabled={!formData.industryId}
+                >
+                  <SelectTrigger data-testid="select-product-category">
+                    <SelectValue placeholder={formData.industryId ? "Chọn danh mục" : "Chọn ngành hàng trước"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Không có danh mục</SelectItem>
+                    {filteredCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="status">Trạng thái</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "active" | "inactive" | "out-of-stock") => 
+                    setFormData(prev => ({ ...prev, status: value }))
+                  }
+                >
+                  <SelectTrigger data-testid="select-product-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Hoạt động</SelectItem>
+                    <SelectItem value="inactive">Tạm dừng</SelectItem>
+                    <SelectItem value="out-of-stock">Hết hàng</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 🎯 Row 4: Giá + Số lượng + Tự động tạo mô tả (3 cột) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="price">Giá (VND) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="0"
+                  data-testid="input-product-price"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="stock">Số lượng tồn kho</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  min="0"
+                  value={formData.stock}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
+                  placeholder="0"
+                  data-testid="input-product-stock"
+                />
+              </div>
+              <div className="flex flex-col justify-end">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="default"
                   onClick={generateDescriptions}
                   disabled={isGenerating || !formData.name.trim()}
-                  className="gap-2"
+                  className="gap-2 h-10"
                 >
                   {isGenerating ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -451,6 +537,11 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   {isGenerating ? 'Đang tạo...' : '🪄 Tự động tạo mô tả'}
                 </Button>
               </div>
+            </div>
+
+            {/* 🎯 Row 5: Mô tả sản phẩm */}
+            <div>
+              <Label htmlFor="description">Mô tả sản phẩm</Label>
               <RichTextEditor
                 id="description"
                 data-testid="input-product-description"
@@ -458,7 +549,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                 placeholder="Nhập mô tả hoặc click 'Tự động tạo mô tả' để AI tạo giúp bạn"
                 height="120px"
-                className="w-full"
+                className="w-full mt-2"
               />
               {!formData.name.trim() && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -467,7 +558,21 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               )}
             </div>
 
-            {/* AI Generated Descriptions Preview */}
+            {/* 🎯 Row 6: Quản lý FAQ - Moved inside form */}
+            {isEditing && product?.id && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center gap-2 mb-3">
+                  <HelpCircle className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-medium text-gray-900">Quản lý FAQ</h3>
+                </div>
+                <FAQManagement 
+                  productId={product.id}
+                  className="bg-white rounded border"
+                />
+              </div>
+            )}
+
+            {/* 🎯 Row 7: Mô tả đã tạo bởi AI */}
             {generatedDescriptions && (
               <div className="border rounded-lg p-4 bg-gradient-to-r from-green-50 to-blue-50">
                 <div className="flex items-center justify-between mb-3">
@@ -551,102 +656,6 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               </div>
             )}
 
-            {/* Price and Stock */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="price">Giá (VND) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  placeholder="0"
-                  data-testid="input-product-price"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="stock">Số lượng tồn kho</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  min="0"
-                  value={formData.stock}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                  placeholder="0"
-                  data-testid="input-product-stock"
-                />
-              </div>
-            </div>
-
-            {/* Industry and Category */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="industry">Ngành hàng</Label>
-                <Select
-                  value={formData.industryId}
-                  onValueChange={handleIndustryChange}
-                >
-                  <SelectTrigger data-testid="select-product-industry">
-                    <SelectValue placeholder="Chọn ngành hàng" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Không có ngành hàng</SelectItem>
-                    {activeIndustries.map((industry) => (
-                      <SelectItem key={industry.id} value={industry.id}>
-                        {industry.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="category">Danh mục</Label>
-                <Select
-                  value={formData.categoryId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
-                  disabled={!formData.industryId}
-                >
-                  <SelectTrigger data-testid="select-product-category">
-                    <SelectValue placeholder={formData.industryId ? "Chọn danh mục" : "Chọn ngành hàng trước"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Không có danh mục</SelectItem>
-                    {filteredCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="grid grid-cols-2 gap-4">
-              <div></div>
-              <div>
-                <Label htmlFor="status">Trạng thái</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: "active" | "inactive" | "out-of-stock") => 
-                    setFormData(prev => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger data-testid="select-product-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Hoạt động</SelectItem>
-                    <SelectItem value="inactive">Tạm dừng</SelectItem>
-                    <SelectItem value="out-of-stock">Hết hàng</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             {/* Media Upload - Images and Videos */}
             <div>
               <Label>Hình ảnh & Video sản phẩm</Label>
@@ -714,14 +723,6 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           </form>
         </CardContent>
       </Card>
-
-      {/* FAQ Management - Only show for existing products */}
-      {isEditing && product?.id && (
-        <FAQManagement 
-          productId={product.id}
-          className="mt-6"
-        />
-      )}
 
       {/* QR Scanner Modal */}
       <QRScanner
