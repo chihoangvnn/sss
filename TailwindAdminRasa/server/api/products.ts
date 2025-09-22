@@ -41,7 +41,7 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
     console.log('📊 API: Getting product with ID:', id);
     
-    const product = await storage.getProductById(id);
+    const product = await storage.getProduct(id);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -108,10 +108,11 @@ router.delete('/:id', requireAuth, async (req, res) => {
     const deleted = await storage.deleteProduct(id);
     
     if (!deleted) {
-      console.log('❌ Product not found for deletion:', id);
-      return res.status(404).json({ 
-        error: 'Product not found',
-        message: 'The product you are trying to delete does not exist' 
+      console.log('❌ Product cannot be deleted:', id);
+      return res.status(400).json({ 
+        error: 'Cannot delete product',
+        message: 'This product cannot be deleted because it has been ordered by customers or does not exist',
+        code: 'PRODUCT_HAS_ORDERS'
       });
     }
 

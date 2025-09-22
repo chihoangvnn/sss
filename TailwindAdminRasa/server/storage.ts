@@ -550,8 +550,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProduct(id: string): Promise<boolean> {
-    const result = await db.delete(products).where(eq(products.id, id));
-    return (result.rowCount ?? 0) > 0;
+    try {
+      console.log('🗑️ Starting cascade delete for product:', id);
+      
+      // Delete all references to avoid foreign key constraints
+      
+      // 1. Delete product landing pages
+      const landingPages = await db.delete(productLandingPages).where(eq(productLandingPages.productId, id));
+      console.log('🗑️ Deleted landing pages:', landingPages.rowCount);
+      
+      // 2. Delete order items (this will break foreign key with orders, but we need to handle this carefully)
+      // Instead of deleting order items, we'll just prevent deletion if product has orders
+      const existingOrders = await db.select({ count: sql<number>`count(*)` })
+        .from(orderItems)
+        .where(eq(orderItems.productId, id));
+      
+      if (existingOrders[0]?.count > 0) {
+        return false; // Don't delete products that have been ordered
+      }
+      
+      // 3. Delete the product itself
+      const result = await db.delete(products).where(eq(products.id, id));
+      console.log('🗑️ Deleted product:', result.rowCount);
+      
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error in deleteProduct:', error);
+      throw error;
+    }
   }
 
   // Customer methods
