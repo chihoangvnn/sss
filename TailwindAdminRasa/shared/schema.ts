@@ -1097,6 +1097,22 @@ export const insertProductReviewSchema = createInsertSchema(productReviews).omit
   updatedAt: true,
 });
 
+export const insertProductFAQSchema = createInsertSchema(productFAQs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductPolicySchema = createInsertSchema(productPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductPolicyAssociationSchema = createInsertSchema(productPolicyAssociations).omit({
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -1167,6 +1183,15 @@ export type ProductLandingPage = typeof productLandingPages.$inferSelect;
 
 export type InsertProductReview = z.infer<typeof insertProductReviewSchema>;
 export type ProductReview = typeof productReviews.$inferSelect;
+
+export type InsertProductFAQ = z.infer<typeof insertProductFAQSchema>;
+export type ProductFAQ = typeof productFAQs.$inferSelect;
+
+export type InsertProductPolicy = z.infer<typeof insertProductPolicySchema>;
+export type ProductPolicy = typeof productPolicies.$inferSelect;
+
+export type InsertProductPolicyAssociation = z.infer<typeof insertProductPolicyAssociationSchema>;
+export type ProductPolicyAssociation = typeof productPolicyAssociations.$inferSelect;
 
 // ==========================================
 // CONTENT MANAGEMENT TABLES
