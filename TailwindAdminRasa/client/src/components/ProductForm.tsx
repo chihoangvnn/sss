@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy } from "lucide-react";
+import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
+import { QRScanner } from "./QRScanner";
 import type { CloudinaryImage, CloudinaryVideo, RasaDescriptions } from "@shared/schema";
 
 interface Industry {
@@ -65,6 +66,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     name: "",
     description: "",
     sku: "", // Will be auto-generated
+    itemCode: "", // Manual input or QR scan
     price: "",
     stock: "0",
     industryId: "",
@@ -79,6 +81,9 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const [generatedDescriptions, setGeneratedDescriptions] = useState<RasaDescriptions | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showDescriptionPreview, setShowDescriptionPreview] = useState(false);
+
+  // 📱 QR Scanner State
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
   // Fetch industries for dropdown
   const { data: industries = [], isLoading: industriesLoading, error: industriesError } = useQuery<Industry[]>({
@@ -110,6 +115,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         name: product.name,
         description: product.description || "",
         sku: product.sku || "", // Load existing SKU
+        itemCode: (product as any).itemCode || "", // Load existing itemCode
         price: product.price,
         stock: product.stock.toString(),
         industryId: "",
@@ -261,6 +267,15 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     }
   };
 
+  // QR Scanner handler
+  const handleQRScan = (scannedData: string) => {
+    setFormData(prev => ({ ...prev, itemCode: scannedData }));
+    toast({
+      title: "QR Code quét thành công!",
+      description: `Mã sản phẩm: ${scannedData}`,
+    });
+  };
+
   // Copy description to clipboard
   const copyToClipboard = async (text: string) => {
     try {
@@ -302,6 +317,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     const saveData = {
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
+      itemCode: formData.itemCode.trim() || undefined,
       price: formData.price, // Send as string to match backend
       stock: parseInt(formData.stock) || 0,
       categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
@@ -380,6 +396,35 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {isEditing ? "SKU đã được tạo" : "SKU sẽ được tạo tự động: 2 chữ đầu ngành hàng + 4 số"}
+              </p>
+            </div>
+
+            {/* Item Code with QR Scanner */}
+            <div>
+              <Label htmlFor="itemCode">Mã sản phẩm (Item Code)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="itemCode"
+                  value={formData.itemCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, itemCode: e.target.value }))}
+                  placeholder="Nhập mã sản phẩm hoặc quét QR"
+                  data-testid="input-product-itemcode"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="default"
+                  onClick={() => setIsQRScannerOpen(true)}
+                  className="flex items-center gap-2 px-3"
+                  data-testid="button-qr-scanner"
+                >
+                  <QrCode className="h-4 w-4" />
+                  Quét QR
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                📱 Mã sản phẩm có thể là barcode, QR code hoặc mã tự định nghĩa để quản lý kho
               </p>
             </div>
 
@@ -665,6 +710,13 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      {/* QR Scanner Modal */}
+      <QRScanner
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScan={handleQRScan}
+      />
     </div>
   );
 }
