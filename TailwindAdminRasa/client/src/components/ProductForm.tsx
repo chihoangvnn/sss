@@ -254,7 +254,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
 
       toast({
         title: "Thành công! 🎉",
-        description: `Đã tạo 1 mô tả chính + ${Object.keys(result.rasa_variations).length} biến thể RASA`,
+        description: `Đã tạo 1 mô tả chính + ${Object.keys(result.rasa_variations || {}).length} biến thể RASA`,
       });
 
     } catch (error: any) {
@@ -513,7 +513,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                     <div className="bg-white rounded p-3 border-l-4 border-blue-500">
                       <Label className="text-blue-700 font-medium mb-2 block">🤖 RASA Chat Variations:</Label>
                       <div className="grid gap-2">
-                        {Object.entries(generatedDescriptions.rasa_variations).map(([index, description]) => {
+                        {Object.entries(generatedDescriptions.rasa_variations || {}).map(([index, description]) => {
                           const contextLabels = {
                             "0": "🛡️ An toàn",
                             "1": "⚡ Tiện lợi", 
@@ -540,7 +540,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         })}
                       </div>
                       <p className="text-xs text-blue-600 mt-2 italic">
-                        💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations).length} mô tả này khi chat với khách hàng
+                        💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations || {}).length} mô tả này khi chat với khách hàng
                       </p>
                     </div>
                   </div>
