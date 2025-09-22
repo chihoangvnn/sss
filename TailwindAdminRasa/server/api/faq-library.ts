@@ -44,7 +44,7 @@ const FAQQuerySchema = z.object({
   // Filtering
   category: z.enum(["all", "general", "product", "tutorial", "policy", "technical"]).default("all"),
   priority: z.enum(["all", "high", "medium", "low"]).default("all"),
-  tagIds: z.array(z.string().uuid()).default([]), // Filter by specific tags
+  tagIds: z.union([z.string().uuid(), z.array(z.string().uuid())]).transform(v => Array.isArray(v) ? v : [v]).default([]), // Filter by specific tags
   isActive: z.enum(["all", "true", "false"]).default("all"),
   
   // Search
@@ -185,23 +185,11 @@ export async function listFAQs(req: Request, res: Response) {
     console.log(`📊 Found ${result.length} FAQs (${total} total)`);
 
     res.json({
-      success: true,
-      data: result,
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-        total,
-        totalPages,
-        hasNext: query.page < totalPages,
-        hasPrev: query.page > 1
-      },
-      filters: {
-        category: query.category,
-        priority: query.priority,
-        tagIds: query.tagIds,
-        isActive: query.isActive,
-        search: query.search
-      }
+      faqs: result,
+      totalCount: total,
+      currentPage: query.page,
+      totalPages,
+      limit: query.limit
     });
 
   } catch (error) {
@@ -536,11 +524,11 @@ import { Router } from 'express';
 const router = Router();
 
 // FAQ Library Routes
-router.get('/', requireAuth, getFAQs);
-router.get('/:id', requireAuth, getFAQById);
-router.post('/', requireAuth, createFAQ);
-router.put('/:id', requireAuth, updateFAQ);
-router.delete('/:id', requireAuth, deleteFAQ);
-router.patch('/:id/usage', requireAuth, incrementUsage);
+router.get('/faqs', requireAuth, listFAQs);
+router.get('/faqs/:id', requireAuth, getFAQById);
+router.post('/faqs', requireAuth, createFAQ);
+router.put('/faqs/:id', requireAuth, updateFAQ);
+router.delete('/faqs/:id', requireAuth, deleteFAQ);
+router.patch('/faqs/:id/usage', requireAuth, incrementUsage);
 
 export default router;

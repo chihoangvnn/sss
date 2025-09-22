@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, Search, Filter, Grid, List, Eye, Edit2, Trash2, Wand2,
   Tag, Calendar, MoreVertical, Copy, Sparkles, RefreshCw,
-  FileText, Hash, ChevronDown, Settings, Star, Brain, CheckCircle2
+  FileText, Hash, ChevronDown, Settings, Star, Brain, CheckCircle2,
+  HelpCircle, Link, Layers
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FAQLibraryManagement } from '@/components/FAQLibraryManagement';
+import { FAQAssignmentManagement } from '@/components/FAQAssignmentManagement';
 
 interface ContentLibraryItem {
   id: string;
@@ -72,6 +76,7 @@ export function ContentLibrary({}: ContentLibraryProps) {
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState('content');
   
   // Form states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -463,9 +468,9 @@ export function ContentLibrary({}: ContentLibraryProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">📚 Content Library</h1>
+            <h1 className="text-3xl font-bold text-gray-900">📚 Content Management</h1>
             <p className="text-gray-600 mt-1">
-              Quản lý nội dung thông minh với AI automation
+              Quản lý nội dung thông minh, FAQ và assignments với AI automation
             </p>
           </div>
           
@@ -861,6 +866,26 @@ export function ContentLibrary({}: ContentLibraryProps) {
             </Dialog>
           </div>
         </div>
+
+        {/* Tab Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="content" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Social Content
+            </TabsTrigger>
+            <TabsTrigger value="faq-library" className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4" />
+              FAQ Library
+            </TabsTrigger>
+            <TabsTrigger value="faq-assignments" className="flex items-center gap-2">
+              <Link className="w-4 h-4" />
+              FAQ Assignments
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Content Tab */}
+          <TabsContent value="content" className="mt-6">
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
@@ -1262,6 +1287,19 @@ export function ContentLibrary({}: ContentLibraryProps) {
             </div>
           </div>
         )}
+          </TabsContent>
+
+          {/* FAQ Library Tab */}
+          <TabsContent value="faq-library" className="mt-6">
+            <FAQLibraryManagement />
+          </TabsContent>
+
+          {/* FAQ Assignments Tab */}
+          <TabsContent value="faq-assignments" className="mt-6">
+            <FAQAssignmentManagement />
+          </TabsContent>
+
+        </Tabs>
       </div>
     </div>
   );

@@ -126,17 +126,11 @@ export const getFAQAssignments = async (req: Request, res: Response) => {
     console.log(`📊 Found ${result.length} FAQ assignments (${total} total)`);
 
     res.json({
-      success: true,
-      data: result,
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-        total,
-        totalPages,
-        hasNext: query.page < totalPages,
-        hasPrev: query.page > 1
-      },
-      message: `Found ${result.length} FAQ assignments`
+      assignments: result,
+      totalCount: total,
+      currentPage: query.page,
+      totalPages,
+      limit: query.limit
     });
 
   } catch (error: any) {
