@@ -79,7 +79,11 @@ router.get('/:id/policies', async (req, res) => {
     const { id } = req.params;
     console.log('📊 API: Getting policies for product:', id);
     
-    const policies = await storage.getProductPolicyAssociations(id);
+    const associations = await storage.getProductPolicyAssociations(id);
+    // Transform associations to return just the policies with defensive mapping
+    const policies = associations
+      .map(assoc => assoc.policy)
+      .filter(Boolean); // Remove any null/undefined policies
     res.json(policies);
   } catch (error) {
     console.error('❌ Error fetching product policies:', error);

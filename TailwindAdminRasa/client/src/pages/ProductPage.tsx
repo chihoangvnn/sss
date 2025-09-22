@@ -284,7 +284,10 @@ export default function ProductPage() {
     
     const canonical = document.createElement('link');
     canonical.rel = 'canonical';
-    canonical.href = window.location.href;
+    canonical.setAttribute('data-seo', 'product');
+    // Use clean URL without query params for SEO consistency
+    const cleanUrl = window.location.origin + window.location.pathname;
+    canonical.href = cleanUrl;
     document.head.appendChild(canonical);
 
   }, [product, finalPrice, reviewsData]);
@@ -534,13 +537,59 @@ export default function ProductPage() {
     );
   }
 
+  // Handle 404 SEO meta tags at top level (not inside conditionals)
+  useEffect(() => {
+    if (!isLoading && !product) {
+      document.title = 'Sản phẩm không tìm thấy - DrugStore Vietnam';
+      
+      // Remove existing meta tags and JSON-LD scripts
+      const existingMetaTags = document.querySelectorAll('meta[data-seo="product"]');
+      existingMetaTags.forEach(tag => tag.remove());
+      
+      const existingJsonLd = document.querySelectorAll('script[type="application/ld+json"][data-seo="product"]');
+      existingJsonLd.forEach(script => script.remove());
+      
+      // Add no-index meta for 404
+      const robotsMeta = document.createElement('meta');
+      robotsMeta.name = 'robots';
+      robotsMeta.content = 'noindex, nofollow';
+      robotsMeta.setAttribute('data-seo', 'product');
+      document.head.appendChild(robotsMeta);
+      
+      // Clean canonical URL (remove query params) 
+      const canonicalLink = document.querySelector('link[rel="canonical"]');
+      if (canonicalLink) {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        canonicalLink.setAttribute('href', cleanUrl);
+      }
+    }
+    
+    // Cleanup function
+    return () => {
+      if (!isLoading && !product) {
+        const metaTags = document.querySelectorAll('meta[data-seo="product"]');
+        metaTags.forEach(tag => tag.remove());
+      }
+    };
+  }, [isLoading, product]);
+
   if (!product) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-100 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md px-8">
           <AlertCircle className="h-32 w-32 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-red-800 mb-2">Không tìm thấy sản phẩm</h1>
-          <p className="text-red-600">Sản phẩm bạn tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+          <p className="text-red-600 mb-6">
+            Sản phẩm bạn tìm kiếm không tồn tại hoặc đã bị xóa. 
+            Có thể đường dẫn không chính xác hoặc sản phẩm đã ngừng kinh doanh.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Quay lại
+          </button>
         </div>
       </div>
     );
