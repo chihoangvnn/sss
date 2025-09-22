@@ -14,6 +14,8 @@ import {
 export interface Product {
   id: string;
   name: string;
+  sku?: string;
+  itemCode?: string;
   price: number;
   stock: number;
   category: string;
@@ -33,6 +35,8 @@ const mockProducts: Product[] = [
   {
     id: "1",
     name: "iPhone 15 Pro Max",
+    sku: "DT1234",
+    itemCode: "IPH15PM001",
     price: 29999000,
     stock: 12,
     category: "Điện thoại",
@@ -42,6 +46,8 @@ const mockProducts: Product[] = [
   {
     id: "2", 
     name: "Samsung Galaxy S24",
+    sku: "DT5678",
+    itemCode: "SAMGS24002",
     price: 22999000,
     stock: 0,
     category: "Điện thoại",
@@ -51,6 +57,8 @@ const mockProducts: Product[] = [
   {
     id: "3",
     name: "MacBook Pro M3",
+    sku: "LA9101",
+    itemCode: "MBPM3003",
     price: 49999000,
     stock: 8,
     category: "Laptop",
@@ -60,6 +68,8 @@ const mockProducts: Product[] = [
   {
     id: "4",
     name: "AirPods Pro 2",
+    sku: "PK1121",
+    itemCode: "APP2004",
     price: 5999000,
     stock: 25,
     category: "Phụ kiện",
@@ -69,6 +79,8 @@ const mockProducts: Product[] = [
   {
     id: "5",
     name: "iPad Air M2",
+    sku: "TB3141",
+    itemCode: "IPADM2005",
     price: 15999000,
     stock: 15,
     category: "Tablet",
@@ -78,6 +90,8 @@ const mockProducts: Product[] = [
   {
     id: "6",
     name: "Apple Watch Series 9",
+    sku: "SW5161",
+    itemCode: "AWS9006",
     price: 9999000,
     stock: 3,
     category: "Smartwatch",
@@ -115,7 +129,10 @@ export function ProductGrid({
   const categories = Array.from(new Set(products.map(p => p.category)));
   
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = product.name.toLowerCase().includes(searchLower) ||
+                         (product.sku && product.sku.toLowerCase().includes(searchLower)) ||
+                         (product.itemCode && product.itemCode.toLowerCase().includes(searchLower));
     const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -154,7 +171,7 @@ export function ProductGrid({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Tìm kiếm sản phẩm..."
+            placeholder="Tìm kiếm sản phẩm theo tên, SKU hoặc Item Code..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -237,7 +254,19 @@ export function ProductGrid({
                   {getStatusBadge(product.status, product.stock)}
                 </div>
                 
-                <p className="text-xs text-muted-foreground">{product.category}</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{product.category}</p>
+                  {product.itemCode && (
+                    <p className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      🏷️ {product.itemCode}
+                    </p>
+                  )}
+                  {product.sku && (
+                    <p className="text-xs text-muted-foreground">
+                      SKU: {product.sku}
+                    </p>
+                  )}
+                </div>
                 
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-primary" data-testid={`product-price-${product.id}`}>

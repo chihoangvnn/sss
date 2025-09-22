@@ -28,6 +28,7 @@ interface Product {
   name: string;
   description?: string;
   sku?: string; // Auto-generated SKU
+  itemCode?: string; // QR/Barcode scanner input for inventory management
   price: string;
   stock: number;
   categoryId?: string;
