@@ -28,6 +28,7 @@
     "papaparse": "^5.5.3",
     "react-big-calendar": "^1.19.4",
     "react-qr-scanner": "^1.0.0-alpha.11",
+    "react-quill": "^2.0.0",
     "xlsx": "^0.18.5"
   }
 }

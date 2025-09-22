@@ -11,6 +11,7 @@ import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode } from "lucide-react
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
 import { QRScanner } from "./QRScanner";
+import { RichTextEditor } from "./RichTextEditor";
 import type { CloudinaryImage, CloudinaryVideo, RasaDescriptions } from "@shared/schema";
 
 interface Industry {
@@ -449,13 +450,12 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   {isGenerating ? 'Đang tạo...' : '🪄 Tự động tạo mô tả'}
                 </Button>
               </div>
-              <Textarea
-                id="description"
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
                 placeholder="Nhập mô tả hoặc click 'Tự động tạo mô tả' để AI tạo giúp bạn"
-                rows={3}
-                data-testid="input-product-description"
+                height="120px"
+                className="w-full"
               />
               {!formData.name.trim() && (
                 <p className="text-xs text-muted-foreground mt-1">
