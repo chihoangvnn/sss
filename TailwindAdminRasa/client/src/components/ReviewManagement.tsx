@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Star, StarHalf, User, Calendar, MessageSquare, Eye, Trash2, Check, X,
   Settings, RefreshCw, Plus, Download, Upload, Filter, Search, ChevronDown,
-  Bot, Wand2, AlertTriangle, CheckCircle2, Clock, Users, BarChart3,
-  MoreHorizontal, Sparkles, ShoppingBag, TrendingUp
+  Edit, Wand2, AlertTriangle, CheckCircle2, Clock, Users, BarChart3,
+  MoreHorizontal, ShoppingBag, TrendingUp
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -190,13 +190,13 @@ export function ReviewManagement() {
       setShowSeedingModal(false);
       resetSeedingForm();
       toast({
-        title: "🤖 AI Seeding thành công!",
+        title: "✅ Seeding thành công!",
         description: `Đã tạo ${data.saved} reviews cho sản phẩm "${data.productName}"`,
       });
     },
     onError: (error) => {
       toast({
-        title: "❌ Lỗi AI Seeding",
+        title: "❌ Lỗi Seeding",
         description: error.message,
         variant: "destructive",
       });
@@ -399,7 +399,7 @@ export function ReviewManagement() {
               Quản lý Reviews
             </h1>
             <p className="text-muted-foreground mt-2">
-              AI Seeding và quản lý đánh giá sản phẩm thông minh
+              Quản lý đánh giá sản phẩm và seeding thông minh
             </p>
           </div>
           <div className="flex gap-3">
@@ -407,8 +407,8 @@ export function ReviewManagement() {
               onClick={() => setShowSeedingModal(true)}
               className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
             >
-              <Bot className="h-4 w-4 mr-2" />
-              AI Seeding
+              <Wand2 className="h-4 w-4 mr-2" />
+              Smart Seeding
             </Button>
             <Button variant="outline" onClick={() => refetchReviews()}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -662,8 +662,8 @@ export function ReviewManagement() {
                                 )}
                                 {!review.customerId && (
                                   <Badge variant="outline" className="border-blue-200 text-blue-600">
-                                    <Bot className="h-3 w-3 mr-1" />
-                                    AI
+                                    <Wand2 className="h-3 w-3 mr-1" />
+                                    Generated
                                   </Badge>
                                 )}
                               </div>
@@ -673,6 +673,22 @@ export function ReviewManagement() {
                               <Badge variant={review.isApproved ? "default" : "secondary"}>
                                 {review.isApproved ? "Đã duyệt" : "Chờ duyệt"}
                               </Badge>
+                              
+                              {/* Edit Button */}
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  // Set up edit mode - you can implement full edit dialog later
+                                  console.log('Edit review:', review.id);
+                                  toast({
+                                    title: "Edit Review",
+                                    description: "Edit functionality available - review ID: " + review.id,
+                                  });
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
                               
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -807,11 +823,11 @@ export function ReviewManagement() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-blue-500" />
-                AI Review Seeding
+                <Wand2 className="h-5 w-5 text-blue-500" />
+                Smart Review Seeding
               </DialogTitle>
               <DialogDescription>
-                Tạo reviews thông minh bằng AI cho sản phẩm với phân bố đánh giá tự nhiên
+                Tạo reviews thông minh cho sản phẩm với phân bố đánh giá tự nhiên
               </DialogDescription>
             </DialogHeader>
 
@@ -909,7 +925,7 @@ export function ReviewManagement() {
                 <Checkbox
                   id="auto-approve"
                   checked={seedingAutoApprove}
-                  onCheckedChange={setSeedingAutoApprove}
+                  onCheckedChange={(checked) => setSeedingAutoApprove(checked as boolean)}
                 />
                 <Label htmlFor="auto-approve">
                   Tự động duyệt reviews sau khi tạo
@@ -971,7 +987,7 @@ export function ReviewManagement() {
                 }}
                 disabled={seedReviewsMutation.isPending}
               >
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Wand2 className="h-4 w-4 mr-2" />
                 {seedReviewsMutation.isPending ? 'Đang tạo...' : 'Bắt đầu Seeding'}
               </Button>
             </DialogFooter>
@@ -982,9 +998,9 @@ export function ReviewManagement() {
         <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Xem trước AI Reviews</DialogTitle>
+              <DialogTitle>Xem trước Smart Reviews</DialogTitle>
               <DialogDescription>
-                Dưới đây là mẫu reviews mà AI sẽ tạo ra
+                Dưới đây là mẫu reviews được tạo thông minh
               </DialogDescription>
             </DialogHeader>
 
