@@ -130,6 +130,18 @@ export function ReviewManagement() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewData, setPreviewData] = useState<SeedingPreview[]>([]);
 
+  // State for editing review
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingReview, setEditingReview] = useState<Review | null>(null);
+  const [editForm, setEditForm] = useState({
+    customerName: '',
+    rating: 5,
+    title: '',
+    content: '',
+    isVerified: false,
+    isApproved: false
+  });
+
   // Fetch products
   const { data: products = [], isLoading: productsLoading } = useQuery({
     queryKey: ['products-for-reviews'],
@@ -679,12 +691,16 @@ export function ReviewManagement() {
                                 variant="ghost" 
                                 size="sm"
                                 onClick={() => {
-                                  // Set up edit mode - you can implement full edit dialog later
-                                  console.log('Edit review:', review.id);
-                                  toast({
-                                    title: "Edit Review",
-                                    description: "Edit functionality available - review ID: " + review.id,
+                                  setEditingReview(review);
+                                  setEditForm({
+                                    customerName: review.customerName,
+                                    rating: review.rating,
+                                    title: review.title || '',
+                                    content: review.content,
+                                    isVerified: review.isVerified,
+                                    isApproved: review.isApproved
                                   });
+                                  setShowEditModal(true);
                                 }}
                               >
                                 <Edit className="h-4 w-4" />
@@ -1045,6 +1061,148 @@ export function ReviewManagement() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowPreviewModal(false)}>
                 Đóng
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Review Modal */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5 text-blue-500" />
+                Chỉnh sửa Review
+              </DialogTitle>
+              <DialogDescription>
+                Chỉnh sửa thông tin review từ khách hàng
+              </DialogDescription>
+            </DialogHeader>
+
+            {editingReview && (
+              <div className="space-y-6">
+                {/* Customer Name */}
+                <div className="space-y-2">
+                  <Label>Tên khách hàng *</Label>
+                  <Input
+                    value={editForm.customerName}
+                    onChange={(e) => setEditForm(prev => ({...prev, customerName: e.target.value}))}
+                    placeholder="Tên khách hàng"
+                  />
+                </div>
+
+                {/* Rating */}
+                <div className="space-y-2">
+                  <Label>Đánh giá *</Label>
+                  <Select value={editForm.rating.toString()} onValueChange={(value) => setEditForm(prev => ({...prev, rating: parseInt(value)}))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 4, 3, 2, 1].map((rating) => (
+                        <SelectItem key={rating} value={rating.toString()}>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center">
+                              {[...Array(rating)].map((_, i) => (
+                                <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              ))}
+                            </div>
+                            <span>{rating} sao</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Title */}
+                <div className="space-y-2">
+                  <Label>Tiêu đề</Label>
+                  <Input
+                    value={editForm.title}
+                    onChange={(e) => setEditForm(prev => ({...prev, title: e.target.value}))}
+                    placeholder="Tiêu đề review"
+                  />
+                </div>
+
+                {/* Content */}
+                <div className="space-y-2">
+                  <Label>Nội dung *</Label>
+                  <Textarea
+                    value={editForm.content}
+                    onChange={(e) => setEditForm(prev => ({...prev, content: e.target.value}))}
+                    placeholder="Nội dung đánh giá chi tiết"
+                    rows={4}
+                  />
+                </div>
+
+                {/* Checkboxes */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit-verified"
+                      checked={editForm.isVerified}
+                      onCheckedChange={(checked) => setEditForm(prev => ({...prev, isVerified: checked as boolean}))}
+                    />
+                    <Label htmlFor="edit-verified">Khách hàng đã xác thực</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit-approved"
+                      checked={editForm.isApproved}
+                      onCheckedChange={(checked) => setEditForm(prev => ({...prev, isApproved: checked as boolean}))}
+                    />
+                    <Label htmlFor="edit-approved">Duyệt review</Label>
+                  </div>
+                </div>
+
+                {/* Review Info */}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Product:</strong> {editingReview.productName || 'N/A'}</p>
+                    <p><strong>Created:</strong> {new Date(editingReview.createdAt).toLocaleString('vi-VN')}</p>
+                    <p><strong>Helpful count:</strong> {editingReview.helpfulCount}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingReview(null);
+                }}
+              >
+                Hủy
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  if (!editForm.customerName.trim() || !editForm.content.trim()) {
+                    toast({
+                      title: "❌ Lỗi",
+                      description: "Vui lòng điền đầy đủ tên khách hàng và nội dung",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  updateReviewMutation.mutate({
+                    id: editingReview!.id,
+                    data: editForm
+                  });
+                  
+                  setShowEditModal(false);
+                  setEditingReview(null);
+                }}
+                disabled={updateReviewMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                {updateReviewMutation.isPending ? 'Đang cập nhật...' : 'Cập nhật'}
               </Button>
             </DialogFooter>
           </DialogContent>
