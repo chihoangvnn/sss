@@ -290,7 +290,7 @@ export function FAQAssignmentManagement({ className = "" }: FAQAssignmentManagem
   const resetForm = () => {
     setFormContentId('');
     setFormFaqIds([]);
-    setFormIsActive(true);
+    setFormIsVisible(true);
   };
 
   const handleItemSelect = (itemId: string) => {
@@ -545,8 +545,8 @@ export function FAQAssignmentManagement({ className = "" }: FAQAssignmentManagem
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="active"
-                    checked={formIsActive}
-                    onCheckedChange={(checked) => setFormIsActive(checked === true)}
+                    checked={formIsVisible}
+                    onCheckedChange={(checked) => setFormIsVisible(checked === true)}
                   />
                   <Label htmlFor="active">Assignment hoạt động</Label>
                 </div>
@@ -666,7 +666,7 @@ export function FAQAssignmentManagement({ className = "" }: FAQAssignmentManagem
                         Thứ tự: {assignment.sortOrder}
                       </Badge>
                       
-                      {!assignment.isActive && (
+                      {!assignment.isVisible && (
                         <Badge variant="secondary" className="bg-gray-100 text-gray-600">
                           <AlertCircle className="w-3 h-3 mr-1" />
                           Tạm dừng
