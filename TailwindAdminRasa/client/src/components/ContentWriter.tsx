@@ -52,6 +52,13 @@ export function ContentWriter({}: ContentWriterProps) {
   const [aiKeywords, setAiKeywords] = useState('');
   const [aiTone, setAiTone] = useState('professional');
   const [aiContentType, setAiContentType] = useState('blog');
+  const [aiTargetLength, setAiTargetLength] = useState('medium');
+  const [aiTargetAudience, setAiTargetAudience] = useState('general');
+  const [aiSelectedPlatforms, setAiSelectedPlatforms] = useState<string[]>(['facebook']);
+  const [aiSeoKeywords, setAiSeoKeywords] = useState('');
+  const [aiGenerationMode, setAiGenerationMode] = useState('full-article');
+  const [aiGeneratedVariations, setAiGeneratedVariations] = useState<any[]>([]);
+  const [showVariationSelector, setShowVariationSelector] = useState(false);
 
   // Fetch available tags
   const { data: availableTags = [] } = useQuery({
@@ -167,12 +174,12 @@ export function ContentWriter({}: ContentWriterProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          baseContent: aiKeywords,
-          platforms: platforms,
+          baseContent: `Mode: ${aiGenerationMode}; Length: ${aiTargetLength}; Audience: ${aiTargetAudience}; Content: ${aiKeywords}${aiSeoKeywords ? ` | SEO Keywords: ${aiSeoKeywords}` : ''}`,
+          platforms: aiSelectedPlatforms,
           tones: [aiTone],
           variationsPerPlatform: 1,
           includeHashtags: true,
-          targetAudience: 'general audience',
+          targetAudience: aiTargetAudience,
           contentType: aiContentType
         })
       });
@@ -181,9 +188,18 @@ export function ContentWriter({}: ContentWriterProps) {
       
       const result = await response.json();
       if (result.variations && result.variations.length > 0) {
-        const variation = result.variations[0];
-        setTitle(`Bài viết về ${aiKeywords}`);
-        setContent(variation.variation || '');
+        setAiGeneratedVariations(result.variations);
+        
+        if (result.variations.length === 1) {
+          // Auto-insert single variation
+          const variation = result.variations[0];
+          setTitle(`Bài viết về ${aiKeywords}`);
+          setContent(variation.variation || '');
+        } else {
+          // Show selection UI for multiple variations
+          setShowVariationSelector(true);
+          setActiveTab('write'); // Switch to write tab to show selector
+        }
       }
       
       toast({
@@ -303,82 +319,265 @@ export function ContentWriter({}: ContentWriterProps) {
 
         {/* AI Assistant Tab */}
         <TabsContent value="ai-assist" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wand2 className="h-5 w-5" />
-                AI Content Generator
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="ai-keywords">Keywords / Outline</Label>
-                <Textarea
-                  id="ai-keywords"
-                  placeholder="Nhập từ khóa, chủ đề hoặc outline cho bài viết..."
-                  value={aiKeywords}
-                  onChange={(e) => setAiKeywords(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Content Generation */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wand2 className="h-5 w-5" />
+                  AI Content Generator
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="ai-tone">Tone viết</Label>
-                  <Select value={aiTone} onValueChange={setAiTone}>
+                  <Label htmlFor="ai-generation-mode">Generation Mode</Label>
+                  <Select value={aiGenerationMode} onValueChange={setAiGenerationMode}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="professional">Professional</SelectItem>
-                      <SelectItem value="casual">Casual</SelectItem>
-                      <SelectItem value="formal">Formal</SelectItem>
-                      <SelectItem value="creative">Creative</SelectItem>
-                      <SelectItem value="journalistic">Journalistic</SelectItem>
+                      <SelectItem value="full-article">📝 Full Article</SelectItem>
+                      <SelectItem value="outline">📋 Outline Only</SelectItem>
+                      <SelectItem value="introduction">🚀 Introduction</SelectItem>
+                      <SelectItem value="summary">📊 Summary</SelectItem>
+                      <SelectItem value="headline">🎯 Headlines</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="ai-content-type">Loại nội dung</Label>
-                  <Select value={aiContentType} onValueChange={setAiContentType}>
+                  <Label htmlFor="ai-keywords">Topic / Keywords</Label>
+                  <Textarea
+                    id="ai-keywords"
+                    placeholder="Mô tả chủ đề, từ khóa chính, hoặc outline sơ bộ..."
+                    value={aiKeywords}
+                    onChange={(e) => setAiKeywords(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ai-seo-keywords">SEO Keywords (optional)</Label>
+                  <Input
+                    id="ai-seo-keywords"
+                    placeholder="từ khóa SEO, thẻ #hashtag..."
+                    value={aiSeoKeywords}
+                    onChange={(e) => setAiSeoKeywords(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="ai-tone">Writing Tone</Label>
+                    <Select value={aiTone} onValueChange={setAiTone}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">👔 Professional</SelectItem>
+                        <SelectItem value="casual">😊 Casual & Friendly</SelectItem>
+                        <SelectItem value="formal">🎩 Formal</SelectItem>
+                        <SelectItem value="creative">🎨 Creative</SelectItem>
+                        <SelectItem value="journalistic">📰 Journalistic</SelectItem>
+                        <SelectItem value="academic">🎓 Academic</SelectItem>
+                        <SelectItem value="conversational">💬 Conversational</SelectItem>
+                        <SelectItem value="persuasive">💡 Persuasive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ai-content-type">Content Type</Label>
+                    <Select value={aiContentType} onValueChange={setAiContentType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="blog">📝 Blog Post</SelectItem>
+                        <SelectItem value="news">📰 News Article</SelectItem>
+                        <SelectItem value="magazine">📖 Magazine</SelectItem>
+                        <SelectItem value="review">⭐ Review</SelectItem>
+                        <SelectItem value="tutorial">🎯 Tutorial</SelectItem>
+                        <SelectItem value="opinion">💭 Opinion</SelectItem>
+                        <SelectItem value="interview">🎤 Interview</SelectItem>
+                        <SelectItem value="listicle">📋 Listicle</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={generateWithAI}
+                  disabled={isGenerating || aiSelectedPlatforms.length === 0}
+                  className="w-full"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating content...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Generate with AI ✨
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Advanced Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Optimization Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="ai-target-length">Target Length</Label>
+                  <Select value={aiTargetLength} onValueChange={setAiTargetLength}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="blog">Blog Post</SelectItem>
-                      <SelectItem value="news">Tin tức</SelectItem>
-                      <SelectItem value="magazine">Tạp chí</SelectItem>
-                      <SelectItem value="review">Review</SelectItem>
-                      <SelectItem value="tutorial">Tutorial</SelectItem>
+                      <SelectItem value="short">📏 Short (200-500 words)</SelectItem>
+                      <SelectItem value="medium">📐 Medium (500-1000 words)</SelectItem>
+                      <SelectItem value="long">📏 Long (1000-2000 words)</SelectItem>
+                      <SelectItem value="very-long">📚 Very Long (2000+ words)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              <Button 
-                onClick={generateWithAI}
-                disabled={isGenerating}
-                className="w-full"
-              >
-                {isGenerating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Đang tạo nội dung...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    Tạo bài viết với AI
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+                <div>
+                  <Label htmlFor="ai-audience">Target Audience</Label>
+                  <Select value={aiTargetAudience} onValueChange={setAiTargetAudience}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">👥 General Audience</SelectItem>
+                      <SelectItem value="professionals">👔 Professionals</SelectItem>
+                      <SelectItem value="students">🎓 Students</SelectItem>
+                      <SelectItem value="experts">🔬 Experts</SelectItem>
+                      <SelectItem value="beginners">🌱 Beginners</SelectItem>
+                      <SelectItem value="teenagers">🧒 Teenagers</SelectItem>
+                      <SelectItem value="seniors">👴 Seniors</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="ai-platforms">Target Platforms</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {['facebook', 'instagram', 'twitter', 'tiktok'].map(platform => (
+                      <div key={platform} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`platform-${platform}`}
+                          checked={aiSelectedPlatforms.includes(platform)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAiSelectedPlatforms(prev => [...prev, platform]);
+                            } else {
+                              setAiSelectedPlatforms(prev => prev.filter(p => p !== platform));
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <Label htmlFor={`platform-${platform}`} className="text-sm">
+                          {platform === 'facebook' && '📘 Facebook'}
+                          {platform === 'instagram' && '📸 Instagram'}
+                          {platform === 'twitter' && '🐦 Twitter'}
+                          {platform === 'tiktok' && '🎵 TikTok'}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {aiSelectedPlatforms.length === 0 && (
+                    <p className="text-sm text-red-500 mt-1">Select at least one platform</p>
+                  )}
+                </div>
+
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">💡 AI Tips</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Be specific with your topic and keywords</li>
+                    <li>• Choose platform for optimized formatting</li>
+                    <li>• Add SEO keywords for better search ranking</li>
+                    <li>• Try different tones for various audiences</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Write & Edit Tab */}
         <TabsContent value="write" className="mt-6">
+          {/* Platform Variation Selector */}
+          {showVariationSelector && aiGeneratedVariations.length > 1 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wand2 className="h-5 w-5" />
+                  Choose Platform Variation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {aiGeneratedVariations.map((variation, index) => (
+                    <div key={index} className="border rounded-lg p-4 hover:border-blue-500 cursor-pointer transition-colors">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant="outline">
+                          {variation.platform === 'facebook' && '📘 Facebook'}
+                          {variation.platform === 'instagram' && '📸 Instagram'}
+                          {variation.platform === 'twitter' && '🐦 Twitter'}
+                          {variation.platform === 'tiktok' && '🎵 TikTok'}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setTitle(`Bài viết về ${aiKeywords}`);
+                            setContent(variation.variation || '');
+                            setShowVariationSelector(false);
+                            toast({
+                              title: "✅ Content inserted!",
+                              description: `Using ${variation.platform} optimized content`,
+                            });
+                          }}
+                        >
+                          Use This
+                        </Button>
+                      </div>
+                      <div className="text-sm text-gray-600 max-h-20 overflow-hidden">
+                        {variation.variation?.substring(0, 200)}...
+                      </div>
+                      {variation.hashtags && variation.hashtags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {variation.hashtags.slice(0, 3).map((tag: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 text-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowVariationSelector(false)}
+                  >
+                    Cancel Selection
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Editor */}
             <div className="lg:col-span-2 space-y-4">
