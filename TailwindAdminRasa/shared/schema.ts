@@ -174,6 +174,32 @@ export const products = pgTable("products", {
   // Organization  
   tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
   
+  // 🎯 SEO & Product Page Enhancement
+  shortDescription: text("short_description"), // 1-2 câu highlight chính
+  slug: text("slug").unique(), // SEO-friendly URL: nhang-sach-thao-moc-an-lanh
+  productStory: jsonb("product_story").$type<{
+    origin?: string;
+    process?: string;
+    tradition?: string;
+    [key: string]: any;
+  }>().default(sql`'{}'::jsonb`), // Câu chuyện sản phẩm
+  
+  ingredients: jsonb("ingredients").$type<string[]>().default(sql`'[]'::jsonb`), // Thành phần: ["Bột quế", "Keo bời lời", "Tăm tre"]
+  benefits: jsonb("benefits").$type<string[]>().default(sql`'[]'::jsonb`), // Lợi ích: ["Thanh lọc không khí", "Hương thơm dịu nhẹ"]
+  usageInstructions: text("usage_instructions"), // Hướng dẫn sử dụng chi tiết
+  specifications: jsonb("specifications").$type<{
+    burnTime?: string;
+    length?: string;
+    quantity?: number;
+    weight?: string;
+    [key: string]: any;
+  }>().default(sql`'{}'::jsonb`), // Thông số kỹ thuật
+  
+  // SEO & Social Media
+  seoTitle: text("seo_title"), // "Mua Nhang Sạch Thảo Mộc An Lành | Nhangsach.net"
+  seoDescription: text("seo_description"), // Meta description cho Google
+  ogImageUrl: text("og_image_url"), // Open Graph image cho social sharing
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

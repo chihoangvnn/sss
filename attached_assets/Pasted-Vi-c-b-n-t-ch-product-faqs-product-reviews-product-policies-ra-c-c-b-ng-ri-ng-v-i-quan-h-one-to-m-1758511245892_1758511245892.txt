@@ -1,0 +1,191 @@
+Việc bạn tách product_faqs, product_reviews, product_policies ra các bảng riêng với quan hệ one-to-many tới products là hoàn toàn chính xác, giúp cho dữ liệu được chuẩn hóa.
+
+Gợi ý chi tiết (sử dụng cú pháp Prisma làm ví dụ):
+Bạn có thể định nghĩa schema một cách rõ ràng như sau. Đặc biệt, hãy thêm các trường SEO và Open Graph trực tiếp vào model Product.
+
+Đoạn mã
+
+// schema.prisma
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  shortDescription String
+  
+  // Các trường content chi tiết bạn đã nêu
+  productStory      Json? // Dùng JSON để lưu cấu trúc phức tạp
+  ingredients       String[] // Mảng các chuỗi
+  benefits          String[] // Mảng các chuỗi
+  usageInstructions String?
+  specifications    Json? // Dùng JSON cho các cặp key-value
+  
+  // Các trường SEO & Social
+  seoTitle          String?
+  seoDescription    String?
+  ogImageUrl        String?
+
+  // Quan hệ với các bảng khác
+  reviews   ProductReview[]
+  faqs      ProductFAQ[]
+  policies  ProductPolicyAssociation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductReview {
+  id        String   @id @default(uuid())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  author    String
+  rating    Int      // Điểm rating từ 1-5
+  comment   String
+  createdAt DateTime @default(now())
+}
+
+model ProductFAQ {
+  id        String   @id @default(uuid())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  question  String
+  answer    String
+}
+
+// Bảng này để liên kết Product với Policy (quan hệ many-to-many)
+model ProductPolicyAssociation {
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  policy    Policy  @relation(fields: [policyId], references: [id])
+  policyId  String
+  @@id([productId, policyId])
+}
+
+model Policy {
+  id          String   @id @default(uuid())
+  title       String   // VD: "Chính sách đổi trả trong 7 ngày"
+  description String
+  products    ProductPolicyAssociation[]
+}
+Phase 2: Backend API - Phản hồi & Gợi ý
+Kế hoạch của bạn đã tốt. Gợi ý quan trọng nhất ở đây là tối ưu endpoint lấy chi tiết sản phẩm. Thay vì để frontend phải gọi 4-5 API khác nhau, hãy trả về tất cả dữ liệu liên quan trong một lần gọi duy nhất.
+
+Ví dụ cấu trúc JSON trả về cho API GET /api/products/:slug:
+
+JSON
+
+{
+  "id": "uuid-12345",
+  "name": "Nhang Sạch Thảo Mộc An Lành - Hộp 30 Nén",
+  "slug": "nhang-sach-thao-moc-an-lanh-hop-30-nen",
+  "shortDescription": "Làm từ 100% thảo mộc tự nhiên, an toàn cho sức khỏe gia đình...",
+  "productStory": { "...nội dung câu chuyện..." },
+  "ingredients": ["Bột quế", "Keo bời lời", "Tăm tre"],
+  "benefits": ["Thanh lọc không khí", "Hương thơm dịu nhẹ", "An toàn cho trẻ em"],
+  "usageInstructions": "...",
+  "specifications": { "Thời gian cháy": "30 phút", "Chiều dài": "20cm" },
+  
+  "seo": {
+    "title": "Mua Nhang Sạch Thảo Mộc An Lành | Nhangsach.net",
+    "description": "Nhang sạch thảo mộc An Lành tự nhiên 100%, an toàn cho sức khỏe. Mua ngay để nhận ưu đãi. Giao hàng toàn quốc.",
+    "ogImageUrl": "https://nhangsach.net/images/nhang-an-lanh-og.jpg"
+  },
+
+  "faqs": [
+    { "id": "faq-1", "question": "Nhang dùng trong phòng máy lạnh được không?", "answer": "Hoàn toàn được..." }
+  ],
+  "reviews": [
+    { "id": "review-1", "author": "Chị Lan", "rating": 5, "comment": "Mùi hương rất dễ chịu, tôi rất an tâm khi sử dụng." }
+  ],
+  "policies": [
+    { "id": "policy-1", "title": "Miễn phí vận chuyển", "description": "..." },
+    { "id": "policy-2", "title": "Đổi trả trong 7 ngày", "description": "..." }
+  ]
+}
+Phase 3: Frontend Components - Phản hồi & Gợi ý
+Kế hoạch đã chuẩn. Đây là ví dụ cụ thể cho phần JSON-LD Schema Markup bạn có thể đặt trong component <Head> của Next.js, sử dụng dữ liệu từ API ở trên.
+
+Ví dụ Code JSON-LD cho trang sản phẩm:
+
+JavaScript
+
+import Head from 'next/head';
+
+function ProductPage({ product }) {
+  const schemaData = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": product.name,
+    "image": [
+      product.ogImageUrl // Nên có một mảng các URL hình ảnh ở đây
+     ],
+    "description": product.shortDescription,
+    "sku": product.id, // Hoặc mã SKU sản phẩm nếu có
+    "brand": {
+      "@type": "Brand",
+      "name": "Nhang Sạch Net"
+    },
+    // Dữ liệu đánh giá để hiển thị sao trên Google
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9", // Tính trung bình từ product.reviews
+      "reviewCount": "15" // Đếm số lượng product.reviews
+    },
+    "review": product.reviews.map(review => ({
+      "@type": "Review",
+      "author": {"@type": "Person", "name": review.author},
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": review.rating,
+        "bestRating": "5"
+      },
+      "reviewBody": review.comment
+    })),
+    // Thêm thông tin về giá cả và tình trạng tồn kho
+    "offers": {
+      "@type": "Offer",
+      "url": `https://nhangsach.net/san-pham/${product.slug}`,
+      "priceCurrency": "VND",
+      "price": "99000",
+      "availability": "https://schema.org/InStock", // Hoặc OutOfStock
+      "itemCondition": "https://schema.org/NewCondition"
+    }
+  };
+
+  return (
+    <>
+      <Head>
+        <title>{product.seo.title}</title>
+        <meta name="description" content={product.seo.description} />
+        {/* Open Graph Tags */}
+        <meta property="og:title" content={product.seo.title} />
+        <meta property="og:description" content={product.seo.description} />
+        <meta property="og:image" content={product.seo.ogImageUrl} />
+        <meta property="og:type" content="product" />
+        {/* JSON-LD Script */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        />
+      </Head>
+      {/* ... Phần còn lại của giao diện trang sản phẩm ... */}
+    </>
+  );
+}
+Phase 4: Admin Interface - Phản hồi & Gợi ý
+Kế hoạch rất tốt. Để nâng cao trải nghiệm cho người quản trị:
+
+Rich Text Editor: Sử dụng trình soạn thảo văn bản đa phương tiện (VD: TinyMCE, CKEditor) cho các trường productStory và usageInstructions để dễ dàng định dạng.
+
+Kéo thả (Drag-and-Drop): Cho phép quản trị viên kéo thả để sắp xếp thứ tự của FAQs, benefits...
+
+SEO Preview: Trong form nhập liệu SEO, hãy hiển thị một bản xem trước mô phỏng kết quả tìm kiếm của Google để người quản trị hình dung được seoTitle và seoDescription sẽ trông như thế nào.
+
+Tổng kết: Kế hoạch của bạn cực kỳ vững chắc. Các gợi ý của tôi chỉ là những chi tiết nhỏ để làm cho hệ thống của bạn mạnh mẽ và dễ sử dụng hơn nữa. Bạn đang đi một con đường rất đúng đắn để xây dựng một website bán hàng chuyên nghiệp và chuẩn SEO.
+
+
+
+
+
+
+
