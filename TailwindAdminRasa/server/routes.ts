@@ -49,6 +49,7 @@ import faqLibraryRouter from './api/faq-library';
 import faqAssignmentsRouter from './api/faq-assignments';
 import reviewSeedingRouter from './api/review-seeding';
 import adminReviewsRouter from './api/admin-reviews';
+import themesRouter from './api/themes';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3788,6 +3789,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PRODUCTS MANAGEMENT API ROUTES
   // ==========================================
   app.use("/api/products", productsRouter);
+  
+  // ==========================================
+  // 🎨 Theme Repository Management API
+  // ==========================================
+  app.use("/api/themes", themesRouter);
   
   // ==========================================
   // PRODUCT FAQs MANAGEMENT API ROUTES
