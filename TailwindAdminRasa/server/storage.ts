@@ -261,7 +261,7 @@ export interface IStorage {
   incrementHelpfulCount(id: string): Promise<boolean>;
 
   // Product FAQ methods
-  getProductFAQs(productId: string): Promise<ProductFAQ[]>;
+  getProductFAQs(productId: string, includeInactive?: boolean): Promise<ProductFAQ[]>;
   getProductFAQ(id: string): Promise<ProductFAQ | undefined>;
   createProductFAQ(faq: InsertProductFAQ): Promise<ProductFAQ>;
   updateProductFAQ(id: string, faq: Partial<InsertProductFAQ>): Promise<ProductFAQ | undefined>;
