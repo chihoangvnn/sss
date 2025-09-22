@@ -182,6 +182,13 @@ const socialManagementItems = [
 // Content & Design - Creative and design tools
 const contentDesignItems = [
   {
+    title: "Template Builder",
+    url: "/template-builder",
+    icon: Palette,
+    gradient: "gradient-mint",
+    description: "🎨 Giám Đốc Làm Đẹp - Build và customize templates"
+  },
+  {
     title: "Storefront",
     url: "/storefront-manager",
     icon: Store,
