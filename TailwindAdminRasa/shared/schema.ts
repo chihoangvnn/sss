@@ -710,7 +710,7 @@ export const productReviews = pgTable("product_reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// 🙋‍♂️ Product FAQs table - Hỏi & Đáp về sản phẩm
+// 🙋‍♂️ Product FAQs table - Hỏi & Đáp về sản phẩm (LEGACY - will migrate to faqLibrary)
 export const productFAQs = pgTable("product_faqs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
@@ -724,6 +724,75 @@ export const productFAQs = pgTable("product_faqs", {
   // Index để tối ưu query
   productIdIdx: index("product_faqs_product_id_idx").on(table.productId),
   sortOrderIdx: index("product_faqs_sort_order_idx").on(table.sortOrder),
+}));
+
+// 🏷️ FAQ Library table - Tag-based FAQ management system
+export const faqLibrary = pgTable("faq_library", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  question: text("question").notNull(), // "Nhang này có tác dụng gì cho sức khỏe?"
+  answer: text("answer").notNull(), // "Nhang thiên nhiên giúp thư giãn tinh thần..."
+  
+  // 🏷️ Tags integration with unified_tags system - Focus on "Sản phẩm" tags
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
+  
+  // Organization & Priority
+  priority: text("priority", { enum: ["high", "medium", "low"] }).notNull().default("medium"),
+  category: text("category", { enum: ["general", "product", "tutorial", "policy", "technical"] }).notNull().default("product"),
+  
+  // Status & Display
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  
+  // Usage tracking
+  usageCount: integer("usage_count").notNull().default(0), // How many times this FAQ is used
+  lastUsed: timestamp("last_used"), // Last time assigned to content
+  
+  // SEO & Search
+  keywords: jsonb("keywords").$type<string[]>().default(sql`'[]'::jsonb`), // Search keywords
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Indexes for performance
+  categoryIdx: index("faq_library_category_idx").on(table.category),
+  priorityIdx: index("faq_library_priority_idx").on(table.priority),
+  activeIdx: index("faq_library_active_idx").on(table.isActive),
+  sortOrderIdx: index("faq_library_sort_order_idx").on(table.sortOrder),
+  usageCountIdx: index("faq_library_usage_count_idx").on(table.usageCount),
+}));
+
+// 🔗 Content-FAQ Assignment table - Many-to-Many relationship with drag & drop support
+export const contentFAQAssignments = pgTable("content_faq_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  faqId: varchar("faq_id").notNull().references(() => faqLibrary.id, { onDelete: 'cascade' }),
+  
+  // Flexible content types - products, articles, landing pages
+  contentType: text("content_type", { 
+    enum: ["product", "article", "landing_page"] 
+  }).notNull().default("product"),
+  contentId: varchar("content_id").notNull(), // Product/Article/Page ID
+  
+  // Display & Organization
+  sortOrder: integer("sort_order").notNull().default(0), // Drag & drop order
+  isVisible: boolean("is_visible").notNull().default(true), // Show/hide on frontend
+  
+  // Assignment context
+  assignedBy: varchar("assigned_by"), // User who assigned this FAQ
+  assignmentNote: text("assignment_note"), // Why this FAQ was assigned
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint: Each FAQ can only be assigned once per content item
+  uniqueAssignment: unique("unique_faq_content_assignment").on(table.faqId, table.contentType, table.contentId),
+  
+  // Performance indexes
+  faqIdIdx: index("content_faq_assignments_faq_id_idx").on(table.faqId),
+  contentTypeIdx: index("content_faq_assignments_content_type_idx").on(table.contentType),
+  contentIdIdx: index("content_faq_assignments_content_id_idx").on(table.contentId),
+  contentCompositeIdx: index("content_faq_assignments_content_composite_idx").on(table.contentType, table.contentId),
+  sortOrderIdx: index("content_faq_assignments_sort_order_idx").on(table.sortOrder),
+  visibleIdx: index("content_faq_assignments_visible_idx").on(table.isVisible),
 }));
 
 // 🛡️ Product Policies table - Chính sách sản phẩm (có thể tái sử dụng)
