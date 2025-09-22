@@ -1,11 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
+import { db } from "../db";
+import { userTemplates, templateCompilations, projectTemplates, type InsertUserTemplate } from "../../shared/schema";
+import { eq, and, desc, sql, like, or } from "drizzle-orm";
 
 /**
  * 🧩 Template Management API Routes
  * 
  * Provides complete CRUD operations for the Template Repository system
  * Supports category filtering, business type search, and template compilation
+ * Enhanced with Template Persistence System for user template save/load functionality
  */
 
 const router = Router();
@@ -161,6 +165,41 @@ const BusinessTypeSchema = z.enum([
   'healthcare', 'education', 'real-estate', 'fashion', 'technology',
   'finance', 'creative', 'travel', 'fitness', 'automotive'
 ]);
+
+// 💾 User Template Persistence Schemas
+const UserTemplateCreateSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  description: z.string().optional(),
+  baseTemplateId: z.string().min(1, "Base template ID is required"),
+  customizations: z.object({
+    colors: z.object({
+      primary: z.string(),
+      secondary: z.string(),
+      accent: z.string(),
+      background: z.string()
+    }).optional(),
+    typography: z.object({
+      headingFont: z.string(),
+      bodyFont: z.string(),
+      fontSize: z.enum(['small', 'medium', 'large'])
+    }).optional(),
+    layout: z.object({
+      containerWidth: z.enum(['narrow', 'medium', 'wide', 'full']),
+      spacing: z.enum(['tight', 'normal', 'loose']),
+      borderRadius: z.enum(['none', 'small', 'medium', 'large'])
+    }).optional(),
+    responsive: z.object({
+      breakpoints: z.array(z.string()),
+      mobileFirst: z.boolean()
+    }).optional()
+  }),
+  platforms: z.array(z.enum(['landing-page', 'storefront', 'all'])).default(['all']),
+  category: z.string().default('custom'),
+  isPublic: z.boolean().default(false),
+  tags: z.array(z.string()).default([])
+});
+
+const UserTemplateUpdateSchema = UserTemplateCreateSchema.partial().omit({ baseTemplateId: true });
 
 // In-memory template storage (production would use database)
 const templateRegistry = new Map<string, any>();
@@ -331,8 +370,8 @@ router.get("/", async (req, res) => {
     
     // Get available filter options
     const allTemplates = Array.from(templateRegistry.values());
-    const categories = [...new Set(allTemplates.map(t => t.category))];
-    const businessTypes = [...new Set(allTemplates.map(t => t.businessType))];
+    const categories = Array.from(new Set(allTemplates.map(t => t.category)));
+    const businessTypes = Array.from(new Set(allTemplates.map(t => t.businessType)));
     const platforms = ['web', 'mobile', 'desktop'];
     const frameworks = ['react', 'vue', 'angular', 'svelte', 'html'];
     const complexities = ['simple', 'intermediate', 'advanced'];
@@ -904,6 +943,287 @@ router.get("/analytics/overview", requireAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to get analytics",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 💾 USER TEMPLATE PERSISTENCE API ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * 💾 POST /api/user-templates - Save a new user template
+ */
+router.post("/user-templates", requireAuth, async (req, res) => {
+  try {
+    const validatedData = UserTemplateCreateSchema.parse(req.body);
+    const userId = (req.session as any)?.userId || 'anonymous';
+    
+    // Check if base template exists
+    const baseTemplate = templateRegistry.get(validatedData.baseTemplateId);
+    if (!baseTemplate) {
+      return res.status(404).json({
+        success: false,
+        error: "Base template not found",
+        code: "BASE_TEMPLATE_NOT_FOUND"
+      });
+    }
+    
+    // Create user template in database
+    const insertData: InsertUserTemplate = {
+      userId,
+      name: validatedData.name,
+      description: validatedData.description,
+      baseTemplateId: validatedData.baseTemplateId,
+      customizations: validatedData.customizations,
+      platforms: validatedData.platforms,
+      category: validatedData.category,
+      isPublic: validatedData.isPublic,
+      tags: validatedData.tags,
+      usageCount: 0,
+      rating: "0.00"
+    };
+    
+    const [userTemplate] = await db.insert(userTemplates).values(insertData).returning();
+    
+    res.status(201).json({
+      success: true,
+      template: userTemplate,
+      message: "Template saved successfully"
+    });
+  } catch (error) {
+    console.error("❌ Error saving user template:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid template data",
+        details: error.errors
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: "Failed to save template",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+/**
+ * 📋 GET /api/user-templates - List user's saved templates
+ */
+router.get("/user-templates", requireAuth, async (req, res) => {
+  try {
+    const userId = (req.session as any)?.userId || 'anonymous';
+    const {
+      category,
+      platform,
+      search,
+      isPublic,
+      limit = "50",
+      offset = "0",
+      sortBy = "created", // created, name, usage
+      sortOrder = "desc"
+    } = req.query;
+    
+    // Build where conditions
+    const conditions = [eq(userTemplates.userId, userId)];
+    
+    if (category && typeof category === 'string') {
+      conditions.push(eq(userTemplates.category, category));
+    }
+    
+    if (platform && typeof platform === 'string') {
+      conditions.push(sql`${userTemplates.platforms}::text LIKE '%${platform}%'`);
+    }
+    
+    if (isPublic === 'true') {
+      conditions.push(eq(userTemplates.isPublic, true));
+    }
+    
+    if (search && typeof search === 'string') {
+      conditions.push(
+        or(
+          like(userTemplates.name, `%${search}%`),
+          like(userTemplates.description, `%${search}%`)
+        )
+      );
+    }
+    
+    // Build sort order
+    let orderBy;
+    switch (sortBy) {
+      case 'name':
+        orderBy = sortOrder === 'asc' ? userTemplates.name : desc(userTemplates.name);
+        break;
+      case 'usage':
+        orderBy = sortOrder === 'asc' ? userTemplates.usageCount : desc(userTemplates.usageCount);
+        break;
+      default:
+        orderBy = sortOrder === 'asc' ? userTemplates.createdAt : desc(userTemplates.createdAt);
+    }
+    
+    const templates = await db
+      .select()
+      .from(userTemplates)
+      .where(and(...conditions))
+      .orderBy(orderBy)
+      .limit(parseInt(limit as string))
+      .offset(parseInt(offset as string));
+    
+    res.json({
+      success: true,
+      templates,
+      totalCount: templates.length,
+      pagination: {
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+        hasMore: templates.length === parseInt(limit as string)
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error fetching user templates:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch templates",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+/**
+ * 🎯 GET /api/user-templates/:id - Get specific user template
+ */
+router.get("/user-templates/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req.session as any)?.userId || 'anonymous';
+    
+    const [template] = await db
+      .select()
+      .from(userTemplates)
+      .where(and(
+        eq(userTemplates.id, id),
+        or(
+          eq(userTemplates.userId, userId),
+          eq(userTemplates.isPublic, true)
+        )
+      ));
+    
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: "Template not found or access denied"
+      });
+    }
+    
+    res.json({
+      success: true,
+      template
+    });
+  } catch (error) {
+    console.error("❌ Error fetching user template:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch template",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+/**
+ * ✏️ PUT /api/user-templates/:id - Update user template
+ */
+router.put("/user-templates/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req.session as any)?.userId || 'anonymous';
+    const validatedData = UserTemplateUpdateSchema.parse(req.body);
+    
+    // Check if template exists and belongs to user
+    const [existingTemplate] = await db
+      .select()
+      .from(userTemplates)
+      .where(and(
+        eq(userTemplates.id, id),
+        eq(userTemplates.userId, userId)
+      ));
+    
+    if (!existingTemplate) {
+      return res.status(404).json({
+        success: false,
+        error: "Template not found or access denied"
+      });
+    }
+    
+    // Update template
+    const [updatedTemplate] = await db
+      .update(userTemplates)
+      .set({
+        ...validatedData,
+        updatedAt: new Date()
+      })
+      .where(eq(userTemplates.id, id))
+      .returning();
+    
+    res.json({
+      success: true,
+      template: updatedTemplate,
+      message: "Template updated successfully"
+    });
+  } catch (error) {
+    console.error("❌ Error updating user template:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid template data",
+        details: error.errors
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: "Failed to update template",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+/**
+ * 🗑️ DELETE /api/user-templates/:id - Delete user template
+ */
+router.delete("/user-templates/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req.session as any)?.userId || 'anonymous';
+    
+    // Check if template exists and belongs to user
+    const [existingTemplate] = await db
+      .select()
+      .from(userTemplates)
+      .where(and(
+        eq(userTemplates.id, id),
+        eq(userTemplates.userId, userId)
+      ));
+    
+    if (!existingTemplate) {
+      return res.status(404).json({
+        success: false,
+        error: "Template not found or access denied"
+      });
+    }
+    
+    // Delete template
+    await db.delete(userTemplates).where(eq(userTemplates.id, id));
+    
+    res.json({
+      success: true,
+      message: "Template deleted successfully"
+    });
+  } catch (error) {
+    console.error("❌ Error deleting user template:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete template",
       details: error instanceof Error ? error.message : "Unknown error"
     });
   }
