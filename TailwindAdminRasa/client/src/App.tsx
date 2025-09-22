@@ -38,6 +38,7 @@ import ApiManagement from "@/pages/ApiManagement";
 import WorkerManagement from "@/components/WorkerManagement";
 import NotFound from "@/pages/not-found";
 import ProductPage from "@/pages/ProductPage";
+import ReviewManagement from "@/pages/ReviewManagement";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SocialMediaHub } from "@/components/SocialMediaHub";
 
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/industries" component={IndustryManager} />
       <Route path="/shop-settings" component={ShopSettings} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/review-management" component={ReviewManagement} />
       <Route path="/chatbot" component={Chatbot} />
       <Route path="/content-library" component={ContentLibrary} />
       <Route path="/post-scheduler" component={PostScheduler} />

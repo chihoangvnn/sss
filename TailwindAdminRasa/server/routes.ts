@@ -47,6 +47,8 @@ import systemHealthRouter from './api/system-health';
 import orchestratorRouter from './api/orchestrator';
 import faqLibraryRouter from './api/faq-library';
 import faqAssignmentsRouter from './api/faq-assignments';
+import reviewSeedingRouter from './api/review-seeding';
+import adminReviewsRouter from './api/admin-reviews';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3824,6 +3826,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.use("/api/faq-library", faqLibraryRouter);
   app.use("/api/faq-assignments", faqAssignmentsRouter);
+
+  // ==========================================
+  // AI REVIEW SEEDING & MANAGEMENT API ROUTES
+  // ==========================================
+  app.use("/api/review-seeding", reviewSeedingRouter);
+  app.use("/api/admin/reviews", adminReviewsRouter);
 
   // ==========================================
   // SATELLITE SYSTEM API ROUTES

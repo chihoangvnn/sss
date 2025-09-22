@@ -21,7 +21,8 @@ import {
   Satellite,
   Server,
   Monitor,
-  Cloud
+  Cloud,
+  Star
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -91,6 +92,13 @@ const coreBusinessItems = [
     icon: BarChart3,
     gradient: "gradient-mint",
     description: "Real-time monitoring & insights"
+  },
+  {
+    title: "Quản lý Reviews",
+    url: "/review-management",
+    icon: Star,
+    gradient: "gradient-orange",
+    description: "AI seeding và quản lý đánh giá sản phẩm"
   },
 ];
 
