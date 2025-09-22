@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Search, 
   Grid3X3, 
@@ -29,7 +32,8 @@ import {
   ShoppingBag,
   Building2,
   Crown,
-  Briefcase
+  Briefcase,
+  X
 } from 'lucide-react';
 import { TemplatePreview } from './TemplatePreview';
 import { TemplateDefinition, TemplateCategory, TargetFramework } from '@/types/template';
@@ -90,6 +94,7 @@ const COMPLEXITY_COLORS = {
 } as const;
 
 export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ className }) => {
+  const { toast } = useToast();
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateDefinition | null>(null);
   const [templates, setTemplates] = useState<TemplateDefinition[]>([]);
   const [filters, setFilters] = useState<TemplateFilters>({});
@@ -118,6 +123,14 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ className }) =
   const [activeTab, setActiveTab] = useState('browse');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveFormData, setSaveFormData] = useState({
+    name: '',
+    description: '',
+    category: 'custom',
+    isPublic: false
+  });
 
   useEffect(() => {
     loadTemplates();
@@ -185,6 +198,64 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ className }) =
     } catch (error) {
       console.error('Failed to export template:', error);
     }
+  };
+
+  const handleSaveTemplate = async (templateData: { name: string; description?: string; category?: string; isPublic?: boolean }) => {
+    if (!selectedTemplate) return;
+    
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/user-templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: templateData.name,
+          description: templateData.description,
+          baseTemplateId: selectedTemplate.id,
+          customizations: customization,
+          platforms: ['web'],
+          category: templateData.category || 'custom',
+          isPublic: templateData.isPublic || false,
+          tags: []
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setSaveDialogOpen(false);
+        setSaveFormData({ name: '', description: '', category: 'custom', isPublic: false });
+        toast({
+          title: "✅ Lưu thành công!",
+          description: `Template "${templateData.name}" đã được lưu vào thư viện.`,
+        });
+      } else {
+        toast({
+          title: "❌ Lỗi lưu template",
+          description: data.message || "Không thể lưu template. Vui lòng thử lại.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "❌ Lỗi kết nối",
+        description: "Không thể kết nối tới server. Vui lòng kiểm tra kết nối.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!saveFormData.name.trim()) return;
+    handleSaveTemplate(saveFormData);
   };
 
   const renderTemplateCard = (template: TemplateDefinition) => {
@@ -462,7 +533,17 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ className }) =
                   </div>
 
                   <div className="space-y-4">
-                    <Button onClick={handleExportTemplate} className="w-full" size="sm">
+                    <Button 
+                      onClick={() => setSaveDialogOpen(true)} 
+                      className="w-full bg-green-600 hover:bg-green-700" 
+                      size="sm"
+                      disabled={isSaving}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {isSaving ? 'Đang lưu...' : 'Lưu Template'}
+                    </Button>
+                    
+                    <Button onClick={handleExportTemplate} variant="outline" className="w-full" size="sm">
                       <Download className="h-4 w-4 mr-2" />
                       Download React Component
                     </Button>
@@ -536,6 +617,85 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({ className }) =
           />
         </div>
       </div>
+
+      {/* Save Template Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Lưu Template</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveFormSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="templateName">Tên Template *</Label>
+              <Input
+                id="templateName"
+                placeholder="Nhập tên template..."
+                value={saveFormData.name}
+                onChange={(e) => setSaveFormData(prev => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="templateDescription">Mô tả</Label>
+              <Textarea
+                id="templateDescription"
+                placeholder="Mô tả template (tùy chọn)..."
+                value={saveFormData.description}
+                onChange={(e) => setSaveFormData(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="templateCategory">Danh mục</Label>
+              <Select 
+                value={saveFormData.category} 
+                onValueChange={(value) => setSaveFormData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">Custom</SelectItem>
+                  <SelectItem value="ecommerce">E-commerce</SelectItem>
+                  <SelectItem value="content">Content</SelectItem>
+                  <SelectItem value="layout">Layout</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isPublic"
+                checked={saveFormData.isPublic}
+                onChange={(e) => setSaveFormData(prev => ({ ...prev, isPublic: e.target.checked }))}
+                className="rounded"
+              />
+              <Label htmlFor="isPublic" className="text-sm">Chia sẻ công khai</Label>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setSaveDialogOpen(false)}
+                disabled={isSaving}
+              >
+                Hủy
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSaving || !saveFormData.name.trim()}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isSaving ? 'Đang lưu...' : 'Lưu'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
