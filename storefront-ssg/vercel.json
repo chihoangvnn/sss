@@ -2,13 +2,25 @@
   "buildCommand": "npm run build",
   "framework": "nextjs",
   "env": {
+    "NEXT_PUBLIC_ENVIRONMENT": "@environment",
     "NEXT_PUBLIC_API_URL": "@api-url",
-    "NEXT_PUBLIC_BACKEND_URL": "@backend-url"
+    "NEXT_PUBLIC_BACKEND_URL": "@backend-url",
+    "NEXT_PUBLIC_FALLBACK_API_URL": "@fallback-api-url",
+    "NEXT_PUBLIC_HEALTH_CHECK_PATH": "@health-check-path",
+    "NEXT_PUBLIC_API_TIMEOUT": "@api-timeout",
+    "NEXT_PUBLIC_VERIFY_SSL": "@verify-ssl",
+    "NEXT_PUBLIC_ALLOWED_ORIGINS": "@allowed-origins"
   },
   "build": {
     "env": {
-      "NEXT_PUBLIC_API_URL": "https://your-replit-backend.replit.dev",
-      "NEXT_PUBLIC_BACKEND_URL": "https://your-replit-backend.replit.dev"
+      "NEXT_PUBLIC_ENVIRONMENT": "production",
+      "NEXT_PUBLIC_API_URL": "https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev",
+      "NEXT_PUBLIC_BACKEND_URL": "https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev",
+      "NEXT_PUBLIC_FALLBACK_API_URL": "https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev",
+      "NEXT_PUBLIC_HEALTH_CHECK_PATH": "/api/health",
+      "NEXT_PUBLIC_API_TIMEOUT": "15000",
+      "NEXT_PUBLIC_VERIFY_SSL": "true",
+      "NEXT_PUBLIC_ALLOWED_ORIGINS": "https://yourdomain.com,https://your-storefront.vercel.app"
     }
   },
   "functions": {},
