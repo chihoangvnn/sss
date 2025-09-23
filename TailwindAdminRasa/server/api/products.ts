@@ -20,11 +20,16 @@ const requireAuth = (req: any, res: any, next: any) => {
   next();
 };
 
-// GET /api/products - List all products
+// GET /api/products - List all products with search support
 router.get('/', async (req, res) => {
   try {
-    console.log('📊 API: Getting all products');
-    const products = await storage.getProducts();
+    const { limit, categoryId, search, offset } = req.query;
+    const limitNum = limit ? parseInt(limit as string) : 50;
+    const offsetNum = offset ? parseInt(offset as string) : 0;
+    
+    console.log('📊 API: Getting products with filters:', { limitNum, categoryId, search, offsetNum });
+    
+    const products = await storage.getProducts(limitNum, categoryId as string, search as string, offsetNum);
     res.json(products);
   } catch (error) {
     console.error('❌ Error fetching products:', error);
@@ -90,6 +95,41 @@ router.get('/:id/policies', async (req, res) => {
     console.error('❌ Error fetching product policies:', error);
     res.status(500).json({ 
       error: 'Failed to fetch product policies',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// GET /api/products/by-barcode - Get product by barcode (optimized for barcode scanning)
+// IMPORTANT: This route must come BEFORE /:id to avoid conflicts
+router.get('/by-barcode', async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'Barcode code is required' });
+    }
+    
+    console.log('📊 API: Getting product by barcode:', code);
+    
+    // First try to get by SKU
+    let product = await storage.getProductBySKU(code as string);
+    
+    // If not found by SKU, search by itemCode
+    if (!product) {
+      const products = await storage.getProducts(1, undefined, code as string);
+      product = products.find(p => p.itemCode === code) || null;
+    }
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found', code });
+    }
+    
+    res.json(product);
+  } catch (error) {
+    console.error('❌ Error fetching product by barcode:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch product by barcode',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

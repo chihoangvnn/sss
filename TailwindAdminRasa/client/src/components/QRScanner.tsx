@@ -25,10 +25,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     if (result && result.length > 0 && result[0]?.rawValue) {
       onScan(result[0].rawValue);
       onClose();
-      toast({
-        title: "QR Code quét thành công!",
-        description: `Mã sản phẩm: ${result[0].rawValue}`,
-      });
+      // Toast notification is handled by the parent component (POS.tsx)
     }
   };
 

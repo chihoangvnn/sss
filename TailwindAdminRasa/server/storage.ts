@@ -397,7 +397,9 @@ export class DatabaseStorage implements IStorage {
       conditions.push(
         or(
           ilike(products.name, `%${search}%`),
-          ilike(products.description, `%${search}%`)
+          ilike(products.description, `%${search}%`),
+          ilike(products.sku, `%${search}%`),
+          ilike(products.itemCode, `%${search}%`)
         )
       );
     }

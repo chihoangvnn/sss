@@ -15,10 +15,12 @@ import {
   CreditCard,
   QrCode,
   User,
-  Calculator
+  Calculator,
+  Camera
 } from "lucide-react";
 import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
+import { QRScanner } from "@/components/QRScanner";
 import type { Product, Customer, Order } from "@shared/schema";
 
 interface CartItem {
@@ -50,6 +52,8 @@ export default function POS({}: POSProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [isSearchingBarcode, setIsSearchingBarcode] = useState(false);
 
   // Fetch products
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
@@ -256,6 +260,57 @@ export default function POS({}: POSProps) {
     });
   };
 
+  // Barcode scanner functionality  
+  const handleBarcodeScanned = async (barcode: string) => {
+    setIsSearchingBarcode(true);
+    
+    try {
+      // Use the proven search endpoint which works reliably for barcode scanning
+      const response = await fetch(`/api/products?search=${encodeURIComponent(barcode)}`);
+      const products = await response.json();
+      
+      // Find exact match by sku or itemCode for barcode scanning
+      const matchedProduct = products.find((product: Product) => 
+        product.sku === barcode || product.itemCode === barcode
+      );
+      
+      if (matchedProduct) {
+        // Auto-add product to cart
+        addToCart(matchedProduct);
+        
+        toast({
+          title: "📷 Quét mã vạch thành công!",
+          description: `${matchedProduct.name} đã được thêm vào giỏ hàng`,
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: "Không tìm thấy sản phẩm",
+          description: `Không tìm thấy sản phẩm với mã: ${barcode}`,
+          variant: "destructive",
+          duration: 4000,
+        });
+      }
+    } catch (error) {
+      console.error('Barcode scan error:', error);
+      toast({
+        title: "Lỗi quét mã vạch",
+        description: "Có lỗi xảy ra khi tìm kiếm sản phẩm",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingBarcode(false);
+    }
+  };
+
+  const openBarcodeScanner = () => {
+    setShowBarcodeScanner(true);
+  };
+
+  const closeBarcodeScanner = () => {
+    setShowBarcodeScanner(false);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -287,15 +342,25 @@ export default function POS({}: POSProps) {
                   F2
                 </Badge>
               </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <Input
-                  ref={productSearchRef}
-                  placeholder="Tìm sản phẩm theo tên hoặc mã SKU... (F2)"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 text-lg py-3"
-                />
+              <div className="flex space-x-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Input
+                    ref={productSearchRef}
+                    placeholder="Tìm sản phẩm theo tên hoặc mã SKU... (F2)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 text-lg py-3"
+                  />
+                </div>
+                <Button
+                  onClick={openBarcodeScanner}
+                  disabled={isSearchingBarcode}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 text-lg font-medium"
+                >
+                  <Camera className="h-5 w-5 mr-2" />
+                  📷 Quét mã vạch
+                </Button>
               </div>
             </div>
           </div>
@@ -567,6 +632,13 @@ export default function POS({}: POSProps) {
           </div>
         </div>
       )}
+
+      {/* Barcode Scanner Modal */}
+      <QRScanner
+        isOpen={showBarcodeScanner}
+        onClose={closeBarcodeScanner}
+        onScan={handleBarcodeScanned}
+      />
     </div>
   );
 }

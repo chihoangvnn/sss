@@ -12,13 +12,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Handle regular products API
     if (req.method === 'GET') {
-      const { categoryId, withCategories } = req.query;
+      const { categoryId, withCategories, search } = req.query;
       
       if (withCategories === 'true') {
-        const products = await storage.getProductsWithCategory(50, categoryId as string);
+        const products = await storage.getProductsWithCategory(50, categoryId as string, search as string);
         res.json(products);
       } else {
-        const products = await storage.getProducts(50, categoryId as string);
+        const products = await storage.getProducts(50, categoryId as string, search as string);
         res.json(products);
       }
     } else if (req.method === 'POST') {
