@@ -33,6 +33,7 @@ import {
   CreditCard,
   QrCode,
   User,
+  Users,
   Calculator,
   Camera,
   X,
@@ -55,6 +56,7 @@ import { QRScanner } from "@/components/QRScanner";
 import { DecimalQuantityInput } from "@/components/DecimalQuantityInput";
 import { ReceiptPrinter } from "@/components/ReceiptPrinter";
 import { ReceiptSettings, useReceiptSettings } from "@/components/ReceiptSettings";
+import { SplitOrderModal, type SplitOrderData } from "@/components/SplitOrderModal";
 import type { Product, Customer, Order, OrderItem, ShopSettings, Category } from "@shared/schema";
 import type { CartItem } from "@/components/OptimizedTabManager";
 
@@ -107,6 +109,7 @@ export default function POS({}: POSProps) {
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [isSearchingBarcode, setIsSearchingBarcode] = useState(false);
   const [showReceiptPrinter, setShowReceiptPrinter] = useState(false);
+  const [showSplitOrderModal, setShowSplitOrderModal] = useState(false);
   const [lastPrintedOrder, setLastPrintedOrder] = useState<{
     order: Order;
     orderItems: (OrderItem & { product: Product })[];
@@ -610,6 +613,60 @@ export default function POS({}: POSProps) {
     };
 
     createOrderMutation.mutate(orderData);
+  };
+
+  // Handle split order creation
+  const handleSplitOrderComplete = async (splitOrders: SplitOrderData[]) => {
+    try {
+      const createdOrders: Order[] = [];
+      
+      // Create separate orders for each customer
+      for (const splitOrder of splitOrders) {
+        const orderData = {
+          customerId: splitOrder.customer.id,
+          total: splitOrder.total.toString(),
+          status: 'pending',
+          items: splitOrder.items.map(item => ({
+            productId: item.cartItem.product.id,
+            quantity: item.quantity,
+            price: parseFloat(item.cartItem.product.price),
+          })),
+          source: 'pos',
+        };
+
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create order for ${splitOrder.customer.name}`);
+        }
+
+        const order = await response.json();
+        createdOrders.push(order);
+      }
+
+      // Clear cart and show success
+      clearCart();
+      
+      toast({
+        title: "Đơn hàng đã được tách thành công",
+        description: `Đã tạo ${createdOrders.length} đơn hàng riêng biệt cho từng khách hàng`,
+      });
+
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+
+    } catch (error: any) {
+      toast({
+        title: "Lỗi tách đơn hàng",
+        description: error.message || "Không thể tách đơn hàng",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle payment completion
@@ -1352,6 +1409,15 @@ export default function POS({}: POSProps) {
                 </Button>
 
                 <Button
+                  onClick={() => setShowSplitOrderModal(true)}
+                  variant="outline"
+                  className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 py-3 text-lg"
+                >
+                  <Users className="h-5 w-5 mr-2" />
+                  Tách đơn hàng (nhiều khách)
+                </Button>
+
+                <Button
                   onClick={clearCart}
                   variant="outline"
                   className="w-full"
@@ -1441,6 +1507,14 @@ export default function POS({}: POSProps) {
           autoClose={true}
         />
       )}
+
+      {/* Split Order Modal */}
+      <SplitOrderModal
+        isOpen={showSplitOrderModal}
+        onClose={() => setShowSplitOrderModal(false)}
+        cartItems={cart}
+        onSplitComplete={handleSplitOrderComplete}
+      />
     </div>
   );
 }
