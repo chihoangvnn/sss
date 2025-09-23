@@ -134,6 +134,48 @@ export const categories = pgTable("categories", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Industry Keywords table - For AI industry detection
+export const industryKeywords = pgTable("industry_keywords", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  industryId: varchar("industry_id").notNull().references(() => industries.id),
+  keyword: text("keyword").notNull(),
+  weight: decimal("weight", { precision: 5, scale: 3 }).notNull().default("1.000"), // 0.001 to 99.999
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Industry Templates table - Response templates for each industry
+export const industryTemplates = pgTable("industry_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  industryId: varchar("industry_id").notNull().references(() => industries.id),
+  intent: text("intent").notNull(), // "product_search", "product_recommendation", "price_inquiry", etc.
+  template: text("template").notNull(), // "🏠 **SẢN PHẨM GIA DỤNG** cho ngôi nhà của bạn..."
+  language: text("language").notNull().default("vi"), // "vi", "en"
+  isActive: boolean("is_active").notNull().default(true),
+  priority: integer("priority").notNull().default(0), // Higher priority = used first
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Industry Rules table - AI detection rules and configuration
+export const industryRules = pgTable("industry_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  industryId: varchar("industry_id").notNull().references(() => industries.id),
+  rules: jsonb("rules_json").$type<{
+    minKeywordMatches?: number; // Minimum keyword matches required
+    confidenceThreshold?: number; // 0.0 to 1.0
+    excludeKeywords?: string[]; // Keywords that exclude this industry
+    requiredKeywords?: string[]; // Keywords that must be present
+    contextRules?: {
+      [key: string]: any;
+    };
+  }>().default(sql`'{}'::jsonb`),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // RASA Description Variations Type
 export interface RasaDescriptions {
   primary: string; // Main description for listings
@@ -1483,6 +1525,24 @@ export const insertIndustrySchema = createInsertSchema(industries).omit({
   updatedAt: true,
 });
 
+export const insertIndustryKeywordSchema = createInsertSchema(industryKeywords).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIndustryTemplateSchema = createInsertSchema(industryTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIndustryRuleSchema = createInsertSchema(industryRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
   createdAt: true,
@@ -1616,6 +1676,15 @@ export type StorefrontConfig = typeof storefrontConfig.$inferSelect;
 
 export type InsertIndustry = z.infer<typeof insertIndustrySchema>;
 export type Industry = typeof industries.$inferSelect;
+
+export type InsertIndustryKeyword = z.infer<typeof insertIndustryKeywordSchema>;
+export type IndustryKeyword = typeof industryKeywords.$inferSelect;
+
+export type InsertIndustryTemplate = z.infer<typeof insertIndustryTemplateSchema>;
+export type IndustryTemplate = typeof industryTemplates.$inferSelect;
+
+export type InsertIndustryRule = z.infer<typeof insertIndustryRuleSchema>;
+export type IndustryRule = typeof industryRules.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Category = typeof categories.$inferSelect;
