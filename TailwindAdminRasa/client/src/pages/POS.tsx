@@ -195,12 +195,17 @@ export default function POS({}: POSProps) {
 
   // Get default shop settings
   const defaultShopSettings = shopSettings.find(s => s.isDefault) || shopSettings[0] || {
+    id: 'default',
     businessName: 'Cửa hàng POS',
     address: '',
     phone: '',
     email: '',
     website: '',
-    taxId: ''
+    description: null,
+    logo: null,
+    isDefault: true,
+    createdAt: null,
+    updatedAt: null
   } as ShopSettings;
 
   // Intelligent prefetching on mount for better performance
@@ -559,7 +564,7 @@ export default function POS({}: POSProps) {
         id: '', // Will be set after order items are created
         orderId: order.id,
         productId: cartItem.product.id,
-        quantity: cartItem.quantity,
+        quantity: cartItem.quantity.toString(),
         price: cartItem.product.price,
         product: cartItem.product
       }));
@@ -614,7 +619,7 @@ export default function POS({}: POSProps) {
       setLastPrintedOrder({
         order: currentOrder,
         orderItems: currentOrderItems,
-        customer: selectedCustomer
+        customer: selectedCustomer || undefined
       });
       
       // Auto-print receipt if enabled
@@ -923,7 +928,7 @@ export default function POS({}: POSProps) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const emptyTab = tabManager.findEmptyTab();
+                        const emptyTab = tabManager.tabs.find(t => t.status === 'empty');
                         if (emptyTab) {
                           tabManager.duplicateTab(tab.id, emptyTab.id);
                           tabManager.switchToTab(emptyTab.id);
