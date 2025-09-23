@@ -11,6 +11,7 @@ export type TabStatus = 'empty' | 'draft' | 'pending';
 export interface TabState {
   id: string;
   name: string;
+  defaultName: string; // Original tab name ("Đơn 1", "Đơn 2", etc)
   cart: CartItem[];
   selectedCustomer: Customer | null;
   selectedCategoryId: string | null;
@@ -26,6 +27,7 @@ interface TabManagerState {
 const createEmptyTab = (id: string, name: string): TabState => ({
   id,
   name,
+  defaultName: name,
   cart: [],
   selectedCustomer: null,
   selectedCategoryId: null,
@@ -70,12 +72,38 @@ export const useOptimizedTabManager = () => {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Convert date strings back to Date objects
-        const tabs = parsed.tabs.map((tab: any) => ({
-          ...tab,
-          lastModified: new Date(tab.lastModified),
-        }));
-        return { tabs, activeTabId: parsed.activeTabId || 'tab-1' };
+        // Convert date strings back to Date objects and migrate tab names
+        const tabs = parsed.tabs.map((tab: any, index: number) => {
+          // Migration: Ensure defaultName exists for backward compatibility
+          let defaultName = tab.defaultName;
+          if (!defaultName) {
+            // Extract base name from existing name or generate from index
+            if (tab.name && tab.name.includes(' - ')) {
+              defaultName = tab.name.split(' - ')[0];
+            } else {
+              defaultName = `Đơn ${index + 1}`;
+            }
+          }
+          
+          // Ensure name is properly formatted
+          let displayName = tab.name;
+          if (!displayName || displayName === 'undefined') {
+            displayName = defaultName;
+          }
+          
+          return {
+            ...tab,
+            name: displayName,
+            defaultName,
+            lastModified: new Date(tab.lastModified),
+          };
+        });
+        
+        // Save the migrated state back to localStorage
+        const migratedState = { tabs, activeTabId: parsed.activeTabId || 'tab-1' };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedState));
+        
+        return migratedState;
       }
     } catch (error) {
       console.error('Failed to load tab state from localStorage:', error);
@@ -263,10 +291,35 @@ export const useOptimizedTabManager = () => {
     updateQuantity(productId, 0);
   }, [updateQuantity]);
 
-  // Optimized set customer
+  // Optimized set customer with dynamic tab naming
   const setCustomer = useCallback((customer: Customer | null) => {
-    updateTab(state.activeTabId, { selectedCustomer: customer });
-  }, [state.activeTabId, updateTab]);
+    setState(prevState => {
+      const currentTab = prevState.tabs.find(tab => tab.id === prevState.activeTabId);
+      if (!currentTab) return prevState;
+
+      // Generate new tab name based on customer
+      const newName = customer 
+        ? `${currentTab.defaultName} - ${customer.name}`
+        : currentTab.defaultName;
+
+      const updatedTab = {
+        ...currentTab,
+        selectedCustomer: customer,
+        name: newName,
+        lastModified: new Date(),
+        status: calculateTabStatus(currentTab.cart, customer),
+      };
+
+      const newTabs = prevState.tabs.map(tab => 
+        tab.id === prevState.activeTabId ? updatedTab : tab
+      );
+
+      return {
+        ...prevState,
+        tabs: newTabs,
+      };
+    });
+  }, [state.activeTabId, calculateTabStatus]);
 
   // Optimized clear active tab
   const clearActiveTab = useCallback(() => {

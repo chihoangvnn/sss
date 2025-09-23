@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 
 interface VirtualizedListOptions {
   itemHeight: number;
@@ -133,6 +133,9 @@ export function VirtualizedList<T>({
     totalHeight,
     offsetY,
     handleScroll: internalHandleScroll,
+    scrollToItem,
+    getItemAt,
+    visibleRange,
     isVirtualized,
   } = useVirtualizedList(items, { itemHeight, overscan, containerHeight });
 
@@ -142,33 +145,30 @@ export function VirtualizedList<T>({
     onScroll?.(e.currentTarget.scrollTop);
   }, [internalHandleScroll, onScroll]);
 
-  // Simple non-virtualized rendering for small lists
+  // Simple non-virtualized rendering for small lists  
   if (!isVirtualized) {
-    return {
-      containerRef,
-      virtualItems: items.map((item, index) => ({
-        data: item,
-        index,
-        isVisible: true,
-        top: index * itemHeight,
-        height: itemHeight,
-      })),
-      totalHeight: items.length * itemHeight,
-      offsetY: 0,
-      handleScroll,
-      isVirtualized: false,
-    };
+    return (
+      <div className={className}>
+        {items.map((item, index) => renderItem(item, index, true))}
+      </div>
+    );
   }
 
-  return {
-    containerRef,
-    virtualItems,
-    totalHeight,
-    offsetY,
-    handleScroll,
-    scrollToItem,
-    getItemAt,
-    visibleRange,
-    isVirtualized: true,
-  };
+  // Virtualized rendering for large lists
+  return (
+    <div
+      ref={containerRef}
+      className={`overflow-auto ${className}`}
+      style={{ height: containerHeight }}
+      onScroll={handleScroll}
+    >
+      <div style={{ height: totalHeight, position: 'relative' }}>
+        <div style={{ transform: `translateY(${offsetY}px)` }}>
+          {virtualItems.map((virtualItem) => 
+            renderItem(virtualItem.data, virtualItem.index, virtualItem.isVisible)
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

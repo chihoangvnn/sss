@@ -27,29 +27,9 @@ export const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
     isVirtualized,
   } = useVirtualizedList(products, { itemHeight, containerHeight });
 
-  // Render virtual item
-  const renderVirtualItem = useCallback((virtualItem: VirtualizedItem<Product>) => {
-    const { data: product, index, isVisible } = virtualItem;
-    
-    return (
-      <div
-        key={product.id}
-        style={{
-          height: itemHeight,
-          padding: '8px',
-        }}
-      >
-        <OptimizedProductGrid
-          products={[product]}
-          onAddToCart={onAddToCart}
-          enableVirtualization={false} // Individual items don't need virtualization
-        />
-      </div>
-    );
-  }, [onAddToCart, itemHeight]);
-
+  // For VirtualizedProductList, use the proper OptimizedProductGrid directly
+  // instead of trying to virtualize individual items
   if (!isVirtualized) {
-    // Use regular grid for small lists
     return (
       <div className={className}>
         <OptimizedProductGrid
@@ -61,18 +41,16 @@ export const VirtualizedProductList: React.FC<VirtualizedProductListProps> = ({
     );
   }
 
+  // For large lists, disable VirtualizedProductList and use OptimizedProductGrid's own virtualization
   return (
-    <div
-      ref={containerRef}
-      className={`overflow-auto ${className}`}
-      style={{ height: containerHeight }}
-      onScroll={handleScroll}
-    >
-      <div style={{ height: totalHeight, position: 'relative' }}>
-        <div style={{ transform: `translateY(${offsetY}px)` }}>
-          {virtualItems.map(renderVirtualItem)}
-        </div>
-      </div>
+    <div className={className}>
+      <OptimizedProductGrid
+        products={products}
+        onAddToCart={onAddToCart}
+        enableVirtualization={true}
+        itemsPerRow={4}
+      />
     </div>
   );
+
 };

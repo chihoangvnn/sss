@@ -67,8 +67,15 @@ const ProductCard = React.memo(({
 
   const StockIcon = stockStatus.icon;
 
+  const isOutOfStock = product.status === 'out-of-stock' || (product.stock || 0) <= 0;
+  
   return (
-    <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer">
+    <Card 
+      className={`h-full hover:shadow-md transition-shadow duration-200 ${
+        isOutOfStock ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+      }`}
+      onClick={isOutOfStock ? undefined : handleAddToCart}
+    >
       <CardContent className="p-4">
         <div className="aspect-square mb-3 bg-gray-100 rounded-lg overflow-hidden">
           {shouldLoadImage && imageUrl ? (
@@ -117,15 +124,6 @@ const ProductCard = React.memo(({
             <span>Còn: {product.stock || 0}</span>
           </div>
           
-          <Button 
-            size="sm" 
-            className="w-full mt-3" 
-            onClick={handleAddToCart}
-            disabled={product.status === 'out-of-stock' || (product.stock || 0) <= 0}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Thêm vào giỏ
-          </Button>
         </div>
       </CardContent>
     </Card>
