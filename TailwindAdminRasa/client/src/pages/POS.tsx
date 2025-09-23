@@ -1,11 +1,29 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+
+// Performance Optimized Components & Hooks
+import { useOptimizedQuery, useOptimizedProductQuery } from "@/hooks/useOptimizedQuery";
+import { usePerformanceMonitor, useRenderPerformance, useInteractionPerformance } from "@/hooks/usePerformanceMonitor";
+import { useOptimizedTabManager } from "@/components/OptimizedTabManager";
+import { OptimizedProductGrid } from "@/components/OptimizedProductGrid";
+import { VirtualizedProductList } from "@/components/VirtualizedProductList";
+import { PerformanceOverlay, usePerformanceOverlayControl } from "@/components/PerformanceOverlay";
+import { useMemoryMonitor, useComponentMemoryTracking, useMultiTabMemoryOptimization } from "@/hooks/useMemoryMonitor";
+
+// Vietnamese Search Optimization
+import { 
+  vietnameseFilter, 
+  createSearchCacheKey, 
+  createSearchString,
+  testVietnameseSearch 
+} from "@/utils/vietnameseSearch";
+
 import { 
   Search, 
   Plus, 
@@ -28,7 +46,8 @@ import {
   Receipt,
   Filter,
   Tag,
-  Grid3x3
+  Grid3x3,
+  Activity
 } from "lucide-react";
 import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
@@ -36,8 +55,8 @@ import { QRScanner } from "@/components/QRScanner";
 import { DecimalQuantityInput } from "@/components/DecimalQuantityInput";
 import { ReceiptPrinter } from "@/components/ReceiptPrinter";
 import { ReceiptSettings, useReceiptSettings } from "@/components/ReceiptSettings";
-import { useTabManager, type CartItem } from "@/components/TabManager";
 import type { Product, Customer, Order, OrderItem, ShopSettings, Category } from "@shared/schema";
+import type { CartItem } from "@/components/OptimizedTabManager";
 
 interface POSProps {}
 
@@ -50,17 +69,28 @@ const formatPrice = (price: string | number) => {
 };
 
 export default function POS({}: POSProps) {
+  // Performance tracking for the entire POS component
+  useRenderPerformance('POS');
+  useComponentMemoryTracking('POS');
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Performance and memory monitoring
+  const { measureOperation, measureAsync } = usePerformanceMonitor();
+  const { measureInteraction } = useInteractionPerformance();
+  const { memoryStats } = useMemoryMonitor();
+  const { shouldReduceMemoryUsage } = useMultiTabMemoryOptimization();
+  const performanceOverlay = usePerformanceOverlayControl();
   
   // Refs for keyboard shortcuts
   const productSearchRef = useRef<HTMLInputElement>(null);
   const customerSearchRef = useRef<CustomerSearchInputRef>(null);
   
-  // Tab Manager
-  const tabManager = useTabManager();
+  // Optimized Tab Manager with performance tracking
+  const tabManager = useOptimizedTabManager();
   
-  // Get current tab data safely - avoid destructuring to prevent initialization errors
+  // Get current tab data safely
   const activeTab = tabManager.activeTab;
   const setCategoryFilter = tabManager.setCategoryFilter;
   const selectedCategoryId = activeTab?.selectedCategoryId || null;
@@ -70,6 +100,7 @@ export default function POS({}: POSProps) {
   
   // Global state (not tab-specific)
   const [searchTerm, setSearchTerm] = useState("");
+  const [normalizedSearchTerm, setNormalizedSearchTerm] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [currentOrderItems, setCurrentOrderItems] = useState<(OrderItem & { product: Product })[]>([]);
@@ -81,38 +112,86 @@ export default function POS({}: POSProps) {
     orderItems: (OrderItem & { product: Product })[];
     customer?: Customer;
   } | null>(null);
+  
+  // Vietnamese search normalization with performance tracking
+  useEffect(() => {
+    const measure = measureOperation('vietnamese-search-normalize');
+    const normalized = createSearchString(searchTerm);
+    setNormalizedSearchTerm(normalized);
+    measure.end();
+  }, [searchTerm, measureOperation]);
+  
+  // Test Vietnamese search functionality in development
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      testVietnameseSearch();
+    }
+  }, []);
 
-  // Fetch categories with caching
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
-    queryKey: ['/api/categories'],
-    queryFn: () => fetch('/api/categories').then(res => res.json()),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-  });
+  // Optimized categories query with prefetching
+  const { 
+    data: categories = [], 
+    isLoading: categoriesLoading,
+    prefetch: prefetchCategories 
+  } = useOptimizedQuery<Category[]>(
+    ['categories'],
+    () => measureAsync('api-categories', () => 
+      fetch('/api/categories').then(res => res.json())
+    ),
+    {
+      prefetchOnMount: true,
+      backgroundRefresh: true,
+      backgroundRefreshInterval: 10 * 60 * 1000, // 10 minutes
+      customerDataCaching: true, // Categories are stable data
+    }
+  );
 
-  // Fetch products with category and search filtering
-  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ['/api/products', { categoryId: selectedCategoryId, search: searchTerm }],
-    queryFn: () => {
+  // Optimized products query with Vietnamese search and performance tracking
+  const searchQueryKey = useMemo(() => 
+    createSearchCacheKey(normalizedSearchTerm, { categoryId: selectedCategoryId }),
+    [normalizedSearchTerm, selectedCategoryId]
+  );
+
+  const { 
+    data: products = [], 
+    isLoading: productsLoading,
+    prefetch: prefetchProducts,
+    backgroundRefresh: backgroundRefreshProducts 
+  } = useOptimizedProductQuery<Product[]>(
+    ['products', { categoryId: selectedCategoryId, search: searchQueryKey }],
+    () => measureAsync('api-products-search', async () => {
       const params = new URLSearchParams();
       if (selectedCategoryId) {
         params.append('categoryId', selectedCategoryId);
       }
       if (searchTerm.trim()) {
+        // Use original search term for API call (server handles normalization)
         params.append('search', searchTerm.trim());
       }
       const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`;
-      return fetch(url).then(res => res.json());
-    },
-    keepPreviousData: true, // Keep previous data while fetching new data
-    enabled: true, // Always enabled
-  });
+      const response = await fetch(url);
+      return response.json();
+    }),
+    {
+      deduplicationWindow: 500, // Deduplicate rapid searches
+      enablePerformanceTracking: true,
+    }
+  );
 
-  // Fetch shop settings
-  const { data: shopSettings = [], isLoading: shopSettingsLoading } = useQuery<ShopSettings[]>({
-    queryKey: ['/api/shop-settings'],
-    queryFn: () => fetch('/api/shop-settings').then(res => res.json()),
-  });
+  // Optimized shop settings query
+  const { 
+    data: shopSettings = [], 
+    isLoading: shopSettingsLoading 
+  } = useOptimizedQuery<ShopSettings[]>(
+    ['shop-settings'],
+    () => measureAsync('api-shop-settings', () =>
+      fetch('/api/shop-settings').then(res => res.json())
+    ),
+    {
+      customerDataCaching: true,
+      prefetchOnMount: true,
+    }
+  );
 
   // Get default shop settings
   const defaultShopSettings = shopSettings.find(s => s.isDefault) || shopSettings[0] || {
@@ -124,11 +203,63 @@ export default function POS({}: POSProps) {
     taxId: ''
   } as ShopSettings;
 
-  // Ensure products is always an array (defensive programming)
-  const safeProducts = Array.isArray(products) ? products : [];
+  // Intelligent prefetching on mount for better performance
+  useEffect(() => {
+    const prefetchCommonData = async () => {
+      const measure = measureOperation('prefetch-common-data');
+      try {
+        // Prefetch all categories immediately
+        await prefetchCategories();
+        
+        // Prefetch products for first category after a short delay
+        if (categories.length > 0) {
+          setTimeout(async () => {
+            try {
+              await prefetchProducts();
+              // Prefetch products from the most popular category
+              await queryClient.prefetchQuery({
+                queryKey: ['products', { categoryId: categories[0]?.id }],
+                queryFn: () => fetch(`/api/products?categoryId=${categories[0]?.id}`).then(res => res.json()),
+                staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+              });
+            } catch (error) {
+              console.warn('Failed to prefetch products:', error);
+            }
+          }, 500);
+        }
+        
+        // Background refresh every 5 minutes for inventory updates
+        setTimeout(() => {
+          backgroundRefreshProducts();
+        }, 5 * 60 * 1000);
+        
+      } catch (error) {
+        console.warn('Failed to prefetch common data:', error);
+      } finally {
+        measure.end();
+      }
+    };
 
-  // Products are now filtered by API, but keep defensive filtering for edge cases
-  const filteredProducts = safeProducts;
+    prefetchCommonData();
+  }, [prefetchCategories, prefetchProducts, backgroundRefreshProducts, categories, queryClient, measureOperation]);
+
+  // Ensure products is always an array with Vietnamese filtering fallback
+  const safeProducts = Array.isArray(products) ? products : [];
+  
+  // Client-side Vietnamese search filtering as fallback for better search quality
+  const filteredProducts = useMemo(() => {
+    const measure = measureOperation('client-side-vietnamese-filter');
+    
+    let filtered = safeProducts.filter(product => product.status === 'active');
+    
+    // If we have a search term, apply Vietnamese-aware filtering
+    if (normalizedSearchTerm.length > 0) {
+      filtered = vietnameseFilter(filtered, searchTerm, ['name', 'description', 'sku', 'itemCode']);
+    }
+    
+    measure.end();
+    return filtered;
+  }, [safeProducts, normalizedSearchTerm, searchTerm, measureOperation]);
 
   // Decimal-safe arithmetic functions
   const toIntegerCents = (price: string | number): number => {
@@ -185,7 +316,7 @@ export default function POS({}: POSProps) {
     };
   };
 
-  // Keyboard shortcuts for F2, F3, and 1-5 for tab switching
+  // Performance-instrumented keyboard shortcuts with technical goals tracking
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Prevent default browser behavior for F2, F3, and 1-5
@@ -199,9 +330,17 @@ export default function POS({}: POSProps) {
         }
       }
 
-      // F2: Focus product search
+      // F2: Focus product search with performance tracking
       if (event.key === 'F2') {
+        const searchMeasure = measureInteraction('search-focus', { source: 'keyboard-f2' });
         productSearchRef.current?.focus();
+        const duration = searchMeasure.end();
+        
+        // Technical goal: Search operations < 200ms (focus is part of search UX)
+        if (duration > 200) {
+          console.warn(`🚨 Search focus slow: ${duration.toFixed(2)}ms > 200ms target`);
+        }
+        
         toast({
           title: "Tìm sản phẩm",
           description: "Đã chuyển đến ô tìm kiếm sản phẩm",
@@ -209,9 +348,17 @@ export default function POS({}: POSProps) {
         });
       }
 
-      // F3: Focus customer search  
+      // F3: Focus customer search with performance tracking
       if (event.key === 'F3') {
+        const customerMeasure = measureInteraction('customer-search-focus', { source: 'keyboard-f3' });
         customerSearchRef.current?.focus();
+        const duration = customerMeasure.end();
+        
+        // Track customer search focus time
+        if (duration > 100) {
+          console.warn(`🚨 Customer search focus slow: ${duration.toFixed(2)}ms`);
+        }
+        
         toast({
           title: "Tìm khách hàng",
           description: "Đã chuyển đến ô tìm kiếm khách hàng", 
@@ -219,17 +366,32 @@ export default function POS({}: POSProps) {
         });
       }
 
-      // 1-5: Switch tabs (only when not typing)
+      // 1-5: Switch tabs with technical goal instrumentation
       const activeElement = document.activeElement;
       const isTyping = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
       
       if (!isTyping && ['1', '2', '3', '4', '5'].includes(event.key)) {
+        // Technical goal: Tab switching < 100ms
+        const tabSwitchMeasure = measureInteraction('tab-switch-keyboard', { 
+          key: event.key,
+          source: 'keyboard-shortcut',
+          targetTab: `tab-${event.key}`
+        });
+        
         const tabIndex = parseInt(event.key) - 1;
         const targetTabId = `tab-${event.key}`;
         tabManager.switchToTab(targetTabId);
+        
+        const duration = tabSwitchMeasure.end();
+        
+        // Performance alert if tab switching exceeds 100ms threshold
+        if (duration > 100) {
+          console.warn(`🚨 Tab switch slow: ${duration.toFixed(2)}ms > 100ms target`);
+        }
+        
         toast({
-          title: `Đã chuyển sang ${tabManager.tabs[tabIndex].name}`,
-          description: `Phím tắt: ${event.key}`,
+          title: `Đã chuyển sang ${tabManager.tabs[tabIndex]?.name || 'tab'}`,
+          description: `Phím tắt: ${event.key} (${duration.toFixed(1)}ms)`,
           duration: 1000,
         });
       }
@@ -242,57 +404,72 @@ export default function POS({}: POSProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [toast, tabManager]);
+  }, [toast, tabManager, measureInteraction]);
 
-  // Add to cart with decimal support
-  const addToCart = (product: Product) => {
-    // Safety check: ensure tabManager and activeTab are available
-    if (!tabManager || !activeTab) {
-      toast({
-        title: "Lỗi hệ thống",
-        description: "Tab Manager chưa được khởi tạo",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Performance-optimized add to cart with technical goals instrumentation
+  const addToCart = useCallback((product: Product) => {
+    // Technical goal: Cart operations < 50ms
+    const cartMeasure = measureInteraction('cart-add-product', { 
+      productId: product.id, 
+      productName: product.name 
+    });
     
-    if (product.status === 'out-of-stock' || product.stock <= 0) {
-      toast({
-        title: "Hết hàng",
-        description: "Sản phẩm này hiện đã hết hàng",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { quantityStep, minQuantity } = getProductUnitSettings(product);
-    const existingItem = cart.find(item => item.product.id === product.id);
-    
-    if (existingItem) {
-      const newQuantity = existingItem.quantity + quantityStep;
-      
-      // Check if we have enough stock
-      if (newQuantity > product.stock) {
+    try {
+      // Safety check: ensure tabManager and activeTab are available
+      if (!tabManager || !activeTab) {
         toast({
-          title: "Không đủ hàng",
-          description: `Chỉ còn ${product.stock} sản phẩm trong kho`,
+          title: "Lỗi hệ thống",
+          description: "Tab Manager chưa được khởi tạo",
           variant: "destructive",
         });
         return;
       }
       
-      tabManager.updateQuantity(product.id, newQuantity);
-    } else {
-      // Use minimum quantity for initial add
-      const initialQuantity = Math.max(quantityStep, minQuantity);
-      tabManager.addToCart(product, initialQuantity);
-    }
+      if (product.status === 'out-of-stock' || product.stock <= 0) {
+        toast({
+          title: "Hết hàng",
+          description: "Sản phẩm này hiện đã hết hàng",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    toast({
-      title: "Đã thêm vào giỏ",
-      description: `${product.name} đã được thêm vào ${tabManager.activeTab?.name || 'giỏ hàng'}`,
-    });
-  };
+      const { quantityStep, minQuantity } = getProductUnitSettings(product);
+      const existingItem = cart.find(item => item.product.id === product.id);
+      
+      if (existingItem) {
+        const newQuantity = existingItem.quantity + quantityStep;
+        
+        // Check if we have enough stock
+        if (newQuantity > product.stock) {
+          toast({
+            title: "Không đủ hàng",
+            description: `Chỉ còn ${product.stock} sản phẩm trong kho`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        tabManager.updateQuantity(product.id, newQuantity);
+      } else {
+        // Use minimum quantity for initial add
+        const initialQuantity = Math.max(quantityStep, minQuantity);
+        tabManager.addToCart(product, initialQuantity);
+      }
+
+      toast({
+        title: "Đã thêm vào giỏ",
+        description: `${product.name} đã được thêm vào ${tabManager.activeTab?.name || 'giỏ hàng'}`,
+      });
+    } finally {
+      const duration = cartMeasure.end();
+      
+      // Performance alert if cart operation exceeds 50ms threshold
+      if (duration > 50) {
+        console.warn(`🚨 Cart operation slow: ${duration.toFixed(2)}ms > 50ms target`);
+      }
+    }
+  }, [tabManager, activeTab, cart, measureInteraction, toast]);
 
   // Update quantity with decimal support
   const updateQuantity = (productId: string, newQuantity: number) => {
@@ -558,6 +735,12 @@ export default function POS({}: POSProps) {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
+      {/* Performance Overlay - Dev Only */}
+      <PerformanceOverlay 
+        enabled={import.meta.env.DEV && performanceOverlay.isEnabled}
+        position="bottom-right"
+        minimized={false}
+      />
       {/* Header */}
       <div className="bg-white border-b px-6 py-4">
         <div className="flex items-center justify-between">
@@ -625,7 +808,23 @@ export default function POS({}: POSProps) {
             return (
               <button
                 key={tab.id}
-                onClick={() => tabManager.switchToTab(tab.id)}
+                onClick={() => {
+                  // Technical goal: Tab switching < 100ms instrumentation
+                  const tabSwitchMeasure = measureInteraction('tab-switch-click', {
+                    fromTab: tabManager.activeTabId,
+                    toTab: tab.id,
+                    source: 'mouse-click'
+                  });
+                  
+                  tabManager.switchToTab(tab.id);
+                  
+                  const duration = tabSwitchMeasure.end();
+                  
+                  // Performance alert if tab switching exceeds 100ms threshold
+                  if (duration > 100) {
+                    console.warn(`🚨 Tab switch click slow: ${duration.toFixed(2)}ms > 100ms target`);
+                  }
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   const contextMenu = document.getElementById(`context-menu-${tab.id}`);
@@ -826,7 +1025,22 @@ export default function POS({}: POSProps) {
                     ref={productSearchRef}
                     placeholder="Tìm sản phẩm theo tên hoặc mã SKU... (F2)"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                  // Technical goal: Search response time < 200ms instrumentation
+                  const searchMeasure = measureInteraction('search-input-change', {
+                    query: e.target.value,
+                    length: e.target.value.length
+                  });
+                  
+                  setSearchTerm(e.target.value);
+                  
+                  const duration = searchMeasure.end();
+                  
+                  // Performance alert if search input handling exceeds threshold
+                  if (duration > 50) {
+                    console.warn(`🚨 Search input slow: ${duration.toFixed(2)}ms`);
+                  }
+                }}
                     className="pl-10 text-lg py-3"
                   />
                 </div>
@@ -930,62 +1144,50 @@ export default function POS({}: POSProps) {
             </div>
           </div>
 
-          {/* Product Grid */}
-          <div className="flex-1 p-4 overflow-y-auto">
+          {/* Optimized Product Grid with Performance Monitoring */}
+          <div className="flex-1 p-4 overflow-hidden">
             {productsLoading ? (
+              // Skeleton loading states for better perceived performance
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-48 bg-gray-200 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => (
-                  <Card 
-                    key={product.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-200"
-                    onClick={() => addToCart(product)}
-                  >
+                  <Card key={i} className="h-80 animate-pulse">
                     <CardContent className="p-4">
-                      {/* Product Image */}
-                      <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
-                        {product.image || (product.images && product.images.length > 0) ? (
-                          <img
-                            src={product.image || product.images![0].secure_url}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-gray-400 text-4xl">📦</div>
-                        )}
-                      </div>
-
-                      {/* Product Info */}
+                      <div className="aspect-square mb-3 bg-gray-200 rounded-lg"></div>
                       <div className="space-y-2">
-                        <h3 className="font-semibold text-sm line-clamp-2 min-h-[2.5rem]">
-                          {product.name}
-                        </h3>
-                        
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-blue-600">
-                            {formatPrice(product.price)}
-                          </span>
-                          <Badge 
-                            variant={product.status === 'active' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {product.status === 'active' ? 'Còn hàng' : 'Hết hàng'}
-                          </Badge>
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                          Kho: {product.stock}
-                        </div>
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-full"></div>
+                        <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                        <div className="h-8 bg-gray-200 rounded w-full mt-3"></div>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
+            ) : (
+              <>
+                {/* Use VirtualizedProductList for large product lists (>20 items) */}
+                {filteredProducts.length > 20 ? (
+                  <VirtualizedProductList
+                    products={filteredProducts}
+                    onAddToCart={addToCart}
+                    containerHeight={600}
+                    itemHeight={320}
+                    className="h-full"
+                  />
+                ) : (
+                  /* Use OptimizedProductGrid for smaller lists */
+                  <OptimizedProductGrid
+                    products={filteredProducts}
+                    onAddToCart={addToCart}
+                    selectedCategoryId={selectedCategoryId}
+                    searchTerm={searchTerm}
+                    className="h-full overflow-y-auto"
+                    itemsPerRow={4}
+                    enableVirtualization={false} // Disable for small lists
+                  />
+                )}
+              </>
             )}
 
             {!productsLoading && filteredProducts.length === 0 && (
@@ -993,7 +1195,12 @@ export default function POS({}: POSProps) {
                 <div className="text-center text-gray-500">
                   <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg">Không tìm thấy sản phẩm</p>
-                  <p className="text-sm">Thử tìm kiếm với từ khóa khác</p>
+                  <p className="text-sm">
+                    {searchTerm 
+                      ? `Không có sản phẩm nào phù hợp với "${searchTerm}". Thử tìm kiếm với từ khóa khác.`
+                      : 'Danh mục này chưa có sản phẩm nào.'
+                    }
+                  </p>
                 </div>
               </div>
             )}

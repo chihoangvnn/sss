@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Search, Package, Loader2, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { apiRequest } from "@/lib/queryClient";
+import { useCachedDebounceSearch } from "@/hooks/useDebounceSearch";
 import type { Product } from "@shared/schema";
 
 interface ProductSearchInputProps {
@@ -21,6 +21,45 @@ const formatPrice = (price: number) => {
   }).format(price);
 };
 
+// Memoized search function for products with enhanced error handling
+const createProductSearchFn = (categoryFilter?: string) => async (query: string, signal: AbortSignal): Promise<Product[]> => {
+  if (query.length < 2) return [];
+  
+  try {
+    // Build search params
+    const params = new URLSearchParams({
+      search: query,
+      limit: '10'
+    });
+    
+    // Add category filter if provided
+    if (categoryFilter) {
+      params.set('categoryId', categoryFilter);
+    }
+    
+    const response = await fetch(`/api/products?${params}`, { signal });
+    
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+    
+    const results = await response.json();
+    
+    // Filter active products only and ensure type safety
+    const activeProducts = (Array.isArray(results) ? results : []).filter((product: Product) => 
+      product.status === 'active'
+    );
+    
+    return activeProducts;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw error; // Re-throw abort errors
+    }
+    console.error('Product search error:', error);
+    throw new Error('Failed to search products');
+  }
+};
+
 export function ProductSearchInput({ 
   onSelect, 
   placeholder = "Gõ tên sản phẩm để tìm...",
@@ -28,86 +67,71 @@ export function ProductSearchInput({
   categoryFilter
 }: ProductSearchInputProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [suggestions, setSuggestions] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
 
-  // Debounced search function
-  const searchProducts = async (query: string) => {
-    if (query.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      // Build search params
-      const params = new URLSearchParams({
-        search: query,
-        limit: '10'
-      });
-      
-      // Add category filter if provided
-      if (categoryFilter) {
-        params.set('categoryId', categoryFilter);
-      }
-      
-      const response = await apiRequest('GET', `/api/products?${params}`);
-      const results = (await response.json()) as Product[];
-      
-      // Filter active products only
-      const activeProducts = (results || []).filter(product => 
-        product.status === 'active'
-      );
-      
-      setSuggestions(activeProducts);
-    } catch (error) {
-      console.error('Product search error:', error);
-      setSuggestions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Memoized search function that updates when categoryFilter changes
+  const searchFn = useMemo(() => createProductSearchFn(categoryFilter), [categoryFilter]);
 
-  // Handle input change with debouncing
+  // Enhanced debounced search with caching and cancellation
+  const {
+    results: suggestions,
+    isSearching: isLoading,
+    error,
+    search,
+    clear,
+    hasResults,
+    isEmpty
+  } = useCachedDebounceSearch(searchFn, {
+    delay: 300,
+    minLength: 2,
+    cacheSize: 100, // Cache up to 100 search results
+    cacheTimeMs: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Handle input change with enhanced debouncing
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchTerm(query);
     setShowSuggestions(true);
-
-    // Clear previous debounce
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    // Debounce search
-    debounceRef.current = setTimeout(() => {
-      searchProducts(query);
-    }, 300);
+    
+    // Trigger enhanced debounced search
+    search(query);
   };
 
-  // Handle product selection
+  // Handle product selection with performance tracking
   const handleProductSelect = (product: Product) => {
+    const startTime = performance.now();
+    
     setSearchTerm("");
     setShowSuggestions(false);
-    setSuggestions([]);
+    clear(); // Clear search results efficiently
     onSelect(product);
     
     // Clear input for next search
     if (inputRef.current) {
       inputRef.current.value = "";
     }
+    
+    // Performance tracking in development
+    if (import.meta.env.DEV) {
+      const endTime = performance.now();
+      console.log(`🛒 Product selection took ${(endTime - startTime).toFixed(2)}ms`);
+    }
   };
 
-  // Handle focus
+  // Handle focus with performance optimization
   const handleFocus = () => {
     setShowSuggestions(true);
+    
+    // If there's already a search term, trigger search immediately
+    if (searchTerm.length >= 2) {
+      search(searchTerm);
+    }
   };
 
-  // Handle blur
+  // Handle blur with cleanup
   const handleBlur = () => {
     // Delay hiding suggestions to allow click
     setTimeout(() => {
@@ -115,13 +139,21 @@ export function ProductSearchInput({
     }, 200);
   };
 
-  // Handle keyboard navigation
+  // Handle keyboard navigation with performance optimization
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setShowSuggestions(false);
+      clear(); // Cancel any pending searches
       inputRef.current?.blur();
     }
   };
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clear(); // Cancel any pending searches on unmount
+    };
+  }, [clear]);
 
   // Get stock status color and label
   const getStockStatus = (stock: number) => {
@@ -213,11 +245,20 @@ export function ProductSearchInput({
             )}
 
             {/* No results */}
-            {searchTerm.length >= 2 && suggestions.length === 0 && !isLoading && (
+            {isEmpty && (
               <div className="p-3 text-center text-gray-500">
                 <Package className="h-8 w-8 mx-auto text-gray-300 mb-2" />
                 <div className="text-sm">Không tìm thấy sản phẩm</div>
                 <div className="text-xs">Thử từ khóa khác hoặc kiểm tra chính tả</div>
+              </div>
+            )}
+            
+            {/* Error state */}
+            {error && (
+              <div className="p-3 text-center text-red-500">
+                <AlertCircle className="h-8 w-8 mx-auto text-red-300 mb-2" />
+                <div className="text-sm">Lỗi tìm kiếm</div>
+                <div className="text-xs">{error}</div>
               </div>
             )}
 

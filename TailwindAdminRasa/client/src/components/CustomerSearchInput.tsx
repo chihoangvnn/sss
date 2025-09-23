@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useMemo, useCallback } from "react";
 import { Search, User, Loader2, Star, Users, Clock, TrendingUp, Plus, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { apiRequest } from "@/lib/queryClient";
+import { useCachedDebounceSearch } from "@/hooks/useDebounceSearch";
 import type { Customer } from "@shared/schema";
 
 interface CustomerWithAnalytics extends Customer {
@@ -35,13 +35,14 @@ interface CustomerSuggestionGroup {
   customers: CustomerWithAnalytics[];
 }
 
-export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSearchInputProps>(({ 
-  value, 
-  onSelect,
-  onAddNewCustomer, 
-  placeholder = "Gõ tên hoặc SĐT khách hàng...",
-  className 
-}, ref) => {
+export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSearchInputProps>(
+  function CustomerSearchInput({ 
+    value, 
+    onSelect,
+    onAddNewCustomer, 
+    placeholder = "Gõ tên hoặc SĐT khách hàng...",
+    className 
+  }, ref) {
   const [searchTerm, setSearchTerm] = useState("");
   const [displayValue, setDisplayValue] = useState("");
   const [suggestionGroups, setSuggestionGroups] = useState<CustomerSuggestionGroup[]>([]);
@@ -70,22 +71,82 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
     }
   }, [value]);
 
-  // Load initial suggestions when component mounts (for instant display)
-  useEffect(() => {
-    loadInitialSuggestions();
-  }, []);
-
-  // Format price for display
-  const formatPrice = (price: string | number) => {
+  // Memoized format price function
+  const formatPrice = useCallback((price: string | number) => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'
     }).format(numPrice);
-  };
+  }, []);
+
+  // Enhanced customer search function with performance optimization
+  const customerSearchFn = useMemo(() => async (query: string, signal: AbortSignal): Promise<CustomerWithAnalytics[]> => {
+    if (query.length < 2) return [];
+    
+    try {
+      const response = await fetch(`/api/customers?search=${encodeURIComponent(query)}&limit=10`, { signal });
+      
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
+      
+      const searchResults = await response.json() as CustomerWithAnalytics[];
+      
+      if (import.meta.env.DEV) {
+        console.log(`🔍 Found ${searchResults.length} customers for "${query}"`);
+      }
+
+      if (searchResults.length > 0) {
+        // Smart prioritization: VIP first, then by order count, then alphabetical
+        const sortedResults = searchResults.sort((a, b) => {
+          // VIP customers first
+          if (a.status === 'vip' && b.status !== 'vip') return -1;
+          if (b.status === 'vip' && a.status !== 'vip') return 1;
+          
+          // Then by order count (frequent customers)
+          if (a.totalOrders !== b.totalOrders) return b.totalOrders - a.totalOrders;
+          
+          // Finally alphabetical for Vietnamese names
+          return a.name.localeCompare(b.name, 'vi-VN');
+        });
+
+        return sortedResults.slice(0, 10);
+      }
+      
+      return [];
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw error; // Re-throw abort errors
+      }
+      console.error('Customer search error:', error);
+      throw new Error('Failed to search customers');
+    }
+  }, []);
+
+  // Enhanced debounced search with caching
+  const {
+    results: searchResults,
+    isSearching,
+    error: searchError,
+    search,
+    clear,
+    hasResults,
+    isEmpty
+  } = useCachedDebounceSearch(customerSearchFn, {
+    delay: 300,
+    minLength: 2,
+    cacheSize: 50, // Cache up to 50 customer searches
+    cacheTimeMs: 3 * 60 * 1000, // Cache for 3 minutes (customers change less frequently)
+  });
+
+  // Load initial suggestions when component mounts (for instant display)
+  useEffect(() => {
+    loadInitialSuggestions();
+  }, []);
 
   // Load initial suggestions (VIP + Recent + Frequent) - cached for instant display
-  const loadInitialSuggestions = async () => {
+  const loadInitialSuggestions = useCallback(async () => {
     try {
       const [vipResponse, recentResponse, frequentResponse] = await Promise.all([
         fetch('/api/customers?vip=true&limit=5'),
@@ -133,78 +194,37 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
     } catch (error) {
       console.error('Error loading initial suggestions:', error);
     }
-  };
+  }, []);
 
-  // Smart search function with prioritization
-  const searchCustomers = async (query: string) => {
-    if (query.length < 2) {
-      // Show cached suggestions for queries less than 2 characters
-      setSuggestionGroups(cachedSuggestions);
-      return;
+  // Memoized suggestion groups - combines cached suggestions and search results
+  const computedSuggestionGroups = useMemo(() => {
+    if (searchTerm.length >= 2 && hasResults) {
+      return [{
+        type: 'search' as const,
+        title: 'KẾT QUẢ TÌM KIẾM',
+        icon: <Search className="h-3 w-3 text-gray-500" />,
+        customers: searchResults
+      }];
     }
     
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/customers?search=${encodeURIComponent(query)}&limit=10`);
-      
-      if (!response.ok) {
-        console.error(`Search API failed: ${response.status}`);
-        setSuggestionGroups([]);
-        return;
-      }
-      
-      const searchResults = await response.json() as CustomerWithAnalytics[];
-      console.log(`🔍 Found ${searchResults.length} customers for "${query}"`);
-
-      if (searchResults.length > 0) {
-        // Smart prioritization: VIP first, then by order count, then alphabetical
-        const sortedResults = searchResults.sort((a, b) => {
-          // VIP customers first
-          if (a.status === 'vip' && b.status !== 'vip') return -1;
-          if (b.status === 'vip' && a.status !== 'vip') return 1;
-          
-          // Then by order count (frequent customers)
-          if (a.totalOrders !== b.totalOrders) return b.totalOrders - a.totalOrders;
-          
-          // Finally alphabetical
-          return a.name.localeCompare(b.name);
-        });
-
-        setSuggestionGroups([{
-          type: 'search',
-          title: 'KẾT QUẢ TÌM KIẾM',
-          icon: <Search className="h-3 w-3 text-gray-500" />,
-          customers: sortedResults.slice(0, 10)
-        }]);
-      } else {
-        setSuggestionGroups([]);
-      }
-    } catch (error) {
-      console.error('Customer search error:', error);
-      setSuggestionGroups([]);
-    } finally {
-      setIsLoading(false);
+    if (searchTerm.length < 2) {
+      return cachedSuggestions;
     }
-  };
+    
+    return [];
+  }, [searchTerm, hasResults, searchResults, cachedSuggestions]);
 
-  // Handle input change with debouncing
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle input change with optimized debouncing
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchTerm(query);
     setDisplayValue(query);
     setShowSuggestions(true);
     setSelectedIndex(-1);
 
-    // Clear previous debounce
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    // Debounce search API calls (300ms as per requirements)
-    debounceRef.current = setTimeout(() => {
-      searchCustomers(query);
-    }, 300);
-  };
+    // Trigger enhanced debounced search
+    search(query);
+  }, [search]);
 
   // Handle customer selection
   const handleCustomerSelect = (customer: CustomerWithAnalytics) => {
@@ -252,7 +272,7 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
   };
 
   // Get all customers in flat array for keyboard navigation
-  const allCustomers = suggestionGroups.flatMap(group => group.customers);
+  const allCustomers = computedSuggestionGroups.flatMap(group => group.customers);
   const totalItems = allCustomers.length + 1 + (onAddNewCustomer ? 1 : 0); // +1 for retail option
 
   // Handle keyboard navigation
@@ -324,7 +344,7 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
           className="pl-10 pr-10"
         />
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        {isLoading && (
+        {isSearching && (
           <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
         )}
       </div>
@@ -373,7 +393,7 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
             </Button>
 
             {/* Customer suggestion groups */}
-            {suggestionGroups.map((group, groupIndex) => (
+            {computedSuggestionGroups.map((group, groupIndex) => (
               <div key={group.type}>
                 <Separator className="my-2" />
                 <div className="px-3 py-2 text-xs font-medium text-gray-500 flex items-center space-x-2">
@@ -382,7 +402,7 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
                 </div>
                 
                 {group.customers.map((customer, customerIndex) => {
-                  const flatIndex = suggestionGroups
+                  const flatIndex = computedSuggestionGroups
                     .slice(0, groupIndex)
                     .reduce((acc, g) => acc + g.customers.length, 0) + customerIndex + 1;
                   
@@ -441,7 +461,7 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
             )}
 
             {/* No results */}
-            {searchTerm.length >= 2 && suggestionGroups.length === 0 && !isLoading && (
+            {searchTerm.length >= 2 && computedSuggestionGroups.length === 0 && !isSearching && (
               <div className="p-4 text-center text-gray-500">
                 <Search className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                 <div className="text-sm font-medium">Không tìm thấy khách hàng</div>
@@ -450,7 +470,7 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
             )}
 
             {/* Loading state */}
-            {isLoading && (
+            {isSearching && (
               <div className="p-4 text-center">
                 <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
                 <div className="text-sm text-gray-500 mt-2">Đang tìm kiếm khách hàng...</div>
@@ -461,4 +481,5 @@ export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSe
       )}
     </div>
   );
-});
+  }
+);
