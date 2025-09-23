@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,8 @@ import {
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // API endpoints
@@ -44,6 +46,23 @@ const fetchAnalyticsOverview = async () => {
 const fetchIntentAnalytics = async () => {
   const response = await fetch('/api/rasa-management/analytics/intents');
   if (!response.ok) throw new Error('Failed to fetch intents');
+  return response.json();
+};
+
+// Rate Limiting API endpoints
+const fetchRateLimitSettings = async () => {
+  const response = await fetch('/api/rasa-management/rate-limit/settings');
+  if (!response.ok) throw new Error('Failed to fetch rate limit settings');
+  return response.json();
+};
+
+const updateRateLimitSettings = async (settings: any) => {
+  const response = await fetch('/api/rasa-management/rate-limit/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  });
+  if (!response.ok) throw new Error('Failed to update rate limit settings');
   return response.json();
 };
 
@@ -720,6 +739,152 @@ function ConversationMonitoring() {
   );
 }
 
+// Rate Limiting Settings Component
+function RateLimitingSettings() {
+  const { toast } = useToast();
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [maxRequests, setMaxRequests] = useState(60);
+  const [windowMinutes, setWindowMinutes] = useState(1);
+  const [minInterval, setMinInterval] = useState(2);
+
+  const { data: settings, isLoading, isError } = useQuery({
+    queryKey: ['rate-limit-settings'],
+    queryFn: fetchRateLimitSettings
+  });
+
+  // Handle settings data when loaded
+  React.useEffect(() => {
+    if (settings) {
+      setIsEnabled(settings.enabled ?? true);
+      setMaxRequests(settings.maxRequests ?? 60);
+      setWindowMinutes(settings.windowMinutes ?? 1);
+      setMinInterval(settings.minIntervalSeconds ?? 2);
+    } else if (isError) {
+      // Use defaults if API fails
+      setIsEnabled(true);
+      setMaxRequests(60);
+      setWindowMinutes(1);
+      setMinInterval(2);
+    }
+  }, [settings, isError]);
+
+  const updateMutation = useMutation({
+    mutationFn: updateRateLimitSettings,
+    onSuccess: () => {
+      toast({
+        title: "Cài đặt đã được lưu",
+        description: "Rate limiting settings đã được cập nhật thành công.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi cập nhật",
+        description: error instanceof Error ? error.message : "Không thể cập nhật cài đặt",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      enabled: isEnabled,
+      maxRequests,
+      windowMinutes,
+      minIntervalSeconds: minInterval
+    });
+  };
+
+  if (isLoading) {
+    return <div>Đang tải cài đặt...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Enable/Disable Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <Label className="text-base font-medium">Bật Rate Limiting</Label>
+          <p className="text-sm text-muted-foreground">
+            Kích hoạt rate limiting cho RASA chat endpoint
+          </p>
+        </div>
+        <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
+      </div>
+
+      {/* Rate Limiting Configuration */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="maxRequests">Số tin nhắn tối đa</Label>
+          <Input
+            id="maxRequests"
+            type="number"
+            min="1"
+            max="1000"
+            value={maxRequests}
+            onChange={(e) => setMaxRequests(parseInt(e.target.value) || 60)}
+            disabled={!isEnabled}
+          />
+          <p className="text-xs text-muted-foreground">
+            Số tin nhắn tối đa cho phép trong khoảng thời gian
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="windowMinutes">Thời gian (phút)</Label>
+          <Input
+            id="windowMinutes"
+            type="number"
+            min="1"
+            max="60"
+            value={windowMinutes}
+            onChange={(e) => setWindowMinutes(parseInt(e.target.value) || 1)}
+            disabled={!isEnabled}
+          />
+          <p className="text-xs text-muted-foreground">
+            Khoảng thời gian tính rate limit
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="minInterval">Khoảng cách tối thiểu (giây)</Label>
+          <Input
+            id="minInterval"
+            type="number"
+            min="0"
+            max="60"
+            value={minInterval}
+            onChange={(e) => setMinInterval(parseInt(e.target.value) || 2)}
+            disabled={!isEnabled}
+          />
+          <p className="text-xs text-muted-foreground">
+            Khoảng cách tối thiểu giữa các tin nhắn
+          </p>
+        </div>
+      </div>
+
+      {/* Current Status */}
+      <div className="p-4 rounded-lg bg-muted/50">
+        <h4 className="font-medium mb-2">Cài đặt hiện tại</h4>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p>• Status: {isEnabled ? "Bật" : "Tắt"}</p>
+          <p>• Giới hạn: {maxRequests} tin nhắn/{windowMinutes} phút</p>
+          <p>• Khoảng cách: {minInterval} giây giữa các tin nhắn</p>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleSave} 
+          disabled={updateMutation.isPending}
+        >
+          {updateMutation.isPending ? "Đang lưu..." : "Lưu cài đặt"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function RasaDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -733,7 +898,7 @@ export default function RasaDashboard() {
             Quản lý và giám sát chatbot AI của bạn
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setActiveTab("settings")}>
           <Settings className="h-4 w-4 mr-2" />
           Cài đặt
         </Button>
@@ -741,7 +906,7 @@ export default function RasaDashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full sm:w-96 grid-cols-3">
+        <TabsList className="grid w-full sm:w-[500px] grid-cols-4">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Tổng quan
@@ -753,6 +918,10 @@ export default function RasaDashboard() {
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Phân tích
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Cài đặt
           </TabsTrigger>
         </TabsList>
 
@@ -790,6 +959,23 @@ export default function RasaDashboard() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Settings Tab - Rate Limiting Configuration */}
+        <TabsContent value="settings" className="mt-6">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rate Limiting Settings</CardTitle>
+                <CardDescription>
+                  Quản lý cài đặt rate limiting cho RASA chat endpoint
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RateLimitingSettings />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

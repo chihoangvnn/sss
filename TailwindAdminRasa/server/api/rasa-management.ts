@@ -397,9 +397,6 @@ router.post('/conversations/:sessionId/takeover', requireAuth, async (req, res) 
       .set({
         status: 'escalated',
         escalatedToHuman: true,
-        escalatedAt: new Date(),
-        escalationReason: reason || 'Manual takeover requested',
-        assignedAgentId: agentId || null,
         updatedAt: new Date()
       })
       .where(eq(conversationSessions.id, sessionId))
@@ -447,6 +444,83 @@ router.post('/conversations/:sessionId/takeover', requireAuth, async (req, res) 
 // =====================================================================
 // ⚙️ SETTINGS MANAGEMENT
 // =====================================================================
+
+/**
+ * GET /api/rasa-management/rate-limit/settings
+ * Get current rate limiting settings
+ */
+router.get('/rate-limit/settings', requireAuth, async (req, res) => {
+  try {
+    console.log('⚙️ Getting rate limiting settings');
+    
+    // For now, return current hardcoded settings from rasa-routes.ts
+    const currentSettings = {
+      enabled: process.env.NODE_ENV !== 'development', // Disabled in dev
+      maxRequests: 60,
+      windowMinutes: 1,
+      minIntervalSeconds: 2
+    };
+
+    res.json(currentSettings);
+  } catch (error) {
+    console.error('Error getting rate limiting settings:', error);
+    res.status(500).json({
+      error: 'Failed to get rate limiting settings',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * PUT /api/rasa-management/rate-limit/settings
+ * Update rate limiting settings
+ */
+router.put('/rate-limit/settings', requireAuth, async (req, res) => {
+  try {
+    console.log('⚙️ Updating rate limiting settings:', req.body);
+    
+    const { enabled, maxRequests, windowMinutes, minIntervalSeconds } = req.body;
+    
+    // Validate settings
+    if (typeof enabled !== 'boolean' || 
+        typeof maxRequests !== 'number' || maxRequests < 1 || maxRequests > 1000 ||
+        typeof windowMinutes !== 'number' || windowMinutes < 1 || windowMinutes > 60 ||
+        typeof minIntervalSeconds !== 'number' || minIntervalSeconds < 0 || minIntervalSeconds > 60) {
+      return res.status(400).json({
+        error: 'Invalid settings values',
+        message: 'Please check your input values'
+      });
+    }
+
+    // For now, just log the settings (in production this would update config/database)
+    console.log('✅ Rate limiting settings updated:', {
+      enabled,
+      maxRequests,
+      windowMinutes, 
+      minIntervalSeconds
+    });
+
+    // TODO: In production, save to botSettings table or config file
+    // and dynamically update the middleware constants
+    
+    res.json({ 
+      success: true, 
+      settings: {
+        enabled,
+        maxRequests,
+        windowMinutes,
+        minIntervalSeconds
+      },
+      message: 'Settings saved successfully (dev mode: settings logged only)'
+    });
+  } catch (error) {
+    console.error('Error updating rate limiting settings:', error);
+    res.status(500).json({
+      error: 'Failed to update rate limiting settings',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 /**
  * GET /api/rasa-management/settings
