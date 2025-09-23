@@ -2338,6 +2338,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // SHOPEE MARKETPLACE INTEGRATION
+  // ============================================
+  
+  // Import and setup Shopee routes
+  try {
+    const { setupShopeeRoutes } = await import('./shopee-routes.js');
+    setupShopeeRoutes(app, requireAdminAuth, requireCSRFToken);
+    console.log('✅ Shopee routes loaded successfully');
+  } catch (error) {
+    console.error('❌ Failed to load Shopee routes:', error);
+  }
+
   // TikTok Authentication placeholder endpoints
   app.post("/api/tiktok/connect", requireAdminAuth, requireCSRFToken, async (req, res) => {
     try {

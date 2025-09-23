@@ -1565,6 +1565,35 @@ export type TikTokShopProduct = typeof tiktokShopProducts.$inferSelect;
 export type InsertTikTokVideo = z.infer<typeof insertTikTokVideoSchema>;
 export type TikTokVideo = typeof tiktokVideos.$inferSelect;
 
+// Shopee Zod schemas
+export const insertShopeeBusinessAccountSchema = createInsertSchema(shopeeBusinessAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShopeeShopOrderSchema = createInsertSchema(shopeeShopOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShopeeShopProductSchema = createInsertSchema(shopeeShopProducts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Shopee TypeScript types
+export type InsertShopeeBusinessAccount = z.infer<typeof insertShopeeBusinessAccountSchema>;
+export type ShopeeBusinessAccount = typeof shopeeBusinessAccounts.$inferSelect;
+
+export type InsertShopeeShopOrder = z.infer<typeof insertShopeeShopOrderSchema>;
+export type ShopeeShopOrder = typeof shopeeShopOrders.$inferSelect;
+
+export type InsertShopeeShopProduct = z.infer<typeof insertShopeeShopProductSchema>;
+export type ShopeeShopProduct = typeof shopeeShopProducts.$inferSelect;
+
 export type InsertChatbotConversation = z.infer<typeof insertChatbotConversationSchema>;
 export type ChatbotConversation = typeof chatbotConversations.$inferSelect;
 
