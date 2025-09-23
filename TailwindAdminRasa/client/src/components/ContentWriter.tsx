@@ -83,7 +83,7 @@ export function ContentWriter({}: ContentWriterProps) {
           platforms,
           priority,
           status: 'draft',
-          tagIds: selectedTagIds,
+          tagIds: selectedTagIds.filter(id => id != null && id.trim() !== ''),
           metadata: {
             category,
             wordCount: wordCount,
@@ -124,7 +124,7 @@ export function ContentWriter({}: ContentWriterProps) {
           platforms,
           priority,
           status: 'active',
-          tagIds: selectedTagIds,
+          tagIds: selectedTagIds.filter(id => id != null && id.trim() !== ''),
           metadata: {
             category,
             wordCount: wordCount,
