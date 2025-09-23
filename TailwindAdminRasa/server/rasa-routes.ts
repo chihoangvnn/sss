@@ -37,6 +37,67 @@ const requireCSRFToken = (req: any, res: any, next: any) => {
   next();
 };
 
+// 🛡️ RASA Chat Rate Limiting - Anti-spam protection for chat endpoint
+const rasaChatRateLimit = new Map<string, { count: number; resetTime: number; lastRequest: number }>();
+const CHAT_RATE_LIMIT_WINDOW = 60000; // 1 minute window
+const CHAT_RATE_LIMIT_MAX = 60; // 60 messages per minute per IP
+const CHAT_MIN_INTERVAL = 2000; // 2 seconds minimum between messages
+
+const chatRateLimitMiddleware = (req: any, res: any, next: any) => {
+  // For development, allow all requests (bypass rate limiting)
+  if (process.env.NODE_ENV === 'development') {
+    next();
+    return;
+  }
+
+  const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+  const now = Date.now();
+  
+  const clientData = rasaChatRateLimit.get(clientIP);
+  
+  // Check if this is a new client or if the window has reset
+  if (!clientData || now > clientData.resetTime) {
+    rasaChatRateLimit.set(clientIP, { 
+      count: 1, 
+      resetTime: now + CHAT_RATE_LIMIT_WINDOW,
+      lastRequest: now
+    });
+    next();
+    return;
+  }
+  
+  // Check minimum interval between requests (anti-spam)
+  if (now - clientData.lastRequest < CHAT_MIN_INTERVAL) {
+    return res.status(429).json({ 
+      status: "error",
+      error: "Gửi tin nhắn quá nhanh. Vui lòng đợi 2 giây.",
+      code: "RATE_LIMIT_INTERVAL",
+      retryAfter: Math.ceil((CHAT_MIN_INTERVAL - (now - clientData.lastRequest)) / 1000)
+    });
+  }
+  
+  // Check if client has exceeded rate limit
+  if (clientData.count >= CHAT_RATE_LIMIT_MAX) {
+    const resetIn = Math.ceil((clientData.resetTime - now) / 1000);
+    return res.status(429).json({ 
+      status: "error",
+      error: "Đã vượt quá giới hạn tin nhắn. Vui lòng đợi 1 phút.",
+      code: "RATE_LIMIT_EXCEEDED",
+      retryAfter: resetIn,
+      limit: CHAT_RATE_LIMIT_MAX,
+      windowSeconds: CHAT_RATE_LIMIT_WINDOW / 1000
+    });
+  }
+  
+  // Update client data
+  clientData.count++;
+  clientData.lastRequest = now;
+  
+  console.log(`🤖 Chat rate limit: IP ${clientIP} - ${clientData.count}/${CHAT_RATE_LIMIT_MAX} messages in window`);
+  
+  next();
+};
+
 // Helper function for real inventory data
 const getInventory = async (productId: string, variantId?: string) => {
   try {
@@ -1200,8 +1261,9 @@ export function setupRasaRoutes(app: Express) {
   /**
    * POST /api/rasa/chat
    * Main chat endpoint for conversational interaction
+   * Protected with rate limiting to prevent spam/abuse
    */
-  app.post("/api/rasa/chat", async (req, res) => {
+  app.post("/api/rasa/chat", chatRateLimitMiddleware, async (req, res) => {
     try {
       const { message, sender, context } = req.body;
       
