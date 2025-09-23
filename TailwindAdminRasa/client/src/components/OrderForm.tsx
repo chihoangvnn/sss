@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { X, Save, Plus, Trash2, Printer } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { getShortOrderId } from "@/utils/orderUtils";
 import { CustomerSearchInput } from "./CustomerSearchInput";
 import { ProductSearchInput } from "./ProductSearchInput";
 import type { Order, Customer, Product } from "@shared/schema";
@@ -384,7 +385,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
     const customerName = customers.find(c => c.id === formData.customerId)?.name || 'Khách hàng';
     
     // Safely format order ID
-    const orderId = orderData?.id ? orderData.id.slice(-8) : 'N/A';
+    const orderId = orderData?.id ? getShortOrderId(orderData) : 'N/A';
     
     // Build receipt with escaped content
     const receiptHtml = `

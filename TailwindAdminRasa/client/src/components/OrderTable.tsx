@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OrderForm } from "./OrderForm";
 import { useNewOrderNotification } from "./NewOrderNotification";
+import { formatOrderId, getShortOrderId, isMarketplaceOrder, createOrderDisplayInfo } from "@/utils/orderUtils";
 import type { Order } from "@shared/schema";
 
 interface OrderWithCustomerInfo extends Order {
@@ -253,7 +254,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
           // Trigger gentle green notification for main order
           triggerNewOrderNotification({
             id: order.id,
-            orderNumber: `DH-${order.id.slice(0, 8)}`,
+            orderNumber: formatOrderId(order),
             customerName: order.customerName,
             totalAmount: Number(order.total),
             currency: 'VND',
@@ -558,7 +559,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                     <div className="space-y-2">
                       <div className="flex flex-col">
                         <span className="font-mono text-lg font-bold text-[hsl(var(--activity-teal))]">#{logicOrderId}</span>
-                        <span className="text-sm text-muted-foreground">ID: {order.id.slice(-8)}</span>
+                        <span className="text-sm text-muted-foreground">ID: {getShortOrderId(order)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {getSourceBadge(order.sourceInfo)}
@@ -676,7 +677,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                     <TableCell className="font-medium" data-testid={`order-id-${order.id}`}>
                       <div className="flex flex-col">
                         <span className="font-mono text-sm font-semibold text-blue-600">#{logicOrderId}</span>
-                        <span className="text-xs text-muted-foreground">ID: {order.id.slice(-8)}</span>
+                        <span className="text-xs text-muted-foreground">ID: {getShortOrderId(order)}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -794,7 +795,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa đơn hàng</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa đơn hàng #{deletingOrder?.id.slice(-8)} của khách hàng {deletingOrder?.customerName} không? 
+              Bạn có chắc chắn muốn xóa đơn hàng #{deletingOrder ? formatOrderId(deletingOrder) : ''} của khách hàng {deletingOrder?.customerName} không? 
               Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>

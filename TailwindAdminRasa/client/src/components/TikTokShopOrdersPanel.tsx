@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
 import { useNewOrderNotification } from './NewOrderNotification';
+import { formatOrderId } from '@/utils/orderUtils';
 
 const statusColors = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', badge: 'bg-yellow-500' },
@@ -207,7 +208,7 @@ export function TikTokShopOrdersPanel({ businessAccountId }: { businessAccountId
           // Trigger gentle green notification
           triggerNewOrderNotification({
             id: order.id,
-            orderNumber: order.orderNumber || `TTS-${order.id.slice(0, 8)}`,
+            orderNumber: order.orderNumber || formatOrderId({...order, source: 'tiktok-shop', sourceOrderId: order.tiktokOrderId}),
             customerName: order.customerInfo.name,
             totalAmount: order.totalAmount,
             currency: order.currency || 'VND',
@@ -239,7 +240,7 @@ export function TikTokShopOrdersPanel({ businessAccountId }: { businessAccountId
         
         if (!potentialTruncation) {
           // Safe to advance lastSeen - all new orders are on this page
-          const maxNotifiedDate = Math.max(...notifyOrders.map(o => new Date(o.orderDate).getTime()));
+          const maxNotifiedDate = Math.max(...notifyOrders.map((o: TikTokShopOrder) => new Date(o.orderDate).getTime()));
           const currentLastSeen = lastSeen || new Date(0);
           const newLastSeen = new Date(Math.max(maxNotifiedDate, currentLastSeen.getTime()));
           localStorage.setItem(lastSeenKey, newLastSeen.toISOString());

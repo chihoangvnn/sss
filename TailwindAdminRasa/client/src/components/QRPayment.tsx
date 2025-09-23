@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Copy, CheckCircle, Clock, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatOrderIdForPayment } from "@/utils/orderUtils";
 import type { Order, Payment } from "@shared/schema";
 
 interface QRPaymentProps {
@@ -246,12 +247,12 @@ export function QRPayment({ order, payment, onPaymentCreated }: QRPaymentProps) 
                 <span className="text-sm text-muted-foreground">Nội dung:</span>
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-medium" data-testid="payment-content">
-                    DH-{order.id.slice(-8).toUpperCase()}
+                    {formatOrderIdForPayment(order)}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(`DH-${order.id.slice(-8).toUpperCase()}`, "Nội dung chuyển khoản")}
+                    onClick={() => copyToClipboard(formatOrderIdForPayment(order), "Nội dung chuyển khoản")}
                     data-testid="copy-payment-content"
                   >
                     <Copy className="h-3 w-3" />

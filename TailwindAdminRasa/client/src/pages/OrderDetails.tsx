@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OrderForm } from "@/components/OrderForm";
 import { QRPayment } from "@/components/QRPayment";
+import { formatOrderId, getShortOrderId } from "@/utils/orderUtils";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -203,7 +204,7 @@ export default function OrderDetails() {
           </Button>
           
           <div className="flex-1">
-            <h1 className="text-3xl font-bold">Chi tiết đơn hàng #{order.id.slice(-8)}</h1>
+            <h1 className="text-3xl font-bold">Chi tiết đơn hàng #{formatOrderId(order)}</h1>
             <p className="text-muted-foreground">
               Tạo ngày {formatDate(order.createdAt)}
             </p>
@@ -392,7 +393,7 @@ export default function OrderDetails() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa đơn hàng</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa đơn hàng #{order.id.slice(-8)} không? 
+              Bạn có chắc chắn muốn xóa đơn hàng #{formatOrderId(order)} không? 
               Hành động này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
