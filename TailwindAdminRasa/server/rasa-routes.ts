@@ -317,15 +317,17 @@ export function setupRasaRoutes(app: Express) {
         });
       }
 
-      // Use PostgreSQL storage instead of Firebase
-      const allProducts = await storage.getProducts(parseInt(limit as string) || 20);
+      // Get ALL products first, then filter and limit
+      const allProducts = await storage.getProducts(1000); // Get up to 1000 products
       
       // Simple search filter by name and description
       const searchLower = (searchTerm as string).toLowerCase();
-      const filteredProducts = allProducts.filter(product => 
-        product.name.toLowerCase().includes(searchLower) ||
-        (product.description && product.description.toLowerCase().includes(searchLower))
-      );
+      const filteredProducts = allProducts
+        .filter(product => 
+          product.name.toLowerCase().includes(searchLower) ||
+          (product.description && product.description.toLowerCase().includes(searchLower))
+        )
+        .slice(0, parseInt(limit as string) || 20); // Apply limit AFTER filtering
 
       res.json({
         status: "success",
