@@ -1055,14 +1055,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/orders", async (req, res) => {
     try {
-      const validatedData = insertOrderSchema.parse(req.body);
+      console.log("📦 Creating order with data:", req.body);
+      
+      // Handle different order creation formats (POS vs Admin)
+      let orderData = { ...req.body };
+      
+      // If items is an array (from POS system), convert to count and store items separately
+      let orderItems = [];
+      if (Array.isArray(orderData.items)) {
+        orderItems = orderData.items;
+        orderData.items = orderItems.length; // Convert to count for schema validation
+      }
+      
+      // Validate the order data
+      const validatedData = insertOrderSchema.parse(orderData);
+      console.log("✅ Validated order data:", validatedData);
+      
+      // Create the order
       const order = await storage.createOrder(validatedData);
+      console.log("🎯 Created order:", order.id);
+      
+      // If we have order items from POS, create them
+      if (orderItems.length > 0) {
+        console.log("📦 Creating order items:", orderItems.length);
+        for (const item of orderItems) {
+          await storage.createOrderItem({
+            orderId: order.id,
+            productId: item.productId,
+            quantity: parseFloat(item.quantity.toString()),
+            price: item.price.toString()
+          });
+        }
+      }
+      
       res.status(201).json(order);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("❌ Validation error:", error.errors);
         return res.status(400).json({ error: "Validation error", details: error.errors });
       }
-      console.error("Error creating order:", error);
+      console.error("❌ Error creating order:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -1099,6 +1131,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating order:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/orders/:id", async (req, res) => {
+    try {
+      const orderId = req.params.id;
+      
+      // First check if order exists
+      const existingOrder = await storage.getOrderWithDetails(orderId);
+      if (!existingOrder) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      // Delete associated order items first
+      const orderItems = await storage.getOrderItems(orderId);
+      for (const item of orderItems) {
+        await storage.deleteOrderItem(item.id);
+      }
+
+      // Then delete the order
+      const deletedOrder = await storage.deleteOrder(orderId);
+      
+      res.json({ 
+        success: true, 
+        message: "Order deleted successfully",
+        deletedOrder 
+      });
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      res.status(500).json({ 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

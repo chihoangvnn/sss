@@ -71,13 +71,13 @@ const ProductCard = React.memo(({
   
   return (
     <Card 
-      className={`h-full hover:shadow-md transition-shadow duration-200 ${
+      className={`h-80 hover:shadow-md transition-shadow duration-200 ${
         isOutOfStock ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
       }`}
       onClick={isOutOfStock ? undefined : handleAddToCart}
     >
-      <CardContent className="p-4">
-        <div className="aspect-square mb-3 bg-gray-100 rounded-lg overflow-hidden">
+      <CardContent className="p-4 h-full flex flex-col">
+        <div className="aspect-square mb-3 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
           {shouldLoadImage && imageUrl ? (
             <img
               src={imageUrl}
@@ -98,7 +98,7 @@ const ProductCard = React.memo(({
           )}
         </div>
         
-        <div className="space-y-2">
+        <div className="flex-1 flex flex-col justify-between space-y-2">
           <div className="flex items-start justify-between">
             <h3 className="font-medium text-sm leading-tight line-clamp-2" title={product.name}>
               {product.name}
