@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import {
   User,
   Calculator
 } from "lucide-react";
-import { CustomerSearchInput } from "@/components/CustomerSearchInput";
+import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
 import type { Product, Customer, Order } from "@shared/schema";
 
@@ -39,6 +39,10 @@ const formatPrice = (price: string | number) => {
 export default function POS({}: POSProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Refs for keyboard shortcuts
+  const productSearchRef = useRef<HTMLInputElement>(null);
+  const customerSearchRef = useRef<CustomerSearchInputRef>(null);
   
   // State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -65,6 +69,44 @@ export default function POS({}: POSProps) {
   }, 0);
 
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  // Keyboard shortcuts for F2 and F3
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Prevent default browser behavior for F2 and F3
+      if (event.key === 'F2' || event.key === 'F3') {
+        event.preventDefault();
+      }
+
+      // F2: Focus product search
+      if (event.key === 'F2') {
+        productSearchRef.current?.focus();
+        toast({
+          title: "Tìm sản phẩm",
+          description: "Đã chuyển đến ô tìm kiếm sản phẩm",
+          duration: 1500,
+        });
+      }
+
+      // F3: Focus customer search  
+      if (event.key === 'F3') {
+        customerSearchRef.current?.focus();
+        toast({
+          title: "Tìm khách hàng",
+          description: "Đã chuyển đến ô tìm kiếm khách hàng", 
+          duration: 1500,
+        });
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup event listener on unmount
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toast]);
 
   // Add to cart
   const addToCart = (product: Product) => {
@@ -238,14 +280,23 @@ export default function POS({}: POSProps) {
         <div className="flex-1 flex flex-col bg-white">
           {/* Search */}
           <div className="p-4 border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <Input
-                placeholder="Tìm sản phẩm theo tên hoặc mã SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 text-lg py-3"
-              />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">Tìm sản phẩm</label>
+                <Badge variant="outline" className="text-xs px-2 py-1 bg-blue-50 text-blue-600 border-blue-200">
+                  F2
+                </Badge>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Input
+                  ref={productSearchRef}
+                  placeholder="Tìm sản phẩm theo tên hoặc mã SKU... (F2)"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 text-lg py-3"
+                />
+              </div>
             </div>
           </div>
 
@@ -324,10 +375,16 @@ export default function POS({}: POSProps) {
           {/* Customer Selection */}
           <div className="p-4 border-b">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Khách hàng</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">Khách hàng</label>
+                <Badge variant="outline" className="text-xs px-2 py-1 bg-green-50 text-green-600 border-green-200">
+                  F3
+                </Badge>
+              </div>
               <CustomerSearchInput
+                ref={customerSearchRef}
                 onSelect={setSelectedCustomer}
-                placeholder="Tìm khách hàng..."
+                placeholder="Tìm khách hàng... (F3)"
                 className="w-full"
               />
               {selectedCustomer && (

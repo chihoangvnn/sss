@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Search, User, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,16 @@ interface CustomerSearchInputProps {
   className?: string;
 }
 
-export function CustomerSearchInput({ 
+export interface CustomerSearchInputRef {
+  focus: () => void;
+}
+
+export const CustomerSearchInput = forwardRef<CustomerSearchInputRef, CustomerSearchInputProps>(({ 
   value, 
   onSelect, 
   placeholder = "Gõ tên hoặc SĐT khách hàng...",
   className 
-}: CustomerSearchInputProps) {
+}, ref) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [displayValue, setDisplayValue] = useState("");
   const [suggestions, setSuggestions] = useState<CustomerWithAddress[]>([]);
@@ -32,6 +36,13 @@ export function CustomerSearchInput({
   
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
+
+  // Expose focus method to parent component
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      inputRef.current?.focus();
+    }
+  }));
 
   // Handle external value changes - ✅ No more "Khách lẻ" text display
   useEffect(() => {
@@ -256,4 +267,4 @@ export function CustomerSearchInput({
       )}
     </div>
   );
-}
+});
