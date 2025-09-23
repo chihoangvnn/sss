@@ -51,6 +51,7 @@ import reviewSeedingRouter from './api/review-seeding';
 import adminReviewsRouter from './api/admin-reviews';
 import themesRouter from './api/themes';
 import templatesRouter from './api/templates';
+import rasaManagementRouter from './api/rasa-management';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3827,6 +3828,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.use("/api/analytics", analyticsRouter);
   app.use("/api/limits", limitManagementRouter);
+  
+  // ==========================================
+  // RASA CHATBOT MANAGEMENT API ROUTES
+  // ==========================================
+  app.use("/api/rasa-management", rasaManagementRouter);
 
   // ==========================================
   // AUTOMATION API ROUTES
