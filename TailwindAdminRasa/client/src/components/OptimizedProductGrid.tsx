@@ -113,11 +113,6 @@ const ProductCard = React.memo(({
             {formattedPrice}
           </div>
           
-          {product.description && (
-            <p className="text-xs text-gray-600 line-clamp-2" title={product.description}>
-              {product.description}
-            </p>
-          )}
           
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>Mã: {product.sku || product.id.slice(-8)}</span>
@@ -150,7 +145,7 @@ export const OptimizedProductGrid: React.FC<OptimizedProductGridProps> = ({
     
     // Category filtering
     if (selectedCategoryId) {
-      filtered = filtered.filter(product => product.category_id === selectedCategoryId);
+      filtered = filtered.filter(product => product.categoryId === selectedCategoryId);
     }
     
     // Search filtering
