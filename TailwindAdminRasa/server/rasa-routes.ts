@@ -2,6 +2,7 @@ import { Express } from 'express';
 import { storage } from './storage';
 import { firebaseStorage } from './firebase-storage';
 import { RasaDescriptions } from '../shared/schema';
+import { z } from 'zod';
 
 // Authentication middleware for RASA endpoints
 const requireSessionAuth = (req: any, res: any, next: any) => {
@@ -1265,22 +1266,77 @@ export function setupRasaRoutes(app: Express) {
    */
   app.post("/api/rasa/chat", chatRateLimitMiddleware, async (req, res) => {
     try {
-      const { message, sender, context } = req.body;
-      
-      if (!message || !sender) {
+      // 🔒 Input validation with Zod
+      const chatRequestSchema = z.object({
+        message: z.string().min(1, "Message cannot be empty").max(4000, "Message too long"),
+        sender: z.string().min(1, "Sender ID required").max(255, "Sender ID too long"),
+        context: z.any().optional()
+      });
+
+      const validationResult = chatRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
         return res.status(400).json({
           status: "error",
-          message: "Thiếu thông tin tin nhắn hoặc người gửi"
+          message: "Dữ liệu đầu vào không hợp lệ",
+          details: validationResult.error.errors
         });
       }
+
+      const { message, sender, context } = validationResult.data;
+
+      // 🔄 CONVERSATION LOGGING - Find or create conversation
+      let conversation = await storage.getChatbotConversationBySession(sender);
+      
+      if (!conversation) {
+        // Create new conversation for this session
+        conversation = await storage.createChatbotConversation({
+          sessionId: sender,
+          customerId: context?.customerId || null,
+          status: 'active',
+          messages: []
+        });
+        console.log(`💬 Created new conversation for session: ${sender}`);
+      }
+
+      // 📝 SAVE USER MESSAGE
+      await storage.addMessageToChatbotConversation(conversation.id, {
+        senderType: 'user',
+        senderName: context?.customerName || 'User',
+        content: message,
+        messageType: 'text',
+        metadata: {
+          context: context,
+          userAgent: req.headers['user-agent'],
+          timestamp: new Date().toISOString()
+        }
+      });
 
       // Process message through RASA-like logic with context awareness
       const responses = await processConversationalMessage(message, sender, context);
       
+      // 🤖 SAVE BOT RESPONSES
+      for (const response of responses) {
+        await storage.addMessageToChatbotConversation(conversation.id, {
+          senderType: 'bot',
+          senderName: 'Assistant',
+          content: response.text || JSON.stringify(response),
+          messageType: 'text', // Always use 'text', store interaction data in metadata
+          metadata: {
+            hasButtons: !!response.buttons,
+            buttons: response.buttons || null,
+            custom: response.custom || null,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
+      console.log(`💬 Saved conversation turn - Session: ${sender}, Messages: ${responses.length}`);
+      
       res.json({
         status: "success",
         responses,
-        sender
+        sender,
+        conversationId: conversation.id
       });
     } catch (error) {
       console.error("RASA Chat API Error:", error);
