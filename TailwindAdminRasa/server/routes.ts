@@ -3781,6 +3781,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupApiManagement(app);
 
   // ==========================================
+  // RASA CHATBOT MANAGEMENT API ROUTES - HIGH PRIORITY
+  // ==========================================
+  app.use("/api/rasa-management", rasaManagementRouter);
+
+  // ==========================================
   // CONTENT MANAGEMENT API ROUTES
   // ==========================================
   const contentRoutes = await import("./api/content");
@@ -3830,9 +3835,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/limits", limitManagementRouter);
   
   // ==========================================
-  // RASA CHATBOT MANAGEMENT API ROUTES
+  // RASA CHATBOT MANAGEMENT API ROUTES (MOVED EARLIER)
   // ==========================================
-  app.use("/api/rasa-management", rasaManagementRouter);
+  // Moved to line 3789 for routing priority
 
   // ==========================================
   // AUTOMATION API ROUTES

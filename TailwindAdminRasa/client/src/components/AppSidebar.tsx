@@ -22,7 +22,8 @@ import {
   Server,
   Monitor,
   Cloud,
-  Star
+  Star,
+  Bot
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -247,6 +248,13 @@ const adminTechnicalItems = [
     icon: Server,
     description: "Quản lý Vercel Functions workers",
     gradient: "gradient-teal"
+  },
+  {
+    title: "RASA Dashboard",
+    url: "/rasa-dashboard",
+    icon: Bot,
+    description: "Quản lý và giám sát AI Chatbot",
+    gradient: "gradient-orange"
   },
 ];
 
