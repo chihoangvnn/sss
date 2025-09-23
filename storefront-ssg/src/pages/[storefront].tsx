@@ -274,8 +274,6 @@ export const getStaticProps: GetStaticProps<StorefrontPageProps> = async ({ para
         storefront,
         generatedAt: new Date().toISOString(),
       },
-      // Revalidate every hour (3600 seconds)
-      revalidate: 3600,
     };
   } catch (error) {
     console.error(`Error generating static props for ${storefrontName}:`, error);
@@ -299,14 +297,14 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
     return {
       paths,
-      // Enable ISR - generate pages on-demand for new storefronts
-      fallback: 'blocking',
+      // Full static export - pre-generate all pages at build time
+      fallback: false,
     };
   } catch (error) {
     console.error('Error generating static paths:', error);
     return {
       paths: [],
-      fallback: 'blocking',
+      fallback: false,
     };
   }
 };

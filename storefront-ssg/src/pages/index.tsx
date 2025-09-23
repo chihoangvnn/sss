@@ -197,8 +197,6 @@ export const getStaticProps: GetStaticProps<HomePageProps> = async () => {
         storefronts: activeStorefronts,
         generatedAt: new Date().toISOString(),
       },
-      // Revalidate every hour
-      revalidate: 3600,
     };
   } catch (error) {
     console.error('Error generating static props for home page:', error);
@@ -207,7 +205,6 @@ export const getStaticProps: GetStaticProps<HomePageProps> = async () => {
         storefronts: [],
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 3600,
     };
   }
 };

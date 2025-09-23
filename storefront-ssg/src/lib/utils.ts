@@ -72,7 +72,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
   } : null;
 }
 
-export function generateColorShades(primaryColor: string) {
+export function generateColorShades(primaryColor: string): Record<string, string> {
   const rgb = hexToRgb(primaryColor);
   if (!rgb) return {};
 
