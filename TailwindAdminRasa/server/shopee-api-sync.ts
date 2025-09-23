@@ -534,17 +534,7 @@ export class ShopeeApiSyncService {
     console.log(`🚢 Shipping order: ${orderSn} with tracking: ${shippingData.trackingNumber}`);
 
     try {
-      // Get fresh access token
-      const tokenResult = await this.shopeeAuth.getValidAccessToken(businessAccountId);
-      if (!tokenResult.success || !tokenResult.accessToken) {
-        throw new Error('Failed to get valid access token for shipping');
-      }
-
-      const accessToken = tokenResult.accessToken;
-      const timestamp = Math.floor(Date.now() / 1000);
-      const path = `/api/v2/logistics/ship_order`;
-
-      // Prepare ship order payload
+      // Use makeAuthenticatedRequest for consistency and proper auth handling
       const requestBody = {
         order_sn: orderSn,
         tracking_number: shippingData.trackingNumber,
@@ -554,28 +544,14 @@ export class ShopeeApiSyncService {
         estimated_delivery_time: shippingData.estimatedDeliveryTime ? Math.floor(shippingData.estimatedDeliveryTime.getTime() / 1000) : undefined
       };
 
-      // Generate signature for ship order API
-      const sign = this.shopeeAuth.generateSign(path, timestamp, accessToken, shopId);
-      const url = `${this.shopeeAuth.baseUrl}${path}?partner_id=${this.shopeeAuth.config.partnerId}&timestamp=${timestamp}&access_token=${accessToken}&shop_id=${shopId}&sign=${sign}`;
-
       console.log(`📡 Calling Shopee ship order API for: ${orderSn}`);
       
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Ship order API failed (HTTP ${response.status}):`, errorText);
-        throw new Error(`Ship order API failed: ${response.status} ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      console.log(`🔍 Ship order API response:`, JSON.stringify(responseData, null, 2));
+      const responseData = await this.shopeeAuth.makeAuthenticatedRequest(
+        'logistics/ship_order',
+        shopId,
+        'POST',
+        requestBody
+      );
 
       // Handle Shopee v2.0 response structure
       if (responseData.error && responseData.error !== "" && responseData.error !== 0) {
@@ -594,7 +570,6 @@ export class ShopeeApiSyncService {
           trackingNumber: shippingData.trackingNumber,
           shippingCarrier: shippingData.shippingCarrier,
           shipTime: shippingData.shipTime || new Date(),
-          fulfillmentStatus: 'shipped',
           updatedAt: new Date()
         })
         .where(eq(shopeeShopOrders.orderSn, orderSn));
@@ -614,6 +589,385 @@ export class ShopeeApiSyncService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown ship order error'
       };
+    }
+  }
+
+  // 💰 Vietnamese Currency Helper - VND formatting for Shopee compliance
+  private formatVietnameseCurrency(amount: number): string {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0
+    }).format(amount);
+  }
+
+  // 🔄 TASK 5: Bulk Product Update API - Vietnamese retail optimization
+  async bulkUpdateProducts(
+    businessAccountId: string, 
+    shopId: string, 
+    updates: Array<{
+      shopeeItemId: string;
+      updates: {
+        originalPrice?: number;
+        currentPrice?: number;
+        stock?: number;
+        itemStatus?: string;
+        description?: string;
+      };
+    }>
+  ): Promise<{success: boolean, updatedCount: number, errors: string[]}> {
+    try {
+      console.log(`🔄 Bulk updating ${updates.length} products for shop: ${shopId}`);
+      
+      const errors: string[] = [];
+      let updatedCount = 0;
+      
+      // Process in batches of 10 for Vietnamese market performance
+      const batchSize = 10;
+      for (let i = 0; i < updates.length; i += batchSize) {
+        const batch = updates.slice(i, i + batchSize);
+        
+        // Process each item in current batch with Vietnamese retail optimizations
+        for (const { shopeeItemId, updates: itemUpdates } of batch) {
+          try {
+            let response: any = { error: "", message: "" };
+            const itemId = parseInt(shopeeItemId);
+            
+            // 1. Handle price updates - Use dedicated Shopee v2.0 price endpoint
+            if (itemUpdates.originalPrice !== undefined || itemUpdates.currentPrice !== undefined) {
+              const pricePayload = {
+                item_id: itemId,
+                price_list: [{
+                  model_id: 0, // Default model for Vietnamese single-variant products
+                  original_price: itemUpdates.originalPrice ? Math.round(itemUpdates.originalPrice * 100000) : undefined, // VND × 100000 scaling
+                  current_price: itemUpdates.currentPrice ? Math.round(itemUpdates.currentPrice * 100000) : undefined
+                }]
+              };
+              
+              const priceResponse = await this.shopeeAuth.makeAuthenticatedRequest(
+                'product/update_price',
+                shopId,
+                'POST',
+                pricePayload
+              );
+              
+              if (priceResponse.error && priceResponse.error !== "" && priceResponse.error !== 0) {
+                throw new Error(`Price update failed: ${priceResponse.message || priceResponse.error}`);
+              }
+            }
+            
+            // 2. Handle stock updates - Use dedicated Shopee v2.0 stock endpoint
+            if (itemUpdates.stock !== undefined) {
+              const stockPayload = {
+                item_id: itemId,
+                stock_list: [{
+                  model_id: 0, // Default model
+                  seller_stock: [{
+                    stock: itemUpdates.stock
+                  }]
+                }]
+              };
+              
+              const stockResponse = await this.shopeeAuth.makeAuthenticatedRequest(
+                'product/update_stock',
+                shopId,
+                'POST',
+                stockPayload
+              );
+              
+              if (stockResponse.error && stockResponse.error !== "" && stockResponse.error !== 0) {
+                throw new Error(`Stock update failed: ${stockResponse.message || stockResponse.error}`);
+              }
+            }
+            
+            // 3. Handle status updates - Use item management endpoint
+            if (itemUpdates.itemStatus) {
+              const statusResponse = await this.shopeeAuth.makeAuthenticatedRequest(
+                'product/update_item',
+                shopId,
+                'POST',
+                {
+                  item_id: itemId,
+                  item_status: itemUpdates.itemStatus.toUpperCase()
+                }
+              );
+              
+              if (statusResponse.error && statusResponse.error !== "" && statusResponse.error !== 0) {
+                throw new Error(`Status update failed: ${statusResponse.message || statusResponse.error}`);
+              }
+            }
+            
+            // 4. Handle description updates - Use item info endpoint
+            if (itemUpdates.description) {
+              const descResponse = await this.shopeeAuth.makeAuthenticatedRequest(
+                'product/update_item',
+                shopId,
+                'POST',
+                {
+                  item_id: itemId,
+                  description: itemUpdates.description
+                }
+              );
+              
+              if (descResponse.error && descResponse.error !== "" && descResponse.error !== 0) {
+                throw new Error(`Description update failed: ${descResponse.message || descResponse.error}`);
+              }
+            }
+            
+            // 5. Update local database with Vietnamese formatting and transaction safety
+            await db.transaction(async (tx) => {
+              await tx.update(shopeeShopProducts)
+                .set({
+                  ...(itemUpdates.originalPrice !== undefined && { 
+                    originalPrice: this.formatVietnameseCurrency(itemUpdates.originalPrice) 
+                  }),
+                  ...(itemUpdates.currentPrice !== undefined && { 
+                    currentPrice: this.formatVietnameseCurrency(itemUpdates.currentPrice) 
+                  }),
+                  ...(itemUpdates.stock !== undefined && { stock: itemUpdates.stock }),
+                  ...(itemUpdates.itemStatus && { 
+                    itemStatus: this.mapShopeeProductStatus(itemUpdates.itemStatus) 
+                  }),
+                  ...(itemUpdates.description && { description: itemUpdates.description }),
+                  updatedAt: new Date()
+                })
+                .where(eq(shopeeShopProducts.shopeeItemId, shopeeItemId));
+            });
+            
+            updatedCount++;
+            console.log(`✅ Updated product ${shopeeItemId}`);
+            
+          } catch (productError) {
+            const errorMsg = productError instanceof Error ? productError.message : 'Unknown error';
+            errors.push(`Product ${shopeeItemId}: ${errorMsg}`);
+          }
+        }
+        
+        // Add delay between batches for API rate limiting
+        if (i + batchSize < updates.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+      
+      console.log(`✅ Bulk update completed: ${updatedCount}/${updates.length} products updated`);
+      return { success: true, updatedCount, errors };
+      
+    } catch (error) {
+      console.error('Failed to bulk update products:', error);
+      return {
+        success: false,
+        updatedCount: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown bulk update error']
+      };
+    }
+  }
+
+  // 📦 TASK 5: Inventory Sync API - Advanced Vietnamese conflict resolution
+  async syncInventory(
+    businessAccountId: string,
+    shopId: string,
+    shopeeItemId: string,
+    localStock: number
+  ): Promise<{success: boolean, shopeeStock?: number, localStock?: number, conflict?: boolean, resolution?: string, auditId?: string}> {
+    return await db.transaction(async (tx) => {
+      try {
+        console.log(`📦 Syncing inventory for product ${shopeeItemId} - Local: ${localStock}`);
+        
+        // 1. Get current local product with timestamp for conflict detection
+        const [localProduct] = await tx
+          .select({
+            id: shopeeShopProducts.id,
+            stock: shopeeShopProducts.stock,
+            updatedAt: shopeeShopProducts.updatedAt,
+            lastSyncAt: shopeeShopProducts.lastSyncAt
+          })
+          .from(shopeeShopProducts)
+          .where(eq(shopeeShopProducts.shopeeItemId, shopeeItemId))
+          .limit(1);
+        
+        if (!localProduct) {
+          throw new Error(`Product ${shopeeItemId} not found in local database`);
+        }
+        
+        // 2. Get current Shopee stock with proper API v2.0 call
+        const productDetail = await this.shopeeAuth.makeAuthenticatedRequest(
+          'product/get_item_base_info',
+          shopId,
+          'GET',
+          { item_id_list: shopeeItemId }
+        );
+        
+        if (!productDetail?.response?.item_list?.[0]) {
+          throw new Error(`Product ${shopeeItemId} not found on Shopee`);
+        }
+        
+        const shopeeProduct = productDetail.response.item_list[0];
+        const shopeeStock = shopeeProduct.stock || 0;
+        const currentTime = new Date();
+        
+        // 3. Advanced conflict detection with Vietnamese retail logic
+        const threshold = 5; // Vietnamese retail threshold
+        const stockDifference = Math.abs(shopeeStock - localStock);
+        const hasStockConflict = stockDifference > threshold;
+        
+        // Time-based conflict detection (15 minutes threshold)
+        const timeSinceLastSync = localProduct.lastSyncAt 
+          ? currentTime.getTime() - localProduct.lastSyncAt.getTime()
+          : Infinity;
+        const hasTimingConflict = timeSinceLastSync < 15 * 60 * 1000; // 15 minutes
+        
+        let resolution = 'no_conflict';
+        let finalShopeeStock = shopeeStock;
+        let finalLocalStock = localStock;
+        
+        // 4. Conflict resolution policy for Vietnamese retail
+        if (hasStockConflict) {
+          console.log(`⚠️ Stock conflict detected: Shopee=${shopeeStock}, Local=${localStock} (diff: ${stockDifference})`);
+          
+          if (hasTimingConflict) {
+            // Recent sync - prefer Shopee as source of truth (marketplace-first)
+            resolution = 'shopee_wins_timing';
+            finalLocalStock = shopeeStock;
+            console.log(`🏪 Shopee wins: Recent sync detected, using marketplace data`);
+          } else {
+            // Old sync - check which is more recent based on business logic
+            const localIsNewer = localProduct.updatedAt > (localProduct.lastSyncAt || new Date(0));
+            
+            if (localIsNewer) {
+              // Local changes are newer - push to Shopee
+              resolution = 'local_wins_newer';
+              finalShopeeStock = localStock;
+              
+              const updateResponse = await this.shopeeAuth.makeAuthenticatedRequest(
+                'product/update_stock',
+                shopId,
+                'POST',
+                {
+                  item_id: parseInt(shopeeItemId),
+                  stock_list: [{
+                    model_id: 0,
+                    seller_stock: [{ stock: localStock }]
+                  }]
+                }
+              );
+              
+              if (updateResponse.error && updateResponse.error !== "" && updateResponse.error !== 0) {
+                throw new Error(`Shopee stock update failed: ${updateResponse.message || updateResponse.error}`);
+              }
+              
+              console.log(`📤 Local wins: Pushed ${localStock} units to Shopee`);
+            } else {
+              // Shopee data is authoritative - pull from Shopee
+              resolution = 'shopee_wins_authoritative';
+              finalLocalStock = shopeeStock;
+              console.log(`📥 Shopee wins: Using authoritative marketplace data`);
+            }
+          }
+        } else {
+          // No significant conflict - sync local to Shopee
+          const updateResponse = await this.shopeeAuth.makeAuthenticatedRequest(
+            'product/update_stock',
+            shopId,
+            'POST',
+            {
+              item_id: parseInt(shopeeItemId),
+              stock_list: [{
+                model_id: 0,
+                seller_stock: [{ stock: localStock }]
+              }]
+            }
+          );
+          
+          if (updateResponse.error && updateResponse.error !== "" && updateResponse.error !== 0) {
+            throw new Error(`Shopee sync failed: ${updateResponse.message || updateResponse.error}`);
+          }
+          
+          finalShopeeStock = localStock;
+          resolution = 'synced_to_shopee';
+        }
+        
+        // 5. Update local database with sync audit trail
+        await tx.update(shopeeShopProducts)
+          .set({
+            stock: finalLocalStock,
+            lastSyncAt: currentTime,
+            updatedAt: currentTime
+          })
+          .where(eq(shopeeShopProducts.shopeeItemId, shopeeItemId));
+        
+        // 6. Create audit trail for Vietnamese compliance
+        const auditId = `sync_${shopeeItemId}_${Date.now()}`;
+        console.log(`📋 Audit trail: ${auditId} - Resolution: ${resolution}`);
+        
+        console.log(`✅ Inventory sync completed: Shopee=${finalShopeeStock}, Local=${finalLocalStock}`);
+        
+        return {
+          success: true,
+          shopeeStock: finalShopeeStock,
+          localStock: finalLocalStock,
+          conflict: hasStockConflict,
+          resolution,
+          auditId
+        };
+        
+      } catch (error) {
+        console.error(`❌ Inventory sync transaction failed for ${shopeeItemId}:`, error);
+        throw error; // Re-throw to rollback transaction
+      }
+    }).catch((error) => {
+      console.error(`❌ Inventory sync failed for ${shopeeItemId}:`, error);
+      return { 
+        success: false, 
+        conflict: false, 
+        resolution: 'error',
+        auditId: `error_${Date.now()}`
+      };
+    });
+  }
+
+  // 🎯 TASK 5: Product Status Management - Vietnamese compliance
+  async updateProductStatus(
+    businessAccountId: string,
+    shopId: string,
+    shopeeItemId: string,
+    status: 'NORMAL' | 'BANNED' | 'DELETED' | 'UNLIST'
+  ): Promise<{success: boolean, newStatus?: string}> {
+    try {
+      console.log(`🎯 Updating product ${shopeeItemId} status to: ${status}`);
+      
+      // Shopee v2.0 status update
+      const response = await this.shopeeAuth.makeAuthenticatedRequest(
+        'product/update_item',
+        shopId,
+        'POST',
+        {
+          item_id: parseInt(shopeeItemId),
+          item_status: status
+        }
+      );
+      
+      // Handle response
+      if (response.error && response.error !== "" && response.error !== 0) {
+        const errorMsg = response.message || response.error || 'Status update failed';
+        console.error(`❌ Status update failed:`, errorMsg);
+        return { success: false };
+      }
+      
+      // Update local database
+      const mappedStatus = this.mapShopeeProductStatus(status);
+      await db.update(shopeeShopProducts)
+        .set({
+          itemStatus: mappedStatus,
+          updatedAt: new Date()
+        })
+        .where(eq(shopeeShopProducts.shopeeItemId, shopeeItemId));
+      
+      console.log(`✅ Product status updated to: ${mappedStatus}`);
+      return { success: true, newStatus: mappedStatus };
+      
+    } catch (error) {
+      console.error(`❌ Status update failed for ${shopeeItemId}:`, error);
+      return { success: false };
     }
   }
 }

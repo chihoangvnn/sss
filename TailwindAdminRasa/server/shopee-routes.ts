@@ -645,4 +645,232 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
       });
     }
   });
+
+  // 🔄 TASK 5: Bulk Product Update API - POST /api/shopee-shop/products/bulk-update
+  app.post("/api/shopee-shop/products/bulk-update", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { businessAccountId, updates } = req.body;
+
+      if (!businessAccountId || !Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Business account ID and updates array are required"
+        });
+      }
+
+      // Find business account
+      const [businessAccount] = await db
+        .select()
+        .from(shopeeBusinessAccounts)
+        .where(eq(shopeeBusinessAccounts.id, businessAccountId))
+        .limit(1);
+
+      if (!businessAccount) {
+        return res.status(404).json({
+          error: "Business account not found",
+          message: `Business account ${businessAccountId} not found`
+        });
+      }
+
+      // Get sync service
+      const syncService = createShopeeApiSync();
+      if (!syncService) {
+        return res.status(503).json({
+          error: "Shopee API unavailable",
+          message: "Shopee API credentials not configured. Please contact administrator."
+        });
+      }
+
+      console.log(`🔄 Bulk updating ${updates.length} products for shop: ${businessAccount.shopName}`);
+
+      // Call bulk update API
+      const result = await syncService.bulkUpdateProducts(
+        businessAccountId,
+        businessAccount.shopId,
+        updates
+      );
+
+      res.json({
+        success: result.success,
+        message: `Bulk update completed: ${result.updatedCount}/${updates.length} products updated`,
+        data: {
+          updatedCount: result.updatedCount,
+          totalCount: updates.length,
+          errors: result.errors,
+          successRate: `${Math.round((result.updatedCount / updates.length) * 100)}%`
+        }
+      });
+
+    } catch (error) {
+      console.error(`❌ Bulk update API error:`, error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // 📦 TASK 5: Inventory Sync API - POST /api/shopee-shop/products/:id/sync-inventory
+  app.post("/api/shopee-shop/products/:id/sync-inventory", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { id: itemId } = req.params;
+      const { businessAccountId, localStock } = req.body;
+
+      if (!itemId || !businessAccountId || localStock === undefined) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Item ID, business account ID, and local stock are required"
+        });
+      }
+
+      if (typeof localStock !== 'number' || localStock < 0) {
+        return res.status(400).json({
+          error: "Invalid stock value",
+          message: "Local stock must be a non-negative number"
+        });
+      }
+
+      // Find business account
+      const [businessAccount] = await db
+        .select()
+        .from(shopeeBusinessAccounts)
+        .where(eq(shopeeBusinessAccounts.id, businessAccountId))
+        .limit(1);
+
+      if (!businessAccount) {
+        return res.status(404).json({
+          error: "Business account not found",
+          message: `Business account ${businessAccountId} not found`
+        });
+      }
+
+      // Get sync service
+      const syncService = createShopeeApiSync();
+      if (!syncService) {
+        return res.status(503).json({
+          error: "Shopee API unavailable",
+          message: "Shopee API credentials not configured. Please contact administrator."
+        });
+      }
+
+      console.log(`📦 Syncing inventory for product ${itemId} - Local: ${localStock}`);
+
+      // Call inventory sync API
+      const result = await syncService.syncInventory(
+        businessAccountId,
+        businessAccount.shopId,
+        itemId,
+        localStock
+      );
+
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Inventory sync failed",
+          message: "Failed to sync inventory with Shopee"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: result.conflict 
+          ? `Inventory conflict resolved: Updated local stock to match Shopee (${result.shopeeStock})`
+          : `Inventory synced successfully: ${result.localStock} units`,
+        data: {
+          shopeeStock: result.shopeeStock,
+          localStock: result.localStock,
+          conflict: result.conflict,
+          syncDirection: result.conflict ? 'from_shopee' : 'to_shopee'
+        }
+      });
+
+    } catch (error) {
+      console.error(`❌ Inventory sync API error for ${req.params.id}:`, error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // 🎯 TASK 5: Product Status Management API - PATCH /api/shopee-shop/products/:id/status
+  app.patch("/api/shopee-shop/products/:id/status", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { id: itemId } = req.params;
+      const { businessAccountId, status } = req.body;
+
+      if (!itemId || !businessAccountId || !status) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Item ID, business account ID, and status are required"
+        });
+      }
+
+      // Validate status
+      const validStatuses = ['NORMAL', 'BANNED', 'DELETED', 'UNLIST'];
+      if (!validStatuses.includes(status.toUpperCase())) {
+        return res.status(400).json({
+          error: "Invalid status",
+          message: `Status must be one of: ${validStatuses.join(', ')}`
+        });
+      }
+
+      // Find business account
+      const [businessAccount] = await db
+        .select()
+        .from(shopeeBusinessAccounts)
+        .where(eq(shopeeBusinessAccounts.id, businessAccountId))
+        .limit(1);
+
+      if (!businessAccount) {
+        return res.status(404).json({
+          error: "Business account not found",
+          message: `Business account ${businessAccountId} not found`
+        });
+      }
+
+      // Get sync service
+      const syncService = createShopeeApiSync();
+      if (!syncService) {
+        return res.status(503).json({
+          error: "Shopee API unavailable",
+          message: "Shopee API credentials not configured. Please contact administrator."
+        });
+      }
+
+      console.log(`🎯 Updating product ${itemId} status to: ${status}`);
+
+      // Call status update API
+      const result = await syncService.updateProductStatus(
+        businessAccountId,
+        businessAccount.shopId,
+        itemId,
+        status.toUpperCase() as 'NORMAL' | 'BANNED' | 'DELETED' | 'UNLIST'
+      );
+
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Status update failed",
+          message: "Failed to update product status on Shopee"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Product status updated successfully to: ${result.newStatus}`,
+        data: {
+          itemId,
+          oldStatus: status.toUpperCase(),
+          newStatus: result.newStatus,
+          shopName: businessAccount.shopName
+        }
+      });
+
+    } catch (error) {
+      console.error(`❌ Status update API error for ${req.params.id}:`, error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
 }
