@@ -236,7 +236,7 @@ export const orders = pgTable("orders", {
   
   // 🚀 Unified Order Source Tracking
   source: text("source", { 
-    enum: ["admin", "storefront", "tiktok-shop", "landing-page"] 
+    enum: ["admin", "storefront", "tiktok-shop", "landing-page", "pos"] 
   }).notNull().default("admin"),
   sourceOrderId: text("source_order_id"), // Original order ID in source system
   sourceReference: text("source_reference"), // Additional reference (storefront name, TikTok shop ID, etc.)

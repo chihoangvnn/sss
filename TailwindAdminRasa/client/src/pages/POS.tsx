@@ -599,7 +599,7 @@ export default function POS({}: POSProps) {
 
     const orderData = {
       customerId: selectedCustomer?.id || null,
-      total: roundedCartTotal, // Use decimal-safe rounded total
+      total: roundedCartTotal.toString(), // Convert to string for validation
       status: 'pending',
       items: cart.map(item => ({
         productId: item.product.id,
