@@ -51,8 +51,9 @@ export function formatOrderId(order: OrderDisplayData | any): string {
     }
   }
   
-  // Đơn hàng nội bộ - chuẩn hóa thành định dạng DH-12345678
-  return `DH-${normalizedOrder.id.slice(-8).toUpperCase()}`;
+  // Đơn hàng nội bộ - chỉ hiển thị 8 chữ số thuần túy
+  const digitsOnly = normalizedOrder.id.replace(/\D/g, ''); // Chỉ lấy số
+  return digitsOnly.slice(-8).padStart(8, '0'); // 8 số cuối, pad với 0 nếu thiếu
 }
 
 /**
@@ -81,7 +82,9 @@ export function formatOrderIdForPayment(order: OrderDisplayData | any): string {
     return normalizedOrder.sourceOrderId || normalizedOrder.id.slice(-8).toUpperCase();
   }
   
-  return `DH-${normalizedOrder.id.slice(-8).toUpperCase()}`;
+  // Đơn hàng nội bộ - chỉ hiển thị 8 chữ số thuần túy cho QR payment
+  const digitsOnly = normalizedOrder.id.replace(/\D/g, ''); // Chỉ lấy số
+  return digitsOnly.slice(-8).padStart(8, '0'); // 8 số cuối, pad với 0 nếu thiếu
 }
 
 /**
