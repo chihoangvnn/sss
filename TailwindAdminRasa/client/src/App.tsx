@@ -33,6 +33,7 @@ import FacebookAppsManager from "@/pages/FacebookAppsManager";
 import GroupsManager from "@/pages/GroupsManager";
 import TikTokBusiness from "@/pages/TikTokBusiness";
 import TikTokShop from "@/pages/TikTokShop";
+import Shopee from "@/pages/Shopee";
 import Satellites from "@/pages/Satellites";
 import ApiManagement from "@/pages/ApiManagement";
 import WorkerManagement from "@/components/WorkerManagement";
@@ -77,6 +78,7 @@ function AdminRouter() {
       <Route path="/social-media" component={SocialMediaHub} />
       <Route path="/tiktok-business" component={TikTokBusiness} />
       <Route path="/tiktok-shop" component={TikTokShop} />
+      <Route path="/shopee" component={Shopee} />
       <Route path="/satellites" component={Satellites} />
       <Route path="/api-management" component={ApiManagement} />
       <Route path="/worker-management" component={WorkerManagement} />

@@ -33,12 +33,20 @@ interface SocialMediaPanelProps {
   onToggleAccount?: (accountId: string, enabled: boolean) => void;
 }
 
+// Shopee Icon Component
+const ShopeeIcon = ({ className = "h-6 w-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.5 12c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-13 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6.5-5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 10c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+  </svg>
+);
+
 const platformIcons = {
   facebook: Facebook,
   instagram: Instagram,
   twitter: Twitter,
   "tiktok-business": TikTokIcon,
   "tiktok-shop": TikTokIcon,
+  "shopee": ShopeeIcon,
 };
 
 const platformColors = {
@@ -47,6 +55,7 @@ const platformColors = {
   twitter: "text-sky-600",
   "tiktok-business": "text-pink-600",
   "tiktok-shop": "text-pink-700",
+  "shopee": "text-orange-600",
 };
 
 const formatLastPost = (lastPost: Date | null): string => {
@@ -112,6 +121,7 @@ export function SocialMediaPanel({
   // Detect current platform from URL
   const currentPlatform = location.includes('/tiktok-business') ? 'tiktok-business'
                         : location.includes('/tiktok-shop') ? 'tiktok-shop'
+                        : location.includes('/shopee') ? 'shopee'
                         : 'facebook';
   const [webhookVerifyToken, setWebhookVerifyToken] = useState<string>("");
   const [webhookUrl, setWebhookUrl] = useState<string>("");
@@ -538,6 +548,19 @@ export function SocialMediaPanel({
             >
               <TikTokIcon className="h-4 w-4 mr-2" />
               {connectingPlatform === 'tiktok-shop' ? 'Đang kết nối...' : 'Kết nối TikTok Shop'}
+            </Button>
+          )}
+          
+          {/* Shopee Connect Button - Only show on Shopee page */}
+          {currentPlatform === 'shopee' && (
+            <Button 
+              data-testid="button-connect-shopee" 
+              onClick={() => handleConnectAccount('shopee')}
+              disabled={connectingPlatform === 'shopee'}
+              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+            >
+              <ShopeeIcon className="h-4 w-4 mr-2" />
+              {connectingPlatform === 'shopee' ? 'Đang kết nối...' : 'Kết nối Shopee'}
             </Button>
           )}
           <Button 
