@@ -21,14 +21,20 @@ import {
   MoreVertical,
   CheckCircle,
   Circle,
-  Clock
+  Clock,
+  Printer,
+  Settings,
+  RotateCcw,
+  Receipt
 } from "lucide-react";
 import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
 import { QRScanner } from "@/components/QRScanner";
 import { DecimalQuantityInput } from "@/components/DecimalQuantityInput";
+import { ReceiptPrinter } from "@/components/ReceiptPrinter";
+import { ReceiptSettings, useReceiptSettings } from "@/components/ReceiptSettings";
 import { useTabManager, type CartItem } from "@/components/TabManager";
-import type { Product, Customer, Order } from "@shared/schema";
+import type { Product, Customer, Order, OrderItem, ShopSettings } from "@shared/schema";
 
 interface POSProps {}
 
@@ -51,18 +57,44 @@ export default function POS({}: POSProps) {
   // Tab Manager
   const tabManager = useTabManager();
   
+  // Receipt Settings
+  const [receiptConfig, setReceiptConfig] = useReceiptSettings();
+  
   // Global state (not tab-specific)
   const [searchTerm, setSearchTerm] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+  const [currentOrderItems, setCurrentOrderItems] = useState<(OrderItem & { product: Product })[]>([]);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [isSearchingBarcode, setIsSearchingBarcode] = useState(false);
+  const [showReceiptPrinter, setShowReceiptPrinter] = useState(false);
+  const [lastPrintedOrder, setLastPrintedOrder] = useState<{
+    order: Order;
+    orderItems: (OrderItem & { product: Product })[];
+    customer?: Customer;
+  } | null>(null);
 
   // Fetch products
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     queryFn: () => fetch('/api/products').then(res => res.json()),
   });
+
+  // Fetch shop settings
+  const { data: shopSettings = [], isLoading: shopSettingsLoading } = useQuery<ShopSettings[]>({
+    queryKey: ['/api/shop-settings'],
+    queryFn: () => fetch('/api/shop-settings').then(res => res.json()),
+  });
+
+  // Get default shop settings
+  const defaultShopSettings = shopSettings.find(s => s.isDefault) || shopSettings[0] || {
+    businessName: 'Cửa hàng POS',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    taxId: ''
+  } as ShopSettings;
 
   // Ensure products is always an array (defensive programming)
   const safeProducts = Array.isArray(products) ? products : [];
@@ -298,7 +330,20 @@ export default function POS({}: POSProps) {
     },
     onSuccess: (order) => {
       setCurrentOrder(order);
+      
+      // Prepare order items with product info for receipt printing
+      const orderItemsWithProducts = cart.map(cartItem => ({
+        id: '', // Will be set after order items are created
+        orderId: order.id,
+        productId: cartItem.product.id,
+        quantity: cartItem.quantity,
+        price: cartItem.product.price,
+        product: cartItem.product
+      }));
+      
+      setCurrentOrderItems(orderItemsWithProducts);
       setShowPayment(true);
+      
       toast({
         title: "Đơn hàng đã tạo",
         description: `Đơn hàng ${order.id} đã được tạo thành công`,
@@ -341,13 +386,73 @@ export default function POS({}: POSProps) {
 
   // Handle payment completion
   const handlePaymentComplete = () => {
+    if (currentOrder && currentOrderItems.length > 0) {
+      // Store last printed order for reprint functionality
+      setLastPrintedOrder({
+        order: currentOrder,
+        orderItems: currentOrderItems,
+        customer: selectedCustomer
+      });
+      
+      // Auto-print receipt if enabled
+      const shouldAutoPrint = localStorage.getItem('pos-auto-print') === 'true';
+      if (shouldAutoPrint) {
+        setShowReceiptPrinter(true);
+      }
+    }
+    
     clearCart();
     setCurrentOrder(null);
+    setCurrentOrderItems([]);
     setShowPayment(false);
     
     toast({
       title: "Thanh toán thành công",
-      description: "Đơn hàng đã được thanh toán",
+      description: "Đơn hàng đã được thanh toán. " + (localStorage.getItem('pos-auto-print') === 'true' ? 'In hóa đơn tự động.' : 'Nhấn In hóa đơn để in.'),
+    });
+  };
+
+  // Handle manual receipt print
+  const handlePrintReceipt = () => {
+    if (currentOrder && currentOrderItems.length > 0) {
+      setShowReceiptPrinter(true);
+    } else {
+      toast({
+        title: "Không có đơn hàng",
+        description: "Vui lòng tạo đơn hàng trước khi in hóa đơn",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle reprint last receipt
+  const handleReprintReceipt = () => {
+    if (lastPrintedOrder) {
+      setShowReceiptPrinter(true);
+    } else {
+      toast({
+        title: "Không có hóa đơn",
+        description: "Chưa có hóa đơn nào được in gần đây",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle receipt print success
+  const handleReceiptPrintSuccess = () => {
+    setShowReceiptPrinter(false);
+    toast({
+      title: "In thành công",
+      description: "Hóa đơn đã được in thành công",
+    });
+  };
+
+  // Handle receipt print error
+  const handleReceiptPrintError = (error: string) => {
+    toast({
+      title: "Lỗi in hóa đơn",
+      description: error,
+      variant: "destructive",
     });
   };
 
@@ -420,6 +525,31 @@ export default function POS({}: POSProps) {
               <Calculator className="h-4 w-4 mr-2" />
               {formatPrice(roundedCartTotal)}
             </Badge>
+            
+            {/* Receipt & Settings Actions */}
+            <div className="flex items-center space-x-2">
+              {lastPrintedOrder && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReprintReceipt}
+                  className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  In lại
+                </Button>
+              )}
+              
+              <ReceiptSettings 
+                onConfigChange={setReceiptConfig}
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-1" />
+                    Cài đặt
+                  </Button>
+                }
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -912,20 +1042,33 @@ export default function POS({}: POSProps) {
               }}
             />
 
-            <div className="mt-4 flex space-x-2">
+            <div className="mt-4 space-y-2">
+              {/* Print Receipt Button */}
               <Button
-                onClick={handlePaymentComplete}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-              >
-                Xác nhận đã thanh toán
-              </Button>
-              <Button
+                onClick={handlePrintReceipt}
                 variant="outline"
-                onClick={() => setShowPayment(false)}
-                className="flex-1"
+                className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
               >
-                Đóng
+                <Printer className="h-4 w-4 mr-2" />
+                In hóa đơn
               </Button>
+              
+              <div className="flex space-x-2">
+                <Button
+                  onClick={handlePaymentComplete}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Hoàn tất thanh toán
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPayment(false)}
+                  className="flex-1"
+                >
+                  Đóng
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -937,6 +1080,20 @@ export default function POS({}: POSProps) {
         onClose={closeBarcodeScanner}
         onScan={handleBarcodeScanned}
       />
+
+      {/* Receipt Printer Modal */}
+      {(showReceiptPrinter && ((currentOrder && currentOrderItems.length > 0) || lastPrintedOrder)) && (
+        <ReceiptPrinter
+          order={currentOrder || lastPrintedOrder!.order}
+          orderItems={currentOrderItems.length > 0 ? currentOrderItems : lastPrintedOrder!.orderItems}
+          shopSettings={defaultShopSettings}
+          customer={selectedCustomer || lastPrintedOrder?.customer}
+          onPrintSuccess={handleReceiptPrintSuccess}
+          onPrintError={handleReceiptPrintError}
+          autoPrint={localStorage.getItem('pos-auto-print') === 'true' && !!currentOrder}
+          autoClose={true}
+        />
+      )}
     </div>
   );
 }
