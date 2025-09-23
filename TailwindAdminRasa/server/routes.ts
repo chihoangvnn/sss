@@ -53,6 +53,7 @@ import themesRouter from './api/themes';
 import templatesRouter from './api/templates';
 import rasaManagementRouter from './api/rasa-management';
 import rasaConversationsRouter from './api/rasa-conversations';
+import rasaIndustryRouter from './api/rasa-industry';
 
 // Facebook webhook event processing functions
 async function processFacebookMessage(event: any, appId?: string) {
@@ -3864,6 +3865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.use("/api/rasa-management", rasaManagementRouter);
   app.use("/api/rasa", rasaConversationsRouter);
+  app.use("/api/rasa-industry", rasaIndustryRouter);
 
   // ==========================================
   // CONTENT MANAGEMENT API ROUTES
