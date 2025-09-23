@@ -200,6 +200,17 @@ export const products = pgTable("products", {
   seoDescription: text("seo_description"), // Meta description cho Google
   ogImageUrl: text("og_image_url"), // Open Graph image cho social sharing
   
+  // 🏷️ Unit & Measurement Support for POS
+  unitType: text("unit_type", { 
+    enum: ["weight", "count", "volume"] 
+  }).notNull().default("count"), // Product measurement type
+  unit: text("unit", { 
+    enum: ["kg", "gram", "lít", "ml", "cái", "hộp", "gói", "thùng"] 
+  }).notNull().default("cái"), // Specific unit of measurement
+  allowDecimals: boolean("allow_decimals").notNull().default(false), // Enable decimal quantities in POS
+  minQuantity: decimal("min_quantity", { precision: 10, scale: 3 }).default("0.001"), // Minimum quantity for weight-based products
+  quantityStep: decimal("quantity_step", { precision: 10, scale: 3 }).default("1.000"), // Step increment (0.001 for weight, 1 for count)
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -261,7 +272,7 @@ export const orderItems = pgTable("order_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   orderId: varchar("order_id").notNull().references(() => orders.id),
   productId: varchar("product_id").notNull().references(() => products.id),
-  quantity: integer("quantity").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(), // Support decimal quantities with 3 decimal places
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
 });
 

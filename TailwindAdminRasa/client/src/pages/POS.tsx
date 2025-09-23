@@ -21,6 +21,7 @@ import {
 import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
 import { QRScanner } from "@/components/QRScanner";
+import { DecimalQuantityInput } from "@/components/DecimalQuantityInput";
 import type { Product, Customer, Order } from "@shared/schema";
 
 interface CartItem {
@@ -67,12 +68,56 @@ export default function POS({}: POSProps) {
     (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Cart calculations
-  const cartTotal = cart.reduce((total, item) => {
-    return total + (parseFloat(item.product.price) * item.quantity);
+  // Decimal-safe arithmetic functions
+  const toIntegerCents = (price: string | number): number => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return Math.round(numPrice * 100); // Convert to cents (integer)
+  };
+
+  const toIntegerThousandths = (quantity: number): number => {
+    return Math.round(quantity * 1000); // Convert to thousandths (integer) 
+  };
+
+  const fromIntegerCents = (cents: number): number => {
+    return cents / 100; // Convert back to VND
+  };
+
+  // Decimal-safe cart calculations using integer arithmetic
+  const cartTotalCents = cart.reduce((totalCents, item) => {
+    const priceCents = toIntegerCents(item.product.price);
+    const quantityThousandths = toIntegerThousandths(item.quantity);
+    
+    // Calculate subtotal in cents * thousandths, then convert back
+    const subtotalCents = Math.round((priceCents * quantityThousandths) / 1000);
+    return totalCents + subtotalCents;
   }, 0);
 
+  const roundedCartTotal = fromIntegerCents(cartTotalCents);
+
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  // Helper function to get product unit settings
+  const getProductUnitSettings = (product: Product) => {
+    // Default values for backward compatibility
+    const unitType = (product as any).unitType || 'count';
+    const unit = (product as any).unit || 'cái';
+    const allowDecimals = (product as any).allowDecimals || false;
+    
+    // Fix backward compatibility: count products should have minQuantity=1, weight products=0.001
+    const defaultMinQuantity = allowDecimals ? '0.001' : '1.000';
+    const defaultQuantityStep = allowDecimals ? '0.001' : '1.000';
+    
+    const minQuantity = parseFloat((product as any).minQuantity || defaultMinQuantity);
+    const quantityStep = parseFloat((product as any).quantityStep || defaultQuantityStep);
+    
+    return {
+      unitType,
+      unit,
+      allowDecimals,
+      minQuantity,
+      quantityStep
+    };
+  };
 
   // Keyboard shortcuts for F2 and F3
   useEffect(() => {
@@ -112,7 +157,7 @@ export default function POS({}: POSProps) {
     };
   }, [toast]);
 
-  // Add to cart
+  // Add to cart with decimal support
   const addToCart = (product: Product) => {
     if (product.status === 'out-of-stock' || product.stock <= 0) {
       toast({
@@ -123,12 +168,16 @@ export default function POS({}: POSProps) {
       return;
     }
 
+    const { quantityStep, minQuantity } = getProductUnitSettings(product);
+
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.product.id === product.id);
       
       if (existingItem) {
+        const newQuantity = existingItem.quantity + quantityStep;
+        
         // Check if we have enough stock
-        if (existingItem.quantity >= product.stock) {
+        if (newQuantity > product.stock) {
           toast({
             title: "Không đủ hàng",
             description: `Chỉ còn ${product.stock} sản phẩm trong kho`,
@@ -139,11 +188,13 @@ export default function POS({}: POSProps) {
         
         return prevCart.map(item =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: newQuantity }
             : item
         );
       } else {
-        return [...prevCart, { product, quantity: 1 }];
+        // Use minimum quantity for initial add
+        const initialQuantity = Math.max(quantityStep, minQuantity);
+        return [...prevCart, { product, quantity: initialQuantity }];
       }
     });
 
@@ -153,21 +204,44 @@ export default function POS({}: POSProps) {
     });
   };
 
-  // Update quantity
+  // Update quantity with decimal support
   const updateQuantity = (productId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeFromCart(productId);
-      return;
-    }
-
     const product = cart.find(item => item.product.id === productId)?.product;
-    if (product && newQuantity > product.stock) {
-      toast({
-        title: "Không đủ hàng",
-        description: `Chỉ còn ${product.stock} sản phẩm trong kho`,
-        variant: "destructive",
-      });
-      return;
+    
+    if (product) {
+      const { minQuantity, allowDecimals } = getProductUnitSettings(product);
+      
+      // For count-based products, remove if quantity < 1
+      if (!allowDecimals && newQuantity < 1) {
+        removeFromCart(productId);
+        return;
+      }
+      
+      // For decimal products, remove if quantity <= 0
+      if (allowDecimals && newQuantity <= 0) {
+        removeFromCart(productId);
+        return;
+      }
+      
+      // Check minimum quantity
+      if (newQuantity < minQuantity) {
+        toast({
+          title: "Số lượng không hợp lệ",
+          description: `Số lượng tối thiểu: ${minQuantity}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check stock availability
+      if (newQuantity > product.stock) {
+        toast({
+          title: "Không đủ hàng",
+          description: `Chỉ còn ${product.stock} sản phẩm trong kho`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setCart(prevCart =>
@@ -235,11 +309,11 @@ export default function POS({}: POSProps) {
 
     const orderData = {
       customerId: selectedCustomer?.id || null,
-      total: cartTotal,
+      total: roundedCartTotal, // Use decimal-safe rounded total
       status: 'pending',
       items: cart.map(item => ({
         productId: item.product.id,
-        quantity: item.quantity,
+        quantity: item.quantity, // Decimal quantities are supported
         price: parseFloat(item.product.price),
       })),
       source: 'pos', // Mark as POS order
@@ -324,7 +398,7 @@ export default function POS({}: POSProps) {
             </Badge>
             <Badge className="text-lg px-3 py-1 bg-green-100 text-green-800">
               <Calculator className="h-4 w-4 mr-2" />
-              {formatPrice(cartTotal)}
+              {formatPrice(roundedCartTotal)}
             </Badge>
           </div>
         </div>
@@ -503,33 +577,28 @@ export default function POS({}: POSProps) {
                           {formatPrice(item.product.price)}
                         </p>
 
-                        {/* Quantity Controls */}
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center space-x-2">
-                            <Button
+                        {/* Decimal Quantity Controls */}
+                        <div className="flex items-center justify-between mt-3 gap-2">
+                          <div className="flex-1">
+                            <DecimalQuantityInput
+                              value={item.quantity}
+                              onChange={(newQuantity) => updateQuantity(item.product.id, newQuantity)}
+                              unitType={getProductUnitSettings(item.product).unitType as 'weight' | 'count' | 'volume'}
+                              unit={getProductUnitSettings(item.product).unit}
+                              allowDecimals={getProductUnitSettings(item.product).allowDecimals}
+                              minQuantity={getProductUnitSettings(item.product).minQuantity}
+                              quantityStep={getProductUnitSettings(item.product).quantityStep}
+                              maxQuantity={item.product.stock}
                               size="sm"
-                              variant="outline"
-                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="font-medium w-8 text-center">{item.quantity}</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
+                              className="w-full"
+                            />
                           </div>
 
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => removeFromCart(item.product.id)}
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 flex-shrink-0"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -537,10 +606,13 @@ export default function POS({}: POSProps) {
                       </div>
                     </div>
 
-                    {/* Item Total */}
-                    <div className="text-right mt-2 pt-2 border-t">
+                    {/* Item Total with Unit Price Display */}
+                    <div className="text-right mt-3 pt-2 border-t space-y-1">
+                      <div className="text-xs text-gray-500">
+                        {formatPrice(item.product.price)}/{getProductUnitSettings(item.product).unit}
+                      </div>
                       <span className="font-semibold text-green-600">
-                        {formatPrice(parseFloat(item.product.price) * item.quantity)}
+                        {formatPrice(fromIntegerCents(Math.round((toIntegerCents(item.product.price) * toIntegerThousandths(item.quantity)) / 1000)))}
                       </span>
                     </div>
                   </Card>
@@ -556,7 +628,7 @@ export default function POS({}: POSProps) {
                 <div className="flex justify-between text-lg">
                   <span>Tổng cộng:</span>
                   <span className="font-bold text-green-600">
-                    {formatPrice(cartTotal)}
+                    {formatPrice(roundedCartTotal)}
                   </span>
                 </div>
                 <div className="text-sm text-gray-500">
