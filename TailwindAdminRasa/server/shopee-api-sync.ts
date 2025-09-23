@@ -508,6 +508,114 @@ export class ShopeeApiSyncService {
     
     return statusMap[shopeeStatus] || 'normal';
   }
+
+  /**
+   * Ship order API - Mark order as shipped with tracking info
+   * POST /logistics/ship_order
+   */
+  async shipOrder(
+    businessAccountId: string, 
+    shopId: string, 
+    orderSn: string, 
+    shippingData: {
+      trackingNumber: string;
+      shippingCarrier: string;
+      pickupTime?: Date;
+      shipTime?: Date;
+      estimatedDeliveryTime?: Date;
+    }
+  ): Promise<{
+    success: boolean;
+    trackingNumber?: string;
+    shippingCarrier?: string;
+    shipTime?: Date;
+    error?: string;
+  }> {
+    console.log(`🚢 Shipping order: ${orderSn} with tracking: ${shippingData.trackingNumber}`);
+
+    try {
+      // Get fresh access token
+      const tokenResult = await this.shopeeAuth.getValidAccessToken(businessAccountId);
+      if (!tokenResult.success || !tokenResult.accessToken) {
+        throw new Error('Failed to get valid access token for shipping');
+      }
+
+      const accessToken = tokenResult.accessToken;
+      const timestamp = Math.floor(Date.now() / 1000);
+      const path = `/api/v2/logistics/ship_order`;
+
+      // Prepare ship order payload
+      const requestBody = {
+        order_sn: orderSn,
+        tracking_number: shippingData.trackingNumber,
+        shipping_carrier: shippingData.shippingCarrier,
+        pickup_time: shippingData.pickupTime ? Math.floor(shippingData.pickupTime.getTime() / 1000) : undefined,
+        ship_time: shippingData.shipTime ? Math.floor(shippingData.shipTime.getTime() / 1000) : Math.floor(Date.now() / 1000),
+        estimated_delivery_time: shippingData.estimatedDeliveryTime ? Math.floor(shippingData.estimatedDeliveryTime.getTime() / 1000) : undefined
+      };
+
+      // Generate signature for ship order API
+      const sign = this.shopeeAuth.generateSign(path, timestamp, accessToken, shopId);
+      const url = `${this.shopeeAuth.baseUrl}${path}?partner_id=${this.shopeeAuth.config.partnerId}&timestamp=${timestamp}&access_token=${accessToken}&shop_id=${shopId}&sign=${sign}`;
+
+      console.log(`📡 Calling Shopee ship order API for: ${orderSn}`);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Ship order API failed (HTTP ${response.status}):`, errorText);
+        throw new Error(`Ship order API failed: ${response.status} ${errorText}`);
+      }
+
+      const responseData = await response.json();
+      console.log(`🔍 Ship order API response:`, JSON.stringify(responseData, null, 2));
+
+      // Handle Shopee v2.0 response structure
+      if (responseData.error && responseData.error !== "" && responseData.error !== 0) {
+        const errorMsg = responseData.message || responseData.error || 'Ship order failed';
+        console.error(`❌ Ship order API error:`, errorMsg);
+        return {
+          success: false,
+          error: errorMsg
+        };
+      }
+
+      // Update order in local database
+      await db.update(shopeeShopOrders)
+        .set({
+          orderStatus: 'shipped',
+          trackingNumber: shippingData.trackingNumber,
+          shippingCarrier: shippingData.shippingCarrier,
+          shipTime: shippingData.shipTime || new Date(),
+          fulfillmentStatus: 'shipped',
+          updatedAt: new Date()
+        })
+        .where(eq(shopeeShopOrders.orderSn, orderSn));
+
+      console.log(`✅ Order shipped successfully: ${orderSn} - Tracking: ${shippingData.trackingNumber}`);
+
+      return {
+        success: true,
+        trackingNumber: shippingData.trackingNumber,
+        shippingCarrier: shippingData.shippingCarrier,
+        shipTime: shippingData.shipTime || new Date()
+      };
+
+    } catch (error) {
+      console.error(`❌ Ship order failed for ${orderSn}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown ship order error'
+      };
+    }
+  }
 }
 
 // Factory function to create sync service with environment credentials

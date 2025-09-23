@@ -8,7 +8,7 @@ import { shopeeFulfillmentService } from './shopee-fulfillment.js';
 import { createShopeeApiSync } from './shopee-api-sync.js';
 import { db } from './db.js';
 import { eq } from 'drizzle-orm';
-import { shopeeBusinessAccounts, insertShopeeBusinessAccountSchema, insertShopeeShopOrderSchema, insertShopeeShopProductSchema } from '../shared/schema.js';
+import { shopeeBusinessAccounts, shopeeShopOrders, insertShopeeBusinessAccountSchema, insertShopeeShopOrderSchema, insertShopeeShopProductSchema } from '../shared/schema.js';
 
 // 🚨 PRODUCTION WARNING: In-memory state will break on server restart
 // TODO: Use Redis or persistent storage for OAuth state
@@ -560,6 +560,89 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
     } catch (error) {
       console.error("Error checking sync status:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Ship Order API - POST /api/shopee-shop/orders/:orderSn/ship
+  app.post("/api/shopee-shop/orders/:orderSn/ship", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { orderSn } = req.params;
+      const { trackingNumber, shippingCarrier, pickupTime, shipTime, estimatedDeliveryTime } = req.body;
+
+      if (!orderSn || !trackingNumber || !shippingCarrier) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Order number, tracking number, and shipping carrier are required"
+        });
+      }
+
+      // Find business account for this order
+      const [orderRecord] = await db
+        .select()
+        .from(shopeeShopOrders)
+        .where(eq(shopeeShopOrders.orderSn, orderSn))
+        .limit(1);
+
+      if (!orderRecord) {
+        return res.status(404).json({
+          error: "Order not found",
+          message: `Order ${orderSn} not found in database`
+        });
+      }
+
+      // Get sync service and ship order
+      const syncService = createShopeeApiSync();
+      if (!syncService) {
+        return res.status(503).json({
+          error: "Shopee API unavailable",
+          message: "Shopee API credentials not configured. Please contact administrator."
+        });
+      }
+
+      // Prepare shipping data
+      const shippingData = {
+        trackingNumber,
+        shippingCarrier,
+        pickupTime: pickupTime ? new Date(pickupTime) : undefined,
+        shipTime: shipTime ? new Date(shipTime) : new Date(),
+        estimatedDeliveryTime: estimatedDeliveryTime ? new Date(estimatedDeliveryTime) : undefined
+      };
+
+      console.log(`🚢 Shipping order ${orderSn} via ${shippingCarrier} with tracking: ${trackingNumber}`);
+
+      // Call ship order API
+      const result = await syncService.shipOrder(
+        orderRecord.businessAccountId,
+        orderRecord.shopId,
+        orderSn as string, // TypeScript: orderSn validated above
+        shippingData
+      );
+
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Ship order failed",
+          message: result.error || "Failed to ship order via Shopee API"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Order ${orderSn} shipped successfully`,
+        data: {
+          orderSn,
+          trackingNumber: result.trackingNumber,
+          shippingCarrier: result.shippingCarrier,
+          shipTime: result.shipTime,
+          status: 'shipped'
+        }
+      });
+
+    } catch (error) {
+      console.error(`❌ Ship order API error for ${req.params.orderSn}:`, error);
+      res.status(500).json({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     }
   });
 }
