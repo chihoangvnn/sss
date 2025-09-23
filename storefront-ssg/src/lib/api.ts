@@ -37,7 +37,6 @@ async function enhancedFetch(
 
   const defaultHeaders: Record<string, string> = {
     'Accept': 'application/json',
-    'User-Agent': 'Storefront-SSG/2.0',
     ...headers
   };
 
@@ -94,7 +93,7 @@ async function enhancedFetch(
   throw new APIError('Unexpected error in enhancedFetch', undefined, url);
 }
 
-// Build-time API client for static generation
+// Build-time API client for static generation with failover support
 export class StaticApiClient {
   private baseUrl: string;
 
@@ -102,9 +101,34 @@ export class StaticApiClient {
     this.baseUrl = baseUrl || config.apiUrl;
   }
 
+  // Get best available backend URL for build-time operations
+  private async getBuildTimeBackendUrl(): Promise<string> {
+    const { apiUrl, fallbackApiUrl } = config;
+    
+    // Try primary URL first
+    const primaryHealthy = await checkBackendHealth(apiUrl);
+    if (primaryHealthy) {
+      return apiUrl;
+    }
+    
+    // Try fallback if available
+    if (fallbackApiUrl) {
+      const fallbackHealthy = await checkBackendHealth(fallbackApiUrl);
+      if (fallbackHealthy) {
+        console.warn(`Build-time: Primary backend (${apiUrl}) unavailable, using fallback: ${fallbackApiUrl}`);
+        return fallbackApiUrl;
+      }
+    }
+    
+    // Return primary URL anyway for error handling
+    console.error(`Build-time: All backend URLs unavailable. Using primary: ${apiUrl}`);
+    return apiUrl;
+  }
+
   async fetchStorefrontData(storefrontName: string): Promise<StorefrontData | null> {
     try {
-      const url = `${this.baseUrl}/api/storefront/public/${storefrontName}`;
+      const baseUrl = await this.getBuildTimeBackendUrl();
+      const url = `${baseUrl}/api/storefront/public/${storefrontName}`;
       const response = await enhancedFetch(url, { retries: 2 });
       
       return await response.json();
@@ -119,7 +143,8 @@ export class StaticApiClient {
 
   async fetchAllStorefronts(): Promise<StorefrontConfig[]> {
     try {
-      const url = `${this.baseUrl}/api/storefront/config`;
+      const baseUrl = await this.getBuildTimeBackendUrl();
+      const url = `${baseUrl}/api/storefront/config`;
       const response = await enhancedFetch(url, { retries: 2 });
       
       return await response.json();
@@ -131,7 +156,8 @@ export class StaticApiClient {
 
   async fetchProducts(): Promise<Product[]> {
     try {
-      const url = `${this.baseUrl}/api/products`;
+      const baseUrl = await this.getBuildTimeBackendUrl();
+      const url = `${baseUrl}/api/products`;
       const response = await enhancedFetch(url, { retries: 2 });
       
       return await response.json();

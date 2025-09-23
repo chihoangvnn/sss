@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import ConnectPGSimple from "connect-pg-simple";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { pool } from "./db";
@@ -11,6 +12,55 @@ const app = express();
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
+
+// CORS configuration for custom domain support
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || [
+  'http://localhost:3000',
+  'http://localhost:5000', 
+  'https://your-storefront.vercel.app',
+  'https://yourdomain.com',
+  'https://www.yourdomain.com'
+];
+
+// Add Replit default domain dynamically
+if (process.env.REPLIT_DEV_DOMAIN) {
+  allowedOrigins.push(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+}
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is allowed
+    if (allowedOrigins.some(allowedOrigin => {
+      // Support wildcard subdomain matching for development
+      if (allowedOrigin.includes('*')) {
+        const pattern = allowedOrigin.replace(/\*/g, '.*');
+        return new RegExp(`^${pattern}$`).test(origin);
+      }
+      return allowedOrigin === origin;
+    })) {
+      return callback(null, true);
+    }
+    
+    // Log rejected origins for debugging
+    console.warn(`🚫 CORS: Rejected origin ${origin}. Allowed: ${allowedOrigins.join(', ')}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true, // Support cookies and authentication
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Accept', 
+    'Origin', 
+    'X-Requested-With',
+    'X-CSRF-Token',
+    'X-Session-ID'
+  ],
+  exposedHeaders: ['X-Total-Count', 'X-Page-Count']
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

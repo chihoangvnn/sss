@@ -64,20 +64,23 @@ export function isCustomDomain(url: string): boolean {
   return !url.includes('replit.dev') && !url.includes('localhost');
 }
 
-// Health check utility
+// Health check utility with better browser compatibility
 export async function checkBackendHealth(url: string): Promise<boolean> {
   if (!isValidUrl(url)) return false;
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
     const response = await fetch(`${url}${config.healthCheckPath}`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Storefront-SSG-HealthCheck/1.0'
+        'Accept': 'application/json'
       },
-      signal: AbortSignal.timeout(5000) // 5 second timeout for health checks
+      signal: controller.signal
     });
     
+    clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
     console.warn(`Health check failed for ${url}:`, error);
