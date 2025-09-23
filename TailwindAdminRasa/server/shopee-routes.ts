@@ -41,11 +41,13 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
       const redirectUrl = req.body.redirectUrl || '/shopee';
       
       // Store state for verification
+      // 🔒 SECURITY FIX: Store minimal state, recreate ShopeeAuth in callback
       oauthStates.set(state, { 
         timestamp: Date.now(),
         redirectUrl,
         platform: 'shopee',
-        shopeeAuth
+        region: region || 'VN'
+        // No shopeeAuth instance stored - will recreate in callback
       });
       
       // Generate authorization URL
@@ -86,7 +88,13 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
         }
       });
 
-      const shopeeAuth = storedState.shopeeAuth;
+      // 🔒 SECURITY FIX: Recreate ShopeeAuth from env instead of storing credentials
+      const shopeeAuth = new ShopeeAuthService({
+        partnerId: process.env.SHOPEE_PARTNER_ID!,
+        partnerKey: process.env.SHOPEE_PARTNER_KEY!,
+        redirectUri: `${process.env.REPL_URL || 'http://localhost:5000'}/auth/shopee/callback`,
+        region: storedState.region || 'VN'
+      });
       
       // Exchange code for tokens
       const authResult = await shopeeAuth.exchangeCodeForToken(code as string, shop_id as string);

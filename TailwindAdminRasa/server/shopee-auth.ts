@@ -3,14 +3,19 @@ import { db } from './db.js';
 import { shopeeBusinessAccounts } from '../shared/schema.js';
 import { eq } from 'drizzle-orm';
 
-// Encryption utilities for secure token storage
+// 🔒 PRODUCTION-GRADE AES-256-GCM ENCRYPTION (Fixed)
 function encryptSecret(secret: string): string {
-  const algorithm = 'aes-256-gcm';
-  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-encryption-key', 'salt', 32);
-  const iv = crypto.randomBytes(16);
+  // Require encryption key in production
+  if (!process.env.ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY environment variable is required for production');
+  }
   
-  const cipher = crypto.createCipher(algorithm, key);
-  cipher.setAAD(Buffer.from('additional-auth-data'));
+  const algorithm = 'aes-256-gcm';
+  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'shopee-salt-v1', 32);
+  const iv = crypto.randomBytes(12); // 12 bytes for GCM
+  
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
+  cipher.setAAD(Buffer.from('shopee-tokens'));
   
   let encrypted = cipher.update(secret, 'utf8', 'hex');
   encrypted += cipher.final('hex');
@@ -21,15 +26,23 @@ function encryptSecret(secret: string): string {
 }
 
 function decryptSecret(encryptedSecret: string): string {
+  if (!process.env.ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY environment variable is required for production');
+  }
+  
   const algorithm = 'aes-256-gcm';
-  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-encryption-key', 'salt', 32);
+  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY, 'shopee-salt-v1', 32);
   
   const [ivHex, authTagHex, encrypted] = encryptedSecret.split(':');
+  if (!ivHex || !authTagHex || !encrypted) {
+    throw new Error('Invalid encrypted secret format');
+  }
+  
   const iv = Buffer.from(ivHex, 'hex');
   const authTag = Buffer.from(authTagHex, 'hex');
   
-  const decipher = crypto.createDecipher(algorithm, key);
-  decipher.setAAD(Buffer.from('additional-auth-data'));
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  decipher.setAAD(Buffer.from('shopee-tokens'));
   decipher.setAuthTag(authTag);
   
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
@@ -270,10 +283,12 @@ class ShopeeAuthService {
     if (expiresAt && expiresAt.getTime() < Date.now() + 5 * 60 * 1000) {
       // Token is expired or expiring soon, refresh it
       if (account.refreshToken) {
-        const refreshResult = await this.refreshAccessToken(account.refreshToken, shopId);
+        // 🔒 CRITICAL FIX: Decrypt refreshToken before using it
+        const decryptedRefreshToken = decryptSecret(account.refreshToken);
+        const refreshResult = await this.refreshAccessToken(decryptedRefreshToken, shopId);
         
         if (refreshResult.success && refreshResult.accessToken) {
-          // Update database with new tokens
+          // Update database with new encrypted tokens
           await db.update(shopeeBusinessAccounts)
             .set({
               accessToken: encryptSecret(refreshResult.accessToken!),
@@ -291,13 +306,30 @@ class ShopeeAuthService {
       return null; // Failed to refresh
     }
 
-    // 🔒 Decrypt token before returning
+    // 🔒 CRITICAL FIX: Decrypt token before returning
     return decryptSecret(account.accessToken);
   }
 
   /**
    * Make authenticated API call to Shopee
    */
+  /**
+   * Helper to get decrypted tokens for a shop
+   */
+  async getDecryptedTokens(shopId: string): Promise<ShopeeTokens | null> {
+    const account = await this.getBusinessAccount(shopId);
+    if (!account || !account.accessToken || !account.refreshToken) {
+      return null;
+    }
+    
+    return {
+      accessToken: decryptSecret(account.accessToken),
+      refreshToken: decryptSecret(account.refreshToken),
+      expiresAt: account.tokenExpiresAt || new Date(),
+      shopId: account.shopId
+    };
+  }
+
   async makeAuthenticatedRequest(
     endpoint: string, 
     shopId: string, 
