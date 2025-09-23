@@ -188,7 +188,12 @@ export interface IStorage {
 
   // Chatbot methods
   getChatbotConversations(limit?: number): Promise<ChatbotConversation[]>;
+  getChatbotConversation(id: string): Promise<ChatbotConversation | undefined>;
+  getChatbotConversationBySession(sessionId: string): Promise<ChatbotConversation | undefined>;
   createChatbotConversation(conversation: InsertChatbotConversation): Promise<ChatbotConversation>;
+  updateChatbotConversation(id: string, conversation: Partial<InsertChatbotConversation>): Promise<ChatbotConversation | undefined>;
+  addMessageToChatbotConversation(conversationId: string, message: any): Promise<ChatbotConversation | undefined>;
+  getChatbotMessages(conversationId: string): Promise<any[]>;
 
   // Bot Settings methods
   getBotSettings(): Promise<BotSettings | undefined>;
@@ -1116,6 +1121,65 @@ export class DatabaseStorage implements IStorage {
   async createChatbotConversation(conversation: InsertChatbotConversation): Promise<ChatbotConversation> {
     const [newConversation] = await db.insert(chatbotConversations).values(conversation).returning();
     return newConversation;
+  }
+
+  async getChatbotConversation(id: string): Promise<ChatbotConversation | undefined> {
+    const [conversation] = await db.select().from(chatbotConversations).where(eq(chatbotConversations.id, id));
+    return conversation || undefined;
+  }
+
+  async getChatbotConversationBySession(sessionId: string): Promise<ChatbotConversation | undefined> {
+    const [conversation] = await db.select().from(chatbotConversations).where(eq(chatbotConversations.sessionId, sessionId));
+    return conversation || undefined;
+  }
+
+  async updateChatbotConversation(id: string, conversation: Partial<InsertChatbotConversation>): Promise<ChatbotConversation | undefined> {
+    const [updatedConversation] = await db
+      .update(chatbotConversations)
+      .set({ ...conversation, updatedAt: new Date() })
+      .where(eq(chatbotConversations.id, id))
+      .returning();
+    return updatedConversation || undefined;
+  }
+
+  async addMessageToChatbotConversation(conversationId: string, message: any): Promise<ChatbotConversation | undefined> {
+    // Get current conversation to access existing messages
+    const conversation = await this.getChatbotConversation(conversationId);
+    if (!conversation) {
+      return undefined;
+    }
+
+    // Add new message to existing messages array
+    const currentMessages = Array.isArray(conversation.messages) ? conversation.messages : [];
+    const updatedMessages = [...currentMessages, {
+      ...message,
+      timestamp: new Date().toISOString(),
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }];
+
+    // Update conversation with new messages and metadata
+    const [updatedConversation] = await db
+      .update(chatbotConversations)
+      .set({
+        messages: updatedMessages,
+        updatedAt: new Date(),
+        status: 'active'
+      })
+      .where(eq(chatbotConversations.id, conversationId))
+      .returning();
+
+    return updatedConversation || undefined;
+  }
+
+  async getChatbotMessages(conversationId: string): Promise<any[]> {
+    const conversation = await this.getChatbotConversation(conversationId);
+    if (!conversation) {
+      return [];
+    }
+    
+    // Return messages from JSONB field, ensuring it's an array
+    const messages = conversation.messages;
+    return Array.isArray(messages) ? messages : [];
   }
 
   // Bot Settings methods
