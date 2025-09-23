@@ -3,6 +3,41 @@ import { db } from './db.js';
 import { shopeeBusinessAccounts } from '../shared/schema.js';
 import { eq } from 'drizzle-orm';
 
+// Encryption utilities for secure token storage
+function encryptSecret(secret: string): string {
+  const algorithm = 'aes-256-gcm';
+  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-encryption-key', 'salt', 32);
+  const iv = crypto.randomBytes(16);
+  
+  const cipher = crypto.createCipher(algorithm, key);
+  cipher.setAAD(Buffer.from('additional-auth-data'));
+  
+  let encrypted = cipher.update(secret, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+}
+
+function decryptSecret(encryptedSecret: string): string {
+  const algorithm = 'aes-256-gcm';
+  const key = crypto.scryptSync(process.env.ENCRYPTION_KEY || 'default-encryption-key', 'salt', 32);
+  
+  const [ivHex, authTagHex, encrypted] = encryptedSecret.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  
+  const decipher = crypto.createDecipher(algorithm, key);
+  decipher.setAAD(Buffer.from('additional-auth-data'));
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
+}
+
 export interface ShopeeAuthConfig {
   partnerId: string;
   partnerKey: string;
@@ -184,10 +219,11 @@ class ShopeeAuthService {
       displayName: shopInfo.shop_name || 'Shopee Shop',
       shopName: shopInfo.shop_name,
       shopLogo: shopInfo.shop_logo,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      // 🔒 PRODUCTION SECURITY: Encrypt sensitive tokens
+      accessToken: encryptSecret(tokens.accessToken),
+      refreshToken: encryptSecret(tokens.refreshToken),
       tokenExpiresAt: tokens.expiresAt,
-      partnerKey: this.config.partnerKey, // Should be encrypted in production
+      // ❌ NEVER store partnerKey in database - read from env only
       shopType: shopInfo.shop_type || 'normal',
       region: this.config.region,
       contactEmail: shopInfo.contact_email,
@@ -197,8 +233,8 @@ class ShopeeAuthService {
     }).onConflictDoUpdate({
       target: shopeeBusinessAccounts.shopId,
       set: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
+        accessToken: encryptSecret(tokens.accessToken),
+        refreshToken: encryptSecret(tokens.refreshToken),
         tokenExpiresAt: tokens.expiresAt,
         connected: true,
         lastSync: new Date(),
@@ -240,8 +276,8 @@ class ShopeeAuthService {
           // Update database with new tokens
           await db.update(shopeeBusinessAccounts)
             .set({
-              accessToken: refreshResult.accessToken,
-              refreshToken: refreshResult.refreshToken,
+              accessToken: encryptSecret(refreshResult.accessToken!),
+              refreshToken: encryptSecret(refreshResult.refreshToken!),
               tokenExpiresAt: refreshResult.expiresAt,
               lastSync: new Date(),
               updatedAt: new Date()
@@ -255,7 +291,8 @@ class ShopeeAuthService {
       return null; // Failed to refresh
     }
 
-    return account.accessToken;
+    // 🔒 Decrypt token before returning
+    return decryptSecret(account.accessToken);
   }
 
   /**

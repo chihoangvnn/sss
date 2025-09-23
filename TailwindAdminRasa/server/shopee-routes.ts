@@ -9,7 +9,8 @@ import { db } from './db.js';
 import { eq } from 'drizzle-orm';
 import { shopeeBusinessAccounts, insertShopeeBusinessAccountSchema, insertShopeeShopOrderSchema, insertShopeeShopProductSchema } from '../shared/schema.js';
 
-// Create OAuth state storage (in production, use Redis or persistent storage)
+// 🚨 PRODUCTION WARNING: In-memory state will break on server restart
+// TODO: Use Redis or persistent storage for OAuth state
 const oauthStates = new Map();
 
 export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCSRFToken: any) {
