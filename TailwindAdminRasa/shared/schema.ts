@@ -692,6 +692,133 @@ export const botSettings = pgTable("bot_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// 🤖 RASA Analytics Tables for Management Dashboard
+
+// Enhanced conversation sessions for RASA analytics
+export const conversationSessions = pgTable("conversation_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => customers.id), // Can be null for anonymous users
+  sessionId: text("session_id").notNull().unique(), // RASA session identifier
+  channel: text("channel", { enum: ["web", "facebook", "instagram", "whatsapp", "api"] }).notNull().default("web"),
+  userAgent: text("user_agent"), // Browser/device info
+  ipAddress: text("ip_address"), // For analytics (anonymized)
+  
+  // Session metrics
+  messageCount: integer("message_count").notNull().default(0),
+  totalResponseTime: integer("total_response_time").notNull().default(0), // Total ms for all responses
+  avgResponseTime: decimal("avg_response_time", { precision: 8, scale: 2 }), // Average response time
+  
+  // Session status
+  status: text("status", { enum: ["active", "completed", "abandoned", "escalated"] }).notNull().default("active"),
+  resolutionStatus: text("resolution_status", { enum: ["resolved", "unresolved", "pending"] }),
+  escalatedToHuman: boolean("escalated_to_human").notNull().default(false),
+  
+  // Timestamps
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  sessionIdIdx: index("conversation_sessions_session_id_idx").on(table.sessionId),
+  channelIdx: index("conversation_sessions_channel_idx").on(table.channel),
+  statusIdx: index("conversation_sessions_status_idx").on(table.status),
+}));
+
+// Individual messages for detailed analytics
+export const conversationMessages = pgTable("conversation_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => conversationSessions.id, { onDelete: 'cascade' }),
+  
+  // Message content
+  message: text("message").notNull(), // User input or bot response
+  isBot: boolean("is_bot").notNull().default(false), // true for bot responses
+  messageType: text("message_type", { enum: ["text", "quick_reply", "button", "image", "product", "order"] }).notNull().default("text"),
+  
+  // RASA-specific data
+  intent: text("intent"), // Detected intent (null for bot messages)
+  entities: jsonb("entities").default(sql`'[]'::jsonb`), // Extracted entities
+  confidence: decimal("confidence", { precision: 4, scale: 3 }), // Intent confidence score
+  responseTime: integer("response_time"), // Response time in ms
+  
+  // Context and metadata
+  context: jsonb("context").default(sql`'{}'::jsonb`), // Session context at time of message
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`), // Additional metadata
+  
+  // Tracking
+  timestamp: timestamp("timestamp").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  sessionIdIdx: index("conversation_messages_session_id_idx").on(table.sessionId),
+  intentIdx: index("conversation_messages_intent_idx").on(table.intent),
+  timestampIdx: index("conversation_messages_timestamp_idx").on(table.timestamp),
+  sessionTimestampIdx: index("conversation_messages_session_timestamp_idx").on(table.sessionId, table.timestamp),
+}));
+
+// Intent analytics for tracking popular intents and success rates
+export const intentAnalytics = pgTable("intent_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Intent details
+  intentName: text("intent_name").notNull().unique(), // "greet", "product_search", "order_status", etc.
+  displayName: text("display_name"), // Human-friendly name
+  category: text("category", { enum: ["greeting", "product", "order", "support", "general"] }).notNull().default("general"),
+  
+  // Analytics metrics
+  totalCount: integer("total_count").notNull().default(0), // Total times triggered
+  successCount: integer("success_count").notNull().default(0), // Successful resolutions
+  failureCount: integer("failure_count").notNull().default(0), // Failed responses
+  
+  // Performance metrics
+  avgConfidence: decimal("avg_confidence", { precision: 4, scale: 3 }), // Average confidence score
+  avgResponseTime: decimal("avg_response_time", { precision: 8, scale: 2 }), // Average response time
+  totalResponseTime: integer("total_response_time").notNull().default(0), // Total response time
+  
+  // Success rate calculation
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }), // Calculated success percentage
+  
+  // Usage patterns
+  peakHour: integer("peak_hour"), // Hour of day with most usage (0-23)
+  peakDay: integer("peak_day"), // Day of week with most usage (0-6)
+  
+  // Timestamps
+  lastTriggered: timestamp("last_triggered"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  intentNameIdx: index("intent_analytics_intent_name_idx").on(table.intentName),
+  categoryIdx: index("intent_analytics_category_idx").on(table.category),
+  successRateIdx: index("intent_analytics_success_rate_idx").on(table.successRate),
+}));
+
+// User satisfaction scores and feedback
+export const userSatisfactionScores = pgTable("user_satisfaction_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => conversationSessions.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => customers.id), // Can be null for anonymous
+  
+  // Rating and feedback
+  rating: integer("rating").notNull(), // 1-5 star rating
+  feedback: text("feedback"), // Optional text feedback
+  feedbackType: text("feedback_type", { enum: ["positive", "negative", "neutral", "suggestion"] }),
+  
+  // Context
+  wasResolved: boolean("was_resolved").notNull().default(false), // Was issue resolved
+  escalatedToHuman: boolean("escalated_to_human").notNull().default(false), // Required human intervention
+  primaryIntent: text("primary_intent"), // Main intent of the conversation
+  
+  // Metadata
+  channel: text("channel", { enum: ["web", "facebook", "instagram", "whatsapp", "api"] }).notNull().default("web"),
+  deviceType: text("device_type", { enum: ["mobile", "desktop", "tablet", "unknown"] }).notNull().default("unknown"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  sessionIdIdx: index("user_satisfaction_scores_session_id_idx").on(table.sessionId),
+  ratingIdx: index("user_satisfaction_scores_rating_idx").on(table.rating),
+  wasResolvedIdx: index("user_satisfaction_scores_was_resolved_idx").on(table.wasResolved),
+}));
+
 // Product reviews table - separate from landing page testimonials
 export const productReviews = pgTable("product_reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2010,6 +2137,22 @@ export const insertWorkerSchema = createInsertSchema(workers);
 export const insertWorkerJobSchema = createInsertSchema(workerJobs);
 export const insertWorkerHealthCheckSchema = createInsertSchema(workerHealthChecks);
 export const insertWorkerAnalyticsSchema = createInsertSchema(workerAnalytics);
+
+// 🤖 RASA Analytics Zod Schemas
+export const insertConversationSessionSchema = createInsertSchema(conversationSessions);
+export const insertConversationMessageSchema = createInsertSchema(conversationMessages);
+export const insertIntentAnalyticsSchema = createInsertSchema(intentAnalytics);
+export const insertUserSatisfactionScoreSchema = createInsertSchema(userSatisfactionScores);
+
+// TypeScript types for RASA analytics
+export type ConversationSession = typeof conversationSessions.$inferSelect;
+export type NewConversationSession = typeof conversationSessions.$inferInsert;
+export type ConversationMessage = typeof conversationMessages.$inferSelect;
+export type NewConversationMessage = typeof conversationMessages.$inferInsert;
+export type IntentAnalytics = typeof intentAnalytics.$inferSelect;
+export type NewIntentAnalytics = typeof intentAnalytics.$inferInsert;
+export type UserSatisfactionScore = typeof userSatisfactionScores.$inferSelect;
+export type NewUserSatisfactionScore = typeof userSatisfactionScores.$inferInsert;
 
 // Template Persistence System - Phase 1 Database Schema
 
