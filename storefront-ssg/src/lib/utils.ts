@@ -28,21 +28,36 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-// Generate optimized Cloudinary URL
+// Generate optimized Cloudinary URL with advanced transformations
 export function getOptimizedImageUrl(
   url: string,
   options: {
     width?: number;
     height?: number;
-    quality?: 'auto' | number;
-    format?: 'auto' | 'webp' | 'avif';
+    quality?: 'auto' | 'auto:best' | 'auto:good' | 'auto:eco' | number;
+    format?: 'auto' | 'webp' | 'avif' | 'jpg' | 'png';
+    dpr?: 'auto' | number;
+    crop?: 'fill' | 'fit' | 'scale' | 'crop' | 'thumb' | 'pad';
+    gravity?: 'auto' | 'face' | 'faces' | 'center' | 'north' | 'south' | 'east' | 'west';
+    blur?: number;
+    progressive?: boolean;
   } = {}
 ): string {
   if (!url || !url.includes('cloudinary.com')) {
     return url;
   }
 
-  const { width, height, quality = 'auto', format = 'auto' } = options;
+  const { 
+    width, 
+    height, 
+    quality = 'auto:good', 
+    format = 'auto', 
+    dpr = 'auto',
+    crop = 'fill',
+    gravity = 'auto',
+    blur,
+    progressive = true
+  } = options;
   
   // Parse Cloudinary URL and inject transformations
   const urlParts = url.split('/upload/');
@@ -50,16 +65,77 @@ export function getOptimizedImageUrl(
 
   const transformations = [];
   
+  // Size transformations
   if (width) transformations.push(`w_${width}`);
   if (height) transformations.push(`h_${height}`);
-  if (width && height) transformations.push('c_fill');
+  if (width || height) transformations.push(`c_${crop}`);
   
+  // Gravity (smart cropping)
+  if (gravity && crop === 'fill') transformations.push(`g_${gravity}`);
+  
+  // Device pixel ratio for retina displays
+  transformations.push(`dpr_${dpr}`);
+  
+  // Quality optimization
   transformations.push(`q_${quality}`);
+  
+  // Format optimization (WebP/AVIF with fallback)
   transformations.push(`f_${format}`);
+  
+  // Progressive loading
+  if (progressive && (format === 'auto' || format === 'jpg')) {
+    transformations.push('fl_progressive');
+  }
+  
+  // Blur for placeholder
+  if (blur) transformations.push(`e_blur:${blur}`);
 
   const transformationString = transformations.join(',');
   
   return `${urlParts[0]}/upload/${transformationString}/${urlParts[1]}`;
+}
+
+// Generate responsive image sources for different screen sizes
+export function generateResponsiveImageSources(
+  url: string,
+  breakpoints: { width: number; maxWidth?: string }[] = [
+    { width: 640, maxWidth: '640px' },
+    { width: 768, maxWidth: '768px' },
+    { width: 1024, maxWidth: '1024px' },
+    { width: 1280, maxWidth: '1280px' },
+    { width: 1536 }
+  ]
+): { srcSet: string; sizes: string } {
+  const srcSet = breakpoints
+    .map(bp => {
+      const optimizedUrl = getOptimizedImageUrl(url, {
+        width: bp.width,
+        quality: 'auto:good',
+        format: 'auto',
+        dpr: 'auto'
+      });
+      return `${optimizedUrl} ${bp.width}w`;
+    })
+    .join(', ');
+
+  const sizes = breakpoints
+    .filter(bp => bp.maxWidth)
+    .map(bp => `(max-width: ${bp.maxWidth}) ${bp.width}px`)
+    .concat(['100vw'])
+    .join(', ');
+
+  return { srcSet, sizes };
+}
+
+// Generate blur placeholder for progressive loading
+export function generateBlurPlaceholder(url: string, quality: number = 20): string {
+  return getOptimizedImageUrl(url, {
+    width: 40,
+    height: 40,
+    quality: quality,
+    blur: 1000,
+    format: 'jpg'
+  });
 }
 
 // Color utility functions for theme customization
