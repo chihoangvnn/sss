@@ -1,0 +1,61 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "out",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@api-url",
+    "NEXT_PUBLIC_BACKEND_URL": "@backend-url"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://your-replit-backend.replit.dev",
+      "NEXT_PUBLIC_BACKEND_URL": "https://your-replit-backend.replit.dev"
+    }
+  },
+  "functions": {},
+  "rewrites": [],
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<storefront>.*)\\.your-domain\\.com"
+        }
+      ],
+      "destination": "/:storefront"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "origin-when-cross-origin"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.+\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2))",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
