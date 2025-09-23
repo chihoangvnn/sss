@@ -55,14 +55,14 @@ class ShopeeFulfillmentService {
     let conditions = [
       eq(shopeeShopOrders.businessAccountId, businessAccountId),
       or(
-        eq(shopeeShopOrders.status, 'processing'),
-        eq(shopeeShopOrders.fulfillmentStatus, 'pending'),
-        eq(shopeeShopOrders.fulfillmentStatus, 'processing')
+        eq(shopeeShopOrders.orderStatus, 'to_ship'),
+        eq(shopeeShopOrders.orderStatus, 'shipped'),
+        eq(shopeeShopOrders.orderStatus, 'to_confirm_receive')
       )
     ];
 
     if (filters?.status) {
-      conditions.push(eq(shopeeShopOrders.fulfillmentStatus, filters.status as any));
+      conditions.push(eq(shopeeShopOrders.orderStatus, filters.status as any));
     }
 
     const orders = await db
@@ -73,29 +73,30 @@ class ShopeeFulfillmentService {
     // Convert orders to fulfillment tasks
     const tasks: FulfillmentTask[] = orders.map(order => {
       // Calculate priority based on order age and amount
-      const orderAge = Date.now() - new Date(order.createdAt).getTime();
+      const createdAt = order.createdAt ? new Date(order.createdAt) : new Date();
+      const orderAge = Date.now() - createdAt.getTime();
       const hoursOld = orderAge / (1000 * 60 * 60);
       
       let priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal';
-      if (order.totalAmount > 1000000) priority = 'high'; // High value orders
+      if (Number(order.totalAmount) > 1000000) priority = 'high'; // High value orders
       if (hoursOld > 48) priority = 'urgent'; // Orders older than 48 hours
-      if (order.totalAmount < 200000) priority = 'low'; // Low value orders
+      if (Number(order.totalAmount) < 200000) priority = 'low'; // Low value orders
       
       // Calculate due date (72 hours from order creation)
-      const dueDate = new Date(order.createdAt);
+      const dueDate = new Date(createdAt);
       dueDate.setHours(dueDate.getHours() + 72);
       
       return {
         id: order.id,
         orderId: order.id,
         orderNumber: order.orderNumber,
-        customerName: order.customerInfo?.name || 'Unknown Customer',
-        status: this.mapOrderStatusToFulfillmentStatus(order.fulfillmentStatus),
+        customerName: order.customerInfo?.buyerUsername || 'Unknown Customer',
+        status: this.mapOrderStatusToFulfillmentStatus(order.orderStatus),
         priority,
-        items: order.items || [],
-        shippingAddress: order.customerInfo?.shippingAddress || {},
-        totalAmount: order.totalAmount,
-        createdAt: new Date(order.createdAt),
+        items: this.mapOrderItems(order.items || []),
+        shippingAddress: order.customerInfo?.recipientAddress || {},
+        totalAmount: Number(order.totalAmount),
+        createdAt,
         dueDate
       };
     });
@@ -124,15 +125,15 @@ class ShopeeFulfillmentService {
 
     const stats = {
       pendingTasks: allOrders.filter(o => 
-        o.fulfillmentStatus === 'pending' || o.status === 'processing'
+        o.orderStatus === 'unpaid' || o.orderStatus === 'to_ship'
       ).length,
       
       shippedTasks: allOrders.filter(o => 
-        o.fulfillmentStatus === 'shipped' || o.status === 'shipped'
+        o.orderStatus === 'shipped' || o.orderStatus === 'to_confirm_receive'
       ).length,
       
       completedTasks: allOrders.filter(o => 
-        o.fulfillmentStatus === 'delivered' || o.status === 'delivered'
+        o.orderStatus === 'completed'
       ).length,
       
       efficiency: this.calculateEfficiencyRate(allOrders, last30Days)
@@ -146,7 +147,7 @@ class ShopeeFulfillmentService {
    */
   async updateTaskStatus(taskId: string, status: string, updates?: any) {
     const updateData: any = {
-      fulfillmentStatus: status,
+      orderStatus: this.mapFulfillmentStatusToOrderStatus(status),
       updatedAt: new Date()
     };
 
@@ -160,13 +161,13 @@ class ShopeeFulfillmentService {
       updateData.estimatedDelivery = new Date(updates.estimatedDelivery);
     }
 
-    // Update order status based on fulfillment status
+    // Additional updates based on status
     if (status === 'shipped') {
-      updateData.status = 'shipped';
+      updateData.orderStatus = 'shipped';
     } else if (status === 'delivered') {
-      updateData.status = 'delivered';
+      updateData.orderStatus = 'completed';
     } else if (status === 'processing') {
-      updateData.status = 'processing';
+      updateData.orderStatus = 'to_ship';
     }
 
     const result = await db
@@ -201,7 +202,7 @@ class ShopeeFulfillmentService {
       carrier: orderData.shippingCarrier || 'Shopee Express',
       labelUrl: `/api/shopee-shop/labels/${taskId}.pdf`,
       estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days
-      cost: this.calculateShippingCost(orderData.totalAmount, orderData.customerInfo?.shippingAddress)
+      cost: this.calculateShippingCost(Number(orderData.totalAmount), orderData.customerInfo?.recipientAddress)
     };
 
     // Update order with tracking info
@@ -300,16 +301,38 @@ class ShopeeFulfillmentService {
   }
 
   // Private helper methods
-  private mapOrderStatusToFulfillmentStatus(fulfillmentStatus: string): 'pending' | 'processing' | 'ready_to_ship' | 'shipped' | 'delivered' | 'failed' {
-    const statusMap: Record<string, FulfillmentTask['status']> = {
-      'pending': 'pending',
-      'processing': 'processing', 
-      'ready_to_ship': 'ready_to_ship',
+  private mapOrderStatusToFulfillmentStatus(orderStatus: string): 'pending' | 'processing' | 'ready_to_ship' | 'shipped' | 'delivered' | 'failed' {
+    const statusMap: Record<string, 'pending' | 'processing' | 'ready_to_ship' | 'shipped' | 'delivered' | 'failed'> = {
+      'unpaid': 'pending',
+      'to_ship': 'processing', 
       'shipped': 'shipped',
-      'delivered': 'delivered',
-      'failed': 'failed'
+      'to_confirm_receive': 'delivered',
+      'completed': 'delivered',
+      'cancelled': 'failed',
+      'to_return': 'failed',
+      'in_cancel': 'failed'
     };
-    return statusMap[fulfillmentStatus] || 'pending';
+    return statusMap[orderStatus] || 'pending';
+  }
+
+  private mapFulfillmentStatusToOrderStatus(fulfillmentStatus: string): string {
+    const statusMap: Record<string, string> = {
+      'pending': 'unpaid',
+      'processing': 'to_ship',
+      'ready_to_ship': 'to_ship', 
+      'shipped': 'shipped',
+      'delivered': 'completed',
+      'failed': 'cancelled'
+    };
+    return statusMap[fulfillmentStatus] || 'unpaid';
+  }
+
+  private mapOrderItems(items: any[]): { productName: string; quantity: number; sku: string; }[] {
+    return items.map(item => ({
+      productName: item.itemName || item.item_name || 'Unknown Product',
+      quantity: item.modelQuantityPurchased || item.quantity || 1,
+      sku: item.itemSku || item.item_sku || item.modelSku || 'NO-SKU'
+    }));
   }
 
   private calculateEfficiencyRate(orders: any[], since: Date): number {

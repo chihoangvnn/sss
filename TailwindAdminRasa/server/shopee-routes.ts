@@ -32,7 +32,7 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
       });
 
       const state = crypto.randomUUID();
-      const redirectUrl = req.body.redirectUrl || '/shopee-shop';
+      const redirectUrl = req.body.redirectUrl || '/shopee';
       
       // Store state for verification
       oauthStates.set(state, { 
@@ -55,8 +55,73 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
     }
   });
 
-  // Shopee OAuth Callback
+  // Shopee OAuth Callback - PUBLIC (no auth required for OAuth callback)
   app.get("/auth/shopee/callback", async (req, res) => {
+    try {
+      const { code, shop_id, state } = req.query;
+
+      if (!code || !shop_id) {
+        console.error('Missing required OAuth parameters:', { code: !!code, shop_id: !!shop_id });
+        return res.redirect('/?error=oauth_failed&message=Missing authorization parameters');
+      }
+
+      // Verify state parameter
+      const storedState = oauthStates.get(state as string);
+      if (!storedState || storedState.platform !== 'shopee') {
+        console.error('Invalid or expired OAuth state:', state);
+        return res.redirect('/?error=oauth_failed&message=Invalid authentication state');
+      }
+
+      // Clean up expired states (older than 10 minutes)
+      const now = Date.now();
+      Array.from(oauthStates.entries()).forEach(([key, value]) => {
+        if (now - value.timestamp > 10 * 60 * 1000) {
+          oauthStates.delete(key);
+        }
+      });
+
+      const shopeeAuth = storedState.shopeeAuth;
+      
+      // Exchange code for tokens
+      const authResult = await shopeeAuth.exchangeCodeForToken(code as string, shop_id as string);
+      
+      if (!authResult.success) {
+        console.error('Token exchange failed:', authResult.error);
+        return res.redirect(`/?error=oauth_failed&message=${encodeURIComponent(authResult.error || 'Authentication failed')}`);
+      }
+
+      // Get shop information (placeholder - in production, make API call to get shop details)
+      const shopInfo = {
+        shop_id: shop_id as string,
+        shop_name: `Shopee Shop ${shop_id}`,
+        shop_type: 'normal'
+      };
+
+      // Store business account
+      await shopeeAuth.storeBusinessAccount({
+        accessToken: authResult.accessToken,
+        refreshToken: authResult.refreshToken,
+        expiresAt: authResult.expiresAt,
+        shopId: authResult.shopId
+      }, shopInfo);
+
+      // Clean up state
+      oauthStates.delete(state as string);
+
+      console.log(`Shopee OAuth successful for shop: ${shop_id}`);
+      
+      // Redirect to success page
+      const redirectUrl = storedState.redirectUrl || '/shopee';
+      res.redirect(`${redirectUrl}?connected=true&shop_id=${shop_id}`);
+      
+    } catch (error) {
+      console.error('Shopee OAuth callback error:', error);
+      res.redirect('/?error=oauth_failed&message=Authentication error occurred');
+    }
+  });
+
+  // Shopee disconnect route  
+  app.delete("/api/shopee-shop/disconnect/:accountId", requireAdminAuth, requireCSRFToken, async (req, res) => {
     try {
       const { code, shop_id, state, error } = req.query;
       

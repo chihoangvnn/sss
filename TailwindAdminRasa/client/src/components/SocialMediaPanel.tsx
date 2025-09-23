@@ -400,6 +400,33 @@ export function SocialMediaPanel({
     },
   });
 
+  const connectShopeeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/shopee-shop/connect', { 
+        partnerId: 'your-partner-id', // TODO: Get from user input or config
+        partnerKey: 'your-partner-key', // TODO: Get from user input or config
+        region: 'VN',
+        redirectUrl: '/shopee' 
+      });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      if (data.authUrl) {
+        // Redirect to Shopee OAuth
+        window.location.href = data.authUrl;
+      }
+    },
+    onError: (error: any) => {
+      console.error('Shopee connect error:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: "Failed to initiate Shopee connection. Please try again.",
+      });
+      setConnectingPlatform(null);
+    },
+  });
+
   // Disconnect TikTok mutation
   const disconnectTikTokMutation = useMutation({
     mutationFn: async (accountId: string) => {
@@ -431,6 +458,9 @@ export function SocialMediaPanel({
     } else if (platform === 'tiktok-shop') {
       setConnectingPlatform('tiktok-shop');
       connectTikTokShopMutation.mutate();
+    } else if (platform === 'shopee') {
+      setConnectingPlatform('shopee');
+      connectShopeeMutation.mutate();
     } else {
       console.log(`Connect ${platform} triggered`);
       onConnectAccount?.(platform);
