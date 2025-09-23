@@ -2506,6 +2506,342 @@ export type InsertWorkerHealthCheck = z.infer<typeof insertWorkerHealthCheckSche
 export type WorkerAnalytics = typeof workerAnalytics.$inferSelect;
 export type InsertWorkerAnalytics = z.infer<typeof insertWorkerAnalyticsSchema>;
 
+// ============================================
+// 📦 COMPREHENSIVE PRODUCT MANAGEMENT SYSTEM
+// ============================================
+
+// Product Variants - Support for size, color, material, etc.
+export const productVariants = pgTable("product_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  
+  // Variant Information
+  name: text("name").notNull(), // "Size L - Red"
+  sku: text("sku").notNull().unique(), // Auto-generated: parent SKU + variant suffix
+  barcode: text("barcode"), // EAN/UPC barcode for this specific variant
+  
+  // Variant Attributes
+  attributes: jsonb("attributes").$type<{
+    size?: string;
+    color?: string;
+    material?: string;
+    weight?: string;
+    dimensions?: string;
+    [key: string]: any;
+  }>().default(sql`'{}'::jsonb`),
+  
+  // Pricing & Inventory (can override parent product)
+  price: decimal("price", { precision: 15, scale: 2 }), // If null, use parent product price
+  cost: decimal("cost", { precision: 15, scale: 2 }), // Cost of goods sold for margin calculation
+  stock: integer("stock").notNull().default(0),
+  reservedStock: integer("reserved_stock").notNull().default(0), // Stock reserved for pending orders
+  
+  // Inventory Management
+  reorderPoint: integer("reorder_point").default(10), // Trigger reorder alert
+  maxStock: integer("max_stock").default(1000), // Maximum recommended stock
+  weight: decimal("weight", { precision: 10, scale: 3 }), // Weight in kg for shipping
+  
+  // Media (can override parent product images)
+  images: jsonb("images").$type<CloudinaryImage[]>().default(sql`'[]'::jsonb`),
+  defaultImageIndex: integer("default_image_index").default(0),
+  
+  // Status
+  status: text("status", { enum: ["active", "inactive", "discontinued"] }).notNull().default("active"),
+  isDefault: boolean("is_default").default(false), // Mark as default variant for product
+  
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Warehouse Locations - Support multiple storage locations
+export const warehouseLocations = pgTable("warehouse_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Location Information
+  name: text("name").notNull(), // "Kho chính Hà Nội", "Kho phụ HCM"
+  code: text("code").notNull().unique(), // "WH-HN-01", "WH-HCM-02"
+  description: text("description"),
+  
+  // Address
+  address: jsonb("address").$type<{
+    street: string;
+    ward: string;
+    district: string;
+    city: string;
+    zipCode?: string;
+    country: string;
+  }>().notNull(),
+  
+  // Contact & Management
+  manager: text("manager"), // Warehouse manager name
+  phone: text("phone"),
+  email: text("email"),
+  
+  // Configuration
+  isPrimary: boolean("is_primary").default(false), // Primary warehouse for new products
+  isActive: boolean("is_active").default(true),
+  allowNegativeStock: boolean("allow_negative_stock").default(false),
+  
+  // Operational Details
+  operatingHours: jsonb("operating_hours").$type<{
+    [key: string]: { open: string; close: string; }; // "monday": {"open": "08:00", "close": "17:00"}
+  }>().default(sql`'{}'::jsonb`),
+  
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Inventory Movements - Complete audit trail of all stock changes
+export const inventoryMovements = pgTable("inventory_movements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Product/Variant Reference
+  productId: varchar("product_id").references(() => products.id),
+  variantId: varchar("variant_id").references(() => productVariants.id),
+  warehouseId: varchar("warehouse_id").references(() => warehouseLocations.id),
+  
+  // Movement Details
+  type: text("type", { 
+    enum: ["purchase", "sale", "adjustment", "transfer", "return", "damage", "expired"] 
+  }).notNull(),
+  quantity: integer("quantity").notNull(), // Positive = in, Negative = out
+  previousStock: integer("previous_stock").notNull(),
+  newStock: integer("new_stock").notNull(),
+  
+  // Cost & Pricing
+  unitCost: decimal("unit_cost", { precision: 15, scale: 2 }),
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }),
+  
+  // Reference Information
+  referenceType: text("reference_type", {
+    enum: ["order", "purchase_order", "manual_adjustment", "bulk_import", "return", "transfer"]
+  }),
+  referenceId: text("reference_id"), // Order ID, PO ID, etc.
+  
+  // Details & Tracking
+  reason: text("reason"), // "Sold to customer", "Damaged in shipping", "Manual count adjustment"
+  notes: text("notes"),
+  batchNumber: text("batch_number"), // For product batches/lots
+  expiryDate: timestamp("expiry_date"), // For perishable goods
+  
+  // User & System Tracking
+  performedBy: varchar("performed_by"), // User ID who performed the movement
+  performedByType: text("performed_by_type", { enum: ["user", "system", "api"] }).default("user"),
+  systemSource: text("system_source"), // "shopee_sync", "tiktok_sync", "manual_entry"
+  
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Indexes for efficient queries
+  productDateIndex: index("inventory_movements_product_date_idx").on(table.productId, table.createdAt),
+  variantDateIndex: index("inventory_movements_variant_date_idx").on(table.variantId, table.createdAt),
+  warehouseIndex: index("inventory_movements_warehouse_idx").on(table.warehouseId),
+  referenceIndex: index("inventory_movements_reference_idx").on(table.referenceType, table.referenceId),
+}));
+
+// Marketplace Pricing - Platform-specific pricing and cost management
+export const marketplacePricing = pgTable("marketplace_pricing", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Product Reference
+  productId: varchar("product_id").references(() => products.id),
+  variantId: varchar("variant_id").references(() => productVariants.id),
+  
+  // Marketplace Information
+  platform: text("platform", { 
+    enum: ["shopee", "tiktok-shop", "lazada", "facebook-shop", "instagram-shop", "manual"] 
+  }).notNull(),
+  marketplaceProductId: text("marketplace_product_id"), // Platform's product ID
+  
+  // Pricing Strategy
+  basePrice: decimal("base_price", { precision: 15, scale: 2 }).notNull(),
+  sellPrice: decimal("sell_price", { precision: 15, scale: 2 }).notNull(),
+  compareAtPrice: decimal("compare_at_price", { precision: 15, scale: 2 }), // Original price for discounts
+  
+  // Cost Analysis
+  costPrice: decimal("cost_price", { precision: 15, scale: 2 }), // Cost of goods sold
+  shippingCost: decimal("shipping_cost", { precision: 15, scale: 2 }).default("0"),
+  platformFees: decimal("platform_fees", { precision: 15, scale: 2 }).default("0"), // Commission, transaction fees
+  advertisingCost: decimal("advertising_cost", { precision: 15, scale: 2 }).default("0"),
+  otherCosts: decimal("other_costs", { precision: 15, scale: 2 }).default("0"),
+  
+  // Calculated Margins
+  grossMargin: decimal("gross_margin", { precision: 15, scale: 2 }), // sellPrice - costPrice
+  netMargin: decimal("net_margin", { precision: 15, scale: 2 }), // After all fees and costs
+  marginPercentage: decimal("margin_percentage", { precision: 5, scale: 2 }), // (netMargin / sellPrice) * 100
+  
+  // Pricing Rules
+  minimumPrice: decimal("minimum_price", { precision: 15, scale: 2 }), // Never sell below this
+  maximumPrice: decimal("maximum_price", { precision: 15, scale: 2 }), // Maximum competitive price
+  priceStrategy: text("price_strategy", {
+    enum: ["fixed", "competitive", "margin_based", "volume_based"]
+  }).default("fixed"),
+  
+  // Sync Configuration
+  autoSync: boolean("auto_sync").default(true),
+  syncDirection: text("sync_direction", {
+    enum: ["to_platform", "from_platform", "bidirectional"]
+  }).default("to_platform"),
+  
+  // Status & Tracking
+  isActive: boolean("is_active").default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  syncStatus: text("sync_status", { enum: ["pending", "synced", "failed"] }).default("pending"),
+  syncError: text("sync_error"),
+  
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Ensure one pricing record per product per platform
+  uniquePlatformProduct: unique().on(table.productId, table.variantId, table.platform),
+  platformIndex: index("marketplace_pricing_platform_idx").on(table.platform),
+  productIndex: index("marketplace_pricing_product_idx").on(table.productId),
+}));
+
+// Inventory Alerts - Automated alerts for stock management
+export const inventoryAlerts = pgTable("inventory_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Product Reference
+  productId: varchar("product_id").references(() => products.id),
+  variantId: varchar("variant_id").references(() => productVariants.id),
+  warehouseId: varchar("warehouse_id").references(() => warehouseLocations.id),
+  
+  // Alert Configuration
+  alertType: text("alert_type", {
+    enum: ["low_stock", "out_of_stock", "overstocked", "reorder_point", "expiry_warning", "negative_stock"]
+  }).notNull(),
+  
+  threshold: integer("threshold"), // Stock level that triggers alert
+  currentStock: integer("current_stock").notNull(),
+  
+  // Alert Status
+  status: text("status", { enum: ["active", "acknowledged", "resolved", "ignored"] }).default("active"),
+  priority: text("priority", { enum: ["low", "medium", "high", "critical"] }).default("medium"),
+  
+  // Alert Details
+  message: text("message").notNull(), // Human-readable alert message
+  description: text("description"), // Additional context
+  recommendedAction: text("recommended_action"), // "Order 100 units", "Check warehouse"
+  
+  // Escalation & Notifications
+  notificationsSent: integer("notifications_sent").default(0),
+  lastNotificationAt: timestamp("last_notification_at"),
+  acknowledgedBy: varchar("acknowledged_by"), // User ID who acknowledged
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolvedAt: timestamp("resolved_at"),
+  
+  // Auto-Resolution
+  autoResolve: boolean("auto_resolve").default(true), // Auto-resolve when stock levels normalize
+  snoozeUntil: timestamp("snooze_until"), // Temporary disable until this time
+  
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Indexes for alert management
+  statusIndex: index("inventory_alerts_status_idx").on(table.status, table.priority),
+  productIndex: index("inventory_alerts_product_idx").on(table.productId),
+  typeIndex: index("inventory_alerts_type_idx").on(table.alertType),
+  warehouseIndex: index("inventory_alerts_warehouse_idx").on(table.warehouseId),
+}));
+
+// Bulk Operations Log - Track all bulk operations for auditing
+export const bulkOperationsLog = pgTable("bulk_operations_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Operation Details
+  operationType: text("operation_type", {
+    enum: ["bulk_update", "bulk_create", "bulk_delete", "csv_import", "marketplace_sync", "price_update"]
+  }).notNull(),
+  
+  // Scope & Targets
+  targetType: text("target_type", { enum: ["products", "variants", "inventory", "pricing"] }).notNull(),
+  targetIds: jsonb("target_ids").$type<string[]>().default(sql`'[]'::jsonb`), // IDs of affected records
+  totalRecords: integer("total_records").notNull(),
+  
+  // Execution Status
+  status: text("status", { enum: ["pending", "running", "completed", "failed", "partially_failed"] }).default("pending"),
+  progress: decimal("progress", { precision: 5, scale: 2 }).default("0"), // 0-100 percentage
+  
+  // Results & Metrics
+  successCount: integer("success_count").default(0),
+  failureCount: integer("failure_count").default(0),
+  skippedCount: integer("skipped_count").default(0),
+  
+  // Operation Data
+  operationData: jsonb("operation_data").$type<{
+    filters?: any; // Filters used to select records
+    changes?: any; // Changes to be applied
+    csvFile?: string; // Path to uploaded CSV file
+    mapping?: any; // Field mapping for imports
+    errors?: string[]; // List of errors encountered
+    warnings?: string[]; // List of warnings
+  }>().default(sql`'{}'::jsonb`),
+  
+  // User & System Tracking
+  performedBy: varchar("performed_by").notNull(), // User ID
+  performedByName: text("performed_by_name"), // User name for easier tracking
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  
+  // Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  duration: integer("duration"), // Duration in milliseconds
+  
+  // Additional Context
+  description: text("description"), // Human-readable description
+  notes: text("notes"), // Additional notes or comments
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Indexes for efficient tracking
+  statusIndex: index("bulk_operations_status_idx").on(table.status),
+  userIndex: index("bulk_operations_user_idx").on(table.performedBy),
+  typeIndex: index("bulk_operations_type_idx").on(table.operationType, table.targetType),
+  dateIndex: index("bulk_operations_date_idx").on(table.createdAt),
+}));
+
+// ============================================
+// SCHEMA VALIDATION & TYPE EXPORTS
+// ============================================
+
+// Zod schemas for new tables
+export const insertProductVariantSchema = createInsertSchema(productVariants);
+export const insertWarehouseLocationSchema = createInsertSchema(warehouseLocations);
+export const insertInventoryMovementSchema = createInsertSchema(inventoryMovements);
+export const insertMarketplacePricingSchema = createInsertSchema(marketplacePricing);
+export const insertInventoryAlertSchema = createInsertSchema(inventoryAlerts);
+export const insertBulkOperationsLogSchema = createInsertSchema(bulkOperationsLog);
+
+// Type exports for new product management tables
+export type ProductVariant = typeof productVariants.$inferSelect;
+export type InsertProductVariant = z.infer<typeof insertProductVariantSchema>;
+export type WarehouseLocation = typeof warehouseLocations.$inferSelect;
+export type InsertWarehouseLocation = z.infer<typeof insertWarehouseLocationSchema>;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type InsertInventoryMovement = z.infer<typeof insertInventoryMovementSchema>;
+export type MarketplacePricing = typeof marketplacePricing.$inferSelect;
+export type InsertMarketplacePricing = z.infer<typeof insertMarketplacePricingSchema>;
+export type InventoryAlert = typeof inventoryAlerts.$inferSelect;
+export type InsertInventoryAlert = z.infer<typeof insertInventoryAlertSchema>;
+export type BulkOperationsLog = typeof bulkOperationsLog.$inferSelect;
+export type InsertBulkOperationsLog = z.infer<typeof insertBulkOperationsLogSchema>;
+
 // Template Persistence System types
 export type UserTemplate = typeof userTemplates.$inferSelect;
 export type InsertUserTemplate = z.infer<typeof insertUserTemplateSchema>;
