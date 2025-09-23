@@ -113,10 +113,10 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
 
       // Store business account
       await shopeeAuth.storeBusinessAccount({
-        accessToken: authResult.accessToken,
-        refreshToken: authResult.refreshToken,
-        expiresAt: authResult.expiresAt,
-        shopId: authResult.shopId
+        accessToken: authResult.accessToken!,
+        refreshToken: authResult.refreshToken!,
+        expiresAt: authResult.expiresAt!,
+        shopId: authResult.shopId!
       }, shopInfo);
 
       // Clean up state

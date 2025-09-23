@@ -4,7 +4,7 @@ import {
   shopeeShopProducts, 
   shopeeShopOrders
 } from '../shared/schema.js';
-import { eq, desc, asc, sum, count, and, gte, lt } from 'drizzle-orm';
+import { eq, desc, asc, sum, count, and, gte, lt, sql } from 'drizzle-orm';
 
 export interface ShopeeSellerPerformanceMetrics {
   // Revenue metrics
@@ -173,9 +173,10 @@ class ShopeeSellerService {
         .orderBy(desc(shopeeShopProducts.sales))
         .limit(5),
 
-      // Fulfillment rate calculation
+      // Fulfillment rate calculation - count completed/shipped vs total orders
       db.select({
-        totalOrders: count()
+        totalOrders: count(),
+        fulfilledOrders: count(sql`CASE WHEN ${shopeeShopOrders.orderStatus} IN ('completed', 'shipped', 'to_confirm_receive') THEN 1 END`)
       })
         .from(shopeeShopOrders)
         .where(and(
@@ -202,17 +203,36 @@ class ShopeeSellerService {
       : 0;
 
     const totalFulfillmentOrders = fulfillmentStats[0]?.totalOrders || 0;
-    // Calculate completed/shipped orders separately for now
-    const fulfillmentRate = 85; // Placeholder - would need separate queries for exact counts
+    const fulfilledOrders = fulfillmentStats[0]?.fulfilledOrders || 0;
+    const fulfillmentRate = totalFulfillmentOrders > 0 
+      ? (fulfilledOrders / totalFulfillmentOrders) * 100 
+      : 0;
 
-    // Format top performing products
-    const topPerformingProducts = topProducts.map(product => ({
-      id: product.id,
-      name: product.itemName || 'Unknown Product',
-      revenue: 0, // Would need order data to calculate
-      orders: product.sales || 0,
-      conversionRate: (product.views || 0) > 0 ? ((product.sales || 0) / (product.views || 1)) * 100 : 0
-    }));
+    // Calculate actual revenue for top performing products from order data
+    const topPerformingProducts = await Promise.all(
+      topProducts.map(async (product) => {
+        // Calculate revenue from actual orders for this product
+        const productRevenue = await db.select({
+          revenue: sql`SUM(
+            CAST((
+              SELECT SUM(CAST(item->>'modelDiscountedPrice' AS NUMERIC) * CAST(item->>'modelQuantityPurchased' AS INTEGER))
+              FROM jsonb_array_elements(${shopeeShopOrders.items}) AS item
+              WHERE item->>'itemId' = ${product.id}
+            ) AS NUMERIC)
+          )`
+        })
+        .from(shopeeShopOrders)
+        .where(eq(shopeeShopOrders.businessAccountId, businessAccountId));
+
+        return {
+          id: product.id,
+          name: product.itemName || 'Unknown Product',
+          revenue: parseFloat(productRevenue[0]?.revenue?.toString() || '0'),
+          orders: product.sales || 0,
+          conversionRate: (product.views || 0) > 0 ? ((product.sales || 0) / (product.views || 1)) * 100 : 0
+        };
+      })
+    );
 
     return {
       totalRevenue,
