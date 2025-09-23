@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import {
   Package2,
   ShoppingCart,
+  ShoppingBag,
   Users,
   BarChart3,
   Facebook,
@@ -156,6 +157,15 @@ const socialManagementItems = [
     color: "text-pink-700",
     bgColor: "bg-pink-50 dark:bg-pink-950/20",
     description: "TikTok Shop Management"
+  },
+  {
+    title: "Shopee",
+    url: "/shopee",
+    icon: ShoppingBag,
+    status: "online",
+    color: "text-orange-600",
+    bgColor: "bg-orange-50 dark:bg-orange-950/20",
+    description: "Shopee Seller Management"
   },
   {
     title: "Lịch Đăng Bài",
