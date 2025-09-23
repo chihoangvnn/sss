@@ -128,12 +128,17 @@ class ShopeeAuthService {
 
   /**
    * Exchange authorization code for access token
+   * CRITICAL FIX: Use correct endpoint /token/get for code exchange
    */
   async exchangeCodeForToken(authCode: string, shopId: string): Promise<ShopeeAuthResult> {
     try {
       const timestamp = Math.floor(Date.now() / 1000);
       const path = '/api/v2/auth/token/get';
-      const sign = this.generateSign(path, timestamp, authCode + shopId);
+      
+      // 🔧 CRITICAL FIX: Create signature for token exchange
+      // Base string: partner_id + path + timestamp + code + shop_id
+      const baseString = `${this.config.partnerId}${path}${timestamp}${authCode}${shopId}`;
+      const sign = crypto.createHmac('sha256', this.config.partnerKey).update(baseString).digest('hex');
 
       const response = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
@@ -141,20 +146,21 @@ class ShopeeAuthService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          partner_id: this.config.partnerId,
+          partner_id: parseInt(this.config.partnerId),  // Must be integer
           code: authCode,
-          shop_id: shopId,
-          timestamp,
-          sign
+          shop_id: parseInt(shopId),  // Must be integer
+          timestamp: timestamp,
+          sign: sign
         })
       });
 
       const data = await response.json();
 
-      if (data.error) {
+      // 🔧 FIXED: Handle Shopee API error structure
+      if (data.error || !data.access_token) {
         return {
           success: false,
-          error: data.message || 'Token exchange failed'
+          error: data.message || data.error || 'Token exchange failed'
         };
       }
 
@@ -162,7 +168,7 @@ class ShopeeAuthService {
         success: true,
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
-        expiresAt: new Date(Date.now() + data.expires_in * 1000),
+        expiresAt: new Date(Date.now() + (data.expires_in || 14400) * 1000), // Default 4 hours
         shopId
       };
 
@@ -176,12 +182,17 @@ class ShopeeAuthService {
 
   /**
    * Refresh access token using refresh token
+   * CRITICAL FIX: Shopee v2 requires signed requests even for refresh token
    */
   async refreshAccessToken(refreshToken: string, shopId: string): Promise<ShopeeAuthResult> {
     try {
       const timestamp = Math.floor(Date.now() / 1000);
       const path = '/api/v2/auth/access_token/get';
-      const sign = this.generateSign(path, timestamp, refreshToken + shopId);
+      
+      // 🔧 CRITICAL FIX: Create signature for refresh token
+      // Base string: partner_id + path + timestamp + refresh_token + shop_id
+      const baseString = `${this.config.partnerId}${path}${timestamp}${refreshToken}${shopId}`;
+      const sign = crypto.createHmac('sha256', this.config.partnerKey).update(baseString).digest('hex');
 
       const response = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
@@ -189,28 +200,29 @@ class ShopeeAuthService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          partner_id: this.config.partnerId,
+          partner_id: parseInt(this.config.partnerId),  // Must be integer
           refresh_token: refreshToken,
-          shop_id: shopId,
-          timestamp,
-          sign
+          shop_id: parseInt(shopId),  // Must be integer
+          timestamp: timestamp,
+          sign: sign
         })
       });
 
       const data = await response.json();
 
-      if (data.error) {
+      // 🔧 FIXED: Handle Shopee API error structure
+      if (data.error || !data.access_token) {
         return {
           success: false,
-          error: data.message || 'Token refresh failed'
+          error: data.message || data.error || 'Token refresh failed'
         };
       }
 
       return {
         success: true,
         accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: new Date(Date.now() + data.expires_in * 1000),
+        refreshToken: data.refresh_token || refreshToken, // Keep old if not provided
+        expiresAt: new Date(Date.now() + (data.expires_in || 14400) * 1000), // Default 4 hours
         shopId
       };
 
@@ -330,11 +342,15 @@ class ShopeeAuthService {
     };
   }
 
+  /**
+   * Make authenticated API call to Shopee
+   * CRITICAL FIX: Proper URL construction and signature generation
+   */
   async makeAuthenticatedRequest(
     endpoint: string, 
     shopId: string, 
     method: string = 'GET', 
-    data?: any
+    params?: Record<string, any>
   ): Promise<any> {
     const accessToken = await this.ensureValidToken(shopId);
     
@@ -343,18 +359,26 @@ class ShopeeAuthService {
     }
 
     const timestamp = Math.floor(Date.now() / 1000);
-    const path = `/api/v2/${endpoint}`;
-    const sign = this.generateSign(path, timestamp, accessToken + shopId);
+    
+    // 🔧 CRITICAL FIX: Clean path without query string for signature
+    const cleanPath = `/api/v2/${endpoint}`.split('?')[0];
+    
+    // 🔧 CRITICAL FIX: Sign using path only (no query string)
+    // For API calls with access token: partner_id + path + timestamp + access_token + shop_id
+    const sign = this.generateSign(cleanPath, timestamp, accessToken + shopId);
 
-    const params = new URLSearchParams({
+    // Combine auth params with user params
+    const allParams = {
       partner_id: this.config.partnerId,
-      shop_id: shopId,
       timestamp: timestamp.toString(),
       access_token: accessToken,
-      sign: sign
-    });
+      shop_id: shopId,
+      sign: sign,
+      ...(params || {})
+    };
 
-    const url = `${this.baseUrl}${path}?${params.toString()}`;
+    const queryString = new URLSearchParams(allParams).toString();
+    const url = `${this.baseUrl}${cleanPath}?${queryString}`;
 
     const requestOptions: RequestInit = {
       method,
@@ -363,17 +387,80 @@ class ShopeeAuthService {
       }
     };
 
-    if (data && (method === 'POST' || method === 'PUT')) {
-      requestOptions.body = JSON.stringify(data);
-    }
-
     const response = await fetch(url, requestOptions);
     
     if (!response.ok) {
-      throw new Error(`Shopee API request failed: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Shopee API request failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    
+    // 🔧 FIXED: Handle Shopee API error responses
+    if (result.error) {
+      throw new Error(`Shopee API error: ${result.message || result.error}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Get shop information from Shopee API
+   * Fixed for Shopee API v2 specification
+   */
+  async getShopInfo(shopId: string): Promise<any> {
+    try {
+      const result = await this.makeAuthenticatedRequest('shop/get_shop_info', shopId, 'GET');
+      return result.shop_name ? result : null;
+    } catch (error) {
+      console.error('Failed to fetch shop info:', error);
+      // Return fallback info if API call fails
+      return {
+        shop_id: shopId,
+        shop_name: `Shopee Shop ${shopId}`,
+        shop_type: 'normal',
+        status: 'normal'
+      };
+    }
+  }
+
+  /**
+   * Sync real shop data from Shopee API
+   * Will be called after successful OAuth
+   */
+  async syncShopData(shopId: string): Promise<any> {
+    try {
+      // Get comprehensive shop information
+      const [shopInfo, profileInfo] = await Promise.allSettled([
+        this.makeAuthenticatedRequest('shop/get_shop_info', shopId, 'GET'),
+        this.makeAuthenticatedRequest('shop/get_profile', shopId, 'GET')
+      ]);
+
+      const shop = shopInfo.status === 'fulfilled' ? shopInfo.value : null;
+      const profile = profileInfo.status === 'fulfilled' ? profileInfo.value : null;
+
+      return {
+        shop_id: shopId,
+        shop_name: shop?.shop_name || `Shop ${shopId}`,
+        shop_logo: shop?.shop_logo || profile?.shop_logo,
+        shop_type: shop?.shop_type || 'normal',
+        status: shop?.status || 'normal',
+        contact_email: profile?.email,
+        contact_phone: profile?.phone,
+        description: profile?.description,
+        country: shop?.country || 'VN',
+        region: shop?.region
+      };
+    } catch (error) {
+      console.error('Failed to sync shop data:', error);
+      // Return minimal fallback data
+      return {
+        shop_id: shopId,
+        shop_name: `Shopee Shop ${shopId}`,
+        shop_type: 'normal',
+        status: 'normal'
+      };
+    }
   }
 
   /**

@@ -5,6 +5,7 @@ import ShopeeAuthService from './shopee-auth.js';
 import { shopeeOrdersService } from './shopee-orders.js';
 import { shopeeSellerService } from './shopee-seller.js';
 import { shopeeFulfillmentService } from './shopee-fulfillment.js';
+import { createShopeeApiSync } from './shopee-api-sync.js';
 import { db } from './db.js';
 import { eq } from 'drizzle-orm';
 import { shopeeBusinessAccounts, insertShopeeBusinessAccountSchema, insertShopeeShopOrderSchema, insertShopeeShopProductSchema } from '../shared/schema.js';
@@ -104,20 +105,35 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
         return res.redirect(`/?error=oauth_failed&message=${encodeURIComponent(authResult.error || 'Authentication failed')}`);
       }
 
-      // Get shop information (placeholder - in production, make API call to get shop details)
-      const shopInfo = {
-        shop_id: shop_id as string,
-        shop_name: `Shopee Shop ${shop_id}`,
-        shop_type: 'normal'
+      // 🔧 CRITICAL FIX: Store tokens FIRST, then get shop info
+      // Create minimal shop info for initial storage
+      const minimalShopInfo = {
+        shop_id: authResult.shopId!,
+        shop_name: `Shopee Shop ${authResult.shopId!}`,
+        shop_type: 'normal',
+        status: 'normal'
       };
 
-      // Store business account
+      // Store business account with minimal data first
       await shopeeAuth.storeBusinessAccount({
         accessToken: authResult.accessToken!,
         refreshToken: authResult.refreshToken!,
         expiresAt: authResult.expiresAt!,
         shopId: authResult.shopId!
-      }, shopInfo);
+      }, minimalShopInfo);
+
+      // Now get real shop information from Shopee API (tokens are in DB)
+      const realShopInfo = await shopeeAuth.syncShopData(authResult.shopId! as string);
+      
+      // Update with real shop info if we got it successfully
+      if (realShopInfo && realShopInfo.shop_name && realShopInfo.shop_name !== minimalShopInfo.shop_name) {
+        await shopeeAuth.storeBusinessAccount({
+          accessToken: authResult.accessToken!,
+          refreshToken: authResult.refreshToken!,
+          expiresAt: authResult.expiresAt!,
+          shopId: authResult.shopId!
+        }, realShopInfo);
+      }
 
       // Clean up state
       oauthStates.delete(state as string);
@@ -465,6 +481,84 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
       res.json(result);
     } catch (error) {
       console.error("Error with Shopee bulk fulfillment update:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // 🔧 FIXED: Real API Sync Routes - Only work with real credentials
+  app.post("/api/shopee-shop/sync/:businessAccountId", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { businessAccountId } = req.params;
+      const { syncType = 'full' } = req.body;
+      
+      if (!businessAccountId || !businessAccountId.match(/^[0-9a-fA-F-]{36}$/)) {
+        return res.status(400).json({ error: "Invalid business account ID format" });
+      }
+
+      // Check if Shopee credentials are available
+      const syncService = createShopeeApiSync();
+      if (!syncService) {
+        return res.status(503).json({ 
+          error: "Shopee API sync not available", 
+          message: "Real Shopee credentials required. Currently using demo data."
+        });
+      }
+
+      // Get shop ID from business account
+      const [businessAccount] = await db
+        .select()
+        .from(shopeeBusinessAccounts)
+        .where(eq(shopeeBusinessAccounts.id, businessAccountId));
+
+      if (!businessAccount) {
+        return res.status(404).json({ error: "Business account not found" });
+      }
+
+      console.log(`🚀 Starting ${syncType} sync for shop: ${businessAccount.shopId}`);
+
+      let result;
+      switch (syncType) {
+        case 'orders':
+          result = await syncService.syncOrders(businessAccountId, businessAccount.shopId);
+          break;
+        case 'products':
+          result = await syncService.syncProducts(businessAccountId, businessAccount.shopId);
+          break;
+        case 'full':
+        default:
+          result = await syncService.fullShopSync(businessAccountId, businessAccount.shopId);
+          break;
+      }
+
+      res.json({
+        success: true,
+        message: `${syncType} sync completed for shop: ${businessAccount.shopName}`,
+        result
+      });
+
+    } catch (error) {
+      console.error("Error syncing Shopee data:", error);
+      res.status(500).json({ 
+        error: "Sync failed", 
+        message: error instanceof Error ? error.message : "Unknown sync error"
+      });
+    }
+  });
+
+  app.get("/api/shopee-shop/sync-status", requireAdminAuth, async (req, res) => {
+    try {
+      const syncService = createShopeeApiSync();
+      const isAvailable = !!syncService;
+      
+      res.json({
+        syncAvailable: isAvailable,
+        message: isAvailable 
+          ? "Real Shopee API sync is available" 
+          : "Using demo data - add SHOPEE_PARTNER_ID and SHOPEE_PARTNER_KEY for real sync",
+        demoMode: !isAvailable
+      });
+    } catch (error) {
+      console.error("Error checking sync status:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
