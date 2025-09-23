@@ -128,7 +128,7 @@ export class ShopeeApiSyncService {
               shippingCarrier: detailedOrder.shipping_carrier || 'shopee',
               orderDate: new Date(detailedOrder.create_time * 1000),
               createTime: new Date(detailedOrder.create_time * 1000),
-              updateTime: new Date(detailedOrder.update_time * 1000),
+              updatedAt: new Date(detailedOrder.update_time * 1000),
               payTime: detailedOrder.pay_time ? new Date(detailedOrder.pay_time * 1000) : null,
               shipTime: detailedOrder.ship_time ? new Date(detailedOrder.ship_time * 1000) : null,
               deliveryTime: detailedOrder.delivery_time ? new Date(detailedOrder.delivery_time * 1000) : null,
@@ -155,13 +155,11 @@ export class ShopeeApiSyncService {
                 customerInfo: orderData.customerInfo,
                 totalAmount: orderData.totalAmount,
                 items: orderData.items,
-                updateTime: orderData.updateTime,
                 trackingNumber: orderData.trackingNumber,
                 payTime: orderData.payTime,
                 shipTime: orderData.shipTime,
                 deliveryTime: orderData.deliveryTime,
                 paymentMethod: orderData.paymentMethod,
-                paymentStatus: orderData.paymentStatus,
                 shippingCarrier: orderData.shippingCarrier,
                 updatedAt: new Date()
               }
@@ -271,7 +269,7 @@ export class ShopeeApiSyncService {
               sales: 0,
               views: 0,
               likes: 0,
-              rating: 0,
+              rating: '0',
               reviewCount: 0,
               images: detailedProduct.image?.image_url_list || [],
               videos: [],
@@ -279,12 +277,12 @@ export class ShopeeApiSyncService {
               logisticEnabled: detailedProduct.logistic_info?.enabled || false,
               daysToShip: detailedProduct.logistic_info?.days_to_ship || 7,
               createTime: new Date(detailedProduct.create_time * 1000),
-              updateTime: new Date(detailedProduct.update_time * 1000),
+              updatedAt: new Date(detailedProduct.update_time * 1000),
               tagIds: []
             };
 
             // Insert or update product in database
-            await db.insert(shopeeShopProducts).values(productData).onConflictDoUpdate({
+            await db.insert(shopeeShopProducts).values([productData]).onConflictDoUpdate({
               target: shopeeShopProducts.shopeeItemId,
               set: {
                 itemName: productData.itemName,
@@ -293,7 +291,6 @@ export class ShopeeApiSyncService {
                 originalPrice: productData.originalPrice,
                 currentPrice: productData.currentPrice,
                 itemStatus: productData.itemStatus,
-                updateTime: productData.updateTime,
                 description: productData.description,
                 weight: productData.weight,
                 dimension: productData.dimension,
@@ -324,6 +321,96 @@ export class ShopeeApiSyncService {
         syncedCount: 0, 
         errors: [error instanceof Error ? error.message : 'Unknown sync error'] 
       };
+    }
+  }
+
+  /**
+   * Get detailed order information from Shopee API
+   * NEW: Dedicated method for fetching single order details
+   */
+  async getOrderDetail(businessAccountId: string, shopId: string, orderSn: string): Promise<any> {
+    try {
+      console.log(`🔍 Fetching order details for: ${orderSn} from shop: ${shopId}`);
+      
+      const orderDetail = await this.shopeeAuth.makeAuthenticatedRequest(
+        'order/get_order_detail',
+        shopId,
+        'GET',
+        {
+          order_sn_list: orderSn,
+          response_optional_fields: 'buyer_user_id,buyer_username,estimated_shipping_fee,recipient_address,actual_shipping_fee,goods_to_receive,note,note_update_time,item_list,pay_time,dropshipper,dropshipper_phone,split_up,buyer_cancel_reason,cancel_by,cancel_reason,actual_shipping_fee_confirmed,buyer_cpf_id,fulfillment_flag,pickup_done_time,package_list,shipping_carrier,payment_method,total_amount,buyer_username,invoice_data'
+        }
+      );
+
+      if (!orderDetail?.response?.order_list?.[0]) {
+        throw new Error(`Order ${orderSn} not found on Shopee`);
+      }
+
+      const detailedOrder = orderDetail.response.order_list[0];
+      
+      // Map to our format
+      const mappedOrder = {
+        shopeeOrderId: detailedOrder.order_sn,
+        orderSn: detailedOrder.order_sn,
+        shopId: shopId,
+        businessAccountId: businessAccountId,
+        orderNumber: detailedOrder.order_sn,
+        orderStatus: this.mapShopeeOrderStatus(detailedOrder.order_status),
+        customerInfo: {
+          buyerUserId: detailedOrder.buyer_user_id || '',
+          buyerUsername: detailedOrder.buyer_username || '',
+          recipientAddress: {
+            name: detailedOrder.recipient_address?.name || '',
+            phone: detailedOrder.recipient_address?.phone || '',
+            fullAddress: detailedOrder.recipient_address?.full_address || '',
+            district: detailedOrder.recipient_address?.district || '',
+            city: detailedOrder.recipient_address?.city || '',
+            state: detailedOrder.recipient_address?.state || '',
+            zipCode: detailedOrder.recipient_address?.zipcode || '',
+            country: detailedOrder.recipient_address?.country || 'VN'
+          }
+        },
+        totalAmount: (detailedOrder.total_amount / 100000).toString(),
+        currency: 'VND',
+        actualShippingFee: ((detailedOrder.actual_shipping_fee || 0) / 100000).toString(),
+        goodsToReceive: ((detailedOrder.goods_to_receive || 0) / 100000).toString(),
+        items: detailedOrder.item_list?.map((item: any) => ({
+          itemId: item.item_id?.toString() || '',
+          itemName: item.item_name || '',
+          itemSku: item.item_sku || '',
+          modelId: item.model_id?.toString(),
+          modelName: item.model_name,
+          modelSku: item.model_sku,
+          modelQuantityPurchased: item.model_quantity_purchased || 0,
+          modelOriginalPrice: (item.model_original_price || 0) / 100000,
+          modelDiscountedPrice: (item.model_discounted_price || 0) / 100000,
+          wholesalePrice: item.wholesale_price != null ? item.wholesale_price / 100000 : undefined,
+          weight: item.weight || 0,
+          itemImageUrl: item.item_image?.image_url || '',
+          // Add-on specific fields (extra features)
+          addOnList: item.add_on_deal?.add_on_deal_list || [],
+          mainItem: item.main_item,
+          addOnDealId: item.add_on_deal?.add_on_deal_id
+        })) || [],
+        shippingCarrier: detailedOrder.package_list?.[0]?.shipping_carrier || detailedOrder.shipping_carrier,
+        trackingNumber: detailedOrder.package_list?.[0]?.tracking_number || detailedOrder.tracking_number || '',
+        paymentMethod: detailedOrder.payment_method,
+        payTime: detailedOrder.pay_time ? new Date(detailedOrder.pay_time * 1000) : null,
+        shipTime: detailedOrder.ship_time ? new Date(detailedOrder.ship_time * 1000) : null,
+        deliveryTime: detailedOrder.delivery_time ? new Date(detailedOrder.delivery_time * 1000) : null,
+        notes: detailedOrder.note || '',
+        createTime: new Date(detailedOrder.create_time * 1000),
+        updatedAt: new Date(detailedOrder.update_time * 1000),
+        // Raw Shopee data for reference
+        shopeeRawData: detailedOrder
+      };
+
+      console.log(`✅ Order details fetched successfully for: ${orderSn}`);
+      return mappedOrder;
+
+    } catch (error) {
+      console.error(`❌ Failed to fetch order details for ${orderSn}:`, error);
+      throw error;
     }
   }
 

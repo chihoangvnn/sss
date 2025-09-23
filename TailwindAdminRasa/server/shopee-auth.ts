@@ -282,44 +282,63 @@ class ShopeeAuthService {
 
   /**
    * Check if access token is expired and refresh if needed
+   * ENHANCED: Better error handling, logging, and 10-minute buffer
    */
   async ensureValidToken(shopId: string): Promise<string | null> {
-    const account = await this.getBusinessAccount(shopId);
-    
-    if (!account || !account.accessToken) {
+    try {
+      const account = await this.getBusinessAccount(shopId);
+      
+      if (!account || !account.accessToken) {
+        console.log(`❌ No account or access token found for shop: ${shopId}`);
+        return null;
+      }
+
+      // Check if token expires within next 10 minutes (enhanced buffer)
+      const expiresAt = account.tokenExpiresAt;
+      const now = Date.now();
+      const tenMinutesFromNow = now + 10 * 60 * 1000;
+      
+      if (expiresAt && expiresAt.getTime() < tenMinutesFromNow) {
+        console.log(`🔄 Token expires soon for shop ${shopId}, refreshing...`);
+        
+        if (account.refreshToken) {
+          // 🔒 CRITICAL FIX: Decrypt refreshToken before using it
+          const decryptedRefreshToken = decryptSecret(account.refreshToken);
+          const refreshResult = await this.refreshAccessToken(decryptedRefreshToken, shopId);
+          
+          if (refreshResult.success && refreshResult.accessToken) {
+            // Update database with new encrypted tokens
+            await db.update(shopeeBusinessAccounts)
+              .set({
+                accessToken: encryptSecret(refreshResult.accessToken!),
+                refreshToken: encryptSecret(refreshResult.refreshToken!),
+                tokenExpiresAt: refreshResult.expiresAt,
+                lastSync: new Date(),
+                updatedAt: new Date()
+              })
+              .where(eq(shopeeBusinessAccounts.shopId, shopId));
+            
+            console.log(`✅ Token refreshed successfully for shop: ${shopId}`);
+            return refreshResult.accessToken;
+          } else {
+            console.error(`❌ Token refresh failed for shop ${shopId}:`, refreshResult.error);
+          }
+        } else {
+          console.error(`❌ No refresh token available for shop: ${shopId}`);
+        }
+        
+        return null; // Failed to refresh
+      }
+
+      // Token is still valid, return decrypted version
+      const decryptedToken = decryptSecret(account.accessToken);
+      console.log(`✅ Using valid token for shop: ${shopId} (expires: ${expiresAt?.toISOString()})`);
+      return decryptedToken;
+      
+    } catch (error) {
+      console.error(`❌ Error ensuring valid token for shop ${shopId}:`, error);
       return null;
     }
-
-    // Check if token expires within next 5 minutes
-    const expiresAt = account.tokenExpiresAt;
-    if (expiresAt && expiresAt.getTime() < Date.now() + 5 * 60 * 1000) {
-      // Token is expired or expiring soon, refresh it
-      if (account.refreshToken) {
-        // 🔒 CRITICAL FIX: Decrypt refreshToken before using it
-        const decryptedRefreshToken = decryptSecret(account.refreshToken);
-        const refreshResult = await this.refreshAccessToken(decryptedRefreshToken, shopId);
-        
-        if (refreshResult.success && refreshResult.accessToken) {
-          // Update database with new encrypted tokens
-          await db.update(shopeeBusinessAccounts)
-            .set({
-              accessToken: encryptSecret(refreshResult.accessToken!),
-              refreshToken: encryptSecret(refreshResult.refreshToken!),
-              tokenExpiresAt: refreshResult.expiresAt,
-              lastSync: new Date(),
-              updatedAt: new Date()
-            })
-            .where(eq(shopeeBusinessAccounts.shopId, shopId));
-          
-          return refreshResult.accessToken;
-        }
-      }
-      
-      return null; // Failed to refresh
-    }
-
-    // 🔒 CRITICAL FIX: Decrypt token before returning
-    return decryptSecret(account.accessToken);
   }
 
   /**
