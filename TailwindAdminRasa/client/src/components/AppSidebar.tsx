@@ -24,7 +24,8 @@ import {
   Monitor,
   Cloud,
   Star,
-  Bot
+  Bot,
+  CreditCard
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -73,6 +74,13 @@ const coreBusinessItems = [
     badge: "12",
     gradient: "gradient-pink",
     description: "Theo dõi và xử lý đơn hàng"
+  },
+  {
+    title: "Bán hàng",
+    url: "/pos",
+    icon: CreditCard,
+    gradient: "gradient-blue",
+    description: "Giao diện bán hàng POS"
   },
   {
     title: "Khách hàng",
