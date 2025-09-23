@@ -16,7 +16,8 @@ if (process.env.NODE_ENV === 'production') {
 // CORS configuration for custom domain support
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || [
   'http://localhost:3000',
-  'http://localhost:5000', 
+  'http://localhost:5000',
+  'http://127.0.0.1:5000', // Fix CORS for dev environment
   'https://your-storefront.vercel.app',
   'https://yourdomain.com',
   'https://www.yourdomain.com'

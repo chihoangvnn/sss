@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import ShopeeAuthService from './shopee-auth.js';
 import { shopeeOrdersService } from './shopee-orders.js';
 import { shopeeSellerService } from './shopee-seller.js';
+import { shopeeFulfillmentService } from './shopee-fulfillment.js';
 import { insertShopeeBusinessAccountSchema, insertShopeeShopOrderSchema, insertShopeeShopProductSchema } from '../shared/schema.js';
 
 // Create OAuth state storage (in production, use Redis or persistent storage)
@@ -292,6 +293,113 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
       res.json({ alerts });
     } catch (error) {
       console.error("Error fetching Shopee inventory alerts:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Shopee Fulfillment Routes
+  app.get("/api/shopee-shop/fulfillment/queue", requireAdminAuth, async (req, res) => {
+    try {
+      const businessAccountId = req.query.businessAccountId as string;
+      const status = req.query.status as string;
+      const priority = req.query.priority as string;
+      const search = req.query.search as string;
+      
+      if (!businessAccountId) {
+        return res.status(400).json({ error: "Business Account ID is required" });
+      }
+
+      const filters: any = {};
+      if (status && status !== 'all') filters.status = status;
+      if (priority && priority !== 'all') filters.priority = priority;
+
+      const queue = await shopeeFulfillmentService.getFulfillmentQueue(businessAccountId, filters);
+      
+      // Apply search filter if provided
+      let filteredQueue = queue;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredQueue = queue.filter(task => 
+          task.orderNumber.toLowerCase().includes(searchLower) ||
+          task.customerName.toLowerCase().includes(searchLower)
+        );
+      }
+
+      res.json(filteredQueue);
+    } catch (error) {
+      console.error("Error fetching Shopee fulfillment queue:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/shopee-shop/fulfillment/stats", requireAdminAuth, async (req, res) => {
+    try {
+      const businessAccountId = req.query.businessAccountId as string;
+      
+      if (!businessAccountId) {
+        return res.status(400).json({ error: "Business Account ID is required" });
+      }
+
+      const stats = await shopeeFulfillmentService.getFulfillmentStats(businessAccountId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching Shopee fulfillment stats:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/shopee-shop/fulfillment/tasks/:taskId/status", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      const { status, ...updates } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+
+      const updatedTask = await shopeeFulfillmentService.updateTaskStatus(taskId, status, updates);
+      res.json(updatedTask);
+    } catch (error) {
+      console.error("Error updating Shopee fulfillment task status:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/shopee-shop/fulfillment/tasks/:taskId/shipping-label", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { taskId } = req.params;
+      
+      const label = await shopeeFulfillmentService.generateShippingLabel(taskId);
+      
+      // For demo purposes, return the label info
+      // In production, this would return the actual PDF file
+      res.json({
+        success: true,
+        label,
+        message: "Shipping label generated successfully"
+      });
+    } catch (error) {
+      console.error("Error generating Shopee shipping label:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/shopee-shop/fulfillment/bulk-update", requireAdminAuth, requireCSRFToken, async (req, res) => {
+    try {
+      const { orderIds, action } = req.body;
+      
+      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+        return res.status(400).json({ error: "Order IDs array is required" });
+      }
+      
+      if (!action) {
+        return res.status(400).json({ error: "Action is required" });
+      }
+
+      const result = await shopeeFulfillmentService.batchProcessOrders(orderIds, action);
+      res.json(result);
+    } catch (error) {
+      console.error("Error with Shopee bulk fulfillment update:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
