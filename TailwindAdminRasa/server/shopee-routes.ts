@@ -5,7 +5,9 @@ import ShopeeAuthService from './shopee-auth.js';
 import { shopeeOrdersService } from './shopee-orders.js';
 import { shopeeSellerService } from './shopee-seller.js';
 import { shopeeFulfillmentService } from './shopee-fulfillment.js';
-import { insertShopeeBusinessAccountSchema, insertShopeeShopOrderSchema, insertShopeeShopProductSchema } from '../shared/schema.js';
+import { db } from './db.js';
+import { eq } from 'drizzle-orm';
+import { shopeeBusinessAccounts, insertShopeeBusinessAccountSchema, insertShopeeShopOrderSchema, insertShopeeShopProductSchema } from '../shared/schema.js';
 
 // Create OAuth state storage (in production, use Redis or persistent storage)
 const oauthStates = new Map();
@@ -15,12 +17,15 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
   // Shopee Authentication Routes - SECURED
   app.post("/api/shopee-shop/connect", requireAdminAuth, requireCSRFToken, async (req, res) => {
     try {
-      const { partnerId, partnerKey, region = 'VN' } = req.body;
+      // Get credentials from environment (secure server-side storage)
+      const partnerId = process.env.SHOPEE_PARTNER_ID;
+      const partnerKey = process.env.SHOPEE_PARTNER_KEY;
+      const region = req.body.region || 'VN';
       
       if (!partnerId || !partnerKey) {
-        return res.status(400).json({ 
-          error: "Missing required credentials",
-          message: "Partner ID and Partner Key are required"
+        return res.status(500).json({ 
+          error: "Shopee credentials not configured",
+          message: "Please contact administrator to configure Shopee Partner credentials"
         });
       }
 
@@ -123,62 +128,48 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
   // Shopee disconnect route  
   app.delete("/api/shopee-shop/disconnect/:accountId", requireAdminAuth, requireCSRFToken, async (req, res) => {
     try {
-      const { code, shop_id, state, error } = req.query;
+      const { accountId } = req.params;
       
-      if (error) {
-        console.error('Shopee OAuth error:', error);
-        return res.redirect('/shopee-shop?error=access_denied');
-      }
-      
-      if (!code || !shop_id || !state || typeof code !== 'string' || typeof shop_id !== 'string' || typeof state !== 'string') {
-        return res.redirect('/shopee-shop?error=invalid_request');
-      }
-      
-      // Verify state parameter
-      const storedState = oauthStates.get(state);
-      if (!storedState || storedState.platform !== 'shopee') {
-        return res.redirect('/shopee-shop?error=invalid_state');
-      }
-      
-      // Clean up state
-      oauthStates.delete(state);
-      
-      const shopeeAuth = storedState.shopeeAuth;
-      
-      // Exchange code for token
-      const tokenResult = await shopeeAuth.exchangeCodeForToken(code, shop_id);
-      
-      if (!tokenResult.success) {
-        console.error('Shopee token exchange failed:', tokenResult.error);
-        return res.redirect('/shopee-shop?error=token_exchange_failed');
+      if (!accountId) {
+        return res.status(400).json({ error: "Account ID is required" });
       }
 
-      // Store business account (would need shop info from Shopee API)
-      const shopInfo = {
-        shop_name: `Shopee Shop ${shop_id}`,
-        shop_logo: null,
-        shop_type: 'normal',
-        contact_email: null,
-        contact_phone: null
-      };
-
-      await shopeeAuth.storeBusinessAccount({
-        accessToken: tokenResult.accessToken!,
-        refreshToken: tokenResult.refreshToken!,
-        expiresAt: tokenResult.expiresAt!,
-        shopId: shop_id
-      }, shopInfo);
+      // Delete from shopeeBusinessAccounts table
+      const result = await db.delete(shopeeBusinessAccounts).where(eq(shopeeBusinessAccounts.id, accountId));
       
-      // Redirect to success page
-      const allowedPaths = ['/shopee-shop', '/social-media', '/marketplace'];
-      const redirectPath = (storedState.redirectUrl && allowedPaths.includes(storedState.redirectUrl)) 
-        ? storedState.redirectUrl 
-        : '/shopee-shop';
-      
-      res.redirect(`${redirectPath}?success=shopee_connected`);
+      console.log(`Shopee account disconnected: ${accountId}`);
+      res.json({ success: true, message: "Shopee account disconnected successfully" });
     } catch (error) {
-      console.error("Error in Shopee OAuth callback:", error);
-      res.redirect('/shopee-shop?error=authentication_failed');
+      console.error("Error disconnecting Shopee account:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get connected Shopee business accounts
+  app.get("/api/shopee-shop/accounts", requireAdminAuth, async (req, res) => {
+    try {
+      const accounts = await db
+        .select({
+          id: shopeeBusinessAccounts.id,
+          shopId: shopeeBusinessAccounts.shopId,
+          displayName: shopeeBusinessAccounts.displayName,
+          shopName: shopeeBusinessAccounts.shopName,
+          shopLogo: shopeeBusinessAccounts.shopLogo,
+          connected: shopeeBusinessAccounts.connected,
+          isActive: shopeeBusinessAccounts.isActive,
+          region: shopeeBusinessAccounts.region,
+          shopType: shopeeBusinessAccounts.shopType,
+          createdAt: shopeeBusinessAccounts.createdAt,
+          lastSync: shopeeBusinessAccounts.lastSync
+        })
+        .from(shopeeBusinessAccounts)
+        .where(eq(shopeeBusinessAccounts.connected, true))
+        .orderBy(shopeeBusinessAccounts.createdAt);
+
+      res.json({ accounts });
+    } catch (error) {
+      console.error("Error fetching Shopee accounts:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 

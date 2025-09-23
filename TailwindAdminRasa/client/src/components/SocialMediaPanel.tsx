@@ -403,9 +403,6 @@ export function SocialMediaPanel({
   const connectShopeeMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/shopee-shop/connect', { 
-        partnerId: 'your-partner-id', // TODO: Get from user input or config
-        partnerKey: 'your-partner-key', // TODO: Get from user input or config
-        region: 'VN',
         redirectUrl: '/shopee' 
       });
       return await response.json();

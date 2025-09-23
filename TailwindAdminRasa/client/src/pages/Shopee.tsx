@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,14 +32,36 @@ export default function Shopee() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedBusinessAccountId, setSelectedBusinessAccountId] = useState<string | null>(null);
 
-  // Mock business account for demo - would be fetched from API
-  const mockBusinessAccount = {
-    id: "shopee-business-001",
-    shopName: "My Shopee Store",
-    shopId: "123456789",
-    status: "active",
-    isConnected: false // Change to true when connected
-  };
+  // Fetch real business accounts from API
+  const { data: businessAccounts, isLoading, refetch } = useQuery({
+    queryKey: ['shopee-accounts'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/shopee-shop/accounts');
+      return await response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const connectedAccounts = businessAccounts?.accounts || [];
+  const isConnected = connectedAccounts.length > 0;
+  const primaryAccount = connectedAccounts[0] || null;
+
+  // Set selected account if available
+  useEffect(() => {
+    if (primaryAccount && !selectedBusinessAccountId) {
+      setSelectedBusinessAccountId(primaryAccount.id);
+    }
+  }, [primaryAccount, selectedBusinessAccountId]);
+
+  // Handle connection success from OAuth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('connected') === 'true') {
+      refetch(); // Refresh accounts after successful connection
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [refetch]);
 
   return (
     <div className="min-h-screen bg-gray-50" data-testid="page-shopee">
@@ -58,10 +82,15 @@ export default function Shopee() {
             </div>
             
             <div className="flex items-center gap-3">
-              {mockBusinessAccount.isConnected ? (
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                  <span className="text-sm">Đang kiểm tra...</span>
+                </div>
+              ) : isConnected && primaryAccount ? (
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-300" />
-                  <span className="text-sm">Đã kết nối: {mockBusinessAccount.shopName}</span>
+                  <span className="text-sm">Đã kết nối: {primaryAccount.shopName || `Shop ${primaryAccount.shopId}`}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -75,7 +104,7 @@ export default function Shopee() {
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        {!mockBusinessAccount.isConnected ? (
+        {!isConnected ? (
           /* Connection Required State */
           <div className="max-w-2xl mx-auto">
             <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-red-50">
