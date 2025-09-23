@@ -25,7 +25,10 @@ import {
   Printer,
   Settings,
   RotateCcw,
-  Receipt
+  Receipt,
+  Filter,
+  Tag,
+  Grid3x3
 } from "lucide-react";
 import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
@@ -34,7 +37,7 @@ import { DecimalQuantityInput } from "@/components/DecimalQuantityInput";
 import { ReceiptPrinter } from "@/components/ReceiptPrinter";
 import { ReceiptSettings, useReceiptSettings } from "@/components/ReceiptSettings";
 import { useTabManager, type CartItem } from "@/components/TabManager";
-import type { Product, Customer, Order, OrderItem, ShopSettings } from "@shared/schema";
+import type { Product, Customer, Order, OrderItem, ShopSettings, Category } from "@shared/schema";
 
 interface POSProps {}
 
@@ -57,6 +60,11 @@ export default function POS({}: POSProps) {
   // Tab Manager
   const tabManager = useTabManager();
   
+  // Get current tab data safely - avoid destructuring to prevent initialization errors
+  const activeTab = tabManager.activeTab;
+  const setCategoryFilter = tabManager.setCategoryFilter;
+  const selectedCategoryId = activeTab?.selectedCategoryId || null;
+  
   // Receipt Settings
   const [receiptConfig, setReceiptConfig] = useReceiptSettings();
   
@@ -74,10 +82,30 @@ export default function POS({}: POSProps) {
     customer?: Customer;
   } | null>(null);
 
-  // Fetch products
+  // Fetch categories with caching
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+    queryFn: () => fetch('/api/categories').then(res => res.json()),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+  });
+
+  // Fetch products with category and search filtering
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ['/api/products'],
-    queryFn: () => fetch('/api/products').then(res => res.json()),
+    queryKey: ['/api/products', { categoryId: selectedCategoryId, search: searchTerm }],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (selectedCategoryId) {
+        params.append('categoryId', selectedCategoryId);
+      }
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
+      const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`;
+      return fetch(url).then(res => res.json());
+    },
+    keepPreviousData: true, // Keep previous data while fetching new data
+    enabled: true, // Always enabled
   });
 
   // Fetch shop settings
@@ -99,11 +127,8 @@ export default function POS({}: POSProps) {
   // Ensure products is always an array (defensive programming)
   const safeProducts = Array.isArray(products) ? products : [];
 
-  // Filter products by search
-  const filteredProducts = safeProducts.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Products are now filtered by API, but keep defensive filtering for edge cases
+  const filteredProducts = safeProducts;
 
   // Decimal-safe arithmetic functions
   const toIntegerCents = (price: string | number): number => {
@@ -119,10 +144,9 @@ export default function POS({}: POSProps) {
     return cents / 100; // Convert back to VND
   };
 
-  // Get current tab data
-  const { activeTab } = tabManager;
-  const cart = activeTab.cart;
-  const selectedCustomer = activeTab.selectedCustomer;
+  // Get cart and customer data from activeTab with safety checks
+  const cart = activeTab?.cart || [];
+  const selectedCustomer = activeTab?.selectedCustomer || null;
   
   // Decimal-safe cart calculations using integer arithmetic
   const cartTotalCents = cart.reduce((totalCents, item) => {
@@ -222,6 +246,16 @@ export default function POS({}: POSProps) {
 
   // Add to cart with decimal support
   const addToCart = (product: Product) => {
+    // Safety check: ensure tabManager and activeTab are available
+    if (!tabManager || !activeTab) {
+      toast({
+        title: "Lỗi hệ thống",
+        description: "Tab Manager chưa được khởi tạo",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (product.status === 'out-of-stock' || product.stock <= 0) {
       toast({
         title: "Hết hàng",
@@ -256,12 +290,22 @@ export default function POS({}: POSProps) {
 
     toast({
       title: "Đã thêm vào giỏ",
-      description: `${product.name} đã được thêm vào ${tabManager.activeTab.name}`,
+      description: `${product.name} đã được thêm vào ${tabManager.activeTab?.name || 'giỏ hàng'}`,
     });
   };
 
   // Update quantity with decimal support
   const updateQuantity = (productId: string, newQuantity: number) => {
+    // Safety check: ensure tabManager is available
+    if (!tabManager) {
+      toast({
+        title: "Lỗi hệ thống",
+        description: "Tab Manager chưa được khởi tạo",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const product = cart.find(item => item.product.id === productId)?.product;
     
     if (product) {
@@ -305,11 +349,13 @@ export default function POS({}: POSProps) {
 
   // Remove from cart
   const removeFromCart = (productId: string) => {
+    if (!tabManager) return;
     tabManager.removeFromCart(productId);
   };
 
   // Clear cart
   const clearCart = () => {
+    if (!tabManager) return;
     tabManager.clearActiveTab();
   };
 
@@ -763,8 +809,9 @@ export default function POS({}: POSProps) {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side - Products */}
         <div className="flex-1 flex flex-col bg-white">
-          {/* Search */}
-          <div className="p-4 border-b">
+          {/* Search & Category Filter */}
+          <div className="p-4 border-b space-y-3">
+            {/* Search Section */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">Tìm sản phẩm</label>
@@ -792,6 +839,94 @@ export default function POS({}: POSProps) {
                   📷 Quét mã vạch
                 </Button>
               </div>
+            </div>
+
+            {/* Category Filter Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">Danh mục sản phẩm</label>
+                <div className="flex items-center space-x-1 text-xs text-gray-500">
+                  <Grid3x3 className="h-3 w-3" />
+                  <span>{filteredProducts.length} sản phẩm</span>
+                </div>
+              </div>
+              
+              {/* Category Buttons */}
+              <div className="flex flex-wrap gap-2">
+                {categoriesLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-pulse h-8 w-20 bg-gray-200 rounded-full"></div>
+                    <div className="animate-pulse h-8 w-24 bg-gray-200 rounded-full"></div>
+                    <div className="animate-pulse h-8 w-16 bg-gray-200 rounded-full"></div>
+                  </div>
+                ) : (
+                  <>
+                    {/* All Categories Button */}
+                    <Button
+                      variant={selectedCategoryId === null ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCategoryFilter(null)}
+                      className={`
+                        text-sm font-medium transition-all duration-200
+                        ${selectedCategoryId === null 
+                          ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 border-blue-600' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                        }
+                      `}
+                    >
+                      <Tag className="h-4 w-4 mr-1" />
+                      Tất cả
+                    </Button>
+                    
+                    {/* Individual Category Buttons */}
+                    {categories.map((category) => {
+                      const isSelected = selectedCategoryId === category.id;
+                      return (
+                        <Button
+                          key={category.id}
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCategoryFilter(category.id)}
+                          className={`
+                            text-sm font-medium transition-all duration-200
+                            ${isSelected 
+                              ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 border-blue-600' 
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                            }
+                          `}
+                        >
+                          <Filter className="h-4 w-4 mr-1" />
+                          {category.name}
+                        </Button>
+                      );
+                    })}
+                    
+                    {categories.length === 0 && (
+                      <div className="text-sm text-gray-500 italic">
+                        Chưa có danh mục nào
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              {/* Active Filter Info */}
+              {selectedCategoryId && (
+                <div className="flex items-center space-x-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                  <Filter className="h-3 w-3" />
+                  <span>
+                    Đang lọc: {categories.find(c => c.id === selectedCategoryId)?.name}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCategoryFilter(null)}
+                    className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 

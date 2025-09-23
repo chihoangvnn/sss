@@ -13,6 +13,7 @@ export interface TabState {
   name: string;
   cart: CartItem[];
   selectedCustomer: Customer | null;
+  selectedCategoryId: string | null; // Add category filter state
   status: TabStatus;
   lastModified: Date;
 }
@@ -27,6 +28,7 @@ const createEmptyTab = (id: string, name: string): TabState => ({
   name,
   cart: [],
   selectedCustomer: null,
+  selectedCategoryId: null, // Initialize category filter as null (All Categories)
   status: 'empty',
   lastModified: new Date(),
 });
@@ -176,6 +178,7 @@ export const useTabManager = () => {
     updateTab(state.activeTabId, {
       cart: [],
       selectedCustomer: null,
+      selectedCategoryId: null, // Reset category filter
       status: 'empty',
     });
   }, [state.activeTabId, updateTab]);
@@ -185,6 +188,7 @@ export const useTabManager = () => {
     updateTab(tabId, {
       cart: [],
       selectedCustomer: null,
+      selectedCategoryId: null, // Reset category filter
       status: 'empty',
     });
   }, [updateTab]);
@@ -197,6 +201,7 @@ export const useTabManager = () => {
         ...tab,
         cart: [],
         selectedCustomer: null,
+        selectedCategoryId: null, // Reset category filter
         status: 'empty' as TabStatus,
         lastModified: new Date(),
       })),
@@ -237,6 +242,11 @@ export const useTabManager = () => {
     };
   }, []);
 
+  // Set category filter for active tab
+  const setCategoryFilter = useCallback((categoryId: string | null) => {
+    updateTab(state.activeTabId, { selectedCategoryId: categoryId });
+  }, [state.activeTabId, updateTab]);
+
   // Duplicate tab to another tab
   const duplicateTab = useCallback((sourceTabId: string, targetTabId: string) => {
     const sourceTab = state.tabs.find(tab => tab.id === sourceTabId);
@@ -245,6 +255,7 @@ export const useTabManager = () => {
     updateTab(targetTabId, {
       cart: [...sourceTab.cart],
       selectedCustomer: sourceTab.selectedCustomer,
+      selectedCategoryId: sourceTab.selectedCategoryId, // Duplicate category filter
     });
   }, [state.tabs, updateTab]);
 
@@ -260,6 +271,7 @@ export const useTabManager = () => {
     updateQuantity,
     removeFromCart,
     setCustomer,
+    setCategoryFilter,
     clearActiveTab,
     clearTab,
     clearAllTabs,
