@@ -16,18 +16,19 @@ import {
   QrCode,
   User,
   Calculator,
-  Camera
+  Camera,
+  X,
+  MoreVertical,
+  CheckCircle,
+  Circle,
+  Clock
 } from "lucide-react";
 import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
 import { QRScanner } from "@/components/QRScanner";
 import { DecimalQuantityInput } from "@/components/DecimalQuantityInput";
+import { useTabManager, type CartItem } from "@/components/TabManager";
 import type { Product, Customer, Order } from "@shared/schema";
-
-interface CartItem {
-  product: Product;
-  quantity: number;
-}
 
 interface POSProps {}
 
@@ -47,9 +48,10 @@ export default function POS({}: POSProps) {
   const productSearchRef = useRef<HTMLInputElement>(null);
   const customerSearchRef = useRef<CustomerSearchInputRef>(null);
   
-  // State
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  // Tab Manager
+  const tabManager = useTabManager();
+  
+  // Global state (not tab-specific)
   const [searchTerm, setSearchTerm] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
@@ -62,8 +64,11 @@ export default function POS({}: POSProps) {
     queryFn: () => fetch('/api/products').then(res => res.json()),
   });
 
+  // Ensure products is always an array (defensive programming)
+  const safeProducts = Array.isArray(products) ? products : [];
+
   // Filter products by search
-  const filteredProducts = products.filter(product =>
+  const filteredProducts = safeProducts.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -82,6 +87,11 @@ export default function POS({}: POSProps) {
     return cents / 100; // Convert back to VND
   };
 
+  // Get current tab data
+  const { activeTab } = tabManager;
+  const cart = activeTab.cart;
+  const selectedCustomer = activeTab.selectedCustomer;
+  
   // Decimal-safe cart calculations using integer arithmetic
   const cartTotalCents = cart.reduce((totalCents, item) => {
     const priceCents = toIntegerCents(item.product.price);
@@ -119,12 +129,18 @@ export default function POS({}: POSProps) {
     };
   };
 
-  // Keyboard shortcuts for F2 and F3
+  // Keyboard shortcuts for F2, F3, and 1-5 for tab switching
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Prevent default browser behavior for F2 and F3
-      if (event.key === 'F2' || event.key === 'F3') {
-        event.preventDefault();
+      // Prevent default browser behavior for F2, F3, and 1-5
+      if (event.key === 'F2' || event.key === 'F3' || ['1', '2', '3', '4', '5'].includes(event.key)) {
+        // Only prevent default if not typing in an input field
+        const activeElement = document.activeElement;
+        const isTyping = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+        
+        if (!isTyping || event.key === 'F2' || event.key === 'F3') {
+          event.preventDefault();
+        }
       }
 
       // F2: Focus product search
@@ -146,6 +162,21 @@ export default function POS({}: POSProps) {
           duration: 1500,
         });
       }
+
+      // 1-5: Switch tabs (only when not typing)
+      const activeElement = document.activeElement;
+      const isTyping = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+      
+      if (!isTyping && ['1', '2', '3', '4', '5'].includes(event.key)) {
+        const tabIndex = parseInt(event.key) - 1;
+        const targetTabId = `tab-${event.key}`;
+        tabManager.switchToTab(targetTabId);
+        toast({
+          title: `Đã chuyển sang ${tabManager.tabs[tabIndex].name}`,
+          description: `Phím tắt: ${event.key}`,
+          duration: 1000,
+        });
+      }
     };
 
     // Add event listener
@@ -155,7 +186,7 @@ export default function POS({}: POSProps) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [toast]);
+  }, [toast, tabManager]);
 
   // Add to cart with decimal support
   const addToCart = (product: Product) => {
@@ -169,38 +200,31 @@ export default function POS({}: POSProps) {
     }
 
     const { quantityStep, minQuantity } = getProductUnitSettings(product);
-
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.product.id === product.id);
+    const existingItem = cart.find(item => item.product.id === product.id);
+    
+    if (existingItem) {
+      const newQuantity = existingItem.quantity + quantityStep;
       
-      if (existingItem) {
-        const newQuantity = existingItem.quantity + quantityStep;
-        
-        // Check if we have enough stock
-        if (newQuantity > product.stock) {
-          toast({
-            title: "Không đủ hàng",
-            description: `Chỉ còn ${product.stock} sản phẩm trong kho`,
-            variant: "destructive",
-          });
-          return prevCart;
-        }
-        
-        return prevCart.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: newQuantity }
-            : item
-        );
-      } else {
-        // Use minimum quantity for initial add
-        const initialQuantity = Math.max(quantityStep, minQuantity);
-        return [...prevCart, { product, quantity: initialQuantity }];
+      // Check if we have enough stock
+      if (newQuantity > product.stock) {
+        toast({
+          title: "Không đủ hàng",
+          description: `Chỉ còn ${product.stock} sản phẩm trong kho`,
+          variant: "destructive",
+        });
+        return;
       }
-    });
+      
+      tabManager.updateQuantity(product.id, newQuantity);
+    } else {
+      // Use minimum quantity for initial add
+      const initialQuantity = Math.max(quantityStep, minQuantity);
+      tabManager.addToCart(product, initialQuantity);
+    }
 
     toast({
       title: "Đã thêm vào giỏ",
-      description: `${product.name} đã được thêm vào giỏ hàng`,
+      description: `${product.name} đã được thêm vào ${tabManager.activeTab.name}`,
     });
   };
 
@@ -213,13 +237,13 @@ export default function POS({}: POSProps) {
       
       // For count-based products, remove if quantity < 1
       if (!allowDecimals && newQuantity < 1) {
-        removeFromCart(productId);
+        tabManager.removeFromCart(productId);
         return;
       }
       
       // For decimal products, remove if quantity <= 0
       if (allowDecimals && newQuantity <= 0) {
-        removeFromCart(productId);
+        tabManager.removeFromCart(productId);
         return;
       }
       
@@ -244,24 +268,17 @@ export default function POS({}: POSProps) {
       }
     }
 
-    setCart(prevCart =>
-      prevCart.map(item =>
-        item.product.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
+    tabManager.updateQuantity(productId, newQuantity);
   };
 
   // Remove from cart
   const removeFromCart = (productId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
+    tabManager.removeFromCart(productId);
   };
 
   // Clear cart
   const clearCart = () => {
-    setCart([]);
-    setSelectedCustomer(null);
+    tabManager.clearActiveTab();
   };
 
   // Create order mutation
@@ -343,8 +360,11 @@ export default function POS({}: POSProps) {
       const response = await fetch(`/api/products?search=${encodeURIComponent(barcode)}`);
       const products = await response.json();
       
+      // Ensure products is always an array (defensive programming for API response)
+      const safeProductsResponse = Array.isArray(products) ? products : [];
+      
       // Find exact match by sku or itemCode for barcode scanning
-      const matchedProduct = products.find((product: Product) => 
+      const matchedProduct = safeProductsResponse.find((product: Product) => 
         product.sku === barcode || product.itemCode === barcode
       );
       
@@ -354,7 +374,7 @@ export default function POS({}: POSProps) {
         
         toast({
           title: "📷 Quét mã vạch thành công!",
-          description: `${matchedProduct.name} đã được thêm vào giỏ hàng`,
+          description: `${matchedProduct.name} đã được thêm vào ${tabManager.activeTab.name}`,
           duration: 3000,
         });
       } else {
@@ -401,6 +421,212 @@ export default function POS({}: POSProps) {
               {formatPrice(roundedCartTotal)}
             </Badge>
           </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white border-b px-6 py-2">
+        <div className="flex items-center space-x-1">
+          {tabManager.tabs.map((tab, index) => {
+            const tabStats = tabManager.getTabStats(tab);
+            const isActive = tab.id === tabManager.activeTabId;
+            const shortcutKey = (index + 1).toString();
+            
+            // Get status icon
+            const getStatusIcon = () => {
+              switch (tab.status) {
+                case 'empty':
+                  return <Circle className="h-3 w-3 text-gray-400" />;
+                case 'draft':
+                  return <Clock className="h-3 w-3 text-orange-500" />;
+                case 'pending':
+                  return <CheckCircle className="h-3 w-3 text-green-500" />;
+                default:
+                  return <Circle className="h-3 w-3 text-gray-400" />;
+              }
+            };
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => tabManager.switchToTab(tab.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  const contextMenu = document.getElementById(`context-menu-${tab.id}`);
+                  if (contextMenu) {
+                    contextMenu.style.display = 'block';
+                    contextMenu.style.left = `${e.clientX}px`;
+                    contextMenu.style.top = `${e.clientY}px`;
+                    
+                    // Close context menu when clicking outside
+                    const closeMenu = (event: MouseEvent) => {
+                      if (!contextMenu.contains(event.target as Node)) {
+                        contextMenu.style.display = 'none';
+                        document.removeEventListener('click', closeMenu);
+                      }
+                    };
+                    setTimeout(() => document.addEventListener('click', closeMenu), 0);
+                  }
+                }}
+                className={`
+                  relative flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                  ${isActive 
+                    ? 'bg-green-600 text-white shadow-lg' 
+                    : tab.status === 'empty' 
+                      ? 'bg-gray-100 text-gray-500 hover:bg-gray-200' 
+                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                  }
+                `}
+              >
+                {/* Status Icon */}
+                {getStatusIcon()}
+                
+                {/* Tab Name */}
+                <span>{tab.name}</span>
+                
+                {/* Keyboard Shortcut */}
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs px-1 py-0 ${
+                    isActive 
+                      ? 'bg-white/20 text-white border-white/30' 
+                      : 'bg-white text-gray-600 border-gray-300'
+                  }`}
+                >
+                  {shortcutKey}
+                </Badge>
+                
+                {/* Item Count Badge */}
+                {tabStats.itemCount > 0 && (
+                  <Badge 
+                    className={`
+                      ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-bold
+                      ${isActive 
+                        ? 'bg-white text-green-600' 
+                        : 'bg-orange-500 text-white'
+                      }
+                    `}
+                  >
+                    {tabStats.itemCount > 99 ? '99+' : tabStats.itemCount}
+                  </Badge>
+                )}
+                
+                {/* Customer Indicator */}
+                {tab.selectedCustomer && (
+                  <User className="h-3 w-3 ml-1" />
+                )}
+
+                {/* Context Menu */}
+                <div
+                  id={`context-menu-${tab.id}`}
+                  className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-[150px] hidden"
+                  style={{ display: 'none' }}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (tab.status !== 'empty') {
+                        if (confirm(`Bạn có chắc muốn xóa ${tab.name}? Tất cả dữ liệu sẽ bị mất.`)) {
+                          tabManager.clearTab(tab.id);
+                          toast({
+                            title: "Đã xóa tab",
+                            description: `${tab.name} đã được làm sạch`,
+                          });
+                        }
+                      } else {
+                        tabManager.clearTab(tab.id);
+                      }
+                      document.getElementById(`context-menu-${tab.id}`)!.style.display = 'none';
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Xóa tab</span>
+                  </button>
+                  
+                  {tab.status !== 'empty' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const emptyTab = tabManager.findEmptyTab();
+                        if (emptyTab) {
+                          tabManager.duplicateTab(tab.id, emptyTab.id);
+                          tabManager.switchToTab(emptyTab.id);
+                          toast({
+                            title: "Đã sao chép tab",
+                            description: `${tab.name} đã được sao chép sang ${emptyTab.name}`,
+                          });
+                        } else {
+                          toast({
+                            title: "Không thể sao chép",
+                            description: "Không có tab trống để sao chép",
+                            variant: "destructive",
+                          });
+                        }
+                        document.getElementById(`context-menu-${tab.id}`)!.style.display = 'none';
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Sao chép sang tab mới</span>
+                    </button>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+          
+          {/* Tab Actions */}
+          <div className="flex items-center space-x-2 ml-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={tabManager.switchToNewOrder}
+              className="text-green-600 border-green-600 hover:bg-green-50"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Đơn mới
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (confirm('Bạn có chắc muốn xóa tất cả đơn hàng?')) {
+                  tabManager.clearAllTabs();
+                  toast({
+                    title: "Đã xóa tất cả đơn hàng",
+                    description: "Tất cả tab đã được làm sạch",
+                  });
+                }
+              }}
+              className="text-red-600 border-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Xóa tất cả
+            </Button>
+          </div>
+        </div>
+        
+        {/* Tab Status Summary */}
+        <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
+          <div className="flex items-center space-x-1">
+            <Circle className="h-3 w-3 text-gray-400" />
+            <span>Trống</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Clock className="h-3 w-3 text-orange-500" />
+            <span>Nháp</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <CheckCircle className="h-3 w-3 text-green-500" />
+            <span>Sẵn sàng</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <User className="h-3 w-3 text-blue-500" />
+            <span>Có khách hàng</span>
+          </div>
+          <span className="ml-4 text-gray-400">• Phím 1-5: Chuyển tab • F2: Tìm sản phẩm • F3: Tìm khách hàng</span>
         </div>
       </div>
 
@@ -522,7 +748,7 @@ export default function POS({}: POSProps) {
               </div>
               <CustomerSearchInput
                 ref={customerSearchRef}
-                onSelect={setSelectedCustomer}
+                onSelect={tabManager.setCustomer}
                 placeholder="Tìm khách hàng... (F3)"
                 className="w-full"
               />
@@ -531,7 +757,7 @@ export default function POS({}: POSProps) {
                   <User className="h-4 w-4" />
                   <span>{selectedCustomer.name}</span>
                   <button
-                    onClick={() => setSelectedCustomer(null)}
+                    onClick={() => tabManager.setCustomer(null)}
                     className="ml-auto text-gray-400 hover:text-gray-600"
                   >
                     <Trash2 className="h-4 w-4" />
