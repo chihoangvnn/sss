@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCachedDebounceSearch } from "@/hooks/useDebounceSearch";
 import type { Customer } from "@shared/schema";
 
-interface CustomerWithAnalytics extends Customer {
+export interface CustomerWithAnalytics extends Customer {
   totalOrders: number;
   totalSpent: number;
   lastOrderDate: string;
