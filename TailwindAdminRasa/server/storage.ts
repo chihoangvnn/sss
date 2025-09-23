@@ -79,6 +79,12 @@ export interface IStorage {
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
   deleteCustomer(id: string): Promise<boolean>;
   getCustomerRecentAddress(customerId: string): Promise<string | null>;
+  
+  // Customer analytics methods for POS suggestions
+  searchCustomers(searchTerm: string, limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
+  getRecentCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
+  getVipCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
+  getFrequentCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
 
   // Order methods
   getOrders(limit?: number): Promise<(Order & { customerName: string; customerEmail: string })[]>;
@@ -745,6 +751,195 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error getting customer recent address:', error);
       return null;
+    }
+  }
+
+  // Customer analytics methods for POS suggestions
+  async searchCustomers(searchTerm: string, limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+    try {
+      // Search customers by name, phone, or email
+      const baseCustomers = await db
+        .select()
+        .from(customers)
+        .where(
+          or(
+            ilike(customers.name, `%${searchTerm}%`),
+            ilike(customers.phone, `%${searchTerm}%`),
+            ilike(customers.email, `%${searchTerm}%`)
+          )
+        )
+        .orderBy(desc(customers.joinDate))
+        .limit(limit);
+
+      // Calculate enriched data for each customer
+      const enrichedCustomers = await Promise.all(
+        baseCustomers.map(async (customer) => {
+          const customerStats = await db
+            .select({
+              totalOrders: count(orders.id),
+              totalSpent: sum(orders.total),
+              lastOrderDate: sql<string>`MAX(${orders.createdAt})::text`
+            })
+            .from(orders)
+            .where(eq(orders.customerId, customer.id));
+
+          const stats = customerStats[0];
+          
+          return {
+            ...customer,
+            totalOrders: Number(stats.totalOrders) || 0,
+            totalSpent: Number(stats.totalSpent) || 0,
+            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+          };
+        })
+      );
+      
+      return enrichedCustomers;
+    } catch (error) {
+      console.error('Error searching customers:', error);
+      return [];
+    }
+  }
+
+  async getRecentCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+    try {
+      // Get customers with orders in the last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentCustomerIds = await db
+        .selectDistinct({ customerId: orders.customerId })
+        .from(orders)
+        .where(gte(orders.createdAt, thirtyDaysAgo));
+
+      if (recentCustomerIds.length === 0) {
+        return [];
+      }
+
+      const customerIds = recentCustomerIds.map(r => r.customerId);
+      const baseCustomers = await db
+        .select()
+        .from(customers)
+        .where(inArray(customers.id, customerIds))
+        .orderBy(desc(customers.joinDate))
+        .limit(limit);
+
+      // Calculate enriched data for each customer
+      const enrichedCustomers = await Promise.all(
+        baseCustomers.map(async (customer) => {
+          const customerStats = await db
+            .select({
+              totalOrders: count(orders.id),
+              totalSpent: sum(orders.total),
+              lastOrderDate: sql<string>`MAX(${orders.createdAt})::text`
+            })
+            .from(orders)
+            .where(eq(orders.customerId, customer.id));
+
+          const stats = customerStats[0];
+          
+          return {
+            ...customer,
+            totalOrders: Number(stats.totalOrders) || 0,
+            totalSpent: Number(stats.totalSpent) || 0,
+            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+          };
+        })
+      );
+      
+      // Sort by most recent order first
+      return enrichedCustomers.sort((a, b) => 
+        new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime()
+      );
+    } catch (error) {
+      console.error('Error getting recent customers:', error);
+      return [];
+    }
+  }
+
+  async getVipCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+    try {
+      const baseCustomers = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.status, 'vip'))
+        .orderBy(desc(customers.joinDate))
+        .limit(limit);
+
+      // Calculate enriched data for each customer
+      const enrichedCustomers = await Promise.all(
+        baseCustomers.map(async (customer) => {
+          const customerStats = await db
+            .select({
+              totalOrders: count(orders.id),
+              totalSpent: sum(orders.total),
+              lastOrderDate: sql<string>`MAX(${orders.createdAt})::text`
+            })
+            .from(orders)
+            .where(eq(orders.customerId, customer.id));
+
+          const stats = customerStats[0];
+          
+          return {
+            ...customer,
+            totalOrders: Number(stats.totalOrders) || 0,
+            totalSpent: Number(stats.totalSpent) || 0,
+            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+          };
+        })
+      );
+      
+      // Sort VIP customers by total spent (high value customers first)
+      return enrichedCustomers.sort((a, b) => b.totalSpent - a.totalSpent);
+    } catch (error) {
+      console.error('Error getting VIP customers:', error);
+      return [];
+    }
+  }
+
+  async getFrequentCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+    try {
+      // Get customers with their order counts
+      const customerOrderCounts = await db
+        .select({
+          customerId: orders.customerId,
+          totalOrders: count(orders.id),
+          totalSpent: sum(orders.total),
+          lastOrderDate: sql<string>`MAX(${orders.createdAt})::text`
+        })
+        .from(orders)
+        .groupBy(orders.customerId)
+        .having(sql`COUNT(${orders.id}) > 0`)
+        .orderBy(sql`COUNT(${orders.id}) DESC`)
+        .limit(limit);
+
+      if (customerOrderCounts.length === 0) {
+        return [];
+      }
+
+      // Get customer details
+      const customerIds = customerOrderCounts.map(c => c.customerId);
+      const baseCustomers = await db
+        .select()
+        .from(customers)
+        .where(inArray(customers.id, customerIds));
+
+      // Combine customer data with order statistics
+      const enrichedCustomers = baseCustomers.map(customer => {
+        const stats = customerOrderCounts.find(c => c.customerId === customer.id);
+        return {
+          ...customer,
+          totalOrders: Number(stats?.totalOrders) || 0,
+          totalSpent: Number(stats?.totalSpent) || 0,
+          lastOrderDate: stats?.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+        };
+      });
+
+      // Sort by total orders descending (most frequent first)
+      return enrichedCustomers.sort((a, b) => b.totalOrders - a.totalOrders);
+    } catch (error) {
+      console.error('Error getting frequent customers:', error);
+      return [];
     }
   }
 
