@@ -571,6 +571,221 @@ export const tiktokShopProducts = pgTable("tiktok_shop_products", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ============================================
+// SHOPEE MARKETPLACE INTEGRATION SCHEMA
+// ============================================
+
+// Shopee Business Accounts Management
+export const shopeeBusinessAccounts = pgTable("shopee_business_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: text("partner_id").notNull(), // Shopee Partner ID
+  shopId: text("shop_id").notNull().unique(), // Shopee Shop ID
+  displayName: text("display_name").notNull(),
+  shopName: text("shop_name").notNull(),
+  shopLogo: text("shop_logo"),
+  
+  // Authentication
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  partnerKey: text("partner_key"), // Encrypted partner key
+  
+  // Shop Information
+  shopType: text("shop_type"), // "normal", "mall", "official"
+  shopStatus: text("shop_status", { 
+    enum: ["normal", "frozen", "banned", "inactive"] 
+  }).default("normal"),
+  region: text("region").notNull().default("VN"), // VN, TH, MY, SG, PH, etc.
+  currency: text("currency").notNull().default("VND"),
+  
+  // Business Details
+  businessType: text("business_type"), // Individual, Company
+  businessLicense: text("business_license"),
+  taxId: text("tax_id"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  
+  // Performance Metrics  
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
+  responseRate: decimal("response_rate", { precision: 5, scale: 2 }).default("0.00"),
+  responseTime: integer("response_time").default(0), // minutes
+  followerCount: integer("follower_count").default(0),
+  productCount: integer("product_count").default(0),
+  
+  // Analytics Cache
+  totalOrders: integer("total_orders").default(0),
+  totalRevenue: decimal("total_revenue", { precision: 15, scale: 2 }).default("0"),
+  avgOrderValue: decimal("avg_order_value", { precision: 15, scale: 2 }).default("0"),
+  lastOrderAt: timestamp("last_order_at"),
+  lastSync: timestamp("last_sync"),
+  
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  connected: boolean("connected").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Shopee Shop Orders Management
+export const shopeeShopOrders = pgTable("shopee_shop_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shopeeOrderId: text("shopee_order_id").notNull().unique(), // Shopee's order SN
+  orderSn: text("order_sn").notNull(), // Shopee order serial number
+  shopId: text("shop_id").notNull(), // Reference to shop
+  businessAccountId: varchar("business_account_id").references(() => shopeeBusinessAccounts.id),
+  
+  // Order Information
+  orderNumber: text("order_number").notNull(), // Human readable order number
+  orderStatus: text("order_status", { 
+    enum: ["unpaid", "to_ship", "shipped", "to_confirm_receive", "in_cancel", "cancelled", "to_return", "completed"] 
+  }).notNull().default("unpaid"),
+  
+  // Customer Information
+  customerInfo: jsonb("customer_info").$type<{
+    buyerUserId: string;
+    buyerUsername: string;
+    recipientAddress: {
+      name: string;
+      phone: string;
+      fullAddress: string;
+      district: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+  }>().notNull(),
+  
+  // Financial Details
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("VND"),
+  actualShippingFee: decimal("actual_shipping_fee", { precision: 15, scale: 2 }).default("0"),
+  goodsToReceive: decimal("goods_to_receive", { precision: 15, scale: 2 }).default("0"),
+  coinOffset: decimal("coin_offset", { precision: 15, scale: 2 }).default("0"),
+  escrowAmount: decimal("escrow_amount", { precision: 15, scale: 2 }).default("0"),
+  
+  // Order Items
+  items: jsonb("items").$type<Array<{
+    itemId: string;
+    itemName: string;
+    itemSku: string;
+    modelId?: string;
+    modelName?: string;
+    modelSku?: string;
+    modelQuantityPurchased: number;
+    modelOriginalPrice: number;
+    modelDiscountedPrice: number;
+    wholesalePrice?: number;
+    weight?: number;
+    itemImageUrl?: string;
+  }>>().notNull(),
+  
+  // Fulfillment & Shipping
+  shippingCarrier: text("shipping_carrier"),
+  trackingNumber: text("tracking_number"),
+  shipTime: timestamp("ship_time"),
+  deliveryTime: timestamp("delivery_time"),
+  actualShippingFeeConfirmed: boolean("actual_shipping_fee_confirmed").default(false),
+  
+  // Shopee Specific
+  paymentMethod: text("payment_method"),
+  creditCardNumber: text("credit_card_number"), // Masked
+  dropshipper: text("dropshipper"),
+  dropshipperPhone: text("dropshipper_phone"),
+  splitUp: boolean("split_up").default(false),
+  buyerCancelReason: text("buyer_cancel_reason"),
+  cancelBy: text("cancel_by"),
+  cancelReason: text("cancel_reason"),
+  actualShippingProvider: text("actual_shipping_provider"),
+  packageNumber: text("package_number"),
+  
+  // Shopee Fees & Commissions
+  shopeeFee: decimal("shopee_fee", { precision: 15, scale: 2 }).default("0"),
+  transactionFee: decimal("transaction_fee", { precision: 15, scale: 2 }).default("0"),
+  commissionFee: decimal("commission_fee", { precision: 15, scale: 2 }).default("0"),
+  serviceFee: decimal("service_fee", { precision: 15, scale: 2 }).default("0"),
+  
+  // Organization
+  tagIds: jsonb("tag_ids").$type<string[]>().default(sql`'[]'::jsonb`), // References unified_tags.id
+  notes: text("notes"),
+  
+  // Timestamps  
+  createTime: timestamp("create_time").notNull(), // Shopee order creation time
+  updateTime: timestamp("update_time"), // Last update from Shopee
+  payTime: timestamp("pay_time"), // Payment time
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Shopee Shop Products Sync
+export const shopeeShopProducts = pgTable("shopee_shop_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").references(() => products.id), // Link to main products table
+  shopeeItemId: text("shopee_item_id").notNull(), // Shopee's item ID
+  shopId: text("shop_id").notNull(),
+  businessAccountId: varchar("business_account_id").references(() => shopeeBusinessAccounts.id),
+  
+  // Sync Configuration
+  syncEnabled: boolean("sync_enabled").default(true),
+  autoSync: boolean("auto_sync").default(false), // Auto sync inventory/price changes
+  syncDirection: text("sync_direction", { 
+    enum: ["to_shopee", "from_shopee", "bidirectional"] 
+  }).default("to_shopee"),
+  
+  // Shopee Specific Data
+  itemName: text("item_name"),
+  itemSku: text("item_sku"),
+  description: text("description"),
+  originalPrice: decimal("original_price", { precision: 15, scale: 2 }),
+  currentPrice: decimal("current_price", { precision: 15, scale: 2 }),
+  stock: integer("stock"),
+  itemStatus: text("item_status", {
+    enum: ["normal", "deleted", "banned", "reviewing"]
+  }).default("normal"),
+  
+  // Categories
+  categoryId: integer("category_id"),
+  categoryName: text("category_name"),
+  
+  // Product Details
+  weight: decimal("weight", { precision: 8, scale: 3 }),
+  dimension: jsonb("dimension").$type<{
+    packageLength: number;
+    packageWidth: number;
+    packageHeight: number;
+  }>(),
+  condition: text("condition", { enum: ["new", "used"] }).default("new"),
+  wholesaleEnabled: boolean("wholesale_enabled").default(false),
+  
+  // Performance Metrics
+  sales: integer("sales").default(0),
+  views: integer("views").default(0),
+  likes: integer("likes").default(0),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0.00"),
+  ratingCount: integer("rating_count").default(0),
+  
+  // Logistics
+  logisticEnabled: boolean("logistic_enabled").default(true),
+  daysToShip: integer("days_to_ship").default(3),
+  
+  // Sync Status
+  lastSyncAt: timestamp("last_sync_at"),
+  syncStatus: text("sync_status", {
+    enum: ["pending", "syncing", "success", "failed"]
+  }).default("pending"),
+  syncError: text("sync_error"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueShopeeItem: unique().on(table.shopeeItemId, table.shopId),
+}));
+
 // TikTok Video Content Management
 export const tiktokVideos = pgTable("tiktok_videos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
