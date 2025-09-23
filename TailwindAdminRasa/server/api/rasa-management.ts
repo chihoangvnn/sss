@@ -24,7 +24,7 @@ const requireAuth = (req: any, res: any, next: any) => {
   }
   next();
 };
-import { eq, desc, count, avg, sum, gte, lte, and, or, sql } from 'drizzle-orm';
+import { eq, desc, count, avg, sum, gte, lte, and, or, ilike, sql } from 'drizzle-orm';
 
 const router = Router();
 
@@ -170,41 +170,31 @@ router.get('/analytics/overview', requireAuth, async (req, res) => {
     const filters = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get basic conversation metrics
-    let conversationsQuery = db
+    const totalConversations = await db
       .select({ count: count() })
-      .from(conversationSessions);
-    if (conditions.length > 0) {
-      conversationsQuery = conversationsQuery.where(and(...conditions));
-    }
-    const totalConversations = await conversationsQuery;
+      .from(conversationSessions)
+      .where(filters);
 
-    let messagesQuery = db
+    const totalMessages = await db
       .select({ count: count() })
       .from(conversationMessages)
-      .innerJoin(conversationSessions, eq(conversationMessages.sessionId, conversationSessions.id));
-    if (conditions.length > 0) {
-      messagesQuery = messagesQuery.where(and(...conditions));
-    }
-    const totalMessages = await messagesQuery;
+      .innerJoin(conversationSessions, eq(conversationMessages.sessionId, conversationSessions.id))
+      .where(filters);
 
     // Get average satisfaction score
-    let satisfactionQuery = db
+    const avgSatisfaction = await db
       .select({ avg: avg(userSatisfactionScores.rating) })
       .from(userSatisfactionScores)
-      .innerJoin(conversationSessions, eq(userSatisfactionScores.sessionId, conversationSessions.id));
-    if (conditions.length > 0) {
-      satisfactionQuery = satisfactionQuery.where(and(...conditions));
-    }
-    const avgSatisfaction = await satisfactionQuery;
+      .innerJoin(conversationSessions, eq(userSatisfactionScores.sessionId, conversationSessions.id))
+      .where(filters);
 
-    // Get resolved conversations percentage
-    const resolvedConditions = [...conditions];
-    resolvedConditions.push(eq(conversationSessions.status, 'resolved'));
+    // Get resolved conversations percentage (using 'completed' status)
+    const resolvedConditions = [...conditions, eq(conversationSessions.status, 'completed')];
     
     const resolvedConversations = await db
       .select({ count: count() })
       .from(conversationSessions)
-      .where(resolvedConditions.length > 0 ? and(...resolvedConditions) : eq(conversationSessions.status, 'resolved'));
+      .where(and(...resolvedConditions));
 
     const overview = {
       totalConversations: totalConversations[0]?.count || 0,
@@ -295,16 +285,26 @@ router.get('/conversations', requireAuth, async (req, res) => {
     // Build filters
     const conditions = [];
     
-    if (status) {
-      conditions.push(eq(conversationSessions.status, status as string));
+    if (status && ['active', 'completed', 'abandoned', 'escalated'].includes(status as string)) {
+      conditions.push(eq(conversationSessions.status, status as any));
     }
-    if (channel) {
-      conditions.push(eq(conversationSessions.channel, channel as string));
+    if (channel && ['web', 'facebook', 'instagram', 'whatsapp', 'api'].includes(channel as string)) {
+      conditions.push(eq(conversationSessions.channel, channel as any));
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      // Search by conversation ID or user ID
+      const searchTerm = `%${search.trim()}%`;
+      conditions.push(
+        or(
+          ilike(conversationSessions.id, searchTerm),
+          ilike(conversationSessions.userId, searchTerm)
+        )
+      );
     }
     
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    let conversationQuery = db
+    const conversations = await db
       .select({
         id: conversationSessions.id,
         userId: conversationSessions.userId,
@@ -315,23 +315,17 @@ router.get('/conversations', requireAuth, async (req, res) => {
         messageCount: conversationSessions.messageCount,
         escalatedToHuman: conversationSessions.escalatedToHuman
       })
-      .from(conversationSessions);
-    if (conditions.length > 0) {
-      conversationQuery = conversationQuery.where(and(...conditions));
-    }
-    const conversations = await conversationQuery
+      .from(conversationSessions)
+      .where(whereClause)
       .orderBy(desc(conversationSessions.startedAt))
       .limit(parseInt(limit as string))
       .offset(parseInt(offset as string));
 
     // Get total count for pagination
-    let countQuery = db
+    const totalCount = await db
       .select({ count: count() })
-      .from(conversationSessions);
-    if (conditions.length > 0) {
-      countQuery = countQuery.where(and(...conditions));
-    }
-    const totalCount = await countQuery;
+      .from(conversationSessions)
+      .where(whereClause);
 
     res.json({
       conversations,
@@ -381,6 +375,70 @@ router.get('/conversations/:sessionId/messages', requireAuth, async (req, res) =
     console.error('Error getting conversation messages:', error);
     res.status(500).json({
       error: 'Failed to get conversation messages',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/rasa-management/conversations/:id/takeover
+ * Human takeover - escalate conversation to human agent
+ */
+router.post('/conversations/:sessionId/takeover', requireAuth, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { reason, agentId } = req.body;
+    
+    console.log(`🚨 Human takeover requested for conversation: ${sessionId}`);
+    
+    // Update conversation status to escalated
+    const updated = await db
+      .update(conversationSessions)
+      .set({
+        status: 'escalated',
+        escalatedToHuman: true,
+        escalatedAt: new Date(),
+        escalationReason: reason || 'Manual takeover requested',
+        assignedAgentId: agentId || null,
+        updatedAt: new Date()
+      })
+      .where(eq(conversationSessions.id, sessionId))
+      .returning();
+
+    if (!updated.length) {
+      return res.status(404).json({
+        error: 'Conversation not found',
+        conversationId: sessionId
+      });
+    }
+
+    // Add system message about takeover
+    await db
+      .insert(conversationMessages)
+      .values({
+        id: crypto.randomUUID(),
+        sessionId: sessionId,
+        message: `🚨 Cuộc trò chuyện đã được chuyển giao cho nhân viên hỗ trợ. Lý do: ${reason || 'Yêu cầu chuyển giao thủ công'}`,
+        isBot: true, // System message is considered bot message
+        messageType: 'text',
+        timestamp: new Date(),
+        metadata: {
+          type: 'escalation_notice',
+          agentId: agentId || null,
+          reason: reason || 'Manual takeover'
+        }
+      });
+
+    res.json({
+      success: true,
+      conversation: updated[0],
+      message: 'Conversation successfully escalated to human agent',
+      escalatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error during human takeover:', error);
+    res.status(500).json({
+      error: 'Failed to escalate conversation',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
