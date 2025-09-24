@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle, Target } from "lucide-react";
+import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle, Target, ChevronLeft, ChevronRight, Package, Image, Settings, Sparkles, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
 import { QRScanner } from "./QRScanner";
@@ -381,6 +381,73 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
 
   // 📱 QR Scanner State
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+
+  // 🧙‍♂️ Modern Wizard State Management
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  // ✨ Wizard Steps Configuration
+  const wizardSteps = [
+    {
+      id: 'basic',
+      title: 'Thông tin cơ bản',
+      icon: Package,
+      description: 'Tên, giá và thông tin sản phẩm',
+      gradient: 'from-blue-500 to-cyan-500'
+    },
+    {
+      id: 'details',
+      title: 'Chi tiết & Media',
+      icon: Image,
+      description: 'Mô tả, hình ảnh và video',
+      gradient: 'from-purple-500 to-pink-500'
+    },
+    {
+      id: 'category',
+      title: 'Phân loại & Tư vấn',
+      icon: Target,
+      description: 'Ngành hàng và thông tin tư vấn',
+      gradient: 'from-green-500 to-emerald-500'
+    },
+    {
+      id: 'advanced',
+      title: 'Nâng cao',
+      icon: Sparkles,
+      description: 'Kỹ thuật bán hàng và SEO',
+      gradient: 'from-orange-500 to-red-500'
+    }
+  ];
+
+  // 🎯 Step Navigation Functions
+  const canGoNext = () => {
+    if (currentStep === 0) {
+      return formData.name.trim() && formData.price && parseFloat(formData.price) > 0;
+    }
+    if (currentStep === 1) {
+      return formData.description.trim();
+    }
+    if (currentStep === 2) {
+      return formData.categoryId && validateConsultationFields();
+    }
+    return true; // Final step
+  };
+
+  const nextStep = () => {
+    if (canGoNext() && currentStep < wizardSteps.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const goToStep = (stepIndex: number) => {
+    if (stepIndex >= 0 && stepIndex < wizardSteps.length) {
+      setCurrentStep(stepIndex);
+    }
+  };
 
   // Fetch industries for dropdown
   const { data: industries = [], isLoading: industriesLoading, error: industriesError } = useQuery<Industry[]>({
@@ -820,495 +887,293 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl font-bold">
-            {isEditing ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            data-testid="button-close-form"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {/* 🎨 Modern Wizard Container */}
+      <Card className="w-full max-w-4xl max-h-[95vh] overflow-hidden shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+        {/* ✨ Stunning Header with Gradient */}
+        <CardHeader className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white p-6">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 backdrop-blur-sm"></div>
+          <div className="relative flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  {(() => {
+                    const IconComponent = wizardSteps[currentStep].icon;
+                    return IconComponent ? <IconComponent className="h-6 w-6" /> : null;
+                  })()}
+                </div>
+                {isEditing ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}
+              </CardTitle>
+              <p className="text-white/80 text-sm">
+                {wizardSteps[currentStep].description}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="text-white hover:bg-white/20 transition-colors"
+              data-testid="button-close-form"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </CardHeader>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* 🎯 OPTIMIZED LAYOUT - Row 1: Tên sản phẩm + Mã SKU */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="name">Tên sản phẩm *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nhập tên sản phẩm"
-                  data-testid="input-product-name"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="sku">Mã SKU</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku || (isEditing ? "Chưa có SKU" : "Auto-gen")}
-                  readOnly
-                  disabled
-                  placeholder="Auto-generated SKU"
-                  className="bg-muted text-muted-foreground text-sm"
-                  data-testid="input-product-sku"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground -mt-4">
-              {isEditing ? "SKU đã được tạo" : "SKU sẽ được tạo tự động: 2 chữ đầu ngành hàng + 4 số"}
-            </p>
-
-            {/* 🎯 Row 2: Mã sản phẩm (Item Code) */}
-            <div>
-              <Label htmlFor="itemCode">Mã sản phẩm (Item Code)</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="itemCode"
-                  value={formData.itemCode}
-                  onChange={(e) => setFormData(prev => ({ ...prev, itemCode: e.target.value }))}
-                  placeholder="Nhập mã sản phẩm hoặc quét QR"
-                  data-testid="input-product-itemcode"
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="default"
-                  onClick={() => setIsQRScannerOpen(true)}
-                  className="flex items-center gap-2 px-3"
-                  data-testid="button-qr-scanner"
-                >
-                  <QrCode className="h-4 w-4" />
-                  Quét QR
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                📱 Mã sản phẩm có thể là barcode, QR code hoặc mã tự định nghĩa để quản lý kho
-              </p>
-            </div>
-
-            {/* 🎯 Row 3: Ngành hàng + Danh mục + Status (3 cột) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="industry">Ngành hàng</Label>
-                <Select
-                  value={formData.industryId}
-                  onValueChange={handleIndustryChange}
-                >
-                  <SelectTrigger data-testid="select-product-industry">
-                    <SelectValue placeholder="Chọn ngành hàng" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Không có ngành hàng</SelectItem>
-                    {activeIndustries.map((industry) => (
-                      <SelectItem key={industry.id} value={industry.id}>
-                        {industry.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="category">Danh mục</Label>
-                <Select
-                  value={formData.categoryId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
-                  disabled={!formData.industryId}
-                >
-                  <SelectTrigger data-testid="select-product-category">
-                    <SelectValue placeholder={formData.industryId ? "Chọn danh mục" : "Chọn ngành hàng trước"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Không có danh mục</SelectItem>
-                    {filteredCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="status">Trạng thái</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: "active" | "inactive" | "out-of-stock") => 
-                    setFormData(prev => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger data-testid="select-product-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Hoạt động</SelectItem>
-                    <SelectItem value="inactive">Tạm dừng</SelectItem>
-                    <SelectItem value="out-of-stock">Hết hàng</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* 🤖 Category-driven Consultation Fields */}
-            {categoryConfig.config && (
-              <div className="space-y-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <h3 className="font-semibold text-blue-800">
-                    🤖 Thông tin tư vấn cho danh mục này
-                  </h3>
-                </div>
-                <p className="text-sm text-blue-600 mb-4">
-                  Danh mục "{categories.find(c => c.id === formData.categoryId)?.name}" yêu cầu các thông tin bổ sung sau:
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Required Fields */}
-                  {(categoryConfig.config?.required_fields || []).map((fieldId) => {
-                    const fieldLabel = getFieldLabel(fieldId);
-                    const isError = requiredFieldsError.includes(fieldId);
-                    
-                    return (
-                      <div key={fieldId} className="space-y-2">
-                        <Label htmlFor={`consultation-${fieldId}`} className={`flex items-center gap-2 ${isError ? 'text-red-600' : ''}`}>
-                          <span className="text-red-500">*</span>
-                          {fieldLabel}
-                          {isError && <span className="text-xs text-red-500">(Bắt buộc)</span>}
-                        </Label>
-                        <Textarea
-                          id={`consultation-${fieldId}`}
-                          value={consultationFields[fieldId] || ''}
-                          onChange={(e) => updateConsultationField(fieldId, e.target.value)}
-                          placeholder={`Nhập ${fieldLabel.toLowerCase()}...`}
-                          rows={2}
-                          className={`resize-none ${isError ? 'border-red-300 focus:border-red-500' : ''}`}
-                        />
-                      </div>
-                    );
-                  })}
-                  
-                  {/* Optional Fields */}
-                  {(categoryConfig.config?.optional_fields || []).map((fieldId) => {
-                    const fieldLabel = getFieldLabel(fieldId);
-                    
-                    return (
-                      <div key={fieldId} className="space-y-2">
-                        <Label htmlFor={`consultation-${fieldId}`} className="flex items-center gap-2">
-                          {fieldLabel}
-                          <span className="text-xs text-muted-foreground">(Tùy chọn)</span>
-                        </Label>
-                        <Textarea
-                          id={`consultation-${fieldId}`}
-                          value={consultationFields[fieldId] || ''}
-                          onChange={(e) => updateConsultationField(fieldId, e.target.value)}
-                          placeholder={`Nhập ${fieldLabel.toLowerCase()}...`}
-                          rows={2}
-                          className="resize-none"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                {/* Auto Prompts Preview */}
-                {categoryConfig.config.auto_prompts.length > 0 && (
-                  <div className="mt-4 p-3 bg-white rounded border border-blue-200">
-                    <Label className="text-sm font-semibold text-blue-700 mb-2 block">
-                      💬 Câu hỏi gợi ý tự động cho khách hàng:
-                    </Label>
-                    <div className="space-y-1">
-                      {categoryConfig.config.auto_prompts.slice(0, 3).map((prompt, index) => (
-                        <p key={index} className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                          {index + 1}. {prompt}
-                        </p>
-                      ))}
-                      {categoryConfig.config.auto_prompts.length > 3 && (
-                        <p className="text-xs text-muted-foreground">
-                          ... và {categoryConfig.config.auto_prompts.length - 3} câu hỏi khác
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Consultation Templates Info */}
-                {categoryConfig.templates && Object.keys(categoryConfig.templates).length > 0 && (
-                  <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
-                    <Label className="text-sm font-semibold text-green-700 mb-2 block">
-                      📝 Templates tư vấn có sẵn:
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.keys(categoryConfig.templates).map((templateKey) => (
-                        <span key={templateKey} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                          {templateKey.replace('_template', '').replace('_', ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 🎯 Row 4: Giá + Số lượng + Tự động tạo mô tả (3 cột) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="price">Giá (VND) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="1000"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  placeholder="0"
-                  data-testid="input-product-price"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="stock">Số lượng tồn kho</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  min="0"
-                  value={formData.stock}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                  placeholder="0"
-                  data-testid="input-product-stock"
-                />
-              </div>
-              <div className="flex flex-col justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="default"
-                  onClick={generateDescriptions}
-                  disabled={isGenerating || !formData.name.trim()}
-                  className="gap-2 h-10"
-                >
-                  {isGenerating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Wand2 className="h-4 w-4" />
-                  )}
-                  {isGenerating ? 'Đang tạo...' : '🪄 Tự động tạo mô tả'}
-                </Button>
-              </div>
-            </div>
-
-            {/* 🎯 Row 5: Mô tả sản phẩm */}
-            <div>
-              <Label htmlFor="description">Mô tả sản phẩm</Label>
-              <RichTextEditor
-                id="description"
-                data-testid="input-product-description"
-                value={formData.description}
-                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
-                placeholder="Nhập mô tả hoặc click 'Tự động tạo mô tả' để AI tạo giúp bạn"
-                height="120px"
-                className="w-full mt-2"
-              />
-              {!formData.name.trim() && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  💡 Nhập tên sản phẩm trước để AI có thể tạo mô tả phù hợp
-                </p>
-              )}
-            </div>
-
-
-            {/* 🎯 Row 7: Mô tả đã tạo bởi AI */}
-            {generatedDescriptions && (
-              <div className="border rounded-lg p-4 bg-gradient-to-r from-green-50 to-blue-50">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-green-600" />
-                    <h4 className="font-medium text-sm">🤖 Mô tả đã tạo bởi AI</h4>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
-                    className="gap-1"
+        {/* 🌟 Beautiful Progress Indicator */}
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            {wizardSteps.map((step, index) => {
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              const isLast = index === wizardSteps.length - 1;
+              
+              return (
+                <div key={step.id} className="flex items-center flex-1">
+                  {/* Step Circle */}
+                  <div 
+                    className={`
+                      relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 cursor-pointer
+                      ${isCompleted 
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg' 
+                        : isActive 
+                          ? `bg-gradient-to-r ${step.gradient} text-white shadow-lg scale-110` 
+                          : 'bg-gray-200 text-gray-400 hover:bg-gray-300'
+                      }
+                    `}
+                    onClick={() => goToStep(index)}
                   >
-                    {showDescriptionPreview ? (
-                      <EyeOff className="h-3 w-3" />
-                    ) : (
-                      <Eye className="h-3 w-3" />
+                    {isCompleted ? (
+                      <CheckCircle className="h-5 w-5" />
+                    ) : (() => {
+                      const IconComponent = step.icon;
+                      return IconComponent ? <IconComponent className="h-5 w-5" /> : null;
+                    })()}
+                    {isActive && (
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/30 to-transparent animate-pulse"></div>
                     )}
-                    {showDescriptionPreview ? 'Ẩn' : 'Xem'} chi tiết
-                  </Button>
-                </div>
-
-                {showDescriptionPreview && (
-                  <div className="space-y-3">
-                    {/* Primary Description */}
-                    <div className="bg-white rounded p-3 border-l-4 border-green-500">
-                      <div className="flex items-center justify-between mb-1">
-                        <Label className="text-green-700 font-medium">✅ Mô tả chính:</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(generatedDescriptions.primary)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                  </div>
+                  
+                  {/* Step Info */}
+                  <div className="ml-3 flex-1">
+                    <p className={`text-sm font-medium transition-colors ${
+                      isActive ? 'text-gray-900' : isCompleted ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {step.title}
+                    </p>
+                  </div>
+                  
+                  {/* Progress Line */}
+                  {!isLast && (
+                    <div className="flex-1 mx-4">
+                      <div className="h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-500 ${
+                          isCompleted ? 'w-full bg-gradient-to-r from-green-500 to-emerald-500' : 'w-0'
+                        }`}></div>
                       </div>
-                      <p className="text-sm text-gray-700 bg-green-50 p-2 rounded">
-                        {generatedDescriptions.primary}
-                      </p>
                     </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-                    {/* RASA Variations */}
-                    <div className="bg-white rounded p-3 border-l-4 border-blue-500">
-                      <Label className="text-blue-700 font-medium mb-2 block">🤖 RASA Chat Variations:</Label>
-                      <div className="grid gap-2">
-                        {Object.entries(generatedDescriptions.rasa_variations || {}).map(([index, description]) => {
-                          const contextLabels = {
-                            "0": "🛡️ An toàn",
-                            "1": "⚡ Tiện lợi", 
-                            "2": "⭐ Chất lượng",
-                            "3": "💚 Sức khỏe"
-                          };
-                          return (
-                            <div key={index} className="flex items-start gap-2 bg-blue-50 p-2 rounded">
-                              <span className="text-xs font-medium text-blue-600 min-w-fit">
-                                {contextLabels[index as keyof typeof contextLabels]}:
-                              </span>
-                              <span className="text-sm text-gray-700 flex-1">{description}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyToClipboard(description)}
-                                className="h-5 w-5 p-0 flex-shrink-0"
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <p className="text-xs text-blue-600 mt-2 italic">
-                        💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations || {}).length} mô tả này khi chat với khách hàng
+        {/* 📋 Dynamic Step Content with Smooth Animations */}
+        <CardContent className="p-6 min-h-[500px] max-h-[65vh] overflow-y-auto">
+          {/* ✨ Step Content Wrapper with Animation */}
+          <div className="transition-all duration-500 ease-in-out">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* 🚀 STEP 0: BASIC INFO */}
+              {currentStep === 0 && (
+                <div className="space-y-6 animate-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg">
+                      <Package className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Thông tin cơ bản</h3>
+                      <p className="text-sm text-gray-500">Thiết lập thông tin chính của sản phẩm</p>
+                    </div>
+                  </div>
+
+                  {/* Product Name & SKU */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2">
+                        <span className="text-red-500">*</span>
+                        Tên sản phẩm
+                      </Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Nhập tên sản phẩm..."
+                        className="mt-2 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        data-testid="input-product-name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="sku" className="text-sm font-medium">Mã SKU</Label>
+                      <Input
+                        id="sku"
+                        value={formData.sku || (isEditing ? "Chưa có SKU" : "Auto-gen")}
+                        readOnly
+                        disabled
+                        className="mt-2 h-11 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 border-gray-200"
+                        data-testid="input-product-sku"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {isEditing ? "SKU đã được tạo" : "Tự động tạo khi lưu"}
                       </p>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Media Upload - Images and Videos */}
-            <div>
-              <Label>Hình ảnh & Video sản phẩm</Label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Upload hình ảnh và video để giới thiệu sản phẩm một cách sinh động
-              </p>
-              <ImageUploader
-                value={[...formData.images, ...formData.videos]}
-                onChange={(media) => {
-                  const images = media.filter((m): m is CloudinaryImage => m.resource_type === 'image');
-                  const videos = media.filter((m): m is CloudinaryVideo => m.resource_type === 'video');
-                  setFormData(prev => ({ ...prev, images, videos }));
-                }}
-                maxFiles={8}
-                maxFileSize={50}
-                acceptImages={true}
-                acceptVideos={true}
-                folder="products"
-                className="mt-2"
-              />
+                  {/* Item Code with QR Scanner */}
+                  <div className="space-y-2">
+                    <Label htmlFor="itemCode" className="text-sm font-medium">Mã sản phẩm (Item Code)</Label>
+                    <div className="flex gap-3">
+                      <Input
+                        id="itemCode"
+                        value={formData.itemCode}
+                        onChange={(e) => setFormData(prev => ({ ...prev, itemCode: e.target.value }))}
+                        placeholder="Nhập mã sản phẩm hoặc quét QR..."
+                        className="flex-1 h-11 border-gray-300 focus:border-blue-500"
+                        data-testid="input-product-itemcode"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsQRScannerOpen(true)}
+                        className="h-11 px-4 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-all"
+                        data-testid="button-qr-scanner"
+                      >
+                        <QrCode className="h-4 w-4 mr-2" />
+                        Quét QR
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      📱 Mã để quản lý kho - có thể là barcode, QR code hoặc mã tự định nghĩa
+                    </p>
+                  </div>
+
+                  {/* Price & Stock */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="price" className="text-sm font-medium flex items-center gap-2">
+                        <span className="text-red-500">*</span>
+                        Giá bán (VNĐ)
+                      </Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                        placeholder="0"
+                        min="0"
+                        step="1000"
+                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                        data-testid="input-product-price"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="stock" className="text-sm font-medium">Số lượng tồn kho</Label>
+                      <Input
+                        id="stock"
+                        type="number"
+                        value={formData.stock}
+                        onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
+                        placeholder="0"
+                        min="0"
+                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                        data-testid="input-product-stock"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 🎨 More steps coming soon... */}
+              {currentStep > 0 && (
+                <div className="space-y-6 animate-in slide-in-from-right-3 duration-300">
+                  <div className="text-center text-gray-500 py-12">
+                    <div className="text-4xl mb-4">🚧</div>
+                    <p className="text-lg font-medium">Đang phát triển...</p>
+                    <p className="text-sm">Các bước tiếp theo đang được hoàn thiện</p>
+                  </div>
+                </div>
+              )}
+
+            </form>
+          </div>
+
+          {/* 🎮 Navigation Buttons */}
+          <div className="flex justify-between items-center p-6 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 0}
+              className="flex items-center gap-2 h-11 px-6 disabled:opacity-50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Quay lại
+            </Button>
+
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              Bước {currentStep + 1} / {wizardSteps.length}
             </div>
 
-            {/* Backward compatibility - Legacy Image URL */}
-            {formData.image && (
-              <div>
-                <Label htmlFor="image">URL hình ảnh (legacy)</Label>
-                <Input
-                  id="image"
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
-                  placeholder="https://example.com/image.jpg"
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Chỉ hiển thị nếu có dữ liệu cũ. Khuyến nghị sử dụng upload ở trên.
-                </p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="flex-1"
-                data-testid="button-cancel"
-              >
-                Hủy
-              </Button>
+            {currentStep === wizardSteps.length - 1 ? (
               <Button
                 type="submit"
-                disabled={saveMutation.isPending}
-                className="flex-1"
-                data-testid="button-save-product"
+                form="product-form"
+                disabled={saveMutation.isPending || !canGoNext()}
+                className="h-11 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium"
+                onClick={handleSubmit}
               >
-                <Save className="h-4 w-4 mr-2" />
-                {saveMutation.isPending 
-                  ? 'Đang lưu...' 
-                  : (isEditing ? 'Cập nhật' : 'Thêm sản phẩm')
-                }
+                {saveMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isEditing ? 'Cập nhật' : 'Tạo sản phẩm'}
+                  </>
+                )}
               </Button>
-            </div>
-          </form>
+            ) : (
+              <Button
+                type="button"
+                onClick={nextStep}
+                disabled={!canGoNext()}
+                className="flex items-center gap-2 h-11 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium disabled:opacity-50"
+              >
+                Tiếp theo
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* 🎯 FAQ Management - Outside form to avoid nested forms */}
-      {isEditing && product?.id && (
-        <Card className="w-full max-w-2xl mt-4">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-lg">Quản lý FAQ</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <FAQManagement 
-              productId={product.id}
-              className=""
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 🚀 SALES TECHNIQUES MANAGEMENT - Advanced sales technique configuration */}
-      {isEditing && product?.id && (
-        <SalesTechniquesManagement 
-          productId={product.id}
-          initialData={memoizedSalesTechniquesData}
+      {/* 🎯 QR Scanner Modal */}
+      {isQRScannerOpen && (
+        <QRScanner
+          onClose={() => setIsQRScannerOpen(false)}
+          onScan={(result) => {
+            setFormData(prev => ({ ...prev, itemCode: result }));
+            setIsQRScannerOpen(false);
+          }}
         />
       )}
-
-      {/* QR Scanner Modal */}
-      <QRScanner
-        isOpen={isQRScannerOpen}
-        onClose={() => setIsQRScannerOpen(false)}
-        onScan={handleQRScan}
-      />
     </div>
   );
-}
+};
+
+export default ProductForm;
