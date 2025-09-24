@@ -150,21 +150,138 @@ export function ProductFormTabbed({ product, onClose, onSuccess }: ProductFormPr
   const [showDescriptionPreview, setShowDescriptionPreview] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   
-  // Memoized sales techniques data
-  const memoizedSalesTechniquesData = useMemo(() => ({
-    urgencyData: product?.urgencyData || null,
-    socialProofData: product?.socialProofData || null,
-    personalizationData: product?.personalizationData || null,
-    leadingQuestionsData: product?.leadingQuestionsData || null,
-    objectionHandlingData: product?.objectionHandlingData || null,
-  }), [
-    product?.id,
-    product?.urgencyData,
-    product?.socialProofData,
-    product?.personalizationData,
-    product?.leadingQuestionsData,
-    product?.objectionHandlingData
-  ]);
+  // Default sales data factory
+  const createDefaultSalesData = () => ({
+    urgencyData: {
+      demand_level: "medium" as "low" | "medium" | "high",
+      sales_velocity: 0,
+      is_limited_edition: false,
+      low_stock_threshold: 10,
+      urgency_messages: [],
+      trending_platforms: [],
+      flash_sale_end: undefined
+    },
+    socialProofData: {
+      total_customers: 0,
+      average_rating: 0,
+      review_count: 0,
+      featured_reviews: [],
+      social_mentions: 0,
+      trending_hashtags: [],
+      customer_photos: [],
+      testimonials: [],
+      press_mentions: [],
+      influencer_endorsements: []
+    },
+    personalizationData: {
+      target_demographics: [],
+      customer_segments: [],
+      personalized_messages: {},
+      recommended_products: [],
+      seasonal_relevance: [],
+      usage_scenarios: [],
+      lifestyle_fit: [],
+      pain_points: [],
+      value_propositions: {}
+    },
+    leadingQuestionsData: {
+      questions: [],
+      conversation_flow: {},
+      trigger_conditions: [],
+      follow_up_actions: {},
+      escalation_rules: {},
+      success_metrics: {}
+    },
+    objectionHandlingData: {
+      common_objections: [],
+      objection_responses: {},
+      alternative_solutions: [],
+      escalation_triggers: [],
+      confidence_builders: [],
+      guarantee_terms: {
+        money_back: false,
+        warranty_period: "",
+        guarantee_text: "",
+        timeline: "",
+        success_rate: ""
+      },
+      competitor_advantages: [],
+      risk_mitigation: [],
+      trust_builders: []
+    }
+  });
+
+  // Sales data state with proper initialization
+  const [salesData, setSalesData] = useState(() => {
+    const defaults = createDefaultSalesData();
+    return {
+      urgencyData: {
+        ...defaults.urgencyData,
+        ...(product?.urgencyData || {}),
+        trending_platforms: product?.urgencyData?.trending_platforms || []
+      },
+      socialProofData: { ...defaults.socialProofData, ...(product?.socialProofData || {}) },
+      personalizationData: { ...defaults.personalizationData, ...(product?.personalizationData || {}) },
+      leadingQuestionsData: { ...defaults.leadingQuestionsData, ...(product?.leadingQuestionsData || {}) },
+      objectionHandlingData: { ...defaults.objectionHandlingData, ...(product?.objectionHandlingData || {}) }
+    };
+  });
+
+  // Sync sales data with product changes
+  useEffect(() => {
+    if (product) {
+      const defaults = createDefaultSalesData();
+      setSalesData({
+        urgencyData: {
+          ...defaults.urgencyData,
+          ...(product.urgencyData || {}),
+          trending_platforms: product.urgencyData?.trending_platforms || []
+        },
+        socialProofData: { ...defaults.socialProofData, ...(product.socialProofData || {}) },
+        personalizationData: { ...defaults.personalizationData, ...(product.personalizationData || {}) },
+        leadingQuestionsData: { ...defaults.leadingQuestionsData, ...(product.leadingQuestionsData || {}) },
+        objectionHandlingData: { ...defaults.objectionHandlingData, ...(product.objectionHandlingData || {}) }
+      });
+    }
+  }, [product?.id]);
+
+  // Sales techniques save mutation
+  const salesMutation = useMutation({
+    mutationFn: async (data: typeof salesData) => {
+      const response = await fetch(`/api/products/${product?.id}/sales-techniques`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save sales techniques');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Đã lưu dữ liệu sales techniques",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSalesSave = () => {
+    if (product?.id) {
+      salesMutation.mutate(salesData);
+    }
+  };
   
   // Fetch industries and categories
   const { data: industries = [], isLoading: industriesLoading } = useQuery<Industry[]>({
@@ -450,7 +567,10 @@ export function ProductFormTabbed({ product, onClose, onSuccess }: ProductFormPr
                   generateDescriptions={generateDescriptions}
                   copyToClipboard={copyToClipboard}
                   product={product}
-                  memoizedSalesTechniquesData={memoizedSalesTechniquesData}
+                  salesData={salesData}
+                  setSalesData={setSalesData}
+                  handleSalesSave={handleSalesSave}
+                  salesMutation={salesMutation}
                 />
               )}
 
@@ -912,7 +1032,10 @@ function AITab({
   generateDescriptions, 
   copyToClipboard, 
   product, 
-  memoizedSalesTechniquesData 
+  salesData,
+  setSalesData,
+  handleSalesSave,
+  salesMutation
 }: any) {
   return (
     <div className="space-y-6">
@@ -1030,24 +1153,69 @@ function AITab({
         )}
       </div>
 
-      {/* Sales Techniques Management */}
-      {product?.id && (
+      {/* Sales Techniques Management - Full Implementation */}
+      {product?.id ? (
         <div className="border rounded-lg p-4 bg-gradient-to-r from-orange-50 to-red-50">
-          <div className="flex items-center gap-2 mb-4">
-            <Target className="h-5 w-5 text-orange-600" />
-            <h4 className="font-medium">🚀 Sales Techniques Management</h4>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-orange-600" />
+              <h4 className="font-medium">🚀 Sales Techniques Management</h4>
+            </div>
+            <Button
+              type="button"
+              onClick={handleSalesSave}
+              disabled={salesMutation.isPending}
+              variant="default"
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {salesMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {salesMutation.isPending ? 'Đang lưu...' : 'Lưu Sales Data'}
+            </Button>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-gray-600 mb-6">
             Quản lý dữ liệu sales techniques nâng cao cho sản phẩm này. 
             Bao gồm 5 modules: Urgency, Social Proof, Personalization, Leading Questions, và Objection Handling.
           </p>
-          <p className="text-xs text-orange-600">
-            ⚠️ Chức năng này chỉ khả dụng khi sản phẩm đã được lưu (chế độ chỉnh sửa)
-          </p>
-        </div>
-      )}
+          
+          {/* Sales Techniques Forms */}
+          <div className="space-y-6">
+            {/* 1. Urgency Data */}
+            <UrgencyDataForm
+              data={salesData.urgencyData}
+              onChange={(data) => setSalesData((prev: any) => ({ ...prev, urgencyData: data }))}
+            />
 
-      {!product?.id && (
+            {/* 2. Social Proof Data */}
+            <SocialProofDataForm
+              data={salesData.socialProofData}
+              onChange={(data) => setSalesData((prev: any) => ({ ...prev, socialProofData: data }))}
+            />
+
+            {/* 3. Personalization Data */}
+            <PersonalizationDataForm
+              data={salesData.personalizationData}
+              onChange={(data) => setSalesData((prev: any) => ({ ...prev, personalizationData: data }))}
+            />
+
+            {/* 4. Leading Questions Data */}
+            <LeadingQuestionsDataForm
+              data={salesData.leadingQuestionsData}
+              onChange={(data) => setSalesData((prev: any) => ({ ...prev, leadingQuestionsData: data }))}
+            />
+
+            {/* 5. Objection Handling Data */}
+            <ObjectionHandlingDataForm
+              data={salesData.objectionHandlingData}
+              onChange={(data) => setSalesData((prev: any) => ({ ...prev, objectionHandlingData: data }))}
+            />
+          </div>
+        </div>
+      ) : (
         <div className="border rounded-lg p-4 bg-gray-50">
           <div className="flex items-center gap-2 mb-2">
             <Target className="h-5 w-5 text-gray-400" />
