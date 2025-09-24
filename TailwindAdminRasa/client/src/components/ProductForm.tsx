@@ -382,6 +382,13 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   // 📱 QR Scanner State
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
+  // 🚀 UX Enhancement States
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldTouched, setFieldTouched] = useState<Record<string, boolean>>({});
+  const [progressData, setProgressData] = useState<any>(null);
+  const [isDirty, setIsDirty] = useState(false);
+
   // 🧙‍♂️ Modern Wizard State Management
   const [currentStep, setCurrentStep] = useState(0);
   
@@ -601,6 +608,113 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       }
     }
   }, [formData.categoryId, categories, toast]);
+
+  // 🚀 UX ENHANCEMENTS: Auto-save functionality với debouncing (only when dirty)
+  useEffect(() => {
+    if (!isEditing && isDirty && Object.values(fieldTouched).some(Boolean)) {
+      const timer = setTimeout(() => {
+        setAutoSaveStatus('saving');
+        // Safe auto-save với separated metadata
+        const draftData = { 
+          formData, 
+          consultationFields, 
+          currentStep,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('productFormDraft', JSON.stringify(draftData));
+        
+        setTimeout(() => {
+          setAutoSaveStatus('saved');
+          setTimeout(() => setAutoSaveStatus('idle'), 2000);
+        }, 500);
+      }, 1500); // Auto-save after 1.5s of inactivity
+
+      return () => clearTimeout(timer);
+    }
+  }, [formData, consultationFields, currentStep, isEditing, isDirty, fieldTouched]);
+
+  // 🎯 Smart field validation với real-time feedback
+  const validateField = (fieldName: string, value: string) => {
+    let error = '';
+    
+    switch (fieldName) {
+      case 'name':
+        if (!value.trim()) error = 'Tên sản phẩm là bắt buộc';
+        else if (value.length < 3) error = 'Tên sản phẩm phải ít nhất 3 ký tự';
+        else if (value.length > 100) error = 'Tên sản phẩm không được quá 100 ký tự';
+        break;
+      case 'price':
+        if (!value) error = 'Giá sản phẩm là bắt buộc';
+        else if (parseFloat(value) <= 0) error = 'Giá phải lớn hơn 0';
+        else if (parseFloat(value) > 1000000000) error = 'Giá không được quá 1 tỷ VNĐ';
+        break;
+      case 'stock':
+        if (parseInt(value) < 0) error = 'Số lượng không được âm';
+        break;
+      case 'description':
+        if (currentStep >= 1 && !value.trim()) error = 'Mô tả sản phẩm là bắt buộc';
+        else if (value.length > 1000) error = 'Mô tả không được quá 1000 ký tự';
+        break;
+    }
+    
+    return error;
+  };
+
+  // 🔄 Handle field changes với validation
+  const handleFieldChange = (fieldName: string, value: string) => {
+    setFormData(prev => ({ ...prev, [fieldName]: value }));
+    setFieldTouched(prev => ({ ...prev, [fieldName]: true }));
+    setIsDirty(true); // Mark form as dirty
+    
+    // Real-time validation
+    const error = validateField(fieldName, value);
+    setFieldErrors(prev => ({ ...prev, [fieldName]: error }));
+  };
+
+  // 💾 Load draft data on mount (progress persistence)
+  useEffect(() => {
+    if (!isEditing) {
+      const draftData = localStorage.getItem('productFormDraft');
+      if (draftData) {
+        try {
+          const parsed = JSON.parse(draftData);
+          const age = new Date().getTime() - new Date(parsed.timestamp).getTime();
+          
+          // Only restore draft if less than 24 hours old
+          if (age < 24 * 60 * 60 * 1000) {
+            setProgressData(parsed);
+            toast({
+              title: "📄 Bản nháp được tìm thấy",
+              description: "Bạn có dữ liệu chưa hoàn thành. Bấm để khôi phục bản nháp.",
+              action: (
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    // 🔧 SAFE: Only restore valid formData fields
+                    setFormData(parsed.formData || parsed); // Handle both old and new format
+                    setConsultationFields(parsed.consultationFields || {});
+                    setCurrentStep(parsed.currentStep || 0);
+                    setIsDirty(true); // Mark as dirty since we’re restoring data
+                    setProgressData(null);
+                    localStorage.removeItem('productFormDraft');
+                    toast({
+                      title: "✅ Đã khôi phục",
+                      description: "Dữ liệu bản nháp đã được khôi phục thành công"
+                    });
+                  }}
+                >
+                  Khôi phục
+                </Button>
+              )
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to parse draft data:', e);
+          localStorage.removeItem('productFormDraft');
+        }
+      }
+    }
+  }, [isEditing, toast]);
 
   // Show error if data fetch fails
   if (fetchError) {
@@ -922,6 +1036,43 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
 
         {/* 🌟 Beautiful Progress Indicator */}
         <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
+          {/* 🚀 Auto-save Status Indicator */}
+          {!isEditing && (
+            <div className="flex items-center justify-center mb-4">
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                autoSaveStatus === 'saving' ? 'bg-blue-100 text-blue-700' :
+                autoSaveStatus === 'saved' ? 'bg-green-100 text-green-700' :
+                autoSaveStatus === 'error' ? 'bg-red-100 text-red-700' : 
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {autoSaveStatus === 'saving' && (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Đang lưu...
+                  </>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <>
+                    <CheckCircle className="h-3 w-3" />
+                    Đã lưu tự động
+                  </>
+                )}
+                {autoSaveStatus === 'error' && (
+                  <>
+                    <X className="h-3 w-3" />
+                    Lỗi lưu
+                  </>
+                )}
+                {autoSaveStatus === 'idle' && (
+                  <>
+                    <Save className="h-3 w-3" />
+                    Sẵn sàng
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between">
             {wizardSteps.map((step, index) => {
               const isActive = index === currentStep;
@@ -1008,12 +1159,19 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
                         placeholder="Nhập tên sản phẩm..."
-                        className="mt-2 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className={`mt-2 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                          fieldErrors.name && fieldTouched.name ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''
+                        }`}
                         data-testid="input-product-name"
                         required
                       />
+                      {fieldErrors.name && fieldTouched.name && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                          ⚠️ {fieldErrors.name}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="sku" className="text-sm font-medium">Mã SKU</Label>
@@ -1038,7 +1196,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                       <Input
                         id="itemCode"
                         value={formData.itemCode}
-                        onChange={(e) => setFormData(prev => ({ ...prev, itemCode: e.target.value }))}
+                        onChange={(e) => handleFieldChange('itemCode', e.target.value)}
                         placeholder="Nhập mã sản phẩm hoặc quét QR..."
                         className="flex-1 h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
                         data-testid="input-product-itemcode"
@@ -1070,14 +1228,21 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         id="price"
                         type="number"
                         value={formData.price}
-                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                        onChange={(e) => handleFieldChange('price', e.target.value)}
                         placeholder="0"
                         min="0"
                         step="1000"
-                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
+                        className={`mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm ${
+                          fieldErrors.price && fieldTouched.price ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''
+                        }`}
                         data-testid="input-product-price"
                         required
                       />
+                      {fieldErrors.price && fieldTouched.price && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                          ⚠️ {fieldErrors.price}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="stock" className="text-sm font-medium">Số lượng tồn kho</Label>
@@ -1165,6 +1330,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       {/* 🎯 QR Scanner Modal */}
       {isQRScannerOpen && (
         <QRScanner
+          isOpen={isQRScannerOpen}
           onClose={() => setIsQRScannerOpen(false)}
           onScan={(result) => {
             setFormData(prev => ({ ...prev, itemCode: result }));
