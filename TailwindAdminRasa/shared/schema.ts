@@ -365,6 +365,7 @@ export const products = pgTable("products", {
   description: text("description"), // Primary description for general use
   sku: text("sku").unique(), // Auto-generated: 2 chữ đầu ngành hàng + 4 số random
   itemCode: text("item_code"), // QR/Barcode scanner input for inventory management
+  isbn: text("isbn").unique(), // ISBN code for books - International Standard Book Number
   price: decimal("price", { precision: 15, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
   categoryId: varchar("category_id").references(() => categories.id),
@@ -499,6 +500,7 @@ export const products = pgTable("products", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
 
 // Customers table
 export const customers = pgTable("customers", {
