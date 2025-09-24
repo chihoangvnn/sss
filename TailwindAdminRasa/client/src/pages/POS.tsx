@@ -538,15 +538,65 @@ export default function POS({}: POSProps) {
     tabManager.removeFromCart(productId);
   };
 
-  // Clear cart
+  // Clear cart (full clear)
   const clearCart = () => {
     if (!tabManager) return;
     tabManager.clearActiveTab();
   };
 
+  // Selective cart clearing - only remove specific items that were part of an order from specific tab
+  const clearOrderItemsFromCart = (targetTabId: string, orderItems: CartItem[]) => {
+    if (!tabManager || !orderItems.length) return;
+
+    // Get the target tab's current cart at clearing time
+    const targetTab = tabManager.tabs.find(tab => tab.id === targetTabId);
+    if (!targetTab) return;
+
+    // Prepare all cart mutations to batch them into a single state update
+    const cartMutations: Array<{productId: string, action: 'remove' | 'update', quantity?: number}> = [];
+    
+    orderItems.forEach(orderItem => {
+      const existingCartItem = targetTab.cart.find(item => item.product.id === orderItem.product.id);
+      if (existingCartItem) {
+        const remainingQuantity = existingCartItem.quantity - orderItem.quantity;
+        
+        if (remainingQuantity <= 0) {
+          // Mark for removal if no quantity left
+          cartMutations.push({
+            productId: orderItem.product.id,
+            action: 'remove'
+          });
+        } else {
+          // Mark for quantity update if some quantity remains
+          cartMutations.push({
+            productId: orderItem.product.id,
+            action: 'update',
+            quantity: remainingQuantity
+          });
+        }
+      }
+    });
+
+    // Apply all mutations in a single batched operation
+    if (cartMutations.length > 0) {
+      tabManager.updateTabCartBatch(targetTabId, cartMutations);
+    }
+
+    toast({
+      title: "Đã dọn dẹp giỏ hàng",
+      description: `Đã xóa ${orderItems.length} sản phẩm từ đơn hàng vừa lưu`,
+    });
+  };
+
+  // Track items that were used to create the current order (scoped by tab)
+  const [orderCartData, setOrderCartData] = useState<{
+    tabId: string;
+    cartItems: CartItem[];
+  } | null>(null);
+
   // Create order mutation
   const createOrderMutation = useMutation({
-    mutationFn: async (orderData: any) => {
+    mutationFn: async ({ orderData, orderContext }: { orderData: any, orderContext: { tabId: string, cartItems: CartItem[] } }) => {
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -557,13 +607,20 @@ export default function POS({}: POSProps) {
         throw new Error('Failed to create order');
       }
       
-      return response.json();
+      const result = await response.json();
+      return { order: result, orderContext };
     },
-    onSuccess: (order) => {
+    onSuccess: ({ order, orderContext }) => {
       setCurrentOrder(order);
       
+      // Store the order context (tab ID + cart items used for this order)
+      setOrderCartData({
+        tabId: orderContext.tabId,
+        cartItems: orderContext.cartItems
+      });
+      
       // Prepare order items with product info for receipt printing
-      const orderItemsWithProducts = cart.map(cartItem => ({
+      const orderItemsWithProducts = orderContext.cartItems.map(cartItem => ({
         id: '', // Will be set after order items are created
         orderId: order.id,
         productId: cartItem.product.id,
@@ -575,9 +632,12 @@ export default function POS({}: POSProps) {
       setCurrentOrderItems(orderItemsWithProducts);
       setShowPayment(true);
       
+      // Clear only the items that were part of this order from the specific tab
+      clearOrderItemsFromCart(orderContext.tabId, orderContext.cartItems);
+      
       toast({
         title: "Đơn hàng đã tạo",
-        description: `Đơn hàng ${order.id} đã được tạo thành công`,
+        description: `Đơn hàng ${order.id} đã được tạo thành công. Giỏ hàng đã được dọn dẹp.`,
       });
     },
     onError: (error: any) => {
@@ -600,11 +660,15 @@ export default function POS({}: POSProps) {
       return;
     }
 
+    // Capture current tab ID and cart snapshot BEFORE async mutation
+    const currentTabId = tabManager.activeTabId;
+    const cartSnapshot = [...cart]; // Create snapshot at submit time
+    
     const orderData = {
       customerId: selectedCustomer?.id || null,
       total: roundedCartTotal.toString(), // Convert to string for validation
       status: 'pending',
-      items: cart.map(item => ({
+      items: cartSnapshot.map(item => ({
         productId: item.product.id,
         quantity: item.quantity, // Decimal quantities are supported
         price: parseFloat(item.product.price),
@@ -612,7 +676,13 @@ export default function POS({}: POSProps) {
       source: 'pos', // Mark as POS order
     };
 
-    createOrderMutation.mutate(orderData);
+    // Store the order context for selective clearing
+    const orderContext = {
+      tabId: currentTabId,
+      cartItems: cartSnapshot
+    };
+
+    createOrderMutation.mutate({ orderData, orderContext });
   };
 
   // Handle split order creation
@@ -686,7 +756,9 @@ export default function POS({}: POSProps) {
       }
     }
     
-    clearCart();
+    // Don't clear cart here anymore - items are already selectively cleared after order creation
+    // Only clear order tracking states
+    setOrderCartData(null);
     setCurrentOrder(null);
     setCurrentOrderItems([]);
     setShowPayment(false);
@@ -726,10 +798,41 @@ export default function POS({}: POSProps) {
   // Handle receipt print success
   const handleReceiptPrintSuccess = () => {
     setShowReceiptPrinter(false);
-    toast({
-      title: "In thành công",
-      description: "Hóa đơn đã được in thành công",
-    });
+    
+    // If there are remaining items from the order and they weren't cleared yet,
+    // clear them after successful receipt print
+    if (orderCartData) {
+      const targetTab = tabManager.tabs.find(tab => tab.id === orderCartData.tabId);
+      if (targetTab) {
+        // Check if any of the order items are still in the target tab (might have been partially cleared)
+        const remainingOrderItems = orderCartData.cartItems.filter(orderItem =>
+          targetTab.cart.some(cartItem => cartItem.product.id === orderItem.product.id)
+        );
+        
+        if (remainingOrderItems.length > 0) {
+          clearOrderItemsFromCart(orderCartData.tabId, remainingOrderItems);
+          toast({
+            title: "In thành công",
+            description: "Hóa đơn đã được in thành công. Giỏ hàng đã được dọn dẹp.",
+          });
+        } else {
+          toast({
+            title: "In thành công",
+            description: "Hóa đơn đã được in thành công",
+          });
+        }
+      } else {
+        toast({
+          title: "In thành công", 
+          description: "Hóa đơn đã được in thành công",
+        });
+      }
+    } else {
+      toast({
+        title: "In thành công",
+        description: "Hóa đơn đã được in thành công",
+      });
+    }
   };
 
   // Handle receipt print error

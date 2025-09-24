@@ -341,6 +341,106 @@ export const useOptimizedTabManager = () => {
     });
   }, [updateTab]);
 
+  // Tab-scoped cart operations - explicit tabId parameters with batching-safe updates
+  const removeFromTabCart = useCallback((tabId: string, productId: string) => {
+    setState(prevState => {
+      const tabIndex = prevState.tabs.findIndex(tab => tab.id === tabId);
+      if (tabIndex === -1) return prevState;
+
+      const currentTab = prevState.tabs[tabIndex];
+      const updatedCart = currentTab.cart.filter(item => item.product.id !== productId);
+      
+      // Create new tabs array with updated tab
+      const newTabs = [...prevState.tabs];
+      newTabs[tabIndex] = {
+        ...currentTab,
+        cart: updatedCart,
+        status: calculateTabStatus(updatedCart, currentTab.selectedCustomer),
+        lastModified: new Date(),
+      };
+
+      return {
+        ...prevState,
+        tabs: newTabs,
+      };
+    });
+  }, [calculateTabStatus]);
+
+  const updateTabQuantity = useCallback((tabId: string, productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeFromTabCart(tabId, productId);
+      return;
+    }
+    
+    setState(prevState => {
+      const tabIndex = prevState.tabs.findIndex(tab => tab.id === tabId);
+      if (tabIndex === -1) return prevState;
+
+      const currentTab = prevState.tabs[tabIndex];
+      const updatedCart = currentTab.cart.map(item =>
+        item.product.id === productId 
+          ? { ...item, quantity: newQuantity }
+          : item
+      );
+      
+      // Create new tabs array with updated tab
+      const newTabs = [...prevState.tabs];
+      newTabs[tabIndex] = {
+        ...currentTab,
+        cart: updatedCart,
+        status: calculateTabStatus(updatedCart, currentTab.selectedCustomer),
+        lastModified: new Date(),
+      };
+
+      return {
+        ...prevState,
+        tabs: newTabs,
+      };
+    });
+  }, [calculateTabStatus, removeFromTabCart]);
+
+  // Batch cart operations for multiple mutations on single tab
+  const updateTabCartBatch = useCallback((tabId: string, cartMutations: Array<{productId: string, action: 'remove' | 'update', quantity?: number}>) => {
+    setState(prevState => {
+      const tabIndex = prevState.tabs.findIndex(tab => tab.id === tabId);
+      if (tabIndex === -1) return prevState;
+
+      const currentTab = prevState.tabs[tabIndex];
+      let updatedCart = [...currentTab.cart];
+
+      // Apply all mutations in sequence
+      cartMutations.forEach(({ productId, action, quantity }) => {
+        if (action === 'remove') {
+          updatedCart = updatedCart.filter(item => item.product.id !== productId);
+        } else if (action === 'update' && quantity !== undefined) {
+          if (quantity <= 0) {
+            updatedCart = updatedCart.filter(item => item.product.id !== productId);
+          } else {
+            updatedCart = updatedCart.map(item =>
+              item.product.id === productId 
+                ? { ...item, quantity: quantity }
+                : item
+            );
+          }
+        }
+      });
+      
+      // Create new tabs array with updated tab
+      const newTabs = [...prevState.tabs];
+      newTabs[tabIndex] = {
+        ...currentTab,
+        cart: updatedCart,
+        status: calculateTabStatus(updatedCart, currentTab.selectedCustomer),
+        lastModified: new Date(),
+      };
+
+      return {
+        ...prevState,
+        tabs: newTabs,
+      };
+    });
+  }, [calculateTabStatus]);
+
   // Optimized clear all tabs
   const clearAllTabs = useCallback(() => {
     const startTime = performance.now();
@@ -441,6 +541,11 @@ export const useOptimizedTabManager = () => {
     clearAllTabs,
     switchToNewOrder,
     duplicateTab,
+
+    // Tab-scoped operations (new)
+    removeFromTabCart,
+    updateTabQuantity,
+    updateTabCartBatch,
 
     // Utilities (memoized)
     getTabStats,
