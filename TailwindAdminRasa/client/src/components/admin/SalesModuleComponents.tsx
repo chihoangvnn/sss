@@ -42,14 +42,12 @@ export function UrgencyDataForm({ data, onChange }: UrgencyDataFormProps) {
   };
 
   return (
-    <Card className="border-orange-200 bg-orange-50/30">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-orange-800">
-          <AlertTriangle className="h-5 w-5" />
-          🚨 Urgency Data - Tạo Cảm Giác Khẩn Cấp
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4 border-t pt-4">
+      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+        <AlertTriangle className="h-5 w-5 text-orange-600" />
+        🚨 Urgency Data - Tạo Cảm Giác Khẩn Cấp
+      </h4>
+      <div className="space-y-4">
         {/* Demand Level */}
         <div>
           <Label htmlFor="demandLevel">Mức độ cầu</Label>
@@ -132,8 +130,8 @@ export function UrgencyDataForm({ data, onChange }: UrgencyDataFormProps) {
             ))}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -171,14 +169,12 @@ export function SocialProofDataForm({ data, onChange }: SocialProofDataFormProps
   };
 
   return (
-    <Card className="border-blue-200 bg-blue-50/30">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-blue-800">
-          <Users className="h-5 w-5" />
-          👥 Social Proof Data - Bằng Chứng Xã Hội
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4 border-t pt-4">
+      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+        <Users className="h-5 w-5 text-blue-600" />
+        👥 Social Proof Data - Bằng Chứng Xã Hội
+      </h4>
+      <div className="space-y-4">
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -349,8 +345,8 @@ export function SocialProofDataForm({ data, onChange }: SocialProofDataFormProps
             ))}
           </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -401,14 +397,12 @@ export function PersonalizationDataForm({ data, onChange }: PersonalizationDataF
   };
 
   return (
-    <Card className="border-green-200 bg-green-50/30">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-green-800">
-          <Target className="h-5 w-5" />
-          🎯 Personalization Data - Cá Nhân Hóa Cực Cao
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4 border-t pt-4">
+      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+        <Target className="h-5 w-5 text-green-600" />
+        🎯 Personalization Data - Cá Nhân Hóa Cực Cao
+      </h4>
+      <div className="space-y-4">
         {/* Income Bracket */}
         <div>
           <Label htmlFor="incomeBracket">Khung thu nhập</Label>
@@ -552,8 +546,8 @@ export function PersonalizationDataForm({ data, onChange }: PersonalizationDataF
             ))}
           </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -588,14 +582,12 @@ export function LeadingQuestionsDataForm({ data, onChange }: LeadingQuestionsDat
   };
 
   return (
-    <Card className="border-purple-200 bg-purple-50/30">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-purple-800">
-          <MessageCircle className="h-5 w-5" />
-          💬 Leading Questions Data - Câu Hỏi Gợi Mở
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4 border-t pt-4">
+      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+        <MessageCircle className="h-5 w-5 text-purple-600" />
+        💬 Leading Questions Data - Câu Hỏi Gợi Mở
+      </h4>
+      <div className="space-y-4">
         <Tabs defaultValue="emotional" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="emotional">Cảm xúc</TabsTrigger>
@@ -736,8 +728,8 @@ export function LeadingQuestionsDataForm({ data, onChange }: LeadingQuestionsDat
             </div>
           </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -789,14 +781,12 @@ export function ObjectionHandlingDataForm({ data, onChange }: ObjectionHandlingD
   };
 
   return (
-    <Card className="border-red-200 bg-red-50/30">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-red-800">
-          <ShieldCheck className="h-5 w-5" />
-          🛡️ Objection Handling Data - Xử Lý Phản Đối
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4 border-t pt-4">
+      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-red-600" />
+        🛡️ Objection Handling Data - Xử Lý Phản Đối
+      </h4>
+      <div className="space-y-4">
         <Tabs defaultValue="price" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="price">Giá cả</TabsTrigger>
@@ -961,7 +951,7 @@ export function ObjectionHandlingDataForm({ data, onChange }: ObjectionHandlingD
             </div>
           </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
