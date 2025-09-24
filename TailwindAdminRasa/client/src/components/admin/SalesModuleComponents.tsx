@@ -7,14 +7,65 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, AlertTriangle, Users, Target, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { X, Plus, AlertTriangle, Users, Target, MessageCircle, ShieldCheck, ChevronDown, ChevronRight } from 'lucide-react';
 import type { UrgencyData, SocialProofData, PersonalizationData, LeadingQuestionsData, ObjectionHandlingData } from '@shared/schema';
+
+// Sales Module Section Wrapper - Collapsible container
+interface SalesModuleSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  moduleKey: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  isOpen: boolean;
+  onToggle: (moduleKey: string) => void;
+}
+
+function SalesModuleSection({ 
+  title, 
+  icon, 
+  moduleKey, 
+  defaultOpen = false, 
+  children,
+  isOpen,
+  onToggle 
+}: SalesModuleSectionProps) {
+  return (
+    <div className="space-y-4 border-t pt-4">
+      <Collapsible open={isOpen} onOpenChange={() => onToggle(moduleKey)}>
+        <CollapsibleTrigger asChild>
+          <div className="flex items-center justify-between cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+            <h4 className="font-medium text-gray-900 flex items-center gap-2">
+              {icon}
+              {title}
+            </h4>
+            <div className="transition-transform duration-200">
+              {isOpen ? (
+                <ChevronDown className="h-4 w-4 text-gray-500" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-gray-500" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden">
+          <div className="pt-4">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
 
 // 🚨 1. URGENCY DATA - Tạo cảm giác khẩn cấp
 interface UrgencyDataFormProps {
   data: UrgencyData;
   onChange: (data: UrgencyData) => void;
 }
+
+export { SalesModuleSection };
 
 export function UrgencyDataForm({ data, onChange }: UrgencyDataFormProps) {
   const updateField = (field: keyof UrgencyData, value: any) => {
@@ -42,12 +93,7 @@ export function UrgencyDataForm({ data, onChange }: UrgencyDataFormProps) {
   };
 
   return (
-    <div className="space-y-4 border-t pt-4">
-      <h4 className="font-medium text-gray-900 flex items-center gap-2">
-        <AlertTriangle className="h-5 w-5 text-orange-600" />
-        🚨 Urgency Data - Tạo Cảm Giác Khẩn Cấp
-      </h4>
-      <div className="space-y-4">
+    <div className="space-y-4">
         {/* Demand Level */}
         <div>
           <Label htmlFor="demandLevel">Mức độ cầu</Label>
@@ -130,7 +176,6 @@ export function UrgencyDataForm({ data, onChange }: UrgencyDataFormProps) {
             ))}
           </div>
         </div>
-      </div>
     </div>
   );
 }
