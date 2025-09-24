@@ -103,7 +103,7 @@ function App() {
       <TooltipProvider>
         {/* Public Routes (outside admin layout) */}
         <Switch>
-          <Route path="/shopee" component={ShopeeHomePage} />
+          <Route path="/shop" component={ShopeeHomePage} />
           <Route path="/lp/:slug" component={PublicLandingPage} />
           <Route path="/sf/:name" component={PublicStorefront} />
           <Route path="/product/:slug" component={ProductPage} />
