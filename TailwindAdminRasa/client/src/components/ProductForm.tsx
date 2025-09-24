@@ -1040,18 +1040,18 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         value={formData.itemCode}
                         onChange={(e) => setFormData(prev => ({ ...prev, itemCode: e.target.value }))}
                         placeholder="Nhập mã sản phẩm hoặc quét QR..."
-                        className="flex-1 h-11 border-gray-300 focus:border-blue-500"
+                        className="flex-1 h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
                         data-testid="input-product-itemcode"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setIsQRScannerOpen(true)}
-                        className="h-11 px-4 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-all"
+                        className="h-11 px-4 border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
                         data-testid="button-qr-scanner"
                       >
-                        <QrCode className="h-4 w-4 mr-2" />
-                        Quét QR
+                        <QrCode className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
+                        <span className="font-medium">Quét QR</span>
                       </Button>
                     </div>
                     <p className="text-xs text-gray-500 flex items-center gap-1">
@@ -1074,7 +1074,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         placeholder="0"
                         min="0"
                         step="1000"
-                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
                         data-testid="input-product-price"
                         required
                       />
@@ -1088,7 +1088,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
                         placeholder="0"
                         min="0"
-                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-green-500"
+                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
                         data-testid="input-product-stock"
                       />
                     </div>
@@ -1117,10 +1117,10 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 0}
-              className="flex items-center gap-2 h-11 px-6 disabled:opacity-50"
+              className="flex items-center gap-2 h-11 px-6 disabled:opacity-50 border-gray-300 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 transition-all duration-300 transform hover:scale-105 hover:shadow-md group"
             >
-              <ChevronLeft className="h-4 w-4" />
-              Quay lại
+              <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              <span className="font-medium">Quay lại</span>
             </Button>
 
             <div className="flex items-center gap-2 text-sm text-gray-500">
