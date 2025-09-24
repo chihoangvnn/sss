@@ -1313,8 +1313,12 @@ export default function POS({}: POSProps) {
               </div>
             ) : (
               <div className="p-4 space-y-3">
-                {cart.map((item) => (
-                  <Card key={item.product.id} className="p-3">
+                {cart.map((item) => {
+                  const unitSettings = getProductUnitSettings(item.product);
+                  const itemTotal = fromIntegerCents(Math.round((toIntegerCents(item.product.price) * toIntegerThousandths(item.quantity)) / 1000));
+                  
+                  return (
+                  <Card key={`cart-item-${item.product.id}`} className="p-3">
                     <div className="flex items-start space-x-3">
                       {/* Product Image */}
                       <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -1341,27 +1345,40 @@ export default function POS({}: POSProps) {
                         <div className="flex items-center justify-between mt-3 gap-2">
                           <div className="flex-1">
                             <DecimalQuantityInput
+                              key={`quantity-${item.product.id}-${item.quantity}`}
                               value={item.quantity}
-                              onChange={(newQuantity) => updateQuantity(item.product.id, newQuantity)}
-                              unitType={getProductUnitSettings(item.product).unitType as 'weight' | 'count' | 'volume'}
-                              unit={getProductUnitSettings(item.product).unit}
-                              allowDecimals={getProductUnitSettings(item.product).allowDecimals}
-                              minQuantity={getProductUnitSettings(item.product).minQuantity}
-                              quantityStep={getProductUnitSettings(item.product).quantityStep}
+                              onChange={(newQuantity) => {
+                                console.log('🔢 Quantity change:', {productId: item.product.id, oldQuantity: item.quantity, newQuantity});
+                                updateQuantity(item.product.id, newQuantity);
+                              }}
+                              unitType={unitSettings.unitType as 'weight' | 'count' | 'volume'}
+                              unit={unitSettings.unit}
+                              allowDecimals={unitSettings.allowDecimals}
+                              minQuantity={unitSettings.minQuantity}
+                              quantityStep={unitSettings.quantityStep}
                               maxQuantity={item.product.stock}
                               size="sm"
                               className="w-full"
                             />
                           </div>
 
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeFromCart(item.product.id)}
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 flex-shrink-0"
+                          <div
+                            onClick={() => {
+                              console.log('🗑️ Remove from cart:', item.product.id);
+                              removeFromCart(item.product.id);
+                            }}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 flex-shrink-0 cursor-pointer flex items-center justify-center rounded hover:bg-red-50"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                removeFromCart(item.product.id);
+                              }
+                            }}
                           >
                             <Trash2 className="h-3 w-3" />
-                          </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1369,14 +1386,14 @@ export default function POS({}: POSProps) {
                     {/* Item Total with Unit Price Display */}
                     <div className="text-right mt-3 pt-2 border-t space-y-1">
                       <div className="text-xs text-gray-500">
-                        {formatPrice(item.product.price)}/{getProductUnitSettings(item.product).unit}
+                        {formatPrice(item.product.price)}/{unitSettings.unit}
                       </div>
                       <span className="font-semibold text-green-600">
-                        {formatPrice(fromIntegerCents(Math.round((toIntegerCents(item.product.price) * toIntegerThousandths(item.quantity)) / 1000)))}
+                        {formatPrice(itemTotal)}
                       </span>
                     </div>
                   </Card>
-                ))}
+                )})}
               </div>
             )}
           </div>
