@@ -1256,19 +1256,18 @@ function AITab({
 
       {/* Sales Techniques Management - Full Implementation */}
       {product?.id ? (
-        <div className="border rounded-lg p-4 bg-gradient-to-r from-orange-50 to-red-50">
-          <div className="flex items-center justify-between mb-4">
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-orange-600" />
-              <h4 className="font-medium">🚀 Sales Techniques Management</h4>
+              <Target className="h-5 w-5 text-gray-600" />
+              <h4 className="font-medium text-gray-900">🚀 Sales Techniques Management</h4>
             </div>
             <Button
               type="button"
               onClick={handleSalesSave}
               disabled={salesMutation.isPending}
-              variant="default"
+              variant="outline"
               size="sm"
-              className="bg-orange-600 hover:bg-orange-700"
             >
               {salesMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1317,8 +1316,8 @@ function AITab({
           </div>
         </div>
       ) : (
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-gray-400" />
             <h4 className="font-medium text-gray-600">🚀 Sales Techniques Management</h4>
           </div>
