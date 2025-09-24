@@ -116,7 +116,18 @@ export default function CategoryManager() {
     { id: "chống_chỉ_định", label: "Chống chỉ định" },
     { id: "thông_số_kỹ_thuật", label: "Thông số kỹ thuật" },
     { id: "yêu_cầu_hệ_thống", label: "Yêu cầu hệ thống" },
-    { id: "bảo_hành", label: "Bảo hành" }
+    { id: "bảo_hành", label: "Bảo hành" },
+    // 🍲 Food & beverage specific fields
+    { id: "cách_bảo_quản", label: "Cách bảo quản" },
+    { id: "hạn_sử_dụng", label: "Hạn sử dụng" },
+    { id: "nguyên_liệu", label: "Nguyên liệu" },
+    { id: "xuất_xứ", label: "Xuất xứ" },
+    { id: "chứng_nhận", label: "Chứng nhận" },
+    // 🔧 General purpose fields
+    { id: "cách_sử_dụng_cơ_bản", label: "Cách sử dụng cơ bản" },
+    { id: "lưu_ý_đặc_biệt", label: "Lưu ý đặc biệt" },
+    { id: "điều_kiện_bảo_quản", label: "Điều kiện bảo quản" },
+    { id: "khuyến_nghị_chuyên_gia", label: "Khuyến nghị chuyên gia" }
   ];
   const [formData, setFormData] = useState<CategoryFormData>({
     name: "",
@@ -436,6 +447,130 @@ export default function CategoryManager() {
     return industry ? industry.name : 'Không xác định';
   };
 
+  // 🤖 Smart Defaults: Industry-specific consultation configuration
+  const getIndustrySmartDefaults = (industryId: string) => {
+    const industry = industries.find(i => i.id === industryId);
+    const industryName = industry?.name?.toLowerCase() || '';
+    
+    // Vietnamese retail industry patterns
+    if (industryName.includes('mỹ phẩm') || industryName.includes('làm đẹp') || industryName.includes('beauty')) {
+      return {
+        enabled_types: ['usage_guide', 'safety_profile', 'skin_benefits', 'care_instructions'],
+        required_fields: ['loại_da_phù_hợp', 'cách_thoa', 'tần_suất_sử_dụng', 'patch_test'],
+        optional_fields: ['độ_tuổi_khuyến_nghị', 'thành_phần_chính'],
+        auto_prompts: [
+          'Làn da bạn thuộc loại nào? (da dầu, da khô, da hỗn hợp, da nhạy cảm)',
+          'Bạn đã từng dị ứng với sản phẩm chăm sóc da nào chưa?',
+          'Hiện tại bạn đang sử dụng routine chăm sóc da như thế nào?'
+        ],
+        templates: {
+          usage_guide_template: '✨ **HƯỚNG DẪN SỬ DỤNG:**\n1. Làm sạch da mặt\n2. {cách_thoa}\n3. Sử dụng {tần_suất_sử_dụng}\n4. Thoa kem chống nắng nếu dùng ban ngày',
+          safety_template: '⚠️ **AN TOÀN & LƯU Ý:**\n- Phù hợp cho: {loại_da_phù_hợp}\n- {patch_test}\n- Ngưng sử dụng nếu có dấu hiệu kích ứng',
+          skin_benefits_template: '✨ **LỢI ÍCH CHO DA:**\n- Cải thiện tình trạng da\n- Phù hợp với {loại_da_phù_hợp}\n- {thành_phần_chính} giúp nuôi dưỡng da'
+        }
+      };
+    }
+    
+    if (industryName.includes('sức khỏe') || industryName.includes('thực phẩm chức năng') || industryName.includes('health')) {
+      return {
+        enabled_types: ['usage_guide', 'safety_profile', 'health_benefits'],
+        required_fields: ['liều_dùng', 'thời_gian_sử_dụng', 'đối_tượng_sử_dụng', 'chống_chỉ_định'],
+        optional_fields: ['thành_phần_chính'],
+        auto_prompts: [
+          'Bạn có đang dùng thuốc gì khác không?',
+          'Bạn có tiền sử bệnh lý gì cần lưu ý?',
+          'Mục tiêu sức khỏe của bạn là gì?'
+        ],
+        templates: {
+          usage_guide_template: '💊 **HƯỚNG DẪN SỬ DỤNG:**\n- Liều dùng: {liều_dùng}\n- Thời gian: {thời_gian_sử_dụng}\n- Uống cùng với nước hoặc sau bữa ăn',
+          safety_template: '⚠️ **AN TOÀN & LƯU Ý:**\n- Đối tượng: {đối_tượng_sử_dụng}\n- Chống chỉ định: {chống_chỉ_định}\n- Tham khảo ý kiến bác sĩ nếu có bất thường',
+          health_benefits_template: '💊 **LỢI ÍCH SỨC KHỎE:**\n- {thành_phần_chính}\n- Hỗ trợ sức khỏe tổng thể\n- Phù hợp cho: {đối_tượng_sử_dụng}'
+        }
+      };
+    }
+    
+    if (industryName.includes('điện tử') || industryName.includes('công nghệ') || industryName.includes('electronics')) {
+      return {
+        enabled_types: ['usage_guide', 'technical_guide', 'troubleshooting', 'compatibility'],
+        required_fields: ['thông_số_kỹ_thuật', 'yêu_cầu_hệ_thống', 'bảo_hành'],
+        optional_fields: [],
+        auto_prompts: [
+          'Bạn sử dụng thiết bị này để làm gì?',
+          'Thiết bị hiện tại của bạn có tương thích không?',
+          'Bạn đã có kinh nghiệm sử dụng sản phẩm tương tự chưa?'
+        ],
+        templates: {
+          usage_guide_template: '🔧 **HƯỚNG DẪN SỬ DỤNG:**\n1. Kiểm tra {yêu_cầu_hệ_thống}\n2. Kết nối và cài đặt\n3. Cấu hình theo {thông_số_kỹ_thuật}',
+          technical_template: '⚙️ **THÔNG SỐ KỸ THUẬT:**\n- {thông_số_kỹ_thuật}\n- {yêu_cầu_hệ_thống}\n- Bảo hành: {bảo_hành}',
+          troubleshooting_template: '🛠️ **KHẮC PHỤC LỖI:**\n1. Kiểm tra kết nối\n2. Khởi động lại thiết bị\n3. Liên hệ bộ phận kỹ thuật nếu vẫn gặp lỗi'
+        }
+      };
+    }
+    
+    if (industryName.includes('thực phẩm') || industryName.includes('food') || industryName.includes('gia vị')) {
+      return {
+        enabled_types: ['usage_guide', 'recipes', 'storage', 'health_benefits'],
+        required_fields: ['thành_phần_chính', 'cách_bảo_quản', 'hạn_sử_dụng'],
+        optional_fields: ['liều_dùng'],
+        auto_prompts: [
+          'Bạn có dị ứng thực phẩm nào không?',
+          'Bạn thường nấu ăn theo phong cách nào?',
+          'Gia đình bạn có thành viên nào ăn chay không?'
+        ],
+        templates: {
+          usage_guide_template: '🍽️ **HƯỚNG DẪN SỬ DỤNG:**\n- Thành phần: {thành_phần_chính}\n- Cách dùng: {liều_dùng}\n- Bảo quản: {cách_bảo_quản}',
+          recipes_template: '📝 **CÔNG THỨC GỢI Ý:**\n- Nguyên liệu chính: {thành_phần_chính}\n- Phù hợp cho các món: [món ăn phù hợp]\n- Lưu ý: Nêm nếm theo khẩu vị',
+          storage_template: '🏪 **CÁCH BẢO QUẢN:**\n- {cách_bảo_quản}\n- Hạn sử dụng: {hạn_sử_dụng}\n- Tránh ánh nắng trực tiếp'
+        }
+      };
+    }
+    
+    // Default fallback for other industries
+    return {
+      enabled_types: ['usage_guide', 'safety_profile'],
+      required_fields: ['cách_sử_dụng_cơ_bản'],
+      optional_fields: [],
+      auto_prompts: [
+        'Bạn đã sử dụng sản phẩm tương tự chưa?',
+        'Mục đích sử dụng của bạn là gì?'
+      ],
+      templates: {
+        usage_guide_template: '✨ **HƯỚNG DẪN SỬ DỤNG:**\n1. {cách_sử_dụng_cơ_bản}\n2. Thực hiện theo chỉ dẫn\n3. Liên hệ nếu cần hỗ trợ'
+      }
+    };
+  };
+
+  // 🚀 Auto-populate consultation config when industry changes (for new categories only)
+  const handleIndustryChange = (industryId: string) => {
+    // Update industry in form data
+    setFormData(prev => ({ ...prev, industryId }));
+    
+    // Auto-populate consultation config ONLY for new categories (not when editing)
+    if (!editingCategory && industryId) {
+      const smartDefaults = getIndustrySmartDefaults(industryId);
+      
+      setFormData(prev => ({
+        ...prev,
+        consultationConfig: {
+          enabled_types: smartDefaults.enabled_types,
+          required_fields: smartDefaults.required_fields,
+          optional_fields: smartDefaults.optional_fields,
+          auto_prompts: smartDefaults.auto_prompts
+        },
+        consultationTemplates: smartDefaults.templates || {}
+      }));
+      
+      // Switch to consultation tab to show the auto-populated config
+      setActiveTab('consultation');
+      
+      // Show success toast
+      toast({
+        title: "🤖 Smart Defaults",
+        description: `Đã tự động cấu hình tư vấn cho ngành "${getIndustryName(industryId)}". Bạn có thể chỉnh sửa thêm nếu cần.`,
+      });
+    }
+  };
+
   if (error) {
     return (
       <div className="container mx-auto p-6 max-w-6xl">
@@ -628,7 +763,7 @@ export default function CategoryManager() {
                         <Label htmlFor="categoryIndustry">Ngành hàng *</Label>
                         <Select 
                           value={formData.industryId} 
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, industryId: value }))}
+                          onValueChange={handleIndustryChange}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Chọn ngành hàng" />
