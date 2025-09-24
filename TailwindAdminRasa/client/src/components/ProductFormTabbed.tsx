@@ -260,9 +260,10 @@ export function ProductFormTabbed({ product, onClose, onSuccess }: ProductFormPr
     }
   }, [product?.id]);
 
-  // Collapse state for Sales Technique modules
+  // Collapse state for Sales Technique modules and AI Generator
   const [moduleCollapseState, setModuleCollapseState] = useState({
-    urgency: true, // First module open by default
+    aiGenerator: true, // AI Generator open by default
+    urgency: false, // Sales modules closed by default
     socialProof: false,
     personalization: false,
     leadingQuestions: false,
@@ -1165,115 +1166,122 @@ function AITab({
         AI tự động tạo nội dung và quản lý sales techniques nâng cao
       </div>
       
-      {/* AI Description Generation */}
-      <div className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5 text-purple-600" />
-            <h4 className="font-medium">🤖 AI Description Generator</h4>
+      {/* AI Description Generation - Collapsible */}
+      <SalesModuleSection
+        title="🤖 AI Description Generator - Tự Động Tạo Nội Dung"
+        icon={<Wand2 className="h-5 w-5 text-purple-600" />}
+        moduleKey="aiGenerator"
+        isOpen={moduleCollapseState.aiGenerator}
+        onToggle={toggleModuleCollapse}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              AI tự động tạo mô tả sản phẩm và variations cho RASA chatbot
+            </p>
+            <Button
+              type="button"
+              onClick={generateDescriptions}
+              disabled={isGenerating || !formData.name.trim()}
+              variant="outline"
+              size="sm"
+            >
+              {isGenerating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Wand2 className="h-4 w-4 mr-2" />
+              )}
+              {isGenerating ? 'Đang tạo...' : '🪄 Tự động tạo mô tả'}
+            </Button>
           </div>
-          <Button
-            type="button"
-            onClick={generateDescriptions}
-            disabled={isGenerating || !formData.name.trim()}
-            variant="outline"
-            size="sm"
-          >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Wand2 className="h-4 w-4 mr-2" />
-            )}
-            {isGenerating ? 'Đang tạo...' : '🪄 Tự động tạo mô tả'}
-          </Button>
-        </div>
 
-        {!formData.name.trim() && (
-          <p className="text-xs text-muted-foreground">
-            💡 Nhập tên sản phẩm ở tab "Cơ bản" trước để AI có thể tạo mô tả phù hợp
-          </p>
-        )}
+          {!formData.name.trim() && (
+            <p className="text-xs text-muted-foreground">
+              💡 Nhập tên sản phẩm ở tab "Cơ bản" trước để AI có thể tạo mô tả phù hợp
+            </p>
+          )}
 
-        {/* Generated Descriptions Preview */}
-        {generatedDescriptions && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h5 className="text-sm font-medium text-green-700">✅ Mô tả đã tạo bởi AI</h5>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
-              >
-                {showDescriptionPreview ? (
-                  <EyeOff className="h-3 w-3 mr-1" />
-                ) : (
-                  <Eye className="h-3 w-3 mr-1" />
-                )}
-                {showDescriptionPreview ? 'Ẩn' : 'Xem'} chi tiết
-              </Button>
-            </div>
-
-            {showDescriptionPreview && (
-              <div className="space-y-3">
-                {/* Primary Description */}
-                <div className="bg-white rounded p-3 border-l-4 border-green-500">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-green-700">Mô tả chính:</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(generatedDescriptions.primary)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-700 bg-green-50 p-2 rounded">
-                    {generatedDescriptions.primary}
-                  </p>
-                </div>
-
-                {/* RASA Variations */}
-                <div className="bg-white rounded p-3 border-l-4 border-blue-500">
-                  <span className="text-sm font-medium text-blue-700 mb-2 block">🤖 RASA Chat Variations:</span>
-                  <div className="grid gap-2">
-                    {Object.entries(generatedDescriptions.rasa_variations || {}).map(([index, description]: [string, any]) => {
-                      const contextLabels = {
-                        "0": "🛡️ An toàn",
-                        "1": "⚡ Tiện lợi", 
-                        "2": "⭐ Chất lượng",
-                        "3": "💚 Sức khỏe"
-                      };
-                      return (
-                        <div key={index} className="flex items-start gap-2 bg-blue-50 p-2 rounded">
-                          <span className="text-xs font-medium text-blue-600 min-w-fit">
-                            {contextLabels[index as keyof typeof contextLabels]}:
-                          </span>
-                          <span className="text-sm text-gray-700 flex-1">{description}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(description)}
-                            className="h-5 w-5 p-0 flex-shrink-0"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-blue-600 mt-2 italic">
-                    💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations || {}).length} mô tả này khi chat với khách hàng
-                  </p>
-                </div>
+          {/* Generated Descriptions Preview */}
+          {generatedDescriptions && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-sm font-medium text-green-700">✅ Mô tả đã tạo bởi AI</h5>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
+                >
+                  {showDescriptionPreview ? (
+                    <EyeOff className="h-3 w-3 mr-1" />
+                  ) : (
+                    <Eye className="h-3 w-3 mr-1" />
+                  )}
+                  {showDescriptionPreview ? 'Ẩn' : 'Xem'} chi tiết
+                </Button>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+
+              {showDescriptionPreview && (
+                <div className="space-y-3">
+                  {/* Primary Description */}
+                  <div className="bg-white rounded p-3 border-l-4 border-green-500">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-green-700">Mô tả chính:</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(generatedDescriptions.primary)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-700 bg-green-50 p-2 rounded">
+                      {generatedDescriptions.primary}
+                    </p>
+                  </div>
+
+                  {/* RASA Variations */}
+                  <div className="bg-white rounded p-3 border-l-4 border-blue-500">
+                    <span className="text-sm font-medium text-blue-700 mb-2 block">🤖 RASA Chat Variations:</span>
+                    <div className="grid gap-2">
+                      {Object.entries(generatedDescriptions.rasa_variations || {}).map(([index, description]: [string, any]) => {
+                        const contextLabels = {
+                          "0": "🛡️ An toàn",
+                          "1": "⚡ Tiện lợi", 
+                          "2": "⭐ Chất lượng",
+                          "3": "💚 Sức khỏe"
+                        };
+                        return (
+                          <div key={index} className="flex items-start gap-2 bg-blue-50 p-2 rounded">
+                            <span className="text-xs font-medium text-blue-600 min-w-fit">
+                              {contextLabels[index as keyof typeof contextLabels]}:
+                            </span>
+                            <span className="text-sm text-gray-700 flex-1">{description}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(description)}
+                              className="h-5 w-5 p-0 flex-shrink-0"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2 italic">
+                      💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations || {}).length} mô tả này khi chat với khách hàng
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </SalesModuleSection>
 
       {/* Sales Techniques Management - Full Implementation */}
       {product?.id ? (
