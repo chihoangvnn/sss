@@ -221,6 +221,18 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
     }
   });
 
+  // Analytics route MUST come before :orderId dynamic route
+  app.get("/api/shopee-shop/orders/analytics", requireAdminAuth, async (req, res) => {
+    try {
+      const shopId = req.query.shopId as string;
+      const analytics = await shopeeOrdersService.getOrderAnalytics(shopId);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching Shopee order analytics:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.get("/api/shopee-shop/orders/:orderId", requireAdminAuth, async (req, res) => {
     try {
       const order = await shopeeOrdersService.getOrderById(req.params.orderId);
@@ -250,24 +262,14 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
     }
   });
 
-  app.get("/api/shopee-shop/orders/analytics", requireAdminAuth, async (req, res) => {
-    try {
-      const shopId = req.query.shopId as string;
-      const analytics = await shopeeOrdersService.getOrderAnalytics(shopId);
-      res.json(analytics);
-    } catch (error) {
-      console.error("Error fetching Shopee order analytics:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
   // Shopee Seller Dashboard API
   app.get("/api/shopee-shop/seller/:businessAccountId/dashboard", requireAdminAuth, async (req, res) => {
     try {
       const { businessAccountId } = req.params;
       
-      if (!businessAccountId || !businessAccountId.match(/^[0-9a-fA-F-]{36}$/)) {
-        return res.status(400).json({ error: "Invalid business account ID format" });
+      // Allow both UUID and shop account ID formats for now
+      if (!businessAccountId) {
+        return res.status(400).json({ error: "Business account ID is required" });
       }
 
       const dashboardData = await shopeeSellerService.getSellerDashboard(businessAccountId);
@@ -282,8 +284,9 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
     try {
       const { businessAccountId } = req.params;
       
-      if (!businessAccountId || !businessAccountId.match(/^[0-9a-fA-F-]{36}$/)) {
-        return res.status(400).json({ error: "Invalid business account ID format" });
+      // Allow both UUID and shop account ID formats for now
+      if (!businessAccountId) {
+        return res.status(400).json({ error: "Business account ID is required" });
       }
 
       const metrics = await shopeeSellerService.getPerformanceMetrics(businessAccountId);
@@ -298,8 +301,9 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
     try {
       const { businessAccountId } = req.params;
       
-      if (!businessAccountId || !businessAccountId.match(/^[0-9a-fA-F-]{36}$/)) {
-        return res.status(400).json({ error: "Invalid business account ID format" });
+      // Allow both UUID and shop account ID formats for now
+      if (!businessAccountId) {
+        return res.status(400).json({ error: "Business account ID is required" });
       }
 
       const result = await shopeeSellerService.syncSellerData(businessAccountId);
@@ -335,8 +339,9 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
     try {
       const { businessAccountId } = req.params;
       
-      if (!businessAccountId || !businessAccountId.match(/^[0-9a-fA-F-]{36}$/)) {
-        return res.status(400).json({ error: "Invalid business account ID format" });
+      // Allow both UUID and shop account ID formats for now
+      if (!businessAccountId) {
+        return res.status(400).json({ error: "Business account ID is required" });
       }
 
       const result = await shopeeSellerService.disconnectSeller(businessAccountId);
@@ -491,8 +496,9 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
       const { businessAccountId } = req.params;
       const { syncType = 'full' } = req.body;
       
-      if (!businessAccountId || !businessAccountId.match(/^[0-9a-fA-F-]{36}$/)) {
-        return res.status(400).json({ error: "Invalid business account ID format" });
+      // Allow both UUID and shop account ID formats for now
+      if (!businessAccountId) {
+        return res.status(400).json({ error: "Business account ID is required" });
       }
 
       // Check if Shopee credentials are available
