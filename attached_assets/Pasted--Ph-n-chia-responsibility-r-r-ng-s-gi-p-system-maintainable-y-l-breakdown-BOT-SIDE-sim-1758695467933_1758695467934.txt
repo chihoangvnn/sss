@@ -1,0 +1,128 @@
+ Phân chia responsibility rõ ràng sẽ giúp system maintainable. Đây là breakdown:
+
+🤖 BOT SIDE (simple_bot_server.py)
+📋 Bot chịu trách nhiệm:
+# simple_bot_server.py - BOT RESPONSIBILITIES
+class BotConsultationHandler:
+    
+    # 1. INTENT DETECTION - Phân tích ý định user
+    def detect_consultation_intent(self, user_message):
+        if 'cách dùng' in user_message.lower():
+            return 'usage_guide'
+        elif 'nấu' in user_message.lower():
+            return 'recipes'
+        # ... intent detection logic
+    
+    # 2. RESPONSE FORMATTING - Format consultation content
+    def format_consultation_response(self, product, intent):
+        consultation = product.get('consultation_content', {})
+        
+        if intent == 'usage_guide':
+            return f"🧴 **CÁCH DÙNG {product['name']}:**\n{consultation['usage_guide']}"
+        elif intent == 'recipes':
+            return f"🍲 **CÔNG THỨC NGON:**\n{consultation['recipes']}"
+    
+    # 3. CONVERSATION FLOW - Sequential messaging, timing
+    def handle_consultation_conversation(self, product, user_message, sender):
+        intent = self.detect_consultation_intent(user_message)
+        consultation_response = self.format_consultation_response(product, intent)
+        
+        # Sequential messaging với timing
+        messenger = SequentialMessenger(sender, conversation_id)
+        messenger.add_message(consultation_response, delay_seconds=2)
+        return messenger.send_sequential()
+🔧 BACKEND SIDE (API Server)
+📋 Backend chịu trách nhiệm:
+// Backend API - BACKEND RESPONSIBILITIES
+// 1. DATA STORAGE - Product + consultation content
+app.get('/api/products/:id', async (req, res) => {
+  const product = await db.products.findOne({
+    where: { id: req.params.id },
+    include: 'consultation_content'  // Lưu trong product database
+  });
+  
+  res.json({
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    industry: product.industry,
+    consultation_content: {
+      usage_guide: product.usage_guide,
+      recipes: product.recipes,
+      safety_profile: product.safety_profile
+      // ... consultation data từ database
+    }
+  });
+});
+// 2. CONTENT MANAGEMENT - Admin APIs for consultation content
+app.post('/api/admin/products/:id/consultation', async (req, res) => {
+  const { usage_guide, recipes, safety_profile } = req.body;
+  
+  await db.products.update({
+    where: { id: req.params.id },
+    data: {
+      usage_guide,
+      recipes, 
+      safety_profile
+    }
+  });
+  
+  res.json({ success: true });
+});
+// 3. INDUSTRY CONFIGURATION - Industry settings management
+app.get('/api/config/industries/:industry', async (req, res) => {
+  const config = await db.industry_configs.findOne({
+    where: { industry: req.params.industry }
+  });
+  
+  res.json({
+    active_consultations: config.active_consultations,
+    default_overview: config.default_overview
+  });
+});
+📊 RESPONSIBILITY MATRIX:
+Functionality	Bot	Backend	Why
+Intent Detection	✅	❌	Real-time, conversation context
+Response Formatting	✅	❌	Vietnamese language, messaging style
+Sequential Timing	✅	❌	SSE connections, user experience
+Consultation Content Storage	❌	✅	Database, data persistence
+Industry Configuration	❌	✅	Business logic, admin management
+Content Management	❌	✅	CRUD operations, validation
+Product Search	🔄	✅	Bot calls backend API
+User Session	✅	❌	Real-time connections
+🔄 INTERACTION FLOW:
+User: "Kem này cách sử dụng thế nào?"
+     ↓
+Bot: 1. Detect intent = "usage_guide"
+     2. Call Backend: GET /api/products/123
+     ↓  
+Backend: Return product + consultation_content
+     ↓
+Bot: 3. Format response with consultation content
+     4. Send via sequential messaging
+     ↓
+User: Receives natural consultation response
+💾 DATABASE STRUCTURE:
+Backend Database Schema:
+-- products table (Backend responsibility)
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255),
+  price DECIMAL,
+  industry VARCHAR(50),
+  
+  -- Consultation content columns
+  usage_guide JSONB,
+  recipes JSONB,
+  safety_profile JSONB,
+  care_instructions JSONB
+);
+-- industry_configs table (Backend responsibility)  
+CREATE TABLE industry_configs (
+  industry VARCHAR(50) PRIMARY KEY,
+  active_consultations JSONB,
+  default_overview JSONB
+);
+🎯 IMPLEMENTATION SPLIT:
+Bot implements: Conversation intelligence, user experience
+Backend implements: Data management, business logic

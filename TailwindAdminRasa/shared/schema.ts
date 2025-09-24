@@ -132,6 +132,11 @@ export const categories = pgTable("categories", {
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  
+  // 🤖 RASA CONSULTATION CONFIGURATION
+  consultationConfig: jsonb("consultation_config").$type<CategoryConsultationConfig>().default(sql`'{}'::jsonb`),
+  consultationTemplates: jsonb("consultation_templates").$type<CategoryConsultationTemplates>().default(sql`'{}'::jsonb`),
+  salesAdviceTemplate: jsonb("sales_advice_template").$type<CategorySalesTemplate>().default(sql`'{}'::jsonb`),
 });
 
 // Industry Keywords table - For AI industry detection
@@ -194,6 +199,50 @@ export interface RasaDescriptions {
   };
 }
 
+// 🤖 RASA CONSULTATION SYSTEM TYPES
+export type ConsultationType = 
+  | "usage_guide" 
+  | "safety_profile" 
+  | "recipes" 
+  | "technical_guide" 
+  | "health_benefits" 
+  | "care_instructions";
+
+// Category consultation configuration
+export interface CategoryConsultationConfig {
+  enabled_types: ConsultationType[];      // ["usage_guide", "safety_profile"]
+  required_fields: string[];             // ["cách thoa", "lưu ý an toàn"] 
+  optional_fields: string[];            // ["patch test", "độ tuổi"]
+  auto_prompts: string[];               // Câu hỏi tự động cho category
+}
+
+// Category consultation templates  
+export interface CategoryConsultationTemplates {
+  usage_guide_template?: string;        // "✨ CÁCH DÙNG: {method}"
+  safety_template?: string;            // "⚠️ LƯU Ý: {safety_notes}"
+  recipe_template?: string;            // "🍲 CÔNG THỨC: {ingredients}"
+  technical_template?: string;         // "🔧 KỸ THUẬT: {specs}"
+  benefits_template?: string;          // "💚 LỢI ÍCH: {benefits}"
+  care_template?: string;              // "🏪 BẢO QUẢN: {storage}"
+}
+
+// Category sales advice template
+export interface CategorySalesTemplate {
+  target_customer_prompts?: string[];  // "Phù hợp cho khách hàng nào?"
+  selling_point_prompts?: string[];   // "Điểm mạnh của sản phẩm?"
+  objection_handling?: string[];      // "Xử lý phản đối thường gặp?"
+  cross_sell_suggestions?: string[];  // "Sản phẩm bán kèm?"
+}
+
+// Product consultation data (dynamic fields based on category config)
+export interface ProductConsultationData {
+  [field: string]: string;             // Dynamic fields based on category config
+  // Examples:
+  // "cách thoa": "Thoa đều lên mặt, massage nhẹ"
+  // "lưu ý an toàn": "Không dùng cho da kích ứng" 
+  // "bảo quản": "Nơi khô ráo, thoáng mát"
+}
+
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -252,6 +301,9 @@ export const products = pgTable("products", {
   allowDecimals: boolean("allow_decimals").notNull().default(false), // Enable decimal quantities in POS
   minQuantity: decimal("min_quantity", { precision: 10, scale: 3 }).default("0.001"), // Minimum quantity for weight-based products
   quantityStep: decimal("quantity_step", { precision: 10, scale: 3 }).default("1.000"), // Step increment (0.001 for weight, 1 for count)
+  
+  // 🤖 RASA CONSULTATION DATA  
+  consultationData: jsonb("consultation_data").$type<ProductConsultationData>().default(sql`'{}'::jsonb`),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

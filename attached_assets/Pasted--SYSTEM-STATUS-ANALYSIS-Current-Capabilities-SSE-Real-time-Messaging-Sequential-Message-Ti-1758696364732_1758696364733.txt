@@ -1,0 +1,109 @@
+📊 SYSTEM STATUS ANALYSIS
+✅ Current Capabilities:
+SSE Real-time Messaging ✓
+Sequential Message Timing ✓
+Product Search API ✓
+Categories API ✓
+Industry Templates ✓ (base, ecommerce, food_service, healthcare)
+❌ Issues Found:
+Action Server FAILED - needs restart
+25 LSP Errors in simple_bot_server.py - imports & type issues
+Smart Gate AI has 156 logs - need investigation
+🎯 CONSULTATION SYSTEM IMPLEMENTATION PLAN
+Phase 1: Fix Current Issues 🔧
+# 1. Clean up LSP errors - missing imports & variables
+# 2. Restart Action Server properly  
+# 3. Check Smart Gate logs for issues
+Phase 2: Backend Requirements 🔗
+BACKEND YÊU CẦU BỔ SUNG:
+
+A. Categories API Enhancement:
+// Current: GET /api/catalogs
+// Enhance to: GET /api/categories/consultation/{category_id}
+{
+  "category_id": "cosmetics_skincare",
+  "consultation_config": {
+    "enabled_types": ["usage_guide", "safety_profile", "care_instructions"],
+    "field_mappings": {
+      "usage_guide": ["cách thoa", "cách dùng", "application_method"],
+      "safety_profile": ["lưu ý an toàn", "chống chỉ định"],
+      "care_instructions": ["bảo quản", "care_method"]
+    }
+  },
+  "consultation_templates": {
+    "usage_guide": "✨ **CÁCH SỬ DỤNG:** {application_method}",
+    "safety_profile": "⚠️ **LƯU Ý:** {safety_notes}",
+    "care_instructions": "🧴 **BẢO QUẢN:** {storage_method}"
+  }
+}
+B. Products API Enhancement:
+// Current: GET /api/products/search?q=term
+// Enhance response to include consultation fields:
+{
+  "id": "product_123",
+  "name": "Kem Dưỡng Ẩm Vitamin C", 
+  "price": 250000,
+  "category_id": "cosmetics_skincare",
+  
+  // 🔥 NEW: Consultation data fields
+  "consultation_fields": {
+    "cách thoa": "Thoa đều lên mặt, massage nhẹ nhàng",
+    "lưu ý an toàn": "Không dùng cho da đang kích ứng", 
+    "bảo quản": "Nơi khô ráo, thoáng mát, tránh ánh sáng trực tiếp"
+  }
+}
+Phase 3: Bot Implementation 🤖
+A. Field Mapping Engine:
+# consultation_engine/field_mapper.py
+class SemanticFieldMapper:
+    def extract_consultation_data(self, product, category_config):
+        # Map product fields to consultation types
+        # "cách thoa" → usage_guide
+        # "lưu ý an toàn" → safety_profile
+B. Integration với Current Bot:
+# Enhance existing search logic trong simple_bot_server.py
+def handle_product_search_enhanced(self, products, user_message):
+    if len(products) == 1:
+        product = products[0]
+        
+        # 🔥 NEW: Get category consultation config
+        category_config = self.get_category_consultation(product['category_id'])
+        
+        # 🔥 NEW: Apply consultation logic  
+        consultation = ConsultationEngine.process(product, user_message, category_config)
+        
+        # Format với existing sequential messaging
+        return self.format_enhanced_response(product, consultation)
+Phase 4: Admin Interface (Optional) 📝
+// Frontend admin để manage category templates
+Admin → Categories → "Kem dưỡng da mặt" → Consultation Setup:
+✅ Usage Guide: Template + Required fields
+✅ Safety Profile: Template + Required fields  
+✅ Care Instructions: Template + Required fields
+🔧 BACKEND API REQUIREMENTS
+🚀 CRITICAL Endpoints Cần Thêm:
+1. GET /api/categories/consultation/{category_id}
+Response: {
+  "consultation_config": {...},
+  "field_mappings": {...}, 
+  "templates": {...}
+}
+2. Enhance GET /api/products/search
+// Add consultation_fields to each product
+Response: {
+  "data": [{
+    "id": "...",
+    "name": "...", 
+    "consultation_fields": {
+      "cách thoa": "...",
+      "lưu ý an toàn": "..."
+    }
+  }]
+}
+3. POST /api/admin/categories/{id}/consultation (Admin)
+// Set consultation config cho category
+Body: {
+  "enabled_types": ["usage_guide", "safety_profile"],
+  "templates": {...},
+  "field_mappings": {...}
+}
