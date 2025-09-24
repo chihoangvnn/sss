@@ -9,7 +9,8 @@ import {
   Activity,
   Zap,
   MessageSquare,
-  Store
+  Store,
+  ShoppingBag
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -34,12 +35,12 @@ const mobileNavItems = [
     bgColor: "bg-[hsl(var(--activity-pink))]/10 dark:bg-[hsl(var(--activity-pink))]/20"
   },
   {
-    title: "Social",
-    url: "/facebook",
-    icon: Facebook,
-    color: "text-[hsl(var(--activity-purple))]", 
-    activeColor: "text-[hsl(var(--activity-purple))]",
-    bgColor: "bg-[hsl(var(--activity-purple))]/10 dark:bg-[hsl(var(--activity-purple))]/20"
+    title: "Shopee",
+    url: "/shopee",
+    icon: ShoppingBag,
+    color: "text-orange-600", 
+    activeColor: "text-orange-600",
+    bgColor: "bg-orange-50 dark:bg-orange-950/20"
   },
   {
     title: "Báo cáo",
