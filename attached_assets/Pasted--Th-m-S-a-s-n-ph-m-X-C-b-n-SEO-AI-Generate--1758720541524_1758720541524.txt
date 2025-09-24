@@ -1,0 +1,101 @@
+
+
+┌─ Thêm/Sửa sản phẩm ─────────────────── X ┐
+│ 📝 Cơ bản  │🏷️ SEO |  🤖 AI Generate
+├─────────────────────────────────────────│
+│ Tên sản phẩm    │ Mã SKU
+| Mã sản phẩm (Item Code)| Mã sản ISBN
+| [Nhập mã sản phẩm hoặc quét QR] [Quét QR]
+| Ngành hàng      Category ID liên kết với ngành hàng
+| Giá tiền  Quantity step (precision 15, scale 2) * 
+|  Unit types:		Units: kg Units: ml
+ - Trạng thái (active/inactive/out-of-stock)
+
+  Mô tả chi tiết
+	
+|    Hình ảnh & Video sản phẩm
+| 
+│                                         │ 
+│           ❌ Hủy  │  ✅ Lưu    
+└─────────────────────────────────────────┘
+
+🤖 AI Generate
+
+	[🪄 Tự động tạo mô tả]
+		🤖 4. RASA AI INTEGRATION
+		✅ RASA Description Management:
+		- Multiple context-aware descriptions
+		- Primary description
+		- RASA variations cho contexts khác nhau
+		- Analytics tracking
+		- Consultation data integration
+		🎯 5. SEO & PRODUCT PAGE ENHANCEMENT
+
+
+	✅ 5 Sales Technique Modules:
+	1. URGENCY DATA:
+	   - Low stock thresholds
+	   - Limited edition flags
+	   - Sales velocity tracking
+	   - Urgency messages
+	   - Demand level indicators
+	2. SOCIAL PROOF DATA:
+	   - Total sold tracking
+	   - Reviews & ratings
+	   - Featured reviews
+	   - Expert endorsements
+	   - Celebrity users
+	   - Awards & certifications
+	   - Media mentions
+	   - Repurchase rates
+	   - Trending hashtags
+	3. HYPER-PERSONALIZATION:
+	   - Target demographics
+	   - Age range, gender, income levels
+	   - Lifestyle tags
+	   - Personality matching
+	   - Usage scenarios
+	   - Problem solving focus
+	   - Seasonal relevance
+	   - Profession fit
+	4. LEADING QUESTIONS:
+	   - Pain point questions
+	   - Desire questions
+	   - Discovery prompts
+	   - Comparison triggers
+	   - Emotional hooks
+	   - Closing questions
+	   - Objection anticipation
+	5. OBJECTION HANDLING:
+	   - Common objections database
+	   - Price justification strategies
+	   - Quality proof points
+	   - Safety assurance
+	   - Effectiveness guarantees
+	   - Competitor advantages
+	   - Risk mitigation
+	   - Trust builders
+	   
+🏷️ SEO
+
+	✅ SEO & Marketing:
+	- SEO title và description
+	- Slug URL thân thiện
+	- Short description (1-2 câu highlight)
+	- Product story (origin, process, tradition)
+	- Ingredients array
+	- Benefits array  
+	- Usage instructions
+	- Technical specifications
+	- Open Graph image cho social sharing
+
+
+	📊 13. ORGANIZATION & MANAGEMENT
+	✅ Advanced Organization:
+	- Unified tagging system
+	- Category hierarchies linked to industries
+	- Consultation data for RASA chatbot
+	- Timestamps (created/updated)
+	- Status management
+	- Sorting & ordering
+
