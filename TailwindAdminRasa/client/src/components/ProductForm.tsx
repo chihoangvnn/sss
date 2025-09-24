@@ -140,7 +140,7 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
       sales_velocity: 0,
       urgency_messages: [],
       demand_level: "medium" as const,
-      trending_platforms: []
+      trending_platforms: [] as string[]
     },
     socialProofData: {
       total_sold: 0,
@@ -206,7 +206,11 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
   const [salesData, setSalesData] = useState(() => {
     const defaults = createDefaultData();
     return {
-      urgencyData: { ...defaults.urgencyData, ...(initialData.urgencyData || {}) },
+      urgencyData: { 
+        ...defaults.urgencyData, 
+        ...(initialData.urgencyData || {}),
+        trending_platforms: initialData.urgencyData?.trending_platforms || []
+      },
       socialProofData: { ...defaults.socialProofData, ...(initialData.socialProofData || {}) },
       personalizationData: { ...defaults.personalizationData, ...(initialData.personalizationData || {}) },
       leadingQuestionsData: { ...defaults.leadingQuestionsData, ...(initialData.leadingQuestionsData || {}) },
@@ -218,7 +222,11 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
   useEffect(() => {
     const defaults = createDefaultData();
     setSalesData({
-      urgencyData: { ...defaults.urgencyData, ...(initialData.urgencyData || {}) },
+      urgencyData: { 
+        ...defaults.urgencyData, 
+        ...(initialData.urgencyData || {}),
+        trending_platforms: initialData.urgencyData?.trending_platforms || []
+      },
       socialProofData: { ...defaults.socialProofData, ...(initialData.socialProofData || {}) },
       personalizationData: { ...defaults.personalizationData, ...(initialData.personalizationData || {}) },
       leadingQuestionsData: { ...defaults.leadingQuestionsData, ...(initialData.leadingQuestionsData || {}) },
@@ -229,11 +237,7 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof salesData) => {
-      const response = await apiRequest(`/api/products/${productId}/sales-techniques`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      const response = await apiRequest('PUT', `/api/products/${productId}/sales-techniques`, data);
       if (!response.ok) {
         throw new Error('Failed to save sales techniques');
       }
