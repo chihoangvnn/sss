@@ -231,7 +231,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           const templates = selectedCategory.consultationTemplates || {};
           
           // Fill required fields with template content or auto-prompts
-          selectedCategory.consultationConfig.required_fields.forEach(fieldId => {
+          selectedCategory.consultationConfig?.required_fields?.forEach(fieldId => {
             // Try to find matching template for this field
             const templateKey = `${fieldId}_template` as keyof CategoryConsultationTemplates;
             const templateContent = templates[templateKey];
@@ -531,7 +531,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     if (!categoryConfig.config?.required_fields) return true;
     
     const missingFields: string[] = [];
-    categoryConfig.config.required_fields.forEach(fieldId => {
+    categoryConfig.config.required_fields?.forEach(fieldId => {
       if (!consultationFields[fieldId] || !consultationFields[fieldId].trim()) {
         missingFields.push(fieldId);
       }
@@ -724,7 +724,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Required Fields */}
-                  {categoryConfig.config.required_fields.map((fieldId) => {
+                  {(categoryConfig.config?.required_fields || []).map((fieldId) => {
                     const fieldLabel = getFieldLabel(fieldId);
                     const isError = requiredFieldsError.includes(fieldId);
                     
