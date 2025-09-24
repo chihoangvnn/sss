@@ -479,4 +479,39 @@
       padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
     }
   }
+
+  /* Collapsible Sidebar Animations */
+  @keyframes slideDown {
+    from {
+      height: 0;
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      height: var(--radix-collapsible-content-height);
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      height: 0;
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+
+  .animate-slideDown {
+    animation: slideDown 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .animate-slideUp {
+    animation: slideUp 200ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
 }
