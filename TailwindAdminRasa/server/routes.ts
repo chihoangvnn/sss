@@ -1084,8 +1084,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.createOrderItem({
             orderId: order.id,
             productId: item.productId,
-            quantity: parseFloat(item.quantity.toString()),
-            price: item.price.toString()
+            quantity: Number(item.quantity), // explicitly convert to number
+            price: String(item.price) // explicitly convert to string
           });
         }
       }
@@ -1211,8 +1211,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderItem = await storage.createOrderItem({
         orderId,
         productId, 
-        quantity: parseFloat(quantity),
-        price: price.toString()
+        quantity: Number(quantity), // explicitly convert to number
+        price: String(price) // explicitly convert to string
       });
       
       res.status(201).json(orderItem);
@@ -3016,14 +3016,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fallback to old method (backward compatibility)
         const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
         const webhookConfig = facebookAccount?.webhookSubscriptions?.[0];
-        console.log('DEBUG Facebook Account:', {
-          found: !!facebookAccount,
-          name: facebookAccount?.name,
-          hasWebhookSubs: !!facebookAccount?.webhookSubscriptions,
-          subsLength: facebookAccount?.webhookSubscriptions?.length,
-          webhookConfig: JSON.stringify(webhookConfig),
-          verifyTokenFromConfig: webhookConfig?.verifyToken
-        });
         // TEMP FIX: Use correct verify token until database logic is fixed
         VERIFY_TOKEN = "verify_1758480641086";
       }
@@ -3039,14 +3031,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedToken: VERIFY_TOKEN ? 'found' : 'missing'
       });
       
-      // DEBUG: Log actual token values for comparison
-      console.log('DEBUG Token Values:', {
-        receivedToken: JSON.stringify(token),
-        expectedToken: JSON.stringify(VERIFY_TOKEN),
-        tokenMatch: token === VERIFY_TOKEN,
-        tokenLength: token?.length,
-        expectedLength: VERIFY_TOKEN?.length
-      });
 
       if (mode && token) {
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {

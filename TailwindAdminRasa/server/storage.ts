@@ -98,6 +98,7 @@ export interface IStorage {
   // Order items methods
   getOrderItems(orderId: string): Promise<OrderItem[]>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
+  deleteOrderItem(id: string): Promise<boolean>;
 
   // Social account methods
   getSocialAccounts(): Promise<SocialAccount[]>;
@@ -1068,6 +1069,11 @@ export class DatabaseStorage implements IStorage {
   async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
     const [newOrderItem] = await db.insert(orderItems).values(orderItem).returning();
     return newOrderItem;
+  }
+
+  async deleteOrderItem(id: string): Promise<boolean> {
+    const result = await db.delete(orderItems).where(eq(orderItems.id, id));
+    return result.rowCount > 0;
   }
 
   // Social account methods
