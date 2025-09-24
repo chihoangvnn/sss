@@ -27,13 +27,7 @@ interface CartItem {
   quantity: number;
 }
 
-// Hardcoded simplified categories for better performance
-const SIMPLIFIED_CATEGORIES = [
-  { id: 'all', name: 'Tất cả', icon: '🛍️' },
-  { id: 'electronics', name: 'Điện tử', icon: '📱' },
-  { id: 'books', name: 'Sách', icon: '📚' },
-  { id: 'beauty', name: 'Làm đẹp', icon: '💄' }
-];
+// We'll use real categories from API and limit to top 2-3
 
 function MobileStorefront() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,9 +52,37 @@ function MobileStorefront() {
     }
   });
 
-  // Simplified: Use hardcoded categories for better performance
-  // const { data: categories = [] } = useQuery<Category[]>(...) - Commented out
-  const categories = SIMPLIFIED_CATEGORIES;
+  // Fetch real categories and limit to top 2-3 for simplified experience
+  const { data: allCategories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const response = await fetch('/api/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    }
+  });
+  
+  // Create simplified category list with real IDs (limit to 2-3 categories)
+  const categories = [
+    { id: 'all', name: 'Tất cả', icon: '🛍️' },
+    ...allCategories.slice(0, 2).map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      icon: getCategoryIcon(cat.name)
+    }))
+  ];
+  
+  // Helper function to get category icons
+  function getCategoryIcon(categoryName: string): string {
+    const name = categoryName.toLowerCase();
+    if (name.includes('điện') || name.includes('phone') || name.includes('tech')) return '📱';
+    if (name.includes('sách') || name.includes('book')) return '📚';
+    if (name.includes('làm đẹp') || name.includes('beauty') || name.includes('cosmetic')) return '💄';
+    if (name.includes('thời trang') || name.includes('fashion') || name.includes('clothes')) return '👕';
+    if (name.includes('gia dụng') || name.includes('home')) return '🏠';
+    if (name.includes('thể thao') || name.includes('sport')) return '⚽';
+    return '📦';
+  }
 
   const addToCart = (product: Product) => {
     setCart(prev => {
