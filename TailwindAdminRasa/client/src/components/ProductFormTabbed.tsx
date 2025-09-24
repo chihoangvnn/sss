@@ -866,10 +866,97 @@ function BasicTab({ formData, setFormData, industries, categories, isQRScannerOp
 }
 
 function SEOTab({ formData, setFormData }: any) {
+  const [isGeneratingSEO, setIsGeneratingSEO] = useState(false);
+  const { toast } = useToast();
+
+  const handleAutoGenerateSEO = async () => {
+    if (!formData.name.trim()) {
+      toast({
+        title: "Thiếu thông tin",
+        description: "Cần có tên sản phẩm để tạo SEO data",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGeneratingSEO(true);
+    try {
+      console.log('🔍 Generating SEO for:', formData.name);
+      
+      const response = await fetch('/api/ai/generate-seo-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          productName: formData.name,
+          productDescription: formData.description || formData.shortDescription,
+          category: formData.categoryId, // We'll try to get category name later
+          options: {
+            targetMarket: 'vietnam',
+            includeLocalKeywords: true
+          }
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.seo_title && result.seo_description && result.slug) {
+        // Update form data with generated SEO content
+        setFormData((prev: any) => ({
+          ...prev,
+          seoTitle: result.seo_title,
+          seoDescription: result.seo_description,
+          slug: result.slug,
+          ogImageUrl: result.og_title ? `https://og-image-generator.com/api?title=${encodeURIComponent(result.og_title)}` : prev.ogImageUrl
+        }));
+
+        toast({
+          title: "✨ SEO đã được tạo!",
+          description: `Tạo thành công SEO cho "${formData.name}" với ${result.keywords?.length || 0} keywords tối ưu`,
+        });
+
+        console.log('🔍 SEO generation successful:', result);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error: any) {
+      console.error('SEO generation error:', error);
+      toast({
+        title: "Lỗi tạo SEO",
+        description: error.message || 'Không thể tạo dữ liệu SEO. Vui lòng thử lại.',
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingSEO(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-600 mb-4">
-        Tối ưu hóa SEO và marketing cho sản phẩm
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-gray-600">
+          Tối ưu hóa SEO và marketing cho sản phẩm
+        </div>
+        <Button 
+          onClick={handleAutoGenerateSEO}
+          disabled={isGeneratingSEO || !formData.name.trim()}
+          variant="outline" 
+          size="sm"
+          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+        >
+          {isGeneratingSEO ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Đang tạo SEO...
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-4 h-4 mr-2" />
+              ✨ Auto Generate SEO
+            </>
+          )}
+        </Button>
       </div>
       
       {/* SEO Basic */}

@@ -84,7 +84,7 @@ router.post('/generate-seo-data', async (req, res) => {
       {
         targetMarket: options.targetMarket || 'vietnam',
         includeLocalKeywords: options.includeLocalKeywords !== false, // Default true
-        ecommerceType: getEcommerceType(category)
+        ecommerceType: getEcommerceType(category) as 'fashion' | 'cosmetics' | 'supplements' | 'electronics' | 'food' | 'general'
       }
     );
 
