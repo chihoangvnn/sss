@@ -35,21 +35,29 @@ function SalesModuleSection({
     <div className="space-y-4 border-t pt-4">
       <Collapsible open={isOpen} onOpenChange={() => onToggle(moduleKey)}>
         <CollapsibleTrigger asChild>
-          <div className="flex items-center justify-between cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
+          <button 
+            type="button"
+            className="w-full flex items-center justify-between cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 text-left"
+            aria-expanded={isOpen}
+            aria-controls={`module-content-${moduleKey}`}
+          >
             <h4 className="font-medium text-gray-900 flex items-center gap-2">
               {icon}
               {title}
             </h4>
-            <div className="transition-transform duration-200">
+            <div className="transition-transform duration-200" aria-hidden="true">
               {isOpen ? (
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               ) : (
                 <ChevronRight className="h-4 w-4 text-gray-500" />
               )}
             </div>
-          </div>
+          </button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden">
+        <CollapsibleContent 
+          id={`module-content-${moduleKey}`}
+          className="data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden"
+        >
           <div className="pt-4">
             {children}
           </div>
