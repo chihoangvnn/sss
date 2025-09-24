@@ -539,26 +539,49 @@ Trả về JSON format:`;
     };
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: "application/json",
-          responseSchema
-        },
-        contents: `
-        SẢN PHẨM CẦN TỐI ƯU SEO:
-        - Tên: "${productName}"
-        ${category ? `- Danh mục: "${category}"` : ''}
-        ${productDescription ? `- Mô tả: "${productDescription}"` : ''}
-        
-        Hãy tạo bộ SEO data hoàn chỉnh theo yêu cầu, tập trung vào:
-        1. Keywords phù hợp với search behavior của người Việt
-        2. Trust signals và local optimization
-        3. Compelling copy để tăng CTR
-        4. Mobile-friendly content
-        `
-      });
+      // 🔁 Retry logic with exponential backoff for API overload
+      let attempt = 0;
+      const maxRetries = 3;
+      let response;
+      
+      while (attempt < maxRetries) {
+        try {
+          response = await ai.models.generateContent({
+            model: "gemini-2.5-pro",
+            config: {
+              systemInstruction: systemPrompt,
+              responseMimeType: "application/json",
+              responseSchema
+            },
+            contents: `
+            SẢN PHẨM CẦN TỐI ƯU SEO:
+            - Tên: "${productName}"
+            ${category ? `- Danh mục: "${category}"` : ''}
+            ${productDescription ? `- Mô tả: "${productDescription}"` : ''}
+            
+            Hãy tạo bộ SEO data hoàn chỉnh theo yêu cầu, tập trung vào:
+            1. Keywords phù hợp với search behavior của người Việt
+            2. Trust signals và local optimization
+            3. Compelling copy để tăng CTR
+            4. Mobile-friendly content
+            `
+          });
+          break; // Success, exit retry loop
+        } catch (retryError: any) {
+          attempt++;
+          console.log(`🔄 SEO API attempt ${attempt}/${maxRetries} failed:`, retryError.message);
+          
+          if (attempt >= maxRetries) {
+            // Max retries reached, throw error to trigger fallback
+            throw retryError;
+          }
+          
+          // Exponential backoff: wait 2^attempt seconds
+          const delayMs = Math.pow(2, attempt) * 1000;
+          console.log(`⏰ Waiting ${delayMs}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
 
       const rawJson = response.text;
       

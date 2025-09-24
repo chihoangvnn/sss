@@ -126,10 +126,26 @@ router.post('/generate-seo-data', async (req, res) => {
   } catch (error: any) {
     console.error('SEO Generation Error:', error);
     
+    // 🎯 Enhanced error handling for specific API issues
+    let userMessage = 'Không thể tạo dữ liệu SEO. Vui lòng thử lại sau.';
+    let statusCode = 500;
+    
+    if (error.message?.includes('overloaded') || error.message?.includes('503')) {
+      userMessage = '🤖 Hệ thống AI đang quá tải. Vui lòng thử lại sau vài phút hoặc contact admin để được hỗ trợ.';
+      statusCode = 503;
+    } else if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
+      userMessage = '📊 Đã vượt quá giới hạn API. Vui lòng thử lại sau.';
+      statusCode = 429;
+    } else if (error.message?.includes('network') || error.message?.includes('timeout')) {
+      userMessage = '🌐 Lỗi kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.';
+      statusCode = 503;
+    }
+    
     // Return user-friendly error message
-    res.status(500).json({ 
-      error: error.message || 'Không thể tạo dữ liệu SEO. Vui lòng thử lại sau.',
-      code: 'SEO_GENERATION_FAILED'
+    res.status(statusCode).json({ 
+      error: userMessage,
+      code: 'SEO_GENERATION_FAILED',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
