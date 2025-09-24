@@ -258,8 +258,8 @@ export default function Shopee() {
                     <div className="flex items-center gap-3">
                       <Store className="h-8 w-8 text-orange-600" />
                       <div>
-                        <p className="font-semibold text-orange-800">{mockBusinessAccount.shopName}</p>
-                        <p className="text-sm text-orange-600">ID: {mockBusinessAccount.shopId}</p>
+                        <p className="font-semibold text-orange-800">{primaryAccount?.shopName || 'Shop chưa có tên'}</p>
+                        <p className="text-sm text-orange-600">ID: {primaryAccount?.shopId || 'N/A'}</p>
                         <Badge className="bg-green-100 text-green-800 border-none mt-1">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Đang hoạt động
@@ -270,15 +270,15 @@ export default function Shopee() {
                 </Card>
               </div>
               
-              <ShopeeSellerDashboard businessAccountId={mockBusinessAccount.id} />
+              <ShopeeSellerDashboard businessAccountId={primaryAccount?.id} />
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-6">
-              <ShopeeOrdersPanel businessAccountId={mockBusinessAccount.id} />
+              <ShopeeOrdersPanel businessAccountId={primaryAccount?.id} />
             </TabsContent>
 
             <TabsContent value="fulfillment" className="space-y-6">
-              <ShopeeFulfillmentPanel businessAccountId={mockBusinessAccount.id} />
+              <ShopeeFulfillmentPanel businessAccountId={primaryAccount?.id} />
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-6">
@@ -297,11 +297,11 @@ export default function Shopee() {
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Tên cửa hàng:</span>
-                            <span className="font-medium">{mockBusinessAccount.shopName}</span>
+                            <span className="font-medium">{primaryAccount?.shopName || 'Chưa có tên'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Shop ID:</span>
-                            <span className="font-medium">{mockBusinessAccount.shopId}</span>
+                            <span className="font-medium">{primaryAccount?.shopId || 'N/A'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Trạng thái:</span>
