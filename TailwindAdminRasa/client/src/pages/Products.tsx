@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit3, Trash2, Eye } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import { ProductForm } from "@/components/ProductForm";
+import { ProductFormTabbed as ProductForm } from "@/components/ProductFormTabbed";
 import type { CloudinaryImage, CloudinaryVideo } from "@shared/schema";
 
 interface Product {
