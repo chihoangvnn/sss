@@ -46,6 +46,7 @@ import { SocialMediaHub } from "@/components/SocialMediaHub";
 import { TemplateBuilder } from "@/components/template-builder/TemplateBuilder";
 import RasaDashboard from "@/pages/RasaDashboard";
 import POS from "@/pages/POS";
+import MobileStorefront from "@/pages/MobileStorefront";
 
 // Admin Routes (inside sidebar layout)
 function AdminRouter() {
@@ -85,6 +86,7 @@ function AdminRouter() {
       <Route path="/worker-management" component={WorkerManagement} />
       <Route path="/rasa-dashboard" component={RasaDashboard} />
       <Route path="/pos" component={POS} />
+      <Route path="/mobile" component={MobileStorefront} />
       <Route path="/template-builder" component={() => <TemplateBuilder className="h-screen" />} />
       <Route component={NotFound} />
     </Switch>
