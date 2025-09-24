@@ -37,13 +37,19 @@ export class TikTokAuthService {
   private shopRedirectUri: string;
 
   constructor() {
-    this.clientId = process.env.TIKTOK_CLIENT_ID || process.env.TIKTOK_APP_ID || '';
-    this.clientSecret = process.env.TIKTOK_CLIENT_SECRET || process.env.TIKTOK_APP_SECRET || '';
+    // Hardcoded TikTok credentials for testing (replace with your actual credentials from TikTok Developer Portal)
+    this.clientId = process.env.TIKTOK_CLIENT_ID || process.env.TIKTOK_APP_ID || 'your_tiktok_client_id_here';
+    this.clientSecret = process.env.TIKTOK_CLIENT_SECRET || process.env.TIKTOK_APP_SECRET || 'your_tiktok_client_secret_here';
     this.redirectUri = process.env.TIKTOK_REDIRECT_URI || `${process.env.REPL_URL || 'http://localhost:5000'}/auth/tiktok-business/callback`;
     this.shopRedirectUri = process.env.TIKTOK_SHOP_REDIRECT_URI || `${process.env.REPL_URL || 'http://localhost:5000'}/auth/tiktok-shop/callback`;
 
-    if (!this.clientId || !this.clientSecret) {
-      console.warn('TikTok OAuth credentials not found. Set TIKTOK_CLIENT_ID and TIKTOK_CLIENT_SECRET environment variables.');
+    if (this.clientId === 'your_tiktok_client_id_here' || this.clientSecret === 'your_tiktok_client_secret_here') {
+      console.warn('⚠️ THÔNG BÁO: Đang sử dụng TikTok credentials mẫu. Vui lòng thay thế bằng credentials thật từ TikTok Developer Portal để kết nối thực tế.');
+      console.log('📋 Hướng dẫn lấy credentials:');
+      console.log('1. Truy cập: https://developers.tiktok.com/');
+      console.log('2. Tạo ứng dụng mới hoặc chọn ứng dụng hiện tại');
+      console.log('3. Sao chép Client Key và Client Secret');
+      console.log('4. Thay thế trong file tiktok-auth.ts dòng 40-41');
     }
   }
 
