@@ -47,6 +47,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { CollapsibleSidebarGroup } from "@/components/CollapsibleSidebarGroup";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -328,12 +329,14 @@ export function AppSidebar() {
 
       <SidebarContent className="custom-scrollbar">
         {/* Main Activity Dashboard */}
-        <SidebarGroup className="px-4 py-4">
-          <SidebarGroupLabel className="text-xs font-semibold tracking-wide text-muted-foreground/60 uppercase mb-3">
-            📊 CORE BUSINESS
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
+        <CollapsibleSidebarGroup 
+          title="CORE BUSINESS"
+          icon="📊"
+          defaultCollapsed={false}
+          persistKey="core_business"
+          itemCount={coreBusinessItems.length}
+        >
+          <SidebarMenu className="space-y-2">
               {coreBusinessItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
@@ -376,17 +379,18 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          </SidebarMenu>
+        </CollapsibleSidebarGroup>
 
         {/* Content & Social Management */}
-        <SidebarGroup className="px-4 py-2">
-          <SidebarGroupLabel className="text-xs font-semibold tracking-wide text-muted-foreground/60 uppercase mb-3">
-            📱 SOCIAL MANAGEMENT
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
+        <CollapsibleSidebarGroup 
+          title="SOCIAL MANAGEMENT"
+          icon="📱"
+          defaultCollapsed={true}
+          persistKey="social_management"
+          itemCount={socialManagementItems.length}
+        >
+          <SidebarMenu className="space-y-2">
               {socialManagementItems.map((item) => {
                 const styling = getSocialPlatformClasses(item, location);
                 return (
@@ -430,18 +434,18 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
+          </SidebarMenu>
+        </CollapsibleSidebarGroup>
 
         {/* Content & Design - Creative and design tools */}
-        <SidebarGroup className="px-4 py-2">
-          <SidebarGroupLabel className="text-xs font-semibold tracking-wide text-muted-foreground/60 uppercase mb-3">
-            🎨 CONTENT & DESIGN
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
+        <CollapsibleSidebarGroup 
+          title="CONTENT & DESIGN"
+          icon="🎨"
+          defaultCollapsed={true}
+          persistKey="content_design"
+          itemCount={contentDesignItems.length}
+        >
+          <SidebarMenu className="space-y-2">
               {contentDesignItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
@@ -473,17 +477,18 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          </SidebarMenu>
+        </CollapsibleSidebarGroup>
 
         {/* Admin & Settings */}
-        <SidebarGroup className="px-4 py-2">
-          <SidebarGroupLabel className="text-xs font-semibold tracking-wide text-muted-foreground/60 uppercase mb-3">
-            ⚙️ ADMIN & TECHNICAL
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
+        <CollapsibleSidebarGroup 
+          title="ADMIN & TECHNICAL"
+          icon="⚙️"
+          defaultCollapsed={true}
+          persistKey="admin_technical"
+          itemCount={adminTechnicalItems.length}
+        >
+          <SidebarMenu className="space-y-2">
               {adminTechnicalItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
@@ -515,9 +520,8 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+          </SidebarMenu>
+        </CollapsibleSidebarGroup>
 
       </SidebarContent>
 
