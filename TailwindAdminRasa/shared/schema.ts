@@ -1281,13 +1281,10 @@ export const shopSettings = pgTable("shop_settings", {
   website: text("website"),
   logo: text("logo"),
   
-  // POS UI Preferences for customizable category display
-  posUIPreferences: jsonb("pos_ui_preferences").$type<{
-    showCategoryLabel?: boolean; // Show "Danh mục sản phẩm" label
-    categoryLayoutMode?: "full" | "compact" | "hidden"; // Display mode
-    showProductCount?: boolean; // Show product count in categories
-    collapsedByDefault?: boolean; // Whether category section starts collapsed
-  }>().default(sql`'{"showCategoryLabel":true,"categoryLayoutMode":"full","showProductCount":true,"collapsedByDefault":false}'::jsonb`),
+  // Visible categories in POS - array of category IDs to show (empty = show all)
+  visibleCategoriesInPOS: jsonb("visible_categories_in_pos")
+    .$type<string[]>() // Array of category IDs
+    .default(sql`'[]'::jsonb`), // Empty array = show all categories
   
   isDefault: boolean("is_default").notNull().default(true), // Allow multiple settings but mark one as default
   createdAt: timestamp("created_at").defaultNow(),
