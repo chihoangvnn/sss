@@ -116,25 +116,6 @@ export default function POS({}: POSProps) {
     customer?: Customer;
   } | null>(null);
   
-  // POS Category filtering from Settings
-  // null = no preference (show all), [] = hide all, [ids] = show specific categories
-  const [visibleCategoryIds, setVisibleCategoryIds] = useState<string[] | null>(() => {
-    try {
-      const saved = localStorage.getItem('pos-visible-categories');
-      if (!saved) return null;
-      const parsed = JSON.parse(saved);
-      // Legacy migration: handle old "null" string values
-      if (parsed === null || parsed === "null") {
-        localStorage.removeItem('pos-visible-categories'); // Clean up legacy data
-        return null; // Show all (no preference)
-      }
-      return Array.isArray(parsed) ? parsed : null;
-    } catch {
-      localStorage.removeItem('pos-visible-categories'); // Clean up corrupted data
-      return null;
-    }
-  });
-  
   // Vietnamese search normalization with performance tracking
   useEffect(() => {
     const measure = measureOperation('vietnamese-search-normalize');
@@ -147,33 +128,6 @@ export default function POS({}: POSProps) {
   useEffect(() => {
     if (import.meta.env.DEV) {
       testVietnameseSearch();
-    }
-  }, []);
-
-  // Load visible category settings from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('pos-visible-categories');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Legacy migration: handle old "null" string values
-        if (parsed === null || parsed === "null") {
-          localStorage.removeItem('pos-visible-categories'); // Clean up legacy data
-          setVisibleCategoryIds(null); // Show all (no preference)
-          return;
-        }
-        if (Array.isArray(parsed)) {
-          setVisibleCategoryIds(parsed);
-        } else {
-          // Non-array, non-null data - treat as corruption, reset to show all
-          localStorage.removeItem('pos-visible-categories');
-          setVisibleCategoryIds(null);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load POS category settings:', error);
-      localStorage.removeItem('pos-visible-categories'); // Clean up corrupted data
-      setVisibleCategoryIds(null); // Reset to show all
     }
   }, []);
 
@@ -194,29 +148,6 @@ export default function POS({}: POSProps) {
       customerDataCaching: true, // Categories are stable data
     }
   );
-
-  // Filter categories based on settings (null = show all, [] = hide all, [ids] = show specific)
-  const filteredCategories = useMemo(() => {
-    if (visibleCategoryIds === null) {
-      return categories; // Show all categories if no preference set
-    }
-    if (visibleCategoryIds.length === 0) {
-      return []; // Hide all categories if user explicitly chose to hide all
-    }
-    return categories.filter(category => visibleCategoryIds.includes(category.id));
-  }, [categories, visibleCategoryIds]);
-
-  // Sync selectedCategoryId with filteredCategories - Reset if selected category is hidden
-  useEffect(() => {
-    if (selectedCategoryId && visibleCategoryIds !== null) {
-      const isSelectedCategoryVisible = filteredCategories.some(cat => cat.id === selectedCategoryId);
-      if (!isSelectedCategoryVisible) {
-        // Selected category is hidden, reset to show all
-        setCategoryFilter(null);
-        console.log('🔄 Reset category filter - selected category was hidden');
-      }
-    }
-  }, [selectedCategoryId, filteredCategories, setCategoryFilter, visibleCategoryIds]);
 
   // Optimized products query with Vietnamese search and performance tracking
   const searchQueryKey = useMemo(() => 
@@ -289,14 +220,14 @@ export default function POS({}: POSProps) {
         await prefetchCategories();
         
         // Prefetch products for first category after a short delay
-        if (filteredCategories.length > 0) {
+        if (categories.length > 0) {
           setTimeout(async () => {
             try {
               await prefetchProducts();
               // Prefetch products from the most popular category
               await queryClient.prefetchQuery({
-                queryKey: ['products', { categoryId: filteredCategories[0]?.id }],
-                queryFn: () => fetch(`/api/products?categoryId=${filteredCategories[0]?.id}`).then(res => res.json()),
+                queryKey: ['products', { categoryId: categories[0]?.id }],
+                queryFn: () => fetch(`/api/products?categoryId=${categories[0]?.id}`).then(res => res.json()),
                 staleTime: 2 * 60 * 1000, // Cache for 2 minutes
               });
             } catch (error) {
@@ -318,32 +249,16 @@ export default function POS({}: POSProps) {
     };
 
     prefetchCommonData();
-  }, [prefetchCategories, prefetchProducts, backgroundRefreshProducts, filteredCategories, queryClient, measureOperation]);
+  }, [prefetchCategories, prefetchProducts, backgroundRefreshProducts, categories, queryClient, measureOperation]);
 
   // Ensure products is always an array with Vietnamese filtering fallback
   const safeProducts = Array.isArray(products) ? products : [];
   
-  // Client-side Vietnamese search filtering with category visibility enforcement
+  // Client-side Vietnamese search filtering as fallback for better search quality
   const filteredProducts = useMemo(() => {
     const measure = measureOperation('client-side-vietnamese-filter');
     
     let filtered = safeProducts.filter(product => product.status === 'active');
-    
-    // CRITICAL: Filter by visible categories - prevent hidden category products from showing
-    if (visibleCategoryIds === null) {
-      // No preference set - show all products (don't filter)
-    } else if (visibleCategoryIds.length === 0) {
-      // User explicitly chose to hide all categories - hide all products
-      filtered = [];
-      console.log('🔒 Category visibility filter: 0 products - all categories hidden');
-    } else {
-      // User selected specific categories - show only products from visible categories
-      const visibleCategoryIdsSet = new Set(visibleCategoryIds);
-      filtered = filtered.filter(product => 
-        product.categoryId && visibleCategoryIdsSet.has(product.categoryId)
-      );
-      console.log(`🔒 Category visibility filter: ${filtered.length} products from ${visibleCategoryIds.length} visible categories`);
-    }
     
     // If we have a search term, apply Vietnamese-aware filtering
     if (normalizedSearchTerm.length > 0) {
@@ -352,7 +267,7 @@ export default function POS({}: POSProps) {
     
     measure.end();
     return filtered;
-  }, [safeProducts, normalizedSearchTerm, searchTerm, measureOperation, visibleCategoryIds]);
+  }, [safeProducts, normalizedSearchTerm, searchTerm, measureOperation]);
 
   // Decimal-safe arithmetic functions
   const toIntegerCents = (price: string | number): number => {
@@ -1240,7 +1155,7 @@ export default function POS({}: POSProps) {
                     </Button>
                     
                     {/* Individual Category Buttons */}
-                    {filteredCategories.map((category) => {
+                    {categories.map((category) => {
                       const isSelected = selectedCategoryId === category.id;
                       return (
                         <Button
@@ -1262,9 +1177,9 @@ export default function POS({}: POSProps) {
                       );
                     })}
                     
-                    {filteredCategories.length === 0 && (
+                    {categories.length === 0 && (
                       <div className="text-sm text-gray-500 italic">
-                        Chưa có danh mục nào được hiển thị
+                        Chưa có danh mục nào
                       </div>
                     )}
                   </>
@@ -1276,7 +1191,7 @@ export default function POS({}: POSProps) {
                 <div className="flex items-center space-x-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
                   <Filter className="h-3 w-3" />
                   <span>
-                    Đang lọc: {filteredCategories.find(c => c.id === selectedCategoryId)?.name}
+                    Đang lọc: {categories.find(c => c.id === selectedCategoryId)?.name}
                   </span>
                   <Button
                     variant="ghost"
