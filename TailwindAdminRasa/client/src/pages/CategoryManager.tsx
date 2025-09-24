@@ -420,7 +420,7 @@ export default function CategoryManager() {
         ...prev,
         consultationConfig: {
           ...prev.consultationConfig,
-          auto_prompts: [...prev.consultationConfig.auto_prompts, newPrompt.trim()]
+          auto_prompts: [...(prev.consultationConfig.auto_prompts || []), newPrompt.trim()]
         }
       }));
     }
@@ -431,7 +431,7 @@ export default function CategoryManager() {
       ...prev,
       consultationConfig: {
         ...prev.consultationConfig,
-        auto_prompts: prev.consultationConfig.auto_prompts.filter((_, i) => i !== index)
+        auto_prompts: (prev.consultationConfig.auto_prompts || []).filter((_, i) => i !== index)
       }
     }));
   };
@@ -888,7 +888,7 @@ export default function CategoryManager() {
                           Những câu hỏi sẽ được gợi ý tự động cho khách hàng khi tư vấn sản phẩm
                         </p>
                         <div className="space-y-2">
-                          {formData.consultationConfig.auto_prompts.map((prompt, index) => (
+                          {(formData.consultationConfig.auto_prompts || []).map((prompt, index) => (
                             <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
                               <span className="flex-1 text-sm">{prompt}</span>
                               <Button
