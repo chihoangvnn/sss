@@ -210,7 +210,7 @@ export function ShopeeOrdersPanel({ businessAccountId }: { businessAccountId?: s
     if (selectedOrders.length === orders.length) {
       setSelectedOrders([]);
     } else {
-      setSelectedOrders(orders.map(order => order.id));
+      setSelectedOrders(orders.map((order: any) => order.id));
     }
   };
 
@@ -270,7 +270,7 @@ export function ShopeeOrdersPanel({ businessAccountId }: { businessAccountId?: s
 
   return (
     <div className="space-y-6">
-      {NewOrderNotificationComponent}
+      <NewOrderNotificationComponent />
       
       <Card>
         <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-red-50">
@@ -431,8 +431,8 @@ export function ShopeeOrdersPanel({ businessAccountId }: { businessAccountId?: s
                   </tr>
                 ) : (
                   orders.map((order: ShopeeOrder) => {
-                    const StatusIcon = statusIcons[order.status];
-                    const statusStyle = statusColors[order.status];
+                    const StatusIcon = statusIcons[order.status] || Clock;
+                    const statusStyle = statusColors[order.status] || { bg: 'bg-gray-100', text: 'text-gray-800', badge: 'bg-gray-500' };
                     
                     return (
                       <tr key={order.id} className="hover:bg-gray-50">
