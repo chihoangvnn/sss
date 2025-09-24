@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,13 +7,29 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle } from "lucide-react";
+import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle, Target } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
 import { QRScanner } from "./QRScanner";
 import { RichTextEditor } from "./RichTextEditor";
 import { FAQManagement } from "./FAQManagement";
-import type { CloudinaryImage, CloudinaryVideo, RasaDescriptions } from "@shared/schema";
+import { 
+  UrgencyDataForm, 
+  SocialProofDataForm, 
+  PersonalizationDataForm, 
+  LeadingQuestionsDataForm, 
+  ObjectionHandlingDataForm 
+} from "./admin/SalesModuleComponents";
+import type { 
+  CloudinaryImage, 
+  CloudinaryVideo, 
+  RasaDescriptions,
+  UrgencyData,
+  SocialProofData, 
+  PersonalizationData,
+  LeadingQuestionsData,
+  ObjectionHandlingData
+} from "@shared/schema";
 
 interface Industry {
   id: string;
@@ -41,6 +57,12 @@ interface Product {
   // 🤖 AI-generated descriptions for RASA  
   descriptions?: RasaDescriptions;
   defaultImageIndex?: number;
+  // 🚀 Advanced Sales Technique Data
+  urgencyData?: UrgencyData | null;
+  socialProofData?: SocialProofData | null;
+  personalizationData?: PersonalizationData | null;
+  leadingQuestionsData?: LeadingQuestionsData | null;
+  objectionHandlingData?: ObjectionHandlingData | null;
 }
 
 // Consultation configuration types
@@ -94,10 +116,233 @@ interface ProductFormProps {
   onSuccess?: () => void;
 }
 
+// Sales Techniques Management Component
+interface SalesTechniquesManagementProps {
+  productId: string;
+  initialData: {
+    urgencyData: UrgencyData | null;
+    socialProofData: SocialProofData | null;
+    personalizationData: PersonalizationData | null;
+    leadingQuestionsData: LeadingQuestionsData | null;
+    objectionHandlingData: ObjectionHandlingData | null;
+  };
+}
+
+function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesManagementProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Helper function to create default data structures
+  const createDefaultData = () => ({
+    urgencyData: {
+      low_stock_threshold: 10,
+      is_limited_edition: false,
+      sales_velocity: 0,
+      urgency_messages: [],
+      demand_level: "medium" as const,
+      trending_platforms: []
+    },
+    socialProofData: {
+      total_sold: 0,
+      total_reviews: 0,
+      average_rating: 0,
+      featured_reviews: [],
+      expert_endorsements: [],
+      celebrity_users: [],
+      awards_certifications: [],
+      media_mentions: [],
+      repurchase_rate: 0,
+      trending_hashtags: []
+    },
+    personalizationData: {
+      target_demographics: {
+        primary: {
+          age_range: "",
+          gender: [],
+          income_level: "middle" as const,
+          lifestyle: [],
+          location: []
+        }
+      },
+      skin_types: [],
+      lifestyle_tags: [],
+      personality_match: [],
+      usage_scenarios: [],
+      problem_solving: [],
+      seasonal_relevance: [],
+      profession_fit: [],
+      income_bracket: ""
+    },
+    leadingQuestionsData: {
+      pain_point_questions: [],
+      desire_questions: [],
+      discovery_prompts: [],
+      comparison_triggers: [],
+      emotional_hooks: [],
+      closing_questions: [],
+      objection_anticipation: []
+    },
+    objectionHandlingData: {
+      common_objections: [],
+      price_justification: {
+        daily_cost: "",
+        comparison_points: [],
+        value_proposition: ""
+      },
+      quality_proof_points: [],
+      safety_assurance: [],
+      effectiveness_guarantee: {
+        guarantee_text: "",
+        timeline: "",
+        success_rate: ""
+      },
+      competitor_advantages: [],
+      risk_mitigation: [],
+      trust_builders: []
+    }
+  });
+
+  // Initialize state with proper defaults and merge with actual data
+  const [salesData, setSalesData] = useState(() => {
+    const defaults = createDefaultData();
+    return {
+      urgencyData: { ...defaults.urgencyData, ...(initialData.urgencyData || {}) },
+      socialProofData: { ...defaults.socialProofData, ...(initialData.socialProofData || {}) },
+      personalizationData: { ...defaults.personalizationData, ...(initialData.personalizationData || {}) },
+      leadingQuestionsData: { ...defaults.leadingQuestionsData, ...(initialData.leadingQuestionsData || {}) },
+      objectionHandlingData: { ...defaults.objectionHandlingData, ...(initialData.objectionHandlingData || {}) }
+    };
+  });
+
+  // 🔄 CRITICAL FIX: Sync state with initialData when it changes
+  useEffect(() => {
+    const defaults = createDefaultData();
+    setSalesData({
+      urgencyData: { ...defaults.urgencyData, ...(initialData.urgencyData || {}) },
+      socialProofData: { ...defaults.socialProofData, ...(initialData.socialProofData || {}) },
+      personalizationData: { ...defaults.personalizationData, ...(initialData.personalizationData || {}) },
+      leadingQuestionsData: { ...defaults.leadingQuestionsData, ...(initialData.leadingQuestionsData || {}) },
+      objectionHandlingData: { ...defaults.objectionHandlingData, ...(initialData.objectionHandlingData || {}) }
+    });
+  }, [initialData]);
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof salesData) => {
+      const response = await apiRequest(`/api/products/${productId}/sales-techniques`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save sales techniques');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Đã lưu dữ liệu sales techniques"
+      });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể lưu dữ liệu",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSave = () => {
+    saveMutation.mutate(salesData);
+  };
+
+  return (
+    <Card className="w-full max-w-2xl mt-4">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-purple-600" />
+            <CardTitle className="text-lg">🚀 Sales Techniques Management</CardTitle>
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={saveMutation.isPending}
+            variant="default"
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            {saveMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {saveMutation.isPending ? 'Đang lưu...' : 'Lưu'}
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Quản lý dữ liệu sales techniques nâng cao cho sản phẩm
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        
+        {/* Urgency Data */}
+        <UrgencyDataForm
+          data={salesData.urgencyData}
+          onChange={(data) => setSalesData(prev => ({ ...prev, urgencyData: data }))}
+        />
+
+        {/* Social Proof Data */}
+        <SocialProofDataForm
+          data={salesData.socialProofData}
+          onChange={(data) => setSalesData(prev => ({ ...prev, socialProofData: data }))}
+        />
+
+        {/* Personalization Data */}
+        <PersonalizationDataForm
+          data={salesData.personalizationData}
+          onChange={(data) => setSalesData(prev => ({ ...prev, personalizationData: data }))}
+        />
+
+        {/* Leading Questions Data */}
+        <LeadingQuestionsDataForm
+          data={salesData.leadingQuestionsData}
+          onChange={(data) => setSalesData(prev => ({ ...prev, leadingQuestionsData: data }))}
+        />
+
+        {/* Objection Handling Data */}
+        <ObjectionHandlingDataForm
+          data={salesData.objectionHandlingData}
+          onChange={(data) => setSalesData(prev => ({ ...prev, objectionHandlingData: data }))}
+        />
+
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = Boolean(product);
+
+  // 🔄 CRITICAL MEMOIZATION: Stabilize initialData to prevent unnecessary re-renders and state resets
+  const memoizedSalesTechniquesData = useMemo(() => ({
+    urgencyData: product?.urgencyData || null,
+    socialProofData: product?.socialProofData || null,
+    personalizationData: product?.personalizationData || null,
+    leadingQuestionsData: product?.leadingQuestionsData || null,
+    objectionHandlingData: product?.objectionHandlingData || null,
+  }), [
+    product?.id,
+    product?.urgencyData,
+    product?.socialProofData,
+    product?.personalizationData,
+    product?.leadingQuestionsData,
+    product?.objectionHandlingData
+  ]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -1044,6 +1289,14 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
             />
           </CardContent>
         </Card>
+      )}
+
+      {/* 🚀 SALES TECHNIQUES MANAGEMENT - Advanced sales technique configuration */}
+      {isEditing && product?.id && (
+        <SalesTechniquesManagement 
+          productId={product.id}
+          initialData={memoizedSalesTechniquesData}
+        />
       )}
 
       {/* QR Scanner Modal */}

@@ -118,7 +118,7 @@ router.get('/by-barcode', async (req, res) => {
     // If not found by SKU, search by itemCode
     if (!product) {
       const products = await storage.getProducts(1, undefined, code as string);
-      product = products.find(p => p.itemCode === code) || null;
+      product = products.find(p => p.itemCode === code);
     }
     
     if (!product) {
@@ -244,6 +244,139 @@ router.delete('/:id', requireAuth, async (req, res) => {
     console.error('❌ Error deleting product:', error);
     res.status(500).json({ 
       error: 'Failed to delete product',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// 🚀 SALES TECHNIQUES ENDPOINTS - Advanced sales technique data management
+
+// GET /api/products/:id/sales-techniques - Get all sales technique data for a product
+router.get('/:id/sales-techniques', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('🎯 API: Getting sales techniques for product:', id);
+    
+    const product = await storage.getProduct(id);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Extract all sales technique data
+    const salesTechniques = {
+      urgencyData: product.urgencyData,
+      socialProofData: product.socialProofData,
+      personalizationData: product.personalizationData,
+      leadingQuestionsData: product.leadingQuestionsData,
+      objectionHandlingData: product.objectionHandlingData
+    };
+    
+    res.json(salesTechniques);
+  } catch (error) {
+    console.error('❌ Error fetching product sales techniques:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch sales techniques',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// PUT /api/products/:id/sales-techniques - Update specific sales technique data
+router.put('/:id/sales-techniques', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      urgencyData, 
+      socialProofData, 
+      personalizationData, 
+      leadingQuestionsData, 
+      objectionHandlingData 
+    } = req.body;
+    
+    console.log('🎯 API: Updating sales techniques for product:', id);
+    console.log('📊 Sales technique data keys:', Object.keys(req.body));
+
+    // Build the update object with only provided fields
+    const updateData: any = {};
+    if (urgencyData !== undefined) updateData.urgencyData = urgencyData;
+    if (socialProofData !== undefined) updateData.socialProofData = socialProofData;
+    if (personalizationData !== undefined) updateData.personalizationData = personalizationData;
+    if (leadingQuestionsData !== undefined) updateData.leadingQuestionsData = leadingQuestionsData;
+    if (objectionHandlingData !== undefined) updateData.objectionHandlingData = objectionHandlingData;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ 
+        error: 'No sales technique data provided',
+        message: 'Please provide at least one sales technique data field to update'
+      });
+    }
+
+    const updatedProduct = await storage.updateProduct(id, updateData);
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    // Return only the updated sales technique data
+    const updatedSalesTechniques = {
+      urgencyData: updatedProduct.urgencyData,
+      socialProofData: updatedProduct.socialProofData,
+      personalizationData: updatedProduct.personalizationData,
+      leadingQuestionsData: updatedProduct.leadingQuestionsData,
+      objectionHandlingData: updatedProduct.objectionHandlingData
+    };
+    
+    res.json(updatedSalesTechniques);
+  } catch (error) {
+    console.error('❌ Error updating product sales techniques:', error);
+    res.status(500).json({ 
+      error: 'Failed to update sales techniques',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// PUT /api/products/:id/sales-techniques/:technique - Update individual sales technique
+router.put('/:id/sales-techniques/:technique', requireAuth, async (req, res) => {
+  try {
+    const { id, technique } = req.params;
+    const techniqueData = req.body;
+    
+    console.log(`🎯 API: Updating ${technique} for product:`, id);
+
+    // Validate technique type
+    const validTechniques = ['urgency', 'social-proof', 'personalization', 'leading-questions', 'objection-handling'];
+    if (!validTechniques.includes(technique)) {
+      return res.status(400).json({ 
+        error: 'Invalid sales technique',
+        message: `Valid techniques are: ${validTechniques.join(', ')}`
+      });
+    }
+
+    // Map technique names to database field names
+    const fieldMapping: { [key: string]: string } = {
+      'urgency': 'urgencyData',
+      'social-proof': 'socialProofData',  
+      'personalization': 'personalizationData',
+      'leading-questions': 'leadingQuestionsData',
+      'objection-handling': 'objectionHandlingData'
+    };
+
+    const updateField = fieldMapping[technique];
+    const updateData = { [updateField]: techniqueData };
+
+    const updatedProduct = await storage.updateProduct(id, updateData);
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    res.json({ 
+      [technique]: (updatedProduct as any)[updateField],
+      message: `${technique} data updated successfully`
+    });
+  } catch (error) {
+    console.error(`❌ Error updating ${req.params.technique} for product:`, error);
+    res.status(500).json({ 
+      error: `Failed to update ${req.params.technique} data`,
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
