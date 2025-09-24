@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,6 +121,9 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     templates?: CategoryConsultationTemplates;
   }>({});
   const [requiredFieldsError, setRequiredFieldsError] = useState<string[]>([]);
+  
+  // 🔄 Track previous categoryId to prevent false category changes
+  const prevCategoryIdRef = useRef<string | null>(null);
 
   // 🤖 AI Generated Descriptions State
   const [generatedDescriptions, setGeneratedDescriptions] = useState<RasaDescriptions | null>(null);
@@ -180,10 +183,12 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         setShowDescriptionPreview(false);
       }
       
-      // 🤖 Load existing consultation data if available
+      // 🤖 Load existing consultation data if available (rehydration happens first)
       if ((product as any).consultationData && typeof (product as any).consultationData === 'object') {
         console.log('🔄 Rehydrating consultation fields from existing product:', (product as any).consultationData);
         setConsultationFields((product as any).consultationData);
+        // Set initial categoryId ref to prevent false changes during rehydration
+        prevCategoryIdRef.current = product.categoryId || null;
       }
     }
   }, [product]);
@@ -211,12 +216,15 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           templates: selectedCategory.consultationTemplates || {}
         });
         
-        // 🔄 Gate auto-loading: Only initialize if consultationFields is empty OR category actually changed
+        // 🔄 Robust gating: Track actual category changes and prevent clobbering
         const hasExistingFields = Object.keys(consultationFields).length > 0;
-        const categoryChanged = Object.keys(categoryConfig).length === 0; // No previous category config
+        const actualCategoryChanged = prevCategoryIdRef.current !== formData.categoryId;
+        const shouldInitialize = !hasExistingFields || actualCategoryChanged;
         
-        if (!hasExistingFields || categoryChanged) {
-          console.log('🤖 Initializing consultation fields with templates (hasExisting:', hasExistingFields, ', categoryChanged:', categoryChanged, ')');
+        console.log('🔄 Gating decision: hasExisting=', hasExistingFields, ', actualChanged=', actualCategoryChanged, ', shouldInit=', shouldInitialize, ', prev=', prevCategoryIdRef.current, ', current=', formData.categoryId);
+        
+        if (shouldInitialize) {
+          console.log('🤖 Initializing consultation fields with templates');
           
           // Initialize consultation fields with template values and auto-prompts
           const newConsultationFields: Record<string, string> = {};
@@ -248,8 +256,11 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           setConsultationFields(newConsultationFields);
           setRequiredFieldsError([]); // Reset validation errors
         } else {
-          console.log('🔄 Preserving existing consultation fields, category config updated only');
+          console.log('🔄 Preserving existing consultation fields');
         }
+        
+        // Update previous categoryId reference
+        prevCategoryIdRef.current = formData.categoryId;
         
         // Auto-fill description with first available template if description is empty
         if (selectedCategory.consultationTemplates && Object.keys(selectedCategory.consultationTemplates).length > 0 && !formData.description.trim()) {
