@@ -43,12 +43,12 @@ const mobileNavItems = [
     bgColor: "bg-orange-50 dark:bg-orange-950/20"
   },
   {
-    title: "Báo cáo",
-    url: "/analytics",
-    icon: BarChart3,
-    color: "text-[hsl(var(--activity-mint))]",
-    activeColor: "text-[hsl(var(--activity-mint))]", 
-    bgColor: "bg-[hsl(var(--activity-mint))]/10 dark:bg-[hsl(var(--activity-mint))]/20"
+    title: "TikTok Shop",
+    url: "/tiktok-shop",
+    icon: ShoppingBag,
+    color: "text-pink-600", 
+    activeColor: "text-pink-600",
+    bgColor: "bg-pink-50 dark:bg-pink-950/20"
   },
 ];
 
