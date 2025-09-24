@@ -118,11 +118,18 @@ export function ReceiptPrinter({
   // Refs
   const previewRef = useRef<HTMLPreElement>(null);
   
+  // Available receipt templates
+  const availableTemplates = [
+    { key: 'standard', template: new StandardReceiptTemplate() },
+    { key: 'compact', template: new StandardReceiptTemplate() },
+    { key: 'detailed', template: new StandardReceiptTemplate() }
+  ];
+  
   // Get current template
-  const currentTemplate = new StandardReceiptTemplate();
+  const currentTemplate = availableTemplates.find(t => t.key === selectedTemplate)?.template || new StandardReceiptTemplate();
   
   // Check Web Serial API support
-  const isSerialSupported = 'serial' in navigator;
+  const isSerialSupported = typeof (navigator as any).serial !== 'undefined';
 
   // Generate receipt preview with Vietnamese support
   const generatePreview = () => {
@@ -414,7 +421,7 @@ export function ReceiptPrinter({
   // Export as text file
   const exportAsText = () => {
     try {
-      const builder = createReceiptBuilder(currentTemplate, config);
+      const builder = createESCPOSBuilder(currentTemplate, config);
       const receiptText = builder.generatePreview(order, orderItems, shopSettings, customer, receiptNumber);
       
       const blob = new Blob([receiptText], { type: 'text/plain; charset=utf-8' });
@@ -445,7 +452,7 @@ export function ReceiptPrinter({
   // Export ESC/POS commands as file  
   const exportESCPOS = () => {
     try {
-      const builder = createReceiptBuilder(currentTemplate, config);
+      const builder = createESCPOSBuilder(currentTemplate, config);
       const escposCommands = builder.generateReceipt(order, orderItems, shopSettings, customer, receiptNumber);
       
       const blob = new Blob([escposCommands], { type: 'application/octet-stream' });
