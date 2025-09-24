@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, Heart, ArrowLeft, Plus } from 'lucide-react';
+import { Search, ShoppingCart, User, Heart, ArrowLeft, Plus, Minus, MessageCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import ChatbotWidget from '@/components/ChatbotWidget';
 
 interface Product {
   id: string;
@@ -26,10 +27,19 @@ interface CartItem {
   quantity: number;
 }
 
+// Hardcoded simplified categories for better performance
+const SIMPLIFIED_CATEGORIES = [
+  { id: 'all', name: 'Tất cả', icon: '🛍️' },
+  { id: 'electronics', name: 'Điện tử', icon: '📱' },
+  { id: 'books', name: 'Sách', icon: '📚' },
+  { id: 'beauty', name: 'Làm đẹp', icon: '💄' }
+];
+
 function MobileStorefront() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [showCart, setShowCart] = useState(false);
 
   // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
@@ -48,15 +58,9 @@ function MobileStorefront() {
     }
   });
 
-  // Fetch categories
-  const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const response = await fetch('/api/categories');
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      return response.json();
-    }
-  });
+  // Simplified: Use hardcoded categories for better performance
+  // const { data: categories = [] } = useQuery<Category[]>(...) - Commented out
+  const categories = SIMPLIFIED_CATEGORIES;
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -72,6 +76,24 @@ function MobileStorefront() {
     });
   };
 
+  const removeFromCart = (productId: string) => {
+    setCart(prev => prev.filter(item => item.product.id !== productId));
+  };
+
+  const updateQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(prev => 
+      prev.map(item =>
+        item.product.id === productId
+          ? { ...item, quantity: newQuantity }
+          : item
+      )
+    );
+  };
+
   const getTotalPrice = () => {
     return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
   };
@@ -80,9 +102,9 @@ function MobileStorefront() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const filteredProducts = products.filter(product => 
-    product.status === 'active' && product.stock > 0
-  );
+  const filteredProducts = products
+    .filter(product => product.status === 'active' && product.stock > 0)
+    .slice(0, 20); // Limit to 20 products for better mobile performance
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -125,17 +147,6 @@ function MobileStorefront() {
       {/* Category Tabs */}
       <div className="bg-white px-4 py-3 border-b">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          <Button
-            variant={selectedCategory === 'all' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedCategory('all')}
-            className={selectedCategory === 'all' 
-              ? 'bg-green-500 hover:bg-green-600 text-white rounded-full px-4 whitespace-nowrap' 
-              : 'text-gray-600 rounded-full px-4 whitespace-nowrap'
-            }
-          >
-            Tất cả
-          </Button>
           {categories.map((category) => (
             <Button
               key={category.id}
@@ -143,55 +154,63 @@ function MobileStorefront() {
               size="sm"
               onClick={() => setSelectedCategory(category.id)}
               className={selectedCategory === category.id 
-                ? 'bg-green-500 hover:bg-green-600 text-white rounded-full px-4 whitespace-nowrap' 
-                : 'text-gray-600 rounded-full px-4 whitespace-nowrap'
+                ? 'bg-green-500 hover:bg-green-600 text-white rounded-full px-4 whitespace-nowrap flex items-center gap-1' 
+                : 'text-gray-600 rounded-full px-4 whitespace-nowrap flex items-center gap-1'
               }
             >
+              <span>{category.icon}</span>
               {category.name}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Product Grid */}
-      <div className="p-4 pb-24">
+      {/* Product Grid - Reference Design Match */}
+      <div className="p-4 pb-32">
         <div className="space-y-3">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="bg-white rounded-lg p-4 shadow-sm border">
-              <div className="flex items-start gap-3">
+            <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-4">
+                {/* Product Info - Left Side */}
                 <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 text-sm leading-tight">
+                  <h3 className="font-semibold text-gray-900 text-base leading-tight mb-1">
                     {product.name}
                   </h3>
                   {product.short_description && (
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2 mb-2">
                       {product.short_description}
                     </p>
                   )}
-                  <div className="mt-2">
-                    <span className="text-lg font-bold text-green-600">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold text-green-600">
                       {product.price.toLocaleString('vi-VN')}₫
                     </span>
+                    <span className="text-xs text-gray-500">Còn {product.stock}</span>
                   </div>
                 </div>
                 
-                <div className="flex flex-col items-end gap-2">
-                  {product.image && (
+                {/* Image + Add Button - Right Side */}
+                <div className="flex flex-col items-center gap-3">
+                  {product.image ? (
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="w-16 h-16 object-cover rounded-lg"
+                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                       onError={(e) => {
-                        e.currentTarget.src = '/api/placeholder/64/64';
+                        e.currentTarget.src = '/api/placeholder/80/80';
                       }}
                     />
+                  ) : (
+                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <span className="text-2xl">📦</span>
+                    </div>
                   )}
                   <Button
                     onClick={() => addToCart(product)}
                     size="sm"
-                    className="bg-green-500 hover:bg-green-600 text-white rounded-full w-8 h-8 p-0"
+                    className="bg-green-500 hover:bg-green-600 text-white rounded-full w-10 h-10 p-0 shadow-lg hover:shadow-xl transition-all"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
@@ -206,28 +225,120 @@ function MobileStorefront() {
         )}
       </div>
 
-      {/* Bottom Cart */}
-      {getTotalItems() > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-50">
-          <Button 
-            className="w-full bg-green-500 hover:bg-green-600 text-white rounded-full py-3 font-medium"
-            onClick={() => {
-              // Navigate to cart page (implement later)
-              console.log('Navigate to cart:', cart);
+      {/* Improved Bottom Cart + Chatbot */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-xl z-50">
+        {getTotalItems() > 0 && (
+          <div className="p-4 pb-2">
+            <Button 
+              className="w-full bg-green-500 hover:bg-green-600 text-white rounded-full py-4 font-semibold text-lg shadow-lg"
+              onClick={() => setShowCart(true)}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="flex items-center gap-3">
+                  <div className="bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                    {getTotalItems()}
+                  </div>
+                  Xem giỏ hàng
+                </span>
+                <span className="font-bold text-xl">
+                  {getTotalPrice().toLocaleString('vi-VN')}₫
+                </span>
+              </div>
+            </Button>
+          </div>
+        )}
+        
+        {/* Chatbot Button */}
+        <div className="absolute bottom-4 right-4">
+          <ChatbotWidget 
+            pageType="storefront"
+            pageContext={{
+              products: filteredProducts.map(p => ({
+                id: p.id,
+                name: p.name,
+                price: p.price.toString(),
+                category: selectedCategory
+              })),
+              cartItems: cart.map(item => ({
+                productId: item.product.id,
+                name: item.product.name,
+                quantity: item.quantity
+              }))
             }}
-          >
-            <div className="flex items-center justify-between w-full">
-              <span className="flex items-center gap-2">
-                <div className="bg-green-400 rounded-full w-6 h-6 flex items-center justify-center">
-                  <span className="text-sm font-bold">{getTotalItems()}</span>
-                </div>
-                Xem giỏ hàng
-              </span>
-              <span className="font-bold">
-                {getTotalPrice().toLocaleString('vi-VN')}₫
-              </span>
+            onAddToCart={(productId, quantity) => {
+              const product = filteredProducts.find(p => p.id === productId);
+              if (product) {
+                for(let i = 0; i < quantity; i++) {
+                  addToCart(product);
+                }
+              }
+            }}
+          />
+        </div>
+      </div>
+      
+      {/* Cart Modal */}
+      {showCart && (
+        <div className="fixed inset-0 bg-black/50 z-60 flex items-end">
+          <div className="bg-white w-full rounded-t-2xl max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="text-xl font-bold">Giỏ hàng ({getTotalItems()} sản phẩm)</h2>
+              <Button variant="ghost" onClick={() => setShowCart(false)}>
+                <X className="h-6 w-6" />
+              </Button>
             </div>
-          </Button>
+            
+            <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+              {cart.map((item) => (
+                <div key={item.product.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                  {item.product.image && (
+                    <img 
+                      src={item.product.image}
+                      alt={item.product.name}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h3 className="font-medium">{item.product.name}</h3>
+                    <p className="text-green-600 font-bold">
+                      {item.product.price.toLocaleString('vi-VN')}₫
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                      className="w-8 h-8 p-0"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                      className="w-8 h-8 p-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-4 border-t bg-gray-50">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-lg font-semibold">Tổng cộng:</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {getTotalPrice().toLocaleString('vi-VN')}₫
+                </span>
+              </div>
+              <Button className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold">
+                Đặt hàng ngay
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
