@@ -306,6 +306,126 @@ Respond with JSON in this format:
     }
   }
 
+  // 🛡️ Security-enhanced validation & normalization helpers for SEO data
+  private sanitizeTitle(title: any, maxLength: number = 60): string {
+    // Type safety: handle non-string inputs
+    if (!title || typeof title !== 'string') {
+      return "Sản Phẩm Chất Lượng";
+    }
+    
+    // Strip HTML tags and dangerous content
+    const cleanTitle = title
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/javascript:/gi, '') // Remove javascript: URLs
+      .replace(/data:/gi, '') // Remove data: URLs
+      .replace(/vbscript:/gi, '') // Remove vbscript: URLs
+      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+      .trim()
+      .replace(/\s+/g, ' '); // Normalize spaces
+    
+    // Fallback if sanitization removes everything
+    if (cleanTitle.length === 0) {
+      return "Sản Phẩm Chất Lượng";
+    }
+    
+    // Ensure within character limit
+    if (cleanTitle.length > maxLength) {
+      return cleanTitle.substring(0, maxLength - 3) + '...';
+    }
+    
+    return cleanTitle;
+  }
+
+  private sanitizeDescription(description: any, maxLength: number = 160): string {
+    // Type safety: handle non-string inputs
+    if (!description || typeof description !== 'string') {
+      return "Sản phẩm chất lượng cao, uy tín, giao hàng nhanh toàn quốc.";
+    }
+    
+    // Strip HTML tags and dangerous content
+    const cleanDesc = description
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/javascript:/gi, '') // Remove javascript: URLs
+      .replace(/data:/gi, '') // Remove data: URLs
+      .replace(/vbscript:/gi, '') // Remove vbscript: URLs
+      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+      .trim()
+      .replace(/\s+/g, ' '); // Normalize spaces
+    
+    // Fallback if sanitization removes everything
+    if (cleanDesc.length === 0) {
+      return "Sản phẩm chất lượng cao, uy tín, giao hàng nhanh toàn quốc.";
+    }
+    
+    // Ensure within character limit
+    if (cleanDesc.length > maxLength) {
+      return cleanDesc.substring(0, maxLength - 3) + '...';
+    }
+    
+    return cleanDesc;
+  }
+
+  private sanitizeSlug(input: string, productName?: string): string {
+    if (!input || input.trim().length === 0) {
+      input = productName || "san-pham";
+    }
+    
+    // Convert to lowercase and normalize Vietnamese diacritics
+    const slug = input
+      .toLowerCase()
+      .trim()
+      // Replace Vietnamese diacritics
+      .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g, 'a')
+      .replace(/[èéẹẻẽêềếệểễ]/g, 'e')
+      .replace(/[ìíịỉĩ]/g, 'i')
+      .replace(/[òóọỏõôồốộổỗơờớợởỡ]/g, 'o')
+      .replace(/[ùúụủũưừứựửữ]/g, 'u')
+      .replace(/[ỳýỵỷỹ]/g, 'y')
+      .replace(/đ/g, 'd')
+      // Remove non-alphanumeric characters except hyphens
+      .replace(/[^a-z0-9\s-]/g, '')
+      // Replace spaces with hyphens
+      .replace(/\s+/g, '-')
+      // Remove multiple consecutive hyphens
+      .replace(/-+/g, '-')
+      // Remove leading/trailing hyphens
+      .replace(/^-|-$/g, '');
+    
+    // Ensure slug is not empty
+    if (slug.length === 0) {
+      return 'san-pham';
+    }
+    
+    // Limit slug length
+    if (slug.length > 100) {
+      return slug.substring(0, 100).replace(/-$/, '');
+    }
+    
+    return slug;
+  }
+
+  private sanitizeKeywords(keywords: any): string[] {
+    if (!Array.isArray(keywords)) {
+      return ['chất lượng', 'uy tín', 'chính hãng'];
+    }
+    
+    // Filter and clean keywords
+    const cleanKeywords = keywords
+      .filter(keyword => typeof keyword === 'string' && keyword.trim().length > 0)
+      .map(keyword => keyword.trim().toLowerCase())
+      .filter(keyword => keyword.length <= 50) // Max keyword length
+      .slice(0, 12); // Max 12 keywords
+    
+    // Ensure minimum number of keywords
+    if (cleanKeywords.length === 0) {
+      return ['chất lượng', 'uy tín', 'chính hãng'];
+    }
+    
+    return cleanKeywords;
+  }
+
   // 🔍 NEW: SEO Generation for Vietnamese E-commerce
   async generateSEOData(
     productName: string,
@@ -446,54 +566,47 @@ Trả về JSON format:`;
         try {
           const result = JSON.parse(rawJson);
           
-          // Validate and enforce SEO limits
-          if (!result.seo_title || !result.seo_description || !result.slug || !result.keywords) {
-            throw new Error("Invalid SEO response structure from AI");
-          }
+          // 🛡️ Apply comprehensive sanitization and validation
+          const sanitizedSEOData = {
+            seo_title: this.sanitizeTitle(result.seo_title || productName),
+            seo_description: this.sanitizeDescription(result.seo_description || productDescription || `Mua ${productName} chính hãng với giá tốt nhất`),
+            slug: this.sanitizeSlug(result.slug || productName, productName),
+            keywords: this.sanitizeKeywords(result.keywords || []),
+            og_title: this.sanitizeTitle(result.og_title || result.seo_title || productName),
+            og_description: this.sanitizeDescription(result.og_description || result.seo_description || `🔥 ${productName} hot nhất hiện nay! Đặt ngay để không bỏ lỡ cơ hội.`),
+            meta_data: {
+              target_market: options?.targetMarket || 'vietnam',
+              generated_at: new Date().toISOString(),
+              category: options?.ecommerceType || 'general',
+              validation_passed: true
+            }
+          };
           
-          // Enforce title length (50-60 chars)
-          if (result.seo_title.length > 60) {
-            result.seo_title = result.seo_title.substring(0, 57) + '...';
-          }
-          
-          // Enforce description length (150-160 chars)  
-          if (result.seo_description.length > 160) {
-            result.seo_description = result.seo_description.substring(0, 157) + '...';
-          }
-          
-          // Clean slug - ensure URL-friendly
-          result.slug = result.slug
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-            .replace(/\s+/g, '-') // Replace spaces with hyphens
-            .replace(/-+/g, '-') // Remove multiple hyphens
-            .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-            
-          // Ensure keywords array has reasonable count (8-12)
-          if (result.keywords.length > 12) {
-            result.keywords = result.keywords.slice(0, 12);
-          }
-          
-          return result;
+          return sanitizedSEOData;
           
         } catch (parseError) {
           console.error('Failed to parse SEO response:', parseError, 'Raw:', rawJson);
           
-          // Fallback: generate basic SEO data
+          // 🛡️ Fallback: generate basic SEO data using sanitization functions
           console.log('Using fallback SEO generation for:', productName);
-          const fallbackSlug = productName
-            .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, '')
-            .replace(/\s+/g, '-');
             
-          return {
-            seo_title: `${productName} - Chất Lượng Cao | Uy Tín 2024`,
-            seo_description: `⭐ ${productName} chính hãng, chất lượng tốt. Giao hàng miễn phí toàn quốc. Đặt ngay!`,
-            slug: fallbackSlug,
-            keywords: [productName.toLowerCase(), "chính hãng", "chất lượng", "uy tín"],
-            og_title: `${productName} - Đáng Mua Nhất 2024`,
-            og_description: `🔥 ${productName} hot nhất hiện nay! Đặt ngay để không bỏ lỡ cơ hội.`
+          const fallbackSEOData = {
+            seo_title: this.sanitizeTitle(`${productName} - Chất Lượng Cao | Uy Tín 2024`),
+            seo_description: this.sanitizeDescription(`⭐ ${productName} chính hãng, chất lượng tốt. Giao hàng miễn phí toàn quốc. Đặt ngay!`),
+            slug: this.sanitizeSlug(productName),
+            keywords: this.sanitizeKeywords([productName.toLowerCase(), "chính hãng", "chất lượng", "uy tín"]),
+            og_title: this.sanitizeTitle(`${productName} - Đáng Mua Nhất 2024`),
+            og_description: this.sanitizeDescription(`🔥 ${productName} hot nhất hiện nay! Đặt ngay để không bỏ lỡ cơ hội.`),
+            meta_data: {
+              target_market: options?.targetMarket || 'vietnam',
+              generated_at: new Date().toISOString(),
+              category: options?.ecommerceType || 'general',
+              validation_passed: true,
+              fallback_used: true
+            }
           };
+          
+          return fallbackSEOData;
         }
       } else {
         throw new Error("Empty response from Gemini API");

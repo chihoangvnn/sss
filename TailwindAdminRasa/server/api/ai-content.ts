@@ -54,19 +54,51 @@ router.post('/generate-seo-data', async (req, res) => {
       options = {} 
     } = req.body;
 
-    // Validate required fields
+    // 🛡️ Comprehensive input validation and sanitization
     if (!productName || typeof productName !== 'string' || productName.trim().length === 0) {
       return res.status(400).json({ 
         error: 'Product name is required and cannot be empty' 
       });
     }
 
-    console.log('🔍 Generating SEO data for:', productName, 'Category:', category);
-    console.log('📝 Description provided:', productDescription ? 'Yes' : 'No');
+    // Strip HTML and sanitize all inputs with safe type handling
+    const stripHtml = (input: any): string => {
+      if (typeof input !== 'string') return '';
+      return input
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/javascript:/gi, '') // Remove javascript: URLs
+        .replace(/data:/gi, '') // Remove data: URLs
+        .replace(/vbscript:/gi, '') // Remove vbscript: URLs
+        .replace(/on\w+\s*=/gi, '') // Remove event handlers
+        .trim();
+    };
+
+    // Sanitize and validate all inputs with safe defaults
+    const sanitizedInputs = {
+      productName: stripHtml(productName),
+      productDescription: stripHtml(productDescription || ''),
+      category: stripHtml(category || 'general'),
+      options: {
+        targetMarket: (options?.targetMarket && typeof options.targetMarket === 'string') 
+          ? options.targetMarket as 'vietnam' | 'international' 
+          : 'vietnam',
+        includeLocalKeywords: Boolean(options?.includeLocalKeywords),
+      }
+    };
+
+    // Final validation after sanitization
+    if (sanitizedInputs.productName.length === 0) {
+      return res.status(400).json({ 
+        error: 'Product name contains invalid characters or is empty after sanitization' 
+      });
+    }
+
+    console.log('🔍 Generating SEO data for:', sanitizedInputs.productName, 'Category:', sanitizedInputs.category);
+    console.log('📝 Description provided:', sanitizedInputs.productDescription ? 'Yes' : 'No');
 
     // Determine e-commerce category for intelligent optimization
     const getEcommerceType = (categoryName: string): string => {
-      if (!categoryName) return 'general';
+      if (!categoryName || typeof categoryName !== 'string') return 'general';
       const catLower = categoryName.toLowerCase();
       if (catLower.includes('mỹ phẩm') || catLower.includes('cosmetic') || catLower.includes('beauty') || catLower.includes('skincare')) return 'cosmetics';
       if (catLower.includes('thực phẩm') || catLower.includes('vitamin') || catLower.includes('supplement')) return 'supplements';
@@ -76,15 +108,15 @@ router.post('/generate-seo-data', async (req, res) => {
       return 'general';
     };
 
-    // Generate SEO data using AI Content Generator
+    // Generate SEO data using AI Content Generator with sanitized inputs
     const result = await aiContentGenerator.generateSEOData(
-      productName.trim(),
-      productDescription,
-      category,
+      sanitizedInputs.productName,
+      sanitizedInputs.productDescription,
+      sanitizedInputs.category,
       {
-        targetMarket: options.targetMarket || 'vietnam',
-        includeLocalKeywords: options.includeLocalKeywords !== false, // Default true
-        ecommerceType: getEcommerceType(category) as 'fashion' | 'cosmetics' | 'supplements' | 'electronics' | 'food' | 'general'
+        targetMarket: sanitizedInputs.options.targetMarket,
+        includeLocalKeywords: sanitizedInputs.options.includeLocalKeywords !== false, // Default true
+        ecommerceType: getEcommerceType(sanitizedInputs.category) as 'fashion' | 'cosmetics' | 'supplements' | 'electronics' | 'food' | 'general'
       }
     );
 
