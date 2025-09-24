@@ -306,6 +306,204 @@ Respond with JSON in this format:
     }
   }
 
+  // 🔍 NEW: SEO Generation for Vietnamese E-commerce
+  async generateSEOData(
+    productName: string,
+    productDescription?: string,
+    category?: string,
+    options: {
+      targetMarket?: 'vietnam' | 'international';
+      includeLocalKeywords?: boolean;
+      ecommerceType?: 'fashion' | 'cosmetics' | 'supplements' | 'electronics' | 'food' | 'general';
+    } = {}
+  ): Promise<{
+    seo_title: string;
+    seo_description: string;
+    slug: string;
+    keywords: string[];
+    og_title?: string;
+    og_description?: string;
+  }> {
+    // Input validation
+    if (!productName || productName.trim().length === 0) {
+      throw new Error("Product name is required for SEO generation");
+    }
+
+    const { 
+      targetMarket = 'vietnam',
+      includeLocalKeywords = true,
+      ecommerceType = 'general'
+    } = options;
+
+    // Vietnamese e-commerce SEO intelligence
+    const vietnameseEcommerceContext = `
+🇻🇳 VIETNAMESE E-COMMERCE SEO OPTIMIZATION CONTEXT:
+
+TARGET MARKET: ${targetMarket === 'vietnam' ? 'Thị trường Việt Nam' : 'International with Vietnamese focus'}
+CATEGORY: ${ecommerceType.toUpperCase()}
+LOCAL OPTIMIZATION: ${includeLocalKeywords ? 'Include Vietnamese search behavior patterns' : 'Basic optimization'}
+
+VIETNAMESE SEARCH PATTERNS:
+- Search intent: "mua [product]", "giá [product]", "[product] chính hãng", "[product] review"
+- Local terms: "giao hàng tận nơi", "thanh toán khi nhận hàng", "bảo hành"
+- Trust signals: "chính hãng", "uy tín", "đáng tin cậy", "được khuyên dùng"
+- Price sensitivity: "giá rẻ", "khuyến mãi", "giảm giá", "sale off"
+
+CATEGORY-SPECIFIC KEYWORDS:
+${ecommerceType === 'cosmetics' ? '- Cosmetics: "mỹ phẩm", "làm đẹp", "skincare", "chăm sóc da", "anti-aging"' : ''}
+${ecommerceType === 'supplements' ? '- Supplements: "thực phẩm chức năng", "vitamin", "tăng cường sức khỏe", "bổ sung dinh dưỡng"' : ''}
+${ecommerceType === 'electronics' ? '- Electronics: "điện tử", "công nghệ", "chính hãng", "bảo hành", "mới nhất"' : ''}
+${ecommerceType === 'fashion' ? '- Fashion: "thời trang", "xu hướng", "phong cách", "trendy", "hot trend"' : ''}
+${ecommerceType === 'food' ? '- Food: "thực phẩm", "đặc sản", "tươi ngon", "an toàn", "sạch"' : ''}
+
+SEO BEST PRACTICES FOR VIETNAM:
+- Title length: 50-60 characters (Vietnamese reads faster)
+- Description: 150-160 characters with compelling CTA
+- Include year "2024/2025" for freshness signals
+- Local trust signals and shipping promises
+- Mobile-first optimization (80%+ mobile traffic in VN)
+`;
+
+    const systemPrompt = `Bạn là chuyên gia SEO e-commerce chuyên nghiệp cho thị trường Việt Nam.
+
+${vietnameseEcommerceContext}
+
+NHIỆM VỤ:
+Tạo bộ SEO data hoàn chỉnh cho sản phẩm "${productName}"
+${category ? `Thuộc danh mục: "${category}"` : ''}
+${productDescription ? `Mô tả: "${productDescription}"` : ''}
+
+YÊU CẦU CHẤT LƯỢNG:
+✅ SEO Title: 50-60 ký tự, có keyword chính, compelling, có year 2024/2025
+✅ SEO Description: 150-160 ký tự, có CTA mạnh, benefit-focused
+✅ Slug: URL-friendly, Vietnamese → English, SEO-optimized  
+✅ Keywords: 8-12 keywords phù hợp search intent Việt Nam
+✅ OG Title: Social media optimized, engaging hơn SEO title
+✅ OG Description: Facebook/Zalo friendly, call-to-action mạnh
+
+CÔNG THỨC SEO TITLE HIỆU QUẢ:
+- Pattern 1: "[Product] [Brand/Type] - [Main Benefit] | [Trust Signal] 2024"
+- Pattern 2: "[Product] [Category] [Location] - [Price Point] | [Guarantee]"
+- Pattern 3: "Mua [Product] [Quality] - [Benefit] | [Shipping Promise]"
+
+VÍ DỤ THỰC TẾ:
+Product: "Serum Vitamin C"
+- SEO Title: "Serum Vitamin C Chính Hãng - Trắng Da Nhanh | Uy Tín 2024"  
+- SEO Description: "⭐ Serum Vitamin C làm trắng da tự nhiên, an toàn. Giao hàng miễn phí toàn quốc. Đặt ngay để nhận ưu đãi!"
+- Slug: "serum-vitamin-c-chinh-hang-trang-da"
+- Keywords: ["serum vitamin c", "mỹ phẩm trắng da", "vitamin c chính hãng", ...]
+
+QUAN TRỌNG: Tất cả content phải:
+1. Tự nhiên, không stuffing keywords
+2. Phù hợp search intent của người Việt
+3. Có trust signals và urgency
+4. Optimized cho mobile experience
+5. Include local shipping/payment terms
+
+Trả về JSON format:`;
+
+    const responseSchema = {
+      type: "object",
+      properties: {
+        seo_title: { type: "string" },
+        seo_description: { type: "string" },
+        slug: { type: "string" },
+        keywords: {
+          type: "array",
+          items: { type: "string" }
+        },
+        og_title: { type: "string" },
+        og_description: { type: "string" }
+      },
+      required: ["seo_title", "seo_description", "slug", "keywords", "og_title", "og_description"]
+    };
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-pro",
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: "application/json",
+          responseSchema
+        },
+        contents: `
+        SẢN PHẨM CẦN TỐI ƯU SEO:
+        - Tên: "${productName}"
+        ${category ? `- Danh mục: "${category}"` : ''}
+        ${productDescription ? `- Mô tả: "${productDescription}"` : ''}
+        
+        Hãy tạo bộ SEO data hoàn chỉnh theo yêu cầu, tập trung vào:
+        1. Keywords phù hợp với search behavior của người Việt
+        2. Trust signals và local optimization
+        3. Compelling copy để tăng CTR
+        4. Mobile-friendly content
+        `
+      });
+
+      const rawJson = response.text;
+      
+      if (rawJson) {
+        try {
+          const result = JSON.parse(rawJson);
+          
+          // Validate and enforce SEO limits
+          if (!result.seo_title || !result.seo_description || !result.slug || !result.keywords) {
+            throw new Error("Invalid SEO response structure from AI");
+          }
+          
+          // Enforce title length (50-60 chars)
+          if (result.seo_title.length > 60) {
+            result.seo_title = result.seo_title.substring(0, 57) + '...';
+          }
+          
+          // Enforce description length (150-160 chars)  
+          if (result.seo_description.length > 160) {
+            result.seo_description = result.seo_description.substring(0, 157) + '...';
+          }
+          
+          // Clean slug - ensure URL-friendly
+          result.slug = result.slug
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Remove multiple hyphens
+            .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+            
+          // Ensure keywords array has reasonable count (8-12)
+          if (result.keywords.length > 12) {
+            result.keywords = result.keywords.slice(0, 12);
+          }
+          
+          return result;
+          
+        } catch (parseError) {
+          console.error('Failed to parse SEO response:', parseError, 'Raw:', rawJson);
+          
+          // Fallback: generate basic SEO data
+          console.log('Using fallback SEO generation for:', productName);
+          const fallbackSlug = productName
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, '')
+            .replace(/\s+/g, '-');
+            
+          return {
+            seo_title: `${productName} - Chất Lượng Cao | Uy Tín 2024`,
+            seo_description: `⭐ ${productName} chính hãng, chất lượng tốt. Giao hàng miễn phí toàn quốc. Đặt ngay!`,
+            slug: fallbackSlug,
+            keywords: [productName.toLowerCase(), "chính hãng", "chất lượng", "uy tín"],
+            og_title: `${productName} - Đáng Mua Nhất 2024`,
+            og_description: `🔥 ${productName} hot nhất hiện nay! Đặt ngay để không bỏ lỡ cơ hội.`
+          };
+        }
+      } else {
+        throw new Error("Empty response from Gemini API");
+      }
+    } catch (error) {
+      console.error('SEO generation failed:', error);
+      throw new Error(`Failed to generate SEO data: ${error}`);
+    }
+  }
+
   // 🤖 NEW: RASA Product Description Generator
   async generateProductDescriptions(
     productName: string,
