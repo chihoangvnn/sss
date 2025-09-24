@@ -18,7 +18,12 @@ import {
   MoreHorizontal,
   RefreshCw,
   Download,
-  Calendar
+  Calendar,
+  CreditCard,
+  Package2,
+  PackageCheck,
+  RotateCcw,
+  AlertTriangle
 } from 'lucide-react';
 import {
   Dialog,
@@ -37,21 +42,37 @@ import { useToast } from '@/hooks/use-toast';
 import { useNewOrderNotification } from './NewOrderNotification';
 
 const statusColors = {
+  // Generic statuses
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', badge: 'bg-yellow-500' },
   processing: { bg: 'bg-orange-100', text: 'text-orange-800', badge: 'bg-orange-500' },
   shipped: { bg: 'bg-blue-100', text: 'text-blue-800', badge: 'bg-blue-500' },
   delivered: { bg: 'bg-green-100', text: 'text-green-800', badge: 'bg-green-500' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-800', badge: 'bg-red-500' },
-  refunded: { bg: 'bg-gray-100', text: 'text-gray-800', badge: 'bg-gray-500' }
+  refunded: { bg: 'bg-gray-100', text: 'text-gray-800', badge: 'bg-gray-500' },
+  // Shopee-specific statuses
+  unpaid: { bg: 'bg-red-100', text: 'text-red-800', badge: 'bg-red-500' },
+  to_ship: { bg: 'bg-orange-100', text: 'text-orange-800', badge: 'bg-orange-500' },
+  to_confirm_receive: { bg: 'bg-blue-100', text: 'text-blue-800', badge: 'bg-blue-500' },
+  completed: { bg: 'bg-green-100', text: 'text-green-800', badge: 'bg-green-500' },
+  to_return: { bg: 'bg-purple-100', text: 'text-purple-800', badge: 'bg-purple-500' },
+  in_cancel: { bg: 'bg-gray-100', text: 'text-gray-800', badge: 'bg-gray-500' }
 };
 
 const statusIcons = {
+  // Generic statuses
   pending: Clock,
   processing: Package,
   shipped: Truck,
   delivered: CheckCircle,
   cancelled: XCircle,
-  refunded: RefreshCw
+  refunded: RefreshCw,
+  // Shopee-specific statuses
+  unpaid: CreditCard,
+  to_ship: Package2,
+  to_confirm_receive: PackageCheck,
+  completed: CheckCircle,
+  to_return: RotateCcw,
+  in_cancel: AlertTriangle
 };
 
 interface ShopeeOrder {
@@ -452,7 +473,14 @@ export function ShopeeOrdersPanel({ businessAccountId }: { businessAccountId?: s
                              order.status === 'processing' ? 'Đang xử lý' :
                              order.status === 'shipped' ? 'Đã giao' :
                              order.status === 'delivered' ? 'Hoàn thành' :
-                             order.status === 'cancelled' ? 'Đã hủy' : 'Đã hoàn tiền'}
+                             order.status === 'cancelled' ? 'Đã hủy' :
+                             order.status === 'refunded' ? 'Đã hoàn tiền' :
+                             order.status === 'unpaid' ? 'Chưa thanh toán' :
+                             order.status === 'to_ship' ? 'Chờ giao hàng' :
+                             order.status === 'to_confirm_receive' ? 'Chờ xác nhận' :
+                             order.status === 'completed' ? 'Hoàn thành' :
+                             order.status === 'to_return' ? 'Trả hàng' :
+                             order.status === 'in_cancel' ? 'Đang hủy' : order.status}
                           </Badge>
                         </td>
                         <td className="p-3">
