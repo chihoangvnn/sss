@@ -2990,14 +2990,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/webhooks/facebook/:appId?", async (req, res) => {
     try {
       const { appId } = req.params;
-      let VERIFY_TOKEN = "your_verify_token_here";
+      let VERIFY_TOKEN = process.env.FACEBOOK_VERIFY_TOKEN || "fb_webhook_verify_2024";
       
       if (appId) {
         // Get verify token from Facebook app in database
         console.log(`Facebook webhook verification for app ID: ${appId}`);
         const facebookApp = await storage.getFacebookAppByAppId(appId);
         if (facebookApp) {
-          VERIFY_TOKEN = facebookApp.verifyToken || "your_verify_token_here";
+          VERIFY_TOKEN = facebookApp.verifyToken || process.env.FACEBOOK_VERIFY_TOKEN || "fb_webhook_verify_2024";
           console.log('Found Facebook app with verify token in database');
         } else {
           console.error(`Facebook app not found for app ID: ${appId}`);
@@ -3007,7 +3007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fallback to old method (backward compatibility)
         const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
         const webhookConfig = facebookAccount?.webhookSubscriptions?.[0];
-        VERIFY_TOKEN = webhookConfig?.verifyToken || process.env.FACEBOOK_VERIFY_TOKEN || "your_verify_token_here";
+        VERIFY_TOKEN = webhookConfig?.verifyToken || process.env.FACEBOOK_VERIFY_TOKEN || "fb_webhook_verify_2024";
       }
       
       const mode = req.query['hub.mode'];
