@@ -243,6 +243,121 @@ export interface ProductConsultationData {
   // "bảo quản": "Nơi khô ráo, thoáng mát"
 }
 
+// 🚀 ADVANCED SALES TECHNIQUES INTERFACES
+
+// 1. Urgency - Tạo cảm giác khẩn cấp
+export interface UrgencyData {
+  low_stock_threshold: number;          // Ngưỡng cảnh báo ít hàng
+  is_limited_edition: boolean;          // Có phải limited edition
+  sales_velocity: number;               // Tốc độ bán (sản phẩm/ngày)
+  urgency_messages: string[];           // ["Chỉ còn 3 chai cuối!", "Sale kết thúc trong 2 giờ"]
+  flash_sale_end?: string;              // ISO timestamp kết thúc flash sale
+  demand_level: "low" | "medium" | "high"; // Mức độ được quan tâm
+  trending_platforms?: string[];        // ["TikTok", "Instagram", "Facebook"]
+}
+
+// 2. Social Proof - Bằng chứng xã hội
+export interface SocialProofData {
+  total_sold: number;                   // Tổng số đã bán
+  total_reviews: number;                // Tổng reviews
+  average_rating: number;               // Rating trung bình (1-5)
+  featured_reviews: Array<{
+    customer_name: string;              // "Chị Linh"
+    location: string;                   // "Hà Nội"
+    age?: number;                       // 32
+    review: string;                     // "Da tôi hết mụn sau 2 tuần"
+    rating: number;                     // 5
+    verified: boolean;                  // true
+    photo_url?: string;                 // URL ảnh review
+  }>;
+  expert_endorsements: string[];        // ["CEO Ngọc Trinh", "Dr. Thảo"]
+  celebrity_users: string[];            // ["Hot girl Linh Ka", "Beauty blogger Chloe"]
+  awards_certifications: string[];     // ["FDA Approved", "Best Skincare 2024"]
+  media_mentions: string[];             // ["Báo Dân Trí", "Tạp chí Đẹp"]
+  repurchase_rate: number;              // Tỷ lệ mua lại % (0-100)
+  trending_hashtags: string[];          // ["#skincare", "#beautiful", "#viral"]
+}
+
+// 3. Hyper-Personalization - Cá nhân hóa cực cao
+export interface PersonalizationData {
+  target_demographics: {
+    primary: {
+      age_range: string;                // "25-35"
+      gender: string[];                 // ["female", "male"]
+      income_level: "low" | "middle" | "high" | "premium";
+      lifestyle: string[];              // ["busy", "professional", "student"]
+      location: string[];               // ["urban", "suburban", "rural"]
+    };
+    secondary?: {
+      age_range: string;                // "20-45"
+      concerns: string[];               // ["acne", "aging", "sensitive skin"]
+    };
+  };
+  skin_types: string[];                 // ["oily", "dry", "combination", "sensitive"]
+  lifestyle_tags: string[];            // ["busy mom", "night shift worker", "gym lover"]
+  personality_match: string[];         // ["trendsetter", "conservative", "adventurous"]
+  usage_scenarios: string[];           // ["morning routine", "travel", "quick fix"]
+  problem_solving: string[];           // ["acne treatment", "anti-aging", "hydration"]
+  seasonal_relevance: string[];        // ["summer", "winter", "all-season"]
+  profession_fit: string[];            // ["office worker", "student", "healthcare"]
+  income_bracket: string;               // "under-500k", "500k-1m", "over-1m"
+}
+
+// 4. Leading Questions - Câu hỏi gợi mở
+export interface LeadingQuestionsData {
+  pain_point_questions: Array<{
+    question: string;                   // "Bạn có bị mụn ẩn dưới da không?"
+    category: "skin" | "lifestyle" | "budget" | "timeline";
+    follow_up: string[];                // Câu hỏi tiếp theo
+  }>;
+  desire_questions: Array<{
+    question: string;                   // "Bạn muốn da láng mịn như gái Hàn không?"
+    emotional_trigger: "aspiration" | "fear" | "social" | "convenience";
+    expected_response: "yes" | "no" | "maybe";
+  }>;
+  discovery_prompts: string[];          // ["Kể về routine skincare hiện tại?"]
+  comparison_triggers: string[];        // ["So với serum bạn đang dùng..."]
+  emotional_hooks: string[];            // ["Tự tin không makeup", "Trẻ hơn 5 tuổi"]
+  closing_questions: string[];          // ["Bạn muốn thử ngay hôm nay không?"]
+  objection_anticipation: Array<{
+    potential_objection: string;        // "Có đắt không?"
+    preemptive_question: string;        // "Budget skincare của bạn khoảng bao nhiêu?"
+  }>;
+}
+
+// 5. Objection Handling - Xử lý phản đối
+export interface ObjectionHandlingData {
+  common_objections: Array<{
+    objection_type: "price" | "quality" | "trust" | "timing" | "need";
+    objection_text: string;             // "Đắt quá!"
+    response_strategy: {
+      acknowledge: string;              // "Mình hiểu lo lắng về giá của bạn"
+      reframe: string;                  // "Nhưng hãy nghĩ theo cách này..."
+      evidence: string[];               // ["Chi phí chỉ 50k/ngày", "Tiết kiệm hơn spa"]
+      close: string;                    // "Bạn có muốn thử không?"
+    };
+  }>;
+  price_justification: {
+    daily_cost: string;                 // "Chỉ 50k/ngày, bằng 1 ly trà sữa"
+    comparison_points: string[];        // ["Rẻ hơn điều trị spa", "1 chai dùng 3 tháng"]
+    value_proposition: string;          // "Đầu tư cho sức khỏe da dài lâu"
+  };
+  quality_proof_points: string[];       // ["Clinical test 95% hiệu quả", "FDA approved"]
+  safety_assurance: string[];           // ["Không paraben", "Gentle cho da nhạy cảm"]
+  effectiveness_guarantee: {
+    guarantee_text: string;             // "Hoàn tiền 100% nếu không hiệu quả"
+    timeline: string;                   // "Thấy kết quả sau 7 ngày"
+    success_rate: string;               // "98% khách hàng hài lòng"
+  };
+  competitor_advantages: Array<{
+    competitor: string;                 // "Serum X"
+    our_advantage: string;              // "Hiệu quả nhanh gấp 3 lần"
+    proof: string;                      // "Clinical study so sánh"
+  }>;
+  risk_mitigation: string[];            // ["Dùng thử 7 ngày", "Tư vấn miễn phí"]
+  trust_builders: string[];             // ["5000+ review tích cực", "Được bác sĩ khuyên dùng"]
+}
+
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -304,6 +419,82 @@ export const products = pgTable("products", {
   
   // 🤖 RASA CONSULTATION DATA  
   consultationData: jsonb("consultation_data").$type<ProductConsultationData>().default(sql`'{}'::jsonb`),
+  
+  // 🚀 ADVANCED SALES TECHNIQUES DATA
+  // 1. Urgency - Tạo cảm giác khẩn cấp
+  urgencyData: jsonb("urgency_data").$type<UrgencyData>().default(sql`'{
+    "low_stock_threshold": 10,
+    "is_limited_edition": false,
+    "sales_velocity": 0,
+    "urgency_messages": [],
+    "demand_level": "medium"
+  }'::jsonb`),
+  
+  // 2. Social Proof - Bằng chứng xã hội  
+  socialProofData: jsonb("social_proof_data").$type<SocialProofData>().default(sql`'{
+    "total_sold": 0,
+    "total_reviews": 0,
+    "average_rating": 0,
+    "featured_reviews": [],
+    "expert_endorsements": [],
+    "celebrity_users": [],
+    "awards_certifications": [],
+    "media_mentions": [],
+    "repurchase_rate": 0,
+    "trending_hashtags": []
+  }'::jsonb`),
+  
+  // 3. Hyper-Personalization - Cá nhân hóa cực cao
+  personalizationData: jsonb("personalization_data").$type<PersonalizationData>().default(sql`'{
+    "target_demographics": {
+      "primary": {
+        "age_range": "",
+        "gender": [],
+        "income_level": "middle",
+        "lifestyle": [],
+        "location": []
+      }
+    },
+    "skin_types": [],
+    "lifestyle_tags": [],
+    "personality_match": [],
+    "usage_scenarios": [],
+    "problem_solving": [],
+    "seasonal_relevance": [],
+    "profession_fit": [],
+    "income_bracket": "500k-1m"
+  }'::jsonb`),
+  
+  // 4. Leading Questions - Câu hỏi gợi mở
+  leadingQuestionsData: jsonb("leading_questions_data").$type<LeadingQuestionsData>().default(sql`'{
+    "pain_point_questions": [],
+    "desire_questions": [],
+    "discovery_prompts": [],
+    "comparison_triggers": [],
+    "emotional_hooks": [],
+    "closing_questions": [],
+    "objection_anticipation": []
+  }'::jsonb`),
+  
+  // 5. Objection Handling - Xử lý phản đối
+  objectionHandlingData: jsonb("objection_handling_data").$type<ObjectionHandlingData>().default(sql`'{
+    "common_objections": [],
+    "price_justification": {
+      "daily_cost": "",
+      "comparison_points": [],
+      "value_proposition": ""
+    },
+    "quality_proof_points": [],
+    "safety_assurance": [],
+    "effectiveness_guarantee": {
+      "guarantee_text": "",
+      "timeline": "",
+      "success_rate": ""
+    },
+    "competitor_advantages": [],
+    "risk_mitigation": [],
+    "trust_builders": []
+  }'::jsonb`),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

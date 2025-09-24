@@ -748,7 +748,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   })}
                   
                   {/* Optional Fields */}
-                  {categoryConfig.config.optional_fields.map((fieldId) => {
+                  {(categoryConfig.config?.optional_fields || []).map((fieldId) => {
                     const fieldLabel = getFieldLabel(fieldId);
                     
                     return (
