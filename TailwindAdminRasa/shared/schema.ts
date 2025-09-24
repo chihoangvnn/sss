@@ -271,7 +271,7 @@ export const customers = pgTable("customers", {
 // Enhanced Orders table with unified source tracking
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  customerId: varchar("customer_id").notNull().references(() => customers.id),
+  customerId: varchar("customer_id").references(() => customers.id),
   total: decimal("total", { precision: 15, scale: 2 }).notNull(),
   status: text("status", { enum: ["pending", "processing", "shipped", "delivered", "cancelled"] }).notNull().default("pending"),
   items: integer("items").notNull(),
@@ -1448,6 +1448,8 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  customerId: z.string().optional(), // Override to make customerId optional for POS walk-in customers
 });
 
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
