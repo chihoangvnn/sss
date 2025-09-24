@@ -246,7 +246,7 @@ export function DecimalQuantityInput({
           variant="outline"
           size="sm"
           onClick={() => handleAdjust(quantityStep)}
-          disabled={disabled || (maxQuantity && value >= maxQuantity)}
+          disabled={disabled || Boolean(maxQuantity && value >= maxQuantity)}
           className={cn(
             'flex-shrink-0 w-8 h-8 p-0',
             allowDecimals && 'border-orange-200 hover:bg-orange-50'
