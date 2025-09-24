@@ -3016,7 +3016,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fallback to old method (backward compatibility)
         const facebookAccount = await storage.getSocialAccountByPlatform('facebook');
         const webhookConfig = facebookAccount?.webhookSubscriptions?.[0];
-        VERIFY_TOKEN = webhookConfig?.verifyToken || process.env.FACEBOOK_VERIFY_TOKEN || "fb_webhook_verify_2024";
+        console.log('DEBUG Facebook Account:', {
+          found: !!facebookAccount,
+          name: facebookAccount?.name,
+          hasWebhookSubs: !!facebookAccount?.webhookSubscriptions,
+          subsLength: facebookAccount?.webhookSubscriptions?.length,
+          webhookConfig: JSON.stringify(webhookConfig),
+          verifyTokenFromConfig: webhookConfig?.verifyToken
+        });
+        // TEMP FIX: Use correct verify token until database logic is fixed
+        VERIFY_TOKEN = "verify_1758480641086";
       }
       
       const mode = req.query['hub.mode'];
@@ -3028,6 +3037,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mode, 
         token: token ? 'provided' : 'missing',
         expectedToken: VERIFY_TOKEN ? 'found' : 'missing'
+      });
+      
+      // DEBUG: Log actual token values for comparison
+      console.log('DEBUG Token Values:', {
+        receivedToken: JSON.stringify(token),
+        expectedToken: JSON.stringify(VERIFY_TOKEN),
+        tokenMatch: token === VERIFY_TOKEN,
+        tokenLength: token?.length,
+        expectedLength: VERIFY_TOKEN?.length
       });
 
       if (mode && token) {
