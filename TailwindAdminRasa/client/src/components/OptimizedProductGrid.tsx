@@ -109,6 +109,14 @@ const ProductCard = React.memo(({
             </Badge>
           </div>
           
+          {/* Product description */}
+          {product.description && (
+            <div className="text-xs text-gray-600 line-clamp-2" 
+                 title={product.description.replace(/<[^>]*>/g, '')}>
+              {product.description.replace(/<[^>]*>/g, '')}
+            </div>
+          )}
+          
           <div className="text-lg font-bold text-green-600">
             {formattedPrice}
           </div>
