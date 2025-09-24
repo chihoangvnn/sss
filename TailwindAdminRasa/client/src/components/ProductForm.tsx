@@ -43,6 +43,37 @@ interface Product {
   defaultImageIndex?: number;
 }
 
+// Consultation configuration types
+interface CategoryConsultationConfig {
+  enabled_types: string[];
+  required_fields: string[];
+  optional_fields: string[];
+  auto_prompts: string[];
+}
+
+interface CategoryConsultationTemplates {
+  usage_guide_template?: string;
+  safety_template?: string;
+  recipe_template?: string;
+  technical_template?: string;
+  benefits_template?: string;
+  care_template?: string;
+  storage_template?: string;
+  health_benefits_template?: string;
+  skin_benefits_template?: string;
+  care_instructions_template?: string;
+  troubleshooting_template?: string;
+  compatibility_template?: string;
+}
+
+interface CategorySalesTemplate {
+  template?: string;
+  target_customer_prompts?: string[];
+  selling_point_prompts?: string[];
+  objection_handling?: string[];
+  cross_sell_suggestions?: string[];
+}
+
 interface Category {
   id: string;
   name: string;
@@ -52,6 +83,9 @@ interface Category {
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
+  consultationConfig?: CategoryConsultationConfig;
+  consultationTemplates?: CategoryConsultationTemplates;
+  salesAdviceTemplate?: CategorySalesTemplate;
 }
 
 interface ProductFormProps {
@@ -79,6 +113,14 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     images: [] as CloudinaryImage[],
     videos: [] as CloudinaryVideo[],
   });
+  
+  // 🤖 Category-driven consultation fields state
+  const [consultationFields, setConsultationFields] = useState<Record<string, string>>({});
+  const [categoryConfig, setCategoryConfig] = useState<{
+    config?: CategoryConsultationConfig;
+    templates?: CategoryConsultationTemplates;
+  }>({});
+  const [requiredFieldsError, setRequiredFieldsError] = useState<string[]>([]);
 
   // 🤖 AI Generated Descriptions State
   const [generatedDescriptions, setGeneratedDescriptions] = useState<RasaDescriptions | null>(null);
@@ -137,6 +179,12 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         setGeneratedDescriptions(null);
         setShowDescriptionPreview(false);
       }
+      
+      // 🤖 Load existing consultation data if available
+      if ((product as any).consultationData && typeof (product as any).consultationData === 'object') {
+        console.log('🔄 Rehydrating consultation fields from existing product:', (product as any).consultationData);
+        setConsultationFields((product as any).consultationData);
+      }
     }
   }, [product]);
 
@@ -149,6 +197,83 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       }
     }
   }, [product, categories, formData.industryId]);
+  
+  // 🤖 Auto-load consultation config when category changes
+  useEffect(() => {
+    if (formData.categoryId && categories.length > 0) {
+      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+      if (selectedCategory && selectedCategory.consultationConfig) {
+        console.log('🤖 Auto-loading consultation config for category:', selectedCategory.name);
+        
+        // Set category consultation configuration
+        setCategoryConfig({
+          config: selectedCategory.consultationConfig,
+          templates: selectedCategory.consultationTemplates || {}
+        });
+        
+        // 🔄 Gate auto-loading: Only initialize if consultationFields is empty OR category actually changed
+        const hasExistingFields = Object.keys(consultationFields).length > 0;
+        const categoryChanged = Object.keys(categoryConfig).length === 0; // No previous category config
+        
+        if (!hasExistingFields || categoryChanged) {
+          console.log('🤖 Initializing consultation fields with templates (hasExisting:', hasExistingFields, ', categoryChanged:', categoryChanged, ')');
+          
+          // Initialize consultation fields with template values and auto-prompts
+          const newConsultationFields: Record<string, string> = {};
+          const templates = selectedCategory.consultationTemplates || {};
+          
+          // Fill required fields with template content or auto-prompts
+          selectedCategory.consultationConfig.required_fields.forEach(fieldId => {
+            // Try to find matching template for this field
+            const templateKey = `${fieldId}_template` as keyof CategoryConsultationTemplates;
+            const templateContent = templates[templateKey];
+            
+            if (templateContent) {
+              newConsultationFields[fieldId] = templateContent;
+            } else if (selectedCategory.consultationConfig?.auto_prompts && selectedCategory.consultationConfig.auto_prompts.length > 0) {
+              // Use first auto-prompt as default content
+              newConsultationFields[fieldId] = selectedCategory.consultationConfig.auto_prompts[0];
+            } else {
+              newConsultationFields[fieldId] = '';
+            }
+          });
+          
+          // Fill optional fields with template content
+          selectedCategory.consultationConfig?.optional_fields?.forEach(fieldId => {
+            const templateKey = `${fieldId}_template` as keyof CategoryConsultationTemplates;
+            const templateContent = templates[templateKey];
+            newConsultationFields[fieldId] = templateContent || '';
+          });
+          
+          setConsultationFields(newConsultationFields);
+          setRequiredFieldsError([]); // Reset validation errors
+        } else {
+          console.log('🔄 Preserving existing consultation fields, category config updated only');
+        }
+        
+        // Auto-fill description with first available template if description is empty
+        if (selectedCategory.consultationTemplates && Object.keys(selectedCategory.consultationTemplates).length > 0 && !formData.description.trim()) {
+          const templateKeys = Object.keys(selectedCategory.consultationTemplates) as (keyof CategoryConsultationTemplates)[];
+          const firstTemplate = selectedCategory.consultationTemplates[templateKeys[0]];
+          if (firstTemplate) {
+            setFormData(prev => ({
+              ...prev,
+              description: firstTemplate
+            }));
+            toast({
+              title: "✨ Template auto-loaded",
+              description: `Đã tự động tải template từ category "${selectedCategory.name}" vào mô tả sản phẩm`
+            });
+          }
+        }
+      } else {
+        // Clear consultation config if no category or no config
+        setCategoryConfig({});
+        setConsultationFields({});
+        setRequiredFieldsError([]);
+      }
+    }
+  }, [formData.categoryId, categories, toast]);
 
   // Show error if data fetch fails
   if (fetchError) {
@@ -316,6 +441,11 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       });
       return;
     }
+    
+    // 🤖 Validate category-driven consultation fields
+    if (!validateConsultationFields()) {
+      return; // Validation failed, stop submission
+    }
 
     const saveData = {
       name: formData.name.trim(),
@@ -331,6 +461,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       // 🤖 Include AI generated descriptions for RASA (only if exists)
       descriptions: generatedDescriptions ?? undefined,
       defaultImageIndex: 0, // Default to first image
+      // 🤖 Include category-driven consultation data (simple key-value as per schema)
+      consultationData: Object.keys(consultationFields).length > 0 ? consultationFields : undefined,
     };
 
     saveMutation.mutate(saveData);
@@ -351,6 +483,67 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       industryId, 
       categoryId: "" // Reset category when industry changes
     }));
+    // Clear consultation config when industry changes
+    setCategoryConfig({});
+    setConsultationFields({});
+    setRequiredFieldsError([]);
+  };
+  
+  // Update consultation field values
+  const updateConsultationField = (fieldId: string, value: string) => {
+    setConsultationFields(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+    
+    // Remove from error list if field is now filled
+    if (value.trim() && requiredFieldsError.includes(fieldId)) {
+      setRequiredFieldsError(prev => prev.filter(f => f !== fieldId));
+    }
+  };
+  
+  // Validate required consultation fields
+  const validateConsultationFields = (): boolean => {
+    if (!categoryConfig.config?.required_fields) return true;
+    
+    const missingFields: string[] = [];
+    categoryConfig.config.required_fields.forEach(fieldId => {
+      if (!consultationFields[fieldId] || !consultationFields[fieldId].trim()) {
+        missingFields.push(fieldId);
+      }
+    });
+    
+    if (missingFields.length > 0) {
+      setRequiredFieldsError(missingFields);
+      toast({
+        title: "Thiếu trường bắt buộc",
+        description: `Vui lòng điền đầy đủ các trường được yêu cầu cho danh mục này`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Helper function to get Vietnamese field labels
+  const getFieldLabel = (fieldId: string): string => {
+    const fieldLabels: Record<string, string> = {
+      "loại_da_phù_hợp": "Loại da phù hợp",
+      "cách_thoa": "Cách thoa",
+      "tần_suất_sử_dụng": "Tần suất sử dụng",
+      "độ_tuổi_khuyến_nghị": "Độ tuổi khuyến nghị",
+      "patch_test": "Patch test",
+      "thành_phần_chính": "Thành phần chính",
+      "liều_dùng": "Liều dùng",
+      "thời_gian_sử_dụng": "Thời gian sử dụng",
+      "đối_tượng_sử_dụng": "Đối tượng sử dụng",
+      "chống_chỉ_định": "Chống chỉ định",
+      "thông_số_kỹ_thuật": "Thông số kỹ thuật",
+      "yêu_cầu_hệ_thống": "Yêu cầu hệ thống",
+      "bảo_hành": "Bảo hành"
+    };
+    return fieldLabels[fieldId] || fieldId.replace(/_/g, ' ');
   };
 
   return (
@@ -491,6 +684,106 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 </Select>
               </div>
             </div>
+
+            {/* 🤖 Category-driven Consultation Fields */}
+            {categoryConfig.config && (
+              <div className="space-y-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <h3 className="font-semibold text-blue-800">
+                    🤖 Thông tin tư vấn cho danh mục này
+                  </h3>
+                </div>
+                <p className="text-sm text-blue-600 mb-4">
+                  Danh mục "{categories.find(c => c.id === formData.categoryId)?.name}" yêu cầu các thông tin bổ sung sau:
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Required Fields */}
+                  {categoryConfig.config.required_fields.map((fieldId) => {
+                    const fieldLabel = getFieldLabel(fieldId);
+                    const isError = requiredFieldsError.includes(fieldId);
+                    
+                    return (
+                      <div key={fieldId} className="space-y-2">
+                        <Label htmlFor={`consultation-${fieldId}`} className={`flex items-center gap-2 ${isError ? 'text-red-600' : ''}`}>
+                          <span className="text-red-500">*</span>
+                          {fieldLabel}
+                          {isError && <span className="text-xs text-red-500">(Bắt buộc)</span>}
+                        </Label>
+                        <Textarea
+                          id={`consultation-${fieldId}`}
+                          value={consultationFields[fieldId] || ''}
+                          onChange={(e) => updateConsultationField(fieldId, e.target.value)}
+                          placeholder={`Nhập ${fieldLabel.toLowerCase()}...`}
+                          rows={2}
+                          className={`resize-none ${isError ? 'border-red-300 focus:border-red-500' : ''}`}
+                        />
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Optional Fields */}
+                  {categoryConfig.config.optional_fields.map((fieldId) => {
+                    const fieldLabel = getFieldLabel(fieldId);
+                    
+                    return (
+                      <div key={fieldId} className="space-y-2">
+                        <Label htmlFor={`consultation-${fieldId}`} className="flex items-center gap-2">
+                          {fieldLabel}
+                          <span className="text-xs text-muted-foreground">(Tùy chọn)</span>
+                        </Label>
+                        <Textarea
+                          id={`consultation-${fieldId}`}
+                          value={consultationFields[fieldId] || ''}
+                          onChange={(e) => updateConsultationField(fieldId, e.target.value)}
+                          placeholder={`Nhập ${fieldLabel.toLowerCase()}...`}
+                          rows={2}
+                          className="resize-none"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Auto Prompts Preview */}
+                {categoryConfig.config.auto_prompts.length > 0 && (
+                  <div className="mt-4 p-3 bg-white rounded border border-blue-200">
+                    <Label className="text-sm font-semibold text-blue-700 mb-2 block">
+                      💬 Câu hỏi gợi ý tự động cho khách hàng:
+                    </Label>
+                    <div className="space-y-1">
+                      {categoryConfig.config.auto_prompts.slice(0, 3).map((prompt, index) => (
+                        <p key={index} className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                          {index + 1}. {prompt}
+                        </p>
+                      ))}
+                      {categoryConfig.config.auto_prompts.length > 3 && (
+                        <p className="text-xs text-muted-foreground">
+                          ... và {categoryConfig.config.auto_prompts.length - 3} câu hỏi khác
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Consultation Templates Info */}
+                {categoryConfig.templates && Object.keys(categoryConfig.templates).length > 0 && (
+                  <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
+                    <Label className="text-sm font-semibold text-green-700 mb-2 block">
+                      📝 Templates tư vấn có sẵn:
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(categoryConfig.templates).map((templateKey) => (
+                        <span key={templateKey} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                          {templateKey.replace('_template', '').replace('_', ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 🎯 Row 4: Giá + Số lượng + Tự động tạo mô tả (3 cột) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -373,9 +373,9 @@ export default function CategoryManager() {
       ...prev,
       consultationConfig: {
         ...prev.consultationConfig,
-        enabled_types: prev.consultationConfig.enabled_types.includes(typeId)
-          ? prev.consultationConfig.enabled_types.filter(t => t !== typeId)
-          : [...prev.consultationConfig.enabled_types, typeId]
+        enabled_types: (prev.consultationConfig.enabled_types || []).includes(typeId)
+          ? (prev.consultationConfig.enabled_types || []).filter(t => t !== typeId)
+          : [...(prev.consultationConfig.enabled_types || []), typeId]
       }
     }));
   };
@@ -385,9 +385,9 @@ export default function CategoryManager() {
       ...prev,
       consultationConfig: {
         ...prev.consultationConfig,
-        required_fields: prev.consultationConfig.required_fields.includes(fieldId)
-          ? prev.consultationConfig.required_fields.filter(f => f !== fieldId)
-          : [...prev.consultationConfig.required_fields, fieldId]
+        required_fields: (prev.consultationConfig.required_fields || []).includes(fieldId)
+          ? (prev.consultationConfig.required_fields || []).filter(f => f !== fieldId)
+          : [...(prev.consultationConfig.required_fields || []), fieldId]
       }
     }));
   };
@@ -702,7 +702,7 @@ export default function CategoryManager() {
                             <div key={type.id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`consultation-${type.id}`}
-                                checked={formData.consultationConfig.enabled_types.includes(type.id)}
+                                checked={(formData.consultationConfig.enabled_types || []).includes(type.id)}
                                 onCheckedChange={() => toggleConsultationType(type.id)}
                               />
                               <Label 
@@ -730,12 +730,12 @@ export default function CategoryManager() {
                             <div key={field.id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`field-${field.id}`}
-                                checked={formData.consultationConfig.required_fields.includes(field.id)}
+                                checked={(formData.consultationConfig.required_fields || []).includes(field.id)}
                                 onCheckedChange={() => toggleRequiredField(field.id)}
                               />
                               <Label 
                                 htmlFor={`field-${field.id}`} 
-                                className="text-sm cursor-pointer"
+                                className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                               >
                                 {field.label}
                               </Label>
