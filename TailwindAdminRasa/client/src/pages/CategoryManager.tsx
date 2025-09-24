@@ -8,8 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit3, Trash2, Save, X, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Edit3, Trash2, Save, X, ArrowUp, ArrowDown, Settings, Eye, Wand2 } from "lucide-react";
 
 interface Industry {
   id: string;
@@ -21,6 +24,37 @@ interface Industry {
   updatedAt?: string;
 }
 
+// Consultation configuration types
+interface CategoryConsultationConfig {
+  enabled_types: string[];
+  required_fields: string[];
+  optional_fields: string[];
+  auto_prompts: string[];
+}
+
+interface CategoryConsultationTemplates {
+  usage_guide_template?: string;
+  safety_template?: string;
+  recipe_template?: string;
+  technical_template?: string;
+  benefits_template?: string;
+  care_template?: string;
+  storage_template?: string;
+  health_benefits_template?: string;
+  skin_benefits_template?: string;
+  care_instructions_template?: string;
+  troubleshooting_template?: string;
+  compatibility_template?: string;
+}
+
+interface CategorySalesTemplate {
+  template?: string;
+  target_customer_prompts?: string[];
+  selling_point_prompts?: string[];
+  objection_handling?: string[];
+  cross_sell_suggestions?: string[];
+}
+
 interface Category {
   id: string;
   name: string;
@@ -30,6 +64,9 @@ interface Category {
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
+  consultationConfig?: CategoryConsultationConfig;
+  consultationTemplates?: CategoryConsultationTemplates;
+  salesAdviceTemplate?: CategorySalesTemplate;
 }
 
 interface CategoryFormData {
@@ -38,6 +75,9 @@ interface CategoryFormData {
   industryId: string;
   isActive: boolean;
   sortOrder: number;
+  consultationConfig: CategoryConsultationConfig;
+  consultationTemplates: CategoryConsultationTemplates;
+  salesAdviceTemplate: CategorySalesTemplate;
 }
 
 export default function CategoryManager() {
@@ -46,12 +86,52 @@ export default function CategoryManager() {
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [selectedIndustryFilter, setSelectedIndustryFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("basic");
+  
+  // Available consultation types for Vietnamese retail
+  const consultationTypes = [
+    { id: "usage_guide", label: "Hướng dẫn sử dụng", icon: "✨" },
+    { id: "safety_profile", label: "An toàn & lưu ý", icon: "⚠️" },
+    { id: "storage", label: "Bảo quản", icon: "🏪" },
+    { id: "health_benefits", label: "Lợi ích sức khỏe", icon: "💊" },
+    { id: "skin_benefits", label: "Lợi ích da", icon: "✨" },
+    { id: "care_instructions", label: "Chăm sóc", icon: "🌟" },
+    { id: "technical_guide", label: "Kỹ thuật", icon: "🔧" },
+    { id: "troubleshooting", label: "Khắc phục lỗi", icon: "🛠️" },
+    { id: "compatibility", label: "Tương thích", icon: "🔌" },
+    { id: "recipes", label: "Công thức", icon: "📝" }
+  ];
+  
+  // Available required fields for products
+  const availableFields = [
+    { id: "loại_da_phù_hợp", label: "Loại da phù hợp" },
+    { id: "cách_thoa", label: "Cách thoa" },
+    { id: "tần_suất_sử_dụng", label: "Tần suất sử dụng" },
+    { id: "độ_tuổi_khuyến_nghị", label: "Độ tuổi khuyến nghị" },
+    { id: "patch_test", label: "Patch test" },
+    { id: "thành_phần_chính", label: "Thành phần chính" },
+    { id: "liều_dùng", label: "Liều dùng" },
+    { id: "thời_gian_sử_dụng", label: "Thời gian sử dụng" },
+    { id: "đối_tượng_sử_dụng", label: "Đối tượng sử dụng" },
+    { id: "chống_chỉ_định", label: "Chống chỉ định" },
+    { id: "thông_số_kỹ_thuật", label: "Thông số kỹ thuật" },
+    { id: "yêu_cầu_hệ_thống", label: "Yêu cầu hệ thống" },
+    { id: "bảo_hành", label: "Bảo hành" }
+  ];
   const [formData, setFormData] = useState<CategoryFormData>({
     name: "",
     description: "",
     industryId: "",
     isActive: true,
     sortOrder: 0,
+    consultationConfig: {
+      enabled_types: [],
+      required_fields: [],
+      optional_fields: [],
+      auto_prompts: []
+    },
+    consultationTemplates: {},
+    salesAdviceTemplate: {}
   });
 
   // Fetch industries
@@ -180,6 +260,14 @@ export default function CategoryManager() {
       industryId: "",
       isActive: true,
       sortOrder: 0,
+      consultationConfig: {
+        enabled_types: [],
+        required_fields: [],
+        optional_fields: [],
+        auto_prompts: []
+      },
+      consultationTemplates: {},
+      salesAdviceTemplate: {}
     });
     setEditingCategory(null);
     setShowForm(false);
@@ -198,6 +286,14 @@ export default function CategoryManager() {
       industryId: selectedIndustryFilter !== 'all' ? selectedIndustryFilter : "",
       isActive: true,
       sortOrder: maxSortOrder + 1,
+      consultationConfig: {
+        enabled_types: [],
+        required_fields: [],
+        optional_fields: [],
+        auto_prompts: []
+      },
+      consultationTemplates: {},
+      salesAdviceTemplate: {}
     });
     setEditingCategory(null);
     setShowForm(true);
@@ -210,6 +306,14 @@ export default function CategoryManager() {
       industryId: category.industryId,
       isActive: category.isActive,
       sortOrder: category.sortOrder,
+      consultationConfig: category.consultationConfig || {
+        enabled_types: [],
+        required_fields: [],
+        optional_fields: [],
+        auto_prompts: []
+      },
+      consultationTemplates: category.consultationTemplates || {},
+      salesAdviceTemplate: category.salesAdviceTemplate || {}
     });
     setEditingCategory(category);
     setShowForm(true);
@@ -261,6 +365,64 @@ export default function CategoryManager() {
     const nextCategory = filteredCategories[index + 1];
     updateSortMutation.mutate({ id: category.id, sortOrder: nextCategory.sortOrder });
     updateSortMutation.mutate({ id: nextCategory.id, sortOrder: category.sortOrder });
+  };
+  
+  // Consultation configuration helpers
+  const toggleConsultationType = (typeId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      consultationConfig: {
+        ...prev.consultationConfig,
+        enabled_types: prev.consultationConfig.enabled_types.includes(typeId)
+          ? prev.consultationConfig.enabled_types.filter(t => t !== typeId)
+          : [...prev.consultationConfig.enabled_types, typeId]
+      }
+    }));
+  };
+  
+  const toggleRequiredField = (fieldId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      consultationConfig: {
+        ...prev.consultationConfig,
+        required_fields: prev.consultationConfig.required_fields.includes(fieldId)
+          ? prev.consultationConfig.required_fields.filter(f => f !== fieldId)
+          : [...prev.consultationConfig.required_fields, fieldId]
+      }
+    }));
+  };
+  
+  const updateTemplate = (templateKey: keyof CategoryConsultationTemplates, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      consultationTemplates: {
+        ...prev.consultationTemplates,
+        [templateKey]: value
+      }
+    }));
+  };
+  
+  const addAutoPrompt = () => {
+    const newPrompt = prompt("Nhập câu hỏi gợi ý tự động:");
+    if (newPrompt && newPrompt.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        consultationConfig: {
+          ...prev.consultationConfig,
+          auto_prompts: [...prev.consultationConfig.auto_prompts, newPrompt.trim()]
+        }
+      }));
+    }
+  };
+  
+  const removeAutoPrompt = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      consultationConfig: {
+        ...prev.consultationConfig,
+        auto_prompts: prev.consultationConfig.auto_prompts.filter((_, i) => i !== index)
+      }
+    }));
   };
 
   // Filter and sort categories
@@ -451,96 +613,232 @@ export default function CategoryManager() {
                 </div>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="categoryIndustry">Ngành hàng *</Label>
-                    <Select 
-                      value={formData.industryId} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, industryId: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn ngành hàng" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {industries.map((industry) => (
-                          <SelectItem key={industry.id} value={industry.id}>
-                            {industry.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="basic">Thông tin cơ bản</TabsTrigger>
+                    <TabsTrigger value="consultation" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Cấu hình tư vấn
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                    <TabsContent value="basic" className="space-y-4">
+                      <div>
+                        <Label htmlFor="categoryIndustry">Ngành hàng *</Label>
+                        <Select 
+                          value={formData.industryId} 
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, industryId: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn ngành hàng" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {industries.map((industry) => (
+                              <SelectItem key={industry.id} value={industry.id}>
+                                {industry.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div>
-                    <Label htmlFor="categoryName">Tên danh mục *</Label>
-                    <Input
-                      id="categoryName"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nhập tên danh mục"
-                      data-testid="input-category-name"
-                      required
-                    />
-                  </div>
+                      <div>
+                        <Label htmlFor="categoryName">Tên danh mục *</Label>
+                        <Input
+                          id="categoryName"
+                          value={formData.name}
+                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Nhập tên danh mục"
+                          data-testid="input-category-name"
+                          required
+                        />
+                      </div>
 
-                  <div>
-                    <Label htmlFor="categoryDescription">Mô tả</Label>
-                    <Textarea
-                      id="categoryDescription"
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Mô tả chi tiết danh mục"
-                      rows={3}
-                      data-testid="input-category-description"
-                    />
-                  </div>
+                      <div>
+                        <Label htmlFor="categoryDescription">Mô tả</Label>
+                        <Textarea
+                          id="categoryDescription"
+                          value={formData.description}
+                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Mô tả chi tiết danh mục"
+                          rows={3}
+                          data-testid="input-category-description"
+                        />
+                      </div>
 
-                  <div>
-                    <Label htmlFor="categorySortOrder">Thứ tự</Label>
-                    <Input
-                      id="categorySortOrder"
-                      type="number"
-                      value={formData.sortOrder}
-                      onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
-                      placeholder="0"
-                      data-testid="input-category-sort-order"
-                    />
-                  </div>
+                      <div>
+                        <Label htmlFor="categorySortOrder">Thứ tự</Label>
+                        <Input
+                          id="categorySortOrder"
+                          type="number"
+                          value={formData.sortOrder}
+                          onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) || 0 }))}
+                          placeholder="0"
+                          data-testid="input-category-sort-order"
+                        />
+                      </div>
 
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="categoryActive">Kích hoạt</Label>
-                    <Switch
-                      id="categoryActive"
-                      checked={formData.isActive}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
-                      data-testid="switch-category-active"
-                    />
-                  </div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="categoryActive">Kích hoạt</Label>
+                        <Switch
+                          id="categoryActive"
+                          checked={formData.isActive}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+                          data-testid="switch-category-active"
+                        />
+                      </div>
+                    </TabsContent>
 
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={resetForm}
-                      className="flex-1"
-                      data-testid="button-cancel"
-                    >
-                      Hủy
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={saveMutation.isPending}
-                      className="flex-1"
-                      data-testid="button-save-category"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {saveMutation.isPending 
-                        ? 'Đang lưu...' 
-                        : (editingCategory ? 'Cập nhật' : 'Thêm danh mục')
-                      }
-                    </Button>
-                  </div>
-                </form>
+                    <TabsContent value="consultation" className="space-y-6">
+                      {/* Consultation Types */}
+                      <div>
+                        <Label className="text-base font-semibold">🤖 Loại tư vấn được hỗ trợ</Label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Chọn các loại tư vấn mà danh mục này sẽ hỗ trợ
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {consultationTypes.map((type) => (
+                            <div key={type.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`consultation-${type.id}`}
+                                checked={formData.consultationConfig.enabled_types.includes(type.id)}
+                                onCheckedChange={() => toggleConsultationType(type.id)}
+                              />
+                              <Label 
+                                htmlFor={`consultation-${type.id}`} 
+                                className="text-sm cursor-pointer flex items-center gap-1"
+                              >
+                                <span>{type.icon}</span>
+                                {type.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Required Fields */}
+                      <div>
+                        <Label className="text-base font-semibold">📋 Trường bắt buộc khi thêm sản phẩm</Label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Chọn các trường thông tin bắt buộc phải điền khi thêm sản phẩm thuộc danh mục này
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {availableFields.map((field) => (
+                            <div key={field.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`field-${field.id}`}
+                                checked={formData.consultationConfig.required_fields.includes(field.id)}
+                                onCheckedChange={() => toggleRequiredField(field.id)}
+                              />
+                              <Label 
+                                htmlFor={`field-${field.id}`} 
+                                className="text-sm cursor-pointer"
+                              >
+                                {field.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Auto Prompts */}
+                      <div>
+                        <Label className="text-base font-semibold">💬 Câu hỏi gợi ý tự động</Label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Những câu hỏi sẽ được gợi ý tự động cho khách hàng khi tư vấn sản phẩm
+                        </p>
+                        <div className="space-y-2">
+                          {formData.consultationConfig.auto_prompts.map((prompt, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded">
+                              <span className="flex-1 text-sm">{prompt}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeAutoPrompt(index)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addAutoPrompt}
+                            className="w-full"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Thêm câu hỏi gợi ý
+                          </Button>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Template Editor */}
+                      <div>
+                        <Label className="text-base font-semibold">📝 Mẫu template tư vấn</Label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Tạo template cho từng loại tư vấn đã chọn (sử dụng {"{biến_số}"} cho placeholder)
+                        </p>
+                        <div className="space-y-4">
+                          {formData.consultationConfig.enabled_types.map((typeId) => {
+                            const type = consultationTypes.find(t => t.id === typeId);
+                            if (!type) return null;
+                            
+                            const templateKey = `${typeId}_template` as keyof CategoryConsultationTemplates;
+                            
+                            return (
+                              <div key={typeId} className="space-y-2">
+                                <Label className="flex items-center gap-2">
+                                  <span>{type.icon}</span>
+                                  Template {type.label}
+                                </Label>
+                                <Textarea
+                                  value={formData.consultationTemplates[templateKey] || ''}
+                                  onChange={(e) => updateTemplate(templateKey, e.target.value)}
+                                  placeholder={`Ví dụ: ${type.icon} **${type.label.toUpperCase()}:**\n1. {bước_1}\n2. {bước_2}\n3. {bước_3}`}
+                                  rows={3}
+                                  className="font-mono text-sm"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={resetForm}
+                        className="flex-1"
+                        data-testid="button-cancel"
+                      >
+                        Hủy
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={saveMutation.isPending}
+                        className="flex-1"
+                        data-testid="button-save-category"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saveMutation.isPending 
+                          ? 'Đang lưu...' 
+                          : (editingCategory ? 'Cập nhật' : 'Thêm danh mục')
+                        }
+                      </Button>
+                    </div>
+                  </form>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
