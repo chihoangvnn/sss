@@ -923,7 +923,7 @@ export default function CategoryManager() {
                           Tạo template cho từng loại tư vấn đã chọn (sử dụng {"{biến_số}"} cho placeholder)
                         </p>
                         <div className="space-y-4">
-                          {formData.consultationConfig.enabled_types.map((typeId) => {
+                          {(formData.consultationConfig.enabled_types || []).map((typeId) => {
                             const type = consultationTypes.find(t => t.id === typeId);
                             if (!type) return null;
                             
