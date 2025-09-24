@@ -91,11 +91,13 @@ class ShopeeFulfillmentService {
         orderId: order.id,
         orderNumber: order.orderNumber,
         customerName: order.customerInfo?.buyerUsername || 'Unknown Customer',
-        status: this.mapOrderStatusToFulfillmentStatus(order.orderStatus),
+        status: this.mapOrderStatusToFulfillmentStatus(order.orderStatus, order.trackingNumber || undefined),
         priority,
         items: this.mapOrderItems(order.items || []),
         shippingAddress: order.customerInfo?.recipientAddress || {},
         totalAmount: Number(order.totalAmount),
+        trackingNumber: order.trackingNumber,
+        shippingCarrier: order.shippingCarrier,
         createdAt,
         dueDate
       };
@@ -301,10 +303,14 @@ class ShopeeFulfillmentService {
   }
 
   // Private helper methods
-  private mapOrderStatusToFulfillmentStatus(orderStatus: string): 'pending' | 'processing' | 'ready_to_ship' | 'shipped' | 'delivered' | 'failed' {
+  private mapOrderStatusToFulfillmentStatus(orderStatus: string, trackingNumber?: string): 'pending' | 'processing' | 'ready_to_ship' | 'shipped' | 'delivered' | 'failed' {
+    // Smart mapping: to_ship with tracking = ready_to_ship, without tracking = processing
+    if (orderStatus === 'to_ship') {
+      return trackingNumber ? 'ready_to_ship' : 'processing';
+    }
+    
     const statusMap: Record<string, 'pending' | 'processing' | 'ready_to_ship' | 'shipped' | 'delivered' | 'failed'> = {
       'unpaid': 'pending',
-      'to_ship': 'processing', 
       'shipped': 'shipped',
       'to_confirm_receive': 'delivered',
       'completed': 'delivered',

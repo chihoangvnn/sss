@@ -395,17 +395,22 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
         return res.status(400).json({ error: "Business Account ID is required" });
       }
 
-      const filters: any = {};
-      if (status && status !== 'all') filters.status = status;
-      if (priority && priority !== 'all') filters.priority = priority;
-
-      const queue = await shopeeFulfillmentService.getFulfillmentQueue(businessAccountId, filters);
+      // Get full queue first, then apply fulfillment-level status filtering
+      const queue = await shopeeFulfillmentService.getFulfillmentQueue(businessAccountId, {});
+      
+      // Apply fulfillment-level status filtering after smart mapping
+      let filteredQueue = queue;
+      if (status && status !== 'all') {
+        filteredQueue = queue.filter(task => task.status === status);
+      }
+      if (priority && priority !== 'all') {
+        filteredQueue = filteredQueue.filter(task => task.priority === priority);
+      }
       
       // Apply search filter if provided
-      let filteredQueue = queue;
       if (search) {
         const searchLower = search.toLowerCase();
-        filteredQueue = queue.filter(task => 
+        filteredQueue = filteredQueue.filter(task => 
           task.orderNumber.toLowerCase().includes(searchLower) ||
           task.customerName.toLowerCase().includes(searchLower)
         );
@@ -618,8 +623,8 @@ export function setupShopeeRoutes(app: Express, requireAdminAuth: any, requireCS
 
       // Call ship order API
       const result = await syncService.shipOrder(
-        orderRecord.businessAccountId,
-        orderRecord.shopId,
+        orderRecord.businessAccountId || '',
+        orderRecord.shopId || '',
         orderSn as string, // TypeScript: orderSn validated above
         shippingData
       );
