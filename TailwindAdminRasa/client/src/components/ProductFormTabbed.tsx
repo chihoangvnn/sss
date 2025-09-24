@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle, Target } from "lucide-react";
+import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle, Target, AlertTriangle, Users, MessageCircle, ShieldCheck } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
 import { QRScanner } from "./QRScanner";
@@ -18,7 +18,8 @@ import {
   SocialProofDataForm, 
   PersonalizationDataForm, 
   LeadingQuestionsDataForm, 
-  ObjectionHandlingDataForm 
+  ObjectionHandlingDataForm,
+  SalesModuleSection
 } from "./admin/SalesModuleComponents";
 import type { 
   CloudinaryImage, 
@@ -258,6 +259,22 @@ export function ProductFormTabbed({ product, onClose, onSuccess }: ProductFormPr
       });
     }
   }, [product?.id]);
+
+  // Collapse state for Sales Technique modules
+  const [moduleCollapseState, setModuleCollapseState] = useState({
+    urgency: true, // First module open by default
+    socialProof: false,
+    personalization: false,
+    leadingQuestions: false,
+    objectionHandling: false
+  });
+
+  const toggleModuleCollapse = (moduleKey: string) => {
+    setModuleCollapseState(prev => ({
+      ...prev,
+      [moduleKey]: !prev[moduleKey as keyof typeof prev]
+    }));
+  };
 
   // Sales techniques save mutation
   const salesMutation = useMutation({
@@ -585,6 +602,8 @@ export function ProductFormTabbed({ product, onClose, onSuccess }: ProductFormPr
                   setSalesData={setSalesData}
                   handleSalesSave={handleSalesSave}
                   salesMutation={salesMutation}
+                  moduleCollapseState={moduleCollapseState}
+                  toggleModuleCollapse={toggleModuleCollapse}
                 />
               )}
 
@@ -1136,7 +1155,9 @@ function AITab({
   salesData,
   setSalesData,
   handleSalesSave,
-  salesMutation
+  salesMutation,
+  moduleCollapseState,
+  toggleModuleCollapse
 }: any) {
   return (
     <div className="space-y-6">
@@ -1285,34 +1306,74 @@ function AITab({
           {/* Sales Techniques Forms */}
           <div className="space-y-6">
             {/* 1. Urgency Data */}
-            <UrgencyDataForm
-              data={salesData.urgencyData}
-              onChange={(data) => setSalesData((prev: any) => ({ ...prev, urgencyData: data }))}
-            />
+            <SalesModuleSection
+              title="🚨 Urgency Data - Tạo Cảm Giác Khẩn Cấp"
+              icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
+              moduleKey="urgency"
+              isOpen={moduleCollapseState.urgency}
+              onToggle={toggleModuleCollapse}
+            >
+              <UrgencyDataForm
+                data={salesData.urgencyData}
+                onChange={(data) => setSalesData((prev: any) => ({ ...prev, urgencyData: data }))}
+              />
+            </SalesModuleSection>
 
             {/* 2. Social Proof Data */}
-            <SocialProofDataForm
-              data={salesData.socialProofData}
-              onChange={(data) => setSalesData((prev: any) => ({ ...prev, socialProofData: data }))}
-            />
+            <SalesModuleSection
+              title="👥 Social Proof Data - Bằng Chứng Xã Hội"
+              icon={<Users className="h-5 w-5 text-blue-600" />}
+              moduleKey="socialProof"
+              isOpen={moduleCollapseState.socialProof}
+              onToggle={toggleModuleCollapse}
+            >
+              <SocialProofDataForm
+                data={salesData.socialProofData}
+                onChange={(data) => setSalesData((prev: any) => ({ ...prev, socialProofData: data }))}
+              />
+            </SalesModuleSection>
 
             {/* 3. Personalization Data */}
-            <PersonalizationDataForm
-              data={salesData.personalizationData}
-              onChange={(data) => setSalesData((prev: any) => ({ ...prev, personalizationData: data }))}
-            />
+            <SalesModuleSection
+              title="🎯 Personalization Data - Cá Nhân Hóa"
+              icon={<Target className="h-5 w-5 text-green-600" />}
+              moduleKey="personalization"
+              isOpen={moduleCollapseState.personalization}
+              onToggle={toggleModuleCollapse}
+            >
+              <PersonalizationDataForm
+                data={salesData.personalizationData}
+                onChange={(data) => setSalesData((prev: any) => ({ ...prev, personalizationData: data }))}
+              />
+            </SalesModuleSection>
 
             {/* 4. Leading Questions Data */}
-            <LeadingQuestionsDataForm
-              data={salesData.leadingQuestionsData}
-              onChange={(data) => setSalesData((prev: any) => ({ ...prev, leadingQuestionsData: data }))}
-            />
+            <SalesModuleSection
+              title="❓ Leading Questions Data - Câu Hỏi Dẫn Dắt"
+              icon={<MessageCircle className="h-5 w-5 text-purple-600" />}
+              moduleKey="leadingQuestions"
+              isOpen={moduleCollapseState.leadingQuestions}
+              onToggle={toggleModuleCollapse}
+            >
+              <LeadingQuestionsDataForm
+                data={salesData.leadingQuestionsData}
+                onChange={(data) => setSalesData((prev: any) => ({ ...prev, leadingQuestionsData: data }))}
+              />
+            </SalesModuleSection>
 
             {/* 5. Objection Handling Data */}
-            <ObjectionHandlingDataForm
-              data={salesData.objectionHandlingData}
-              onChange={(data) => setSalesData((prev: any) => ({ ...prev, objectionHandlingData: data }))}
-            />
+            <SalesModuleSection
+              title="🛡️ Objection Handling Data - Xử Lý Phản Đối"
+              icon={<ShieldCheck className="h-5 w-5 text-red-600" />}
+              moduleKey="objectionHandling"
+              isOpen={moduleCollapseState.objectionHandling}
+              onToggle={toggleModuleCollapse}
+            >
+              <ObjectionHandlingDataForm
+                data={salesData.objectionHandlingData}
+                onChange={(data) => setSalesData((prev: any) => ({ ...prev, objectionHandlingData: data }))}
+              />
+            </SalesModuleSection>
           </div>
         </div>
       ) : (
