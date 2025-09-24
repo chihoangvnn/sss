@@ -45,17 +45,19 @@ interface Product {
   id: string;
   name: string;
   description?: string;
-  sku?: string;
-  itemCode?: string;
+  sku?: string; // Auto-generated SKU
+  itemCode?: string; // QR/Barcode scanner input for inventory management
   price: string;
   stock: number;
   categoryId?: string;
   status: "active" | "inactive" | "out-of-stock";
-  image?: string;
+  image?: string; // Deprecated - kept for backward compatibility
   images?: CloudinaryImage[];
   videos?: CloudinaryVideo[];
+  // 🤖 AI-generated descriptions for RASA  
   descriptions?: RasaDescriptions;
   defaultImageIndex?: number;
+  // 🚀 Advanced Sales Technique Data
   urgencyData?: UrgencyData | null;
   socialProofData?: SocialProofData | null;
   personalizationData?: PersonalizationData | null;
@@ -63,6 +65,7 @@ interface Product {
   objectionHandlingData?: ObjectionHandlingData | null;
 }
 
+// Consultation configuration types
 interface CategoryConsultationConfig {
   enabled_types: string[];
   required_fields: string[];
@@ -129,6 +132,7 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Helper function to create default data structures
   const createDefaultData = () => ({
     urgencyData: {
       low_stock_threshold: 10,
@@ -198,13 +202,14 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
     }
   });
 
+  // Initialize state with proper defaults and merge with actual data
   const [salesData, setSalesData] = useState(() => {
     const defaults = createDefaultData();
     return {
       urgencyData: { 
         ...defaults.urgencyData, 
         ...(initialData.urgencyData || {}),
-        trending_platforms: initialData.urgencyData?.trending_platforms ?? []
+        trending_platforms: initialData.urgencyData?.trending_platforms || []
       },
       socialProofData: { ...defaults.socialProofData, ...(initialData.socialProofData || {}) },
       personalizationData: { ...defaults.personalizationData, ...(initialData.personalizationData || {}) },
@@ -213,13 +218,14 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
     };
   });
 
+  // 🔄 CRITICAL FIX: Sync state with initialData when it changes
   useEffect(() => {
     const defaults = createDefaultData();
     setSalesData({
       urgencyData: { 
         ...defaults.urgencyData, 
         ...(initialData.urgencyData || {}),
-        trending_platforms: initialData.urgencyData?.trending_platforms ?? []
+        trending_platforms: initialData.urgencyData?.trending_platforms || []
       },
       socialProofData: { ...defaults.socialProofData, ...(initialData.socialProofData || {}) },
       personalizationData: { ...defaults.personalizationData, ...(initialData.personalizationData || {}) },
@@ -228,6 +234,7 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
     });
   }, [initialData]);
 
+  // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof salesData) => {
       const response = await apiRequest('PUT', `/api/products/${productId}/sales-techniques`, data);
@@ -285,26 +292,31 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
       </CardHeader>
       <CardContent className="space-y-6">
         
+        {/* Urgency Data */}
         <UrgencyDataForm
           data={salesData.urgencyData}
-          onChange={(data) => setSalesData(prev => ({ ...prev, urgencyData: { ...data, trending_platforms: data.trending_platforms ?? [] } }))}
+          onChange={(data) => setSalesData(prev => ({ ...prev, urgencyData: data }))}
         />
 
+        {/* Social Proof Data */}
         <SocialProofDataForm
           data={salesData.socialProofData}
           onChange={(data) => setSalesData(prev => ({ ...prev, socialProofData: data }))}
         />
 
+        {/* Personalization Data */}
         <PersonalizationDataForm
           data={salesData.personalizationData}
           onChange={(data) => setSalesData(prev => ({ ...prev, personalizationData: data }))}
         />
 
+        {/* Leading Questions Data */}
         <LeadingQuestionsDataForm
           data={salesData.leadingQuestionsData}
           onChange={(data) => setSalesData(prev => ({ ...prev, leadingQuestionsData: data }))}
         />
 
+        {/* Objection Handling Data */}
         <ObjectionHandlingDataForm
           data={salesData.objectionHandlingData}
           onChange={(data) => setSalesData(prev => ({ ...prev, objectionHandlingData: data }))}
@@ -320,6 +332,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const queryClient = useQueryClient();
   const isEditing = Boolean(product);
 
+  // 🔄 CRITICAL MEMOIZATION: Stabilize initialData to prevent unnecessary re-renders and state resets
   const memoizedSalesTechniquesData = useMemo(() => ({
     urgencyData: product?.urgencyData || null,
     socialProofData: product?.socialProofData || null,
@@ -338,18 +351,19 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    sku: "",
-    itemCode: "",
+    sku: "", // Will be auto-generated
+    itemCode: "", // Manual input or QR scan
     price: "",
     stock: "0",
     industryId: "",
     categoryId: "",
     status: "active" as "active" | "inactive" | "out-of-stock",
-    image: "",
+    image: "", // Deprecated - kept for backward compatibility
     images: [] as CloudinaryImage[],
     videos: [] as CloudinaryVideo[],
   });
   
+  // 🤖 Category-driven consultation fields state
   const [consultationFields, setConsultationFields] = useState<Record<string, string>>({});
   const [categoryConfig, setCategoryConfig] = useState<{
     config?: CategoryConsultationConfig;
@@ -357,15 +371,18 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   }>({});
   const [requiredFieldsError, setRequiredFieldsError] = useState<string[]>([]);
   
+  // 🔄 Track previous categoryId to prevent false category changes
   const prevCategoryIdRef = useRef<string | null>(null);
 
+  // 🤖 AI Generated Descriptions State
   const [generatedDescriptions, setGeneratedDescriptions] = useState<RasaDescriptions | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showDescriptionPreview, setShowDescriptionPreview] = useState(false);
 
+  // 📱 QR Scanner State
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
-  // Fetch industries and categories
+  // Fetch industries for dropdown
   const { data: industries = [], isLoading: industriesLoading, error: industriesError } = useQuery<Industry[]>({
     queryKey: ['/api/industries'],
     queryFn: async () => {
@@ -375,6 +392,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     },
   });
 
+  // Fetch categories for dropdown
   const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
     queryFn: async () => {
@@ -393,8 +411,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       setFormData({
         name: product.name,
         description: product.description || "",
-        sku: product.sku || "",
-        itemCode: (product as any).itemCode || "",
+        sku: product.sku || "", // Load existing SKU
+        itemCode: (product as any).itemCode || "", // Load existing itemCode
         price: product.price,
         stock: product.stock.toString(),
         industryId: "",
@@ -405,22 +423,26 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         videos: product.videos || [],
       });
       
+      // 🤖 Load existing AI descriptions if available
       if (product.descriptions && typeof product.descriptions === 'object') {
         setGeneratedDescriptions(product.descriptions);
-        setShowDescriptionPreview(true);
+        setShowDescriptionPreview(true); // Show preview if descriptions exist
       } else {
         setGeneratedDescriptions(null);
         setShowDescriptionPreview(false);
       }
       
+      // 🤖 Load existing consultation data if available (rehydration happens first)
       if ((product as any).consultationData && typeof (product as any).consultationData === 'object') {
+        console.log('🔄 Rehydrating consultation fields from existing product:', (product as any).consultationData);
         setConsultationFields((product as any).consultationData);
+        // Set initial categoryId ref to prevent false changes during rehydration
         prevCategoryIdRef.current = product.categoryId || null;
       }
     }
   }, [product]);
 
-  // Auto-select industry when editing
+  // Auto-select industry when editing and categories are loaded
   useEffect(() => {
     if (product && product.categoryId && categories.length > 0 && !formData.industryId) {
       const category = categories.find(c => c.id === product.categoryId);
@@ -430,37 +452,50 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     }
   }, [product, categories, formData.industryId]);
   
-  // Auto-load consultation config when category changes
+  // 🤖 Auto-load consultation config when category changes
   useEffect(() => {
     if (formData.categoryId && categories.length > 0) {
       const selectedCategory = categories.find(c => c.id === formData.categoryId);
       if (selectedCategory && selectedCategory.consultationConfig) {
+        console.log('🤖 Auto-loading consultation config for category:', selectedCategory.name);
+        
+        // Set category consultation configuration
         setCategoryConfig({
           config: selectedCategory.consultationConfig,
           templates: selectedCategory.consultationTemplates || {}
         });
         
+        // 🔄 Robust gating: Track actual category changes and prevent clobbering
         const hasExistingFields = Object.keys(consultationFields).length > 0;
         const actualCategoryChanged = prevCategoryIdRef.current !== formData.categoryId;
         const shouldInitialize = !hasExistingFields || actualCategoryChanged;
         
+        console.log('🔄 Gating decision: hasExisting=', hasExistingFields, ', actualChanged=', actualCategoryChanged, ', shouldInit=', shouldInitialize, ', prev=', prevCategoryIdRef.current, ', current=', formData.categoryId);
+        
         if (shouldInitialize) {
+          console.log('🤖 Initializing consultation fields with templates');
+          
+          // Initialize consultation fields with template values and auto-prompts
           const newConsultationFields: Record<string, string> = {};
           const templates = selectedCategory.consultationTemplates || {};
           
+          // Fill required fields with template content or auto-prompts
           selectedCategory.consultationConfig?.required_fields?.forEach(fieldId => {
+            // Try to find matching template for this field
             const templateKey = `${fieldId}_template` as keyof CategoryConsultationTemplates;
             const templateContent = templates[templateKey];
             
             if (templateContent) {
               newConsultationFields[fieldId] = templateContent;
             } else if (selectedCategory.consultationConfig?.auto_prompts && selectedCategory.consultationConfig.auto_prompts.length > 0) {
+              // Use first auto-prompt as default content
               newConsultationFields[fieldId] = selectedCategory.consultationConfig.auto_prompts[0];
             } else {
               newConsultationFields[fieldId] = '';
             }
           });
           
+          // Fill optional fields with template content
           selectedCategory.consultationConfig?.optional_fields?.forEach(fieldId => {
             const templateKey = `${fieldId}_template` as keyof CategoryConsultationTemplates;
             const templateContent = templates[templateKey];
@@ -468,11 +503,15 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           });
           
           setConsultationFields(newConsultationFields);
-          setRequiredFieldsError([]);
+          setRequiredFieldsError([]); // Reset validation errors
+        } else {
+          console.log('🔄 Preserving existing consultation fields');
         }
         
+        // Update previous categoryId reference
         prevCategoryIdRef.current = formData.categoryId;
         
+        // Auto-fill description with first available template if description is empty
         if (selectedCategory.consultationTemplates && Object.keys(selectedCategory.consultationTemplates).length > 0 && !formData.description.trim()) {
           const templateKeys = Object.keys(selectedCategory.consultationTemplates) as (keyof CategoryConsultationTemplates)[];
           const firstTemplate = selectedCategory.consultationTemplates[templateKeys[0]];
@@ -488,6 +527,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           }
         }
       } else {
+        // Clear consultation config if no category or no config
         setCategoryConfig({});
         setConsultationFields({});
         setRequiredFieldsError([]);
@@ -495,42 +535,24 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     }
   }, [formData.categoryId, categories, toast]);
 
-  // Validation function
-  const validateConsultationFields = () => {
-    if (!categoryConfig.config) return true;
-    
-    const { required_fields = [] } = categoryConfig.config;
-    const emptyRequired = required_fields.filter(fieldId => !consultationFields[fieldId]?.trim());
-    
-    if (emptyRequired.length > 0) {
-      setRequiredFieldsError(emptyRequired);
-      const fieldLabels: Record<string, string> = {
-        usage_guide: 'Hướng dẫn sử dụng',
-        safety: 'Thông tin an toàn',
-        recipe: 'Công thức / Recipe',
-        technical: 'Thông số kỹ thuật',
-        benefits: 'Lợi ích',
-        care: 'Cách chăm sóc',
-        storage: 'Bảo quản',
-        health_benefits: 'Lợi ích sức khỏe',
-        skin_benefits: 'Lợi ích cho da',
-        care_instructions: 'Hướng dẫn chăm sóc',
-        troubleshooting: 'Xử lý sự cố',
-        compatibility: 'Tương thích'
-      };
-      
-      const missingLabels = emptyRequired.map(field => fieldLabels[field] || field).join(', ');
-      toast({
-        title: "Thiếu thông tin bắt buộc",
-        description: `Vui lòng điền: ${missingLabels}`,
-        variant: "destructive",
-      });
-      return false;
-    }
-    
-    setRequiredFieldsError([]);
-    return true;
-  };
+  // Show error if data fetch fails
+  if (fetchError) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-8">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">Lỗi khi tải dữ liệu</p>
+              <div className="flex gap-2 justify-center">
+                <Button onClick={onClose} variant="outline">Đóng</Button>
+                <Button onClick={() => window.location.reload()}>Thử lại</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Save product mutation
   const saveMutation = useMutation({
@@ -569,7 +591,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     },
   });
 
-  // Generate AI descriptions
+  // 🤖 AI Content Generation Function
   const generateDescriptions = async () => {
     if (!formData.name.trim()) {
       toast({
@@ -583,9 +605,11 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     setIsGenerating(true);
     
     try {
+      // Get industry and category names
       const selectedIndustry = industries.find(i => i.id === formData.industryId);
       const selectedCategory = categories.find(c => c.id === formData.categoryId);
 
+      // 🧠 Build intelligent consultation context
       let consultationContext = '';
       if (Object.keys(consultationFields).length > 0) {
         const consultationEntries = Object.entries(consultationFields)
@@ -604,10 +628,10 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           productName: formData.name,
           industryName: selectedIndustry?.name,
           categoryName: selectedCategory?.name,
-          consultationData: consultationFields,
+          consultationData: consultationFields, // 🤖 Pass structured consultation data
           options: {
             targetLanguage: 'vietnamese',
-            customContext: consultationContext
+            customContext: consultationContext // 🧠 Include professional consultation context
           }
         }),
       });
@@ -618,17 +642,25 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       }
 
       const result = await response.json();
-      setGeneratedDescriptions(result.descriptions);
-      setShowDescriptionPreview(true);
+      setGeneratedDescriptions(result);
       
+      // Auto-fill primary description
+      setFormData(prev => ({
+        ...prev,
+        description: result.primary
+      }));
+      
+      setShowDescriptionPreview(true);
+
       toast({
-        title: "🤖 AI đã tạo mô tả thành công!",
-        description: "Đã tạo 5 phiên bản mô tả chuyên nghiệp cho sản phẩm",
+        title: "Thành công! 🎉",
+        description: `Đã tạo 1 mô tả chính + ${Object.keys(result.rasa_variations || {}).length} biến thể RASA`,
       });
-    } catch (error) {
+
+    } catch (error: any) {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể tạo mô tả AI",
+        description: error.message || "Không thể tạo mô tả tự động",
         variant: "destructive",
       });
     } finally {
@@ -645,7 +677,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
     });
   };
 
-  // Copy to clipboard
+  // Copy description to clipboard
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -683,23 +715,26 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       return;
     }
     
+    // 🤖 Validate category-driven consultation fields
     if (!validateConsultationFields()) {
-      return;
+      return; // Validation failed, stop submission
     }
 
     const saveData = {
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       itemCode: formData.itemCode.trim() || undefined,
-      price: formData.price,
+      price: formData.price, // Send as string to match backend
       stock: parseInt(formData.stock) || 0,
       categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
       status: formData.status,
       image: formData.image.trim() || undefined,
       images: formData.images || [],
       videos: formData.videos || [],
+      // 🤖 Include AI generated descriptions for RASA (only if exists)
       descriptions: generatedDescriptions ?? undefined,
-      defaultImageIndex: 0,
+      defaultImageIndex: 0, // Default to first image
+      // 🤖 Include category-driven consultation data (simple key-value as per schema)
       consultationData: Object.keys(consultationFields).length > 0 ? consultationFields : undefined,
     };
 
@@ -718,184 +753,163 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   const handleIndustryChange = (industryId: string) => {
     setFormData(prev => ({ 
       ...prev, 
-      industryId,
+      industryId, 
       categoryId: "" // Reset category when industry changes
     }));
-    setConsultationFields({});
+    // Clear consultation config when industry changes
     setCategoryConfig({});
+    setConsultationFields({});
     setRequiredFieldsError([]);
   };
-
-  // Get field label helper
-  const getFieldLabel = (fieldId: string) => {
+  
+  // Update consultation field values
+  const updateConsultationField = (fieldId: string, value: string) => {
+    setConsultationFields(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+    
+    // Remove from error list if field is now filled
+    if (value.trim() && requiredFieldsError.includes(fieldId)) {
+      setRequiredFieldsError(prev => prev.filter(f => f !== fieldId));
+    }
+  };
+  
+  // Validate required consultation fields
+  const validateConsultationFields = (): boolean => {
+    if (!categoryConfig.config?.required_fields) return true;
+    
+    const missingFields: string[] = [];
+    categoryConfig.config.required_fields?.forEach(fieldId => {
+      if (!consultationFields[fieldId] || !consultationFields[fieldId].trim()) {
+        missingFields.push(fieldId);
+      }
+    });
+    
+    if (missingFields.length > 0) {
+      setRequiredFieldsError(missingFields);
+      toast({
+        title: "Thiếu trường bắt buộc",
+        description: `Vui lòng điền đầy đủ các trường được yêu cầu cho danh mục này`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Helper function to get Vietnamese field labels
+  const getFieldLabel = (fieldId: string): string => {
     const fieldLabels: Record<string, string> = {
-      usage_guide: 'Hướng dẫn sử dụng',
-      safety: 'Thông tin an toàn',
-      recipe: 'Công thức / Recipe',
-      technical: 'Thông số kỹ thuật',
-      benefits: 'Lợi ích',
-      care: 'Cách chăm sóc',
-      storage: 'Bảo quản',
-      health_benefits: 'Lợi ích sức khỏe',
-      skin_benefits: 'Lợi ích cho da',
-      care_instructions: 'Hướng dẫn chăm sóc',
-      troubleshooting: 'Xử lý sự cố',
-      compatibility: 'Tương thích'
+      "loại_da_phù_hợp": "Loại da phù hợp",
+      "cách_thoa": "Cách thoa",
+      "tần_suất_sử_dụng": "Tần suất sử dụng",
+      "độ_tuổi_khuyến_nghị": "Độ tuổi khuyến nghị",
+      "patch_test": "Patch test",
+      "thành_phần_chính": "Thành phần chính",
+      "liều_dùng": "Liều dùng",
+      "thời_gian_sử_dụng": "Thời gian sử dụng",
+      "đối_tượng_sử_dụng": "Đối tượng sử dụng",
+      "chống_chỉ_định": "Chống chỉ định",
+      "thông_số_kỹ_thuật": "Thông số kỹ thuật",
+      "yêu_cầu_hệ_thống": "Yêu cầu hệ thống",
+      "bảo_hành": "Bảo hành"
     };
     return fieldLabels[fieldId] || fieldId.replace(/_/g, ' ');
   };
 
-  // Loading and error states
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span>Đang tải...</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (fetchError) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <p className="text-red-500 mb-4">Lỗi khi tải dữ liệu</p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={onClose} variant="outline">Đóng</Button>
-                <Button onClick={() => window.location.reload()}>Thử lại</Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-4xl max-h-[95vh] overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between py-4">
-          <CardTitle className="text-xl">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-xl font-bold">
             {isEditing ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}
           </CardTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0"
+            data-testid="button-close-form"
           >
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
 
-        <CardContent className="max-h-[80vh] overflow-y-auto p-6">
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name" className="text-sm font-medium">
-                  <span className="text-red-500">*</span> Tên sản phẩm
-                </Label>
+            {/* 🎯 OPTIMIZED LAYOUT - Row 1: Tên sản phẩm + Mã SKU */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="name">Tên sản phẩm *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nhập tên sản phẩm..."
-                  className="mt-1"
+                  placeholder="Nhập tên sản phẩm"
+                  data-testid="input-product-name"
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="sku" className="text-sm font-medium">Mã SKU</Label>
+                <Label htmlFor="sku">Mã SKU</Label>
                 <Input
                   id="sku"
                   value={formData.sku || (isEditing ? "Chưa có SKU" : "Auto-gen")}
                   readOnly
                   disabled
-                  className="mt-1 bg-gray-50"
+                  placeholder="Auto-generated SKU"
+                  className="bg-muted text-muted-foreground text-sm"
+                  data-testid="input-product-sku"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  {isEditing ? "SKU đã được tạo" : "Tự động tạo khi lưu"}
-                </p>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground -mt-4">
+              {isEditing ? "SKU đã được tạo" : "SKU sẽ được tạo tự động: 2 chữ đầu ngành hàng + 4 số"}
+            </p>
 
-            {/* Item Code with QR Scanner */}
-            <div className="space-y-2">
-              <Label htmlFor="itemCode" className="text-sm font-medium">Mã sản phẩm (Item Code)</Label>
-              <div className="flex gap-3">
+            {/* 🎯 Row 2: Mã sản phẩm (Item Code) */}
+            <div>
+              <Label htmlFor="itemCode">Mã sản phẩm (Item Code)</Label>
+              <div className="flex gap-2">
                 <Input
                   id="itemCode"
                   value={formData.itemCode}
                   onChange={(e) => setFormData(prev => ({ ...prev, itemCode: e.target.value }))}
-                  placeholder="Nhập mã sản phẩm hoặc quét QR..."
+                  placeholder="Nhập mã sản phẩm hoặc quét QR"
+                  data-testid="input-product-itemcode"
                   className="flex-1"
                 />
                 <Button
                   type="button"
                   variant="outline"
+                  size="default"
                   onClick={() => setIsQRScannerOpen(true)}
-                  className="px-4 border-2 border-dashed border-purple-300 hover:border-purple-500"
+                  className="flex items-center gap-2 px-3"
+                  data-testid="button-qr-scanner"
                 >
-                  <QrCode className="h-4 w-4 mr-2" />
+                  <QrCode className="h-4 w-4" />
                   Quét QR
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">
-                📱 Mã để quản lý kho - có thể là barcode, QR code hoặc mã tự định nghĩa
+              <p className="text-xs text-muted-foreground mt-1">
+                📱 Mã sản phẩm có thể là barcode, QR code hoặc mã tự định nghĩa để quản lý kho
               </p>
             </div>
 
-            {/* Price & Stock */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 🎯 Row 3: Ngành hàng + Danh mục + Status (3 cột) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="price" className="text-sm font-medium">
-                  <span className="text-red-500">*</span> Giá bán (VNĐ)
-                </Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  placeholder="0"
-                  min="0"
-                  step="1000"
-                  className="mt-1"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="stock" className="text-sm font-medium">Số lượng tồn kho</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  value={formData.stock}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                  placeholder="0"
-                  min="0"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            {/* Industry & Category */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="industry" className="text-sm font-medium">Ngành hàng</Label>
-                <Select onValueChange={handleIndustryChange} value={formData.industryId}>
-                  <SelectTrigger className="mt-1">
+                <Label htmlFor="industry">Ngành hàng</Label>
+                <Select
+                  value={formData.industryId}
+                  onValueChange={handleIndustryChange}
+                >
+                  <SelectTrigger data-testid="select-product-industry">
                     <SelectValue placeholder="Chọn ngành hàng" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Không có ngành hàng</SelectItem>
                     {activeIndustries.map((industry) => (
                       <SelectItem key={industry.id} value={industry.id}>
                         {industry.name}
@@ -905,14 +919,14 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="category" className="text-sm font-medium">Danh mục</Label>
-                <Select 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))} 
+                <Label htmlFor="category">Danh mục</Label>
+                <Select
                   value={formData.categoryId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
                   disabled={!formData.industryId}
                 >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Chọn danh mục" />
+                  <SelectTrigger data-testid="select-product-category">
+                    <SelectValue placeholder={formData.industryId ? "Chọn danh mục" : "Chọn ngành hàng trước"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Không có danh mục</SelectItem>
@@ -924,204 +938,377 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label htmlFor="status">Trạng thái</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "active" | "inactive" | "out-of-stock") => 
+                    setFormData(prev => ({ ...prev, status: value }))
+                  }
+                >
+                  <SelectTrigger data-testid="select-product-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Hoạt động</SelectItem>
+                    <SelectItem value="inactive">Tạm dừng</SelectItem>
+                    <SelectItem value="out-of-stock">Hết hàng</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Description */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="description" className="text-sm font-medium">Mô tả sản phẩm</Label>
+            {/* 🤖 Category-driven Consultation Fields */}
+            {categoryConfig.config && (
+              <div className="space-y-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <h3 className="font-semibold text-blue-800">
+                    🤖 Thông tin tư vấn cho danh mục này
+                  </h3>
+                </div>
+                <p className="text-sm text-blue-600 mb-4">
+                  Danh mục "{categories.find(c => c.id === formData.categoryId)?.name}" yêu cầu các thông tin bổ sung sau:
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Required Fields */}
+                  {(categoryConfig.config?.required_fields || []).map((fieldId) => {
+                    const fieldLabel = getFieldLabel(fieldId);
+                    const isError = requiredFieldsError.includes(fieldId);
+                    
+                    return (
+                      <div key={fieldId} className="space-y-2">
+                        <Label htmlFor={`consultation-${fieldId}`} className={`flex items-center gap-2 ${isError ? 'text-red-600' : ''}`}>
+                          <span className="text-red-500">*</span>
+                          {fieldLabel}
+                          {isError && <span className="text-xs text-red-500">(Bắt buộc)</span>}
+                        </Label>
+                        <Textarea
+                          id={`consultation-${fieldId}`}
+                          value={consultationFields[fieldId] || ''}
+                          onChange={(e) => updateConsultationField(fieldId, e.target.value)}
+                          placeholder={`Nhập ${fieldLabel.toLowerCase()}...`}
+                          rows={2}
+                          className={`resize-none ${isError ? 'border-red-300 focus:border-red-500' : ''}`}
+                        />
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Optional Fields */}
+                  {(categoryConfig.config?.optional_fields || []).map((fieldId) => {
+                    const fieldLabel = getFieldLabel(fieldId);
+                    
+                    return (
+                      <div key={fieldId} className="space-y-2">
+                        <Label htmlFor={`consultation-${fieldId}`} className="flex items-center gap-2">
+                          {fieldLabel}
+                          <span className="text-xs text-muted-foreground">(Tùy chọn)</span>
+                        </Label>
+                        <Textarea
+                          id={`consultation-${fieldId}`}
+                          value={consultationFields[fieldId] || ''}
+                          onChange={(e) => updateConsultationField(fieldId, e.target.value)}
+                          placeholder={`Nhập ${fieldLabel.toLowerCase()}...`}
+                          rows={2}
+                          className="resize-none"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Auto Prompts Preview */}
+                {categoryConfig.config.auto_prompts.length > 0 && (
+                  <div className="mt-4 p-3 bg-white rounded border border-blue-200">
+                    <Label className="text-sm font-semibold text-blue-700 mb-2 block">
+                      💬 Câu hỏi gợi ý tự động cho khách hàng:
+                    </Label>
+                    <div className="space-y-1">
+                      {categoryConfig.config.auto_prompts.slice(0, 3).map((prompt, index) => (
+                        <p key={index} className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                          {index + 1}. {prompt}
+                        </p>
+                      ))}
+                      {categoryConfig.config.auto_prompts.length > 3 && (
+                        <p className="text-xs text-muted-foreground">
+                          ... và {categoryConfig.config.auto_prompts.length - 3} câu hỏi khác
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Consultation Templates Info */}
+                {categoryConfig.templates && Object.keys(categoryConfig.templates).length > 0 && (
+                  <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
+                    <Label className="text-sm font-semibold text-green-700 mb-2 block">
+                      📝 Templates tư vấn có sẵn:
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.keys(categoryConfig.templates).map((templateKey) => (
+                        <span key={templateKey} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                          {templateKey.replace('_template', '').replace('_', ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 🎯 Row 4: Giá + Số lượng + Tự động tạo mô tả (3 cột) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="price">Giá (VND) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={formData.price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="0"
+                  data-testid="input-product-price"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="stock">Số lượng tồn kho</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  min="0"
+                  value={formData.stock}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
+                  placeholder="0"
+                  data-testid="input-product-stock"
+                />
+              </div>
+              <div className="flex flex-col justify-end">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="default"
                   onClick={generateDescriptions}
                   disabled={isGenerating || !formData.name.trim()}
-                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                  className="gap-2 h-10"
                 >
                   {isGenerating ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Wand2 className="h-4 w-4 mr-2" />
+                    <Wand2 className="h-4 w-4" />
                   )}
-                  {isGenerating ? 'Đang tạo...' : 'Tạo mô tả AI'}
+                  {isGenerating ? 'Đang tạo...' : '🪄 Tự động tạo mô tả'}
                 </Button>
               </div>
-              <RichTextEditor
-                value={formData.description}
-                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
-                placeholder="Nhập mô tả sản phẩm..."
-              />
             </div>
 
-            {/* AI Generated Descriptions Preview */}
-            {generatedDescriptions && showDescriptionPreview && (
-              <Card className="border-purple-200 bg-purple-50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wand2 className="h-5 w-5 text-purple-600" />
-                      <CardTitle className="text-lg text-purple-800">🤖 Mô tả AI đã tạo</CardTitle>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowDescriptionPreview(false)}
-                      className="text-purple-600 hover:text-purple-800"
-                    >
-                      {showDescriptionPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+            {/* 🎯 Row 5: Mô tả sản phẩm */}
+            <div>
+              <Label htmlFor="description">Mô tả sản phẩm</Label>
+              <RichTextEditor
+                id="description"
+                data-testid="input-product-description"
+                value={formData.description}
+                onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                placeholder="Nhập mô tả hoặc click 'Tự động tạo mô tả' để AI tạo giúp bạn"
+                height="120px"
+                className="w-full mt-2"
+              />
+              {!formData.name.trim() && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 Nhập tên sản phẩm trước để AI có thể tạo mô tả phù hợp
+                </p>
+              )}
+            </div>
+
+
+            {/* 🎯 Row 7: Mô tả đã tạo bởi AI */}
+            {generatedDescriptions && (
+              <div className="border rounded-lg p-4 bg-gradient-to-r from-green-50 to-blue-50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-green-600" />
+                    <h4 className="font-medium text-sm">🤖 Mô tả đã tạo bởi AI</h4>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {Object.entries(generatedDescriptions).map(([key, description]) => (
-                    <div key={key} className="bg-white p-4 rounded-lg border">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-sm capitalize text-gray-800">
-                          {key.replace('_', ' ')}
-                        </h4>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
+                    className="gap-1"
+                  >
+                    {showDescriptionPreview ? (
+                      <EyeOff className="h-3 w-3" />
+                    ) : (
+                      <Eye className="h-3 w-3" />
+                    )}
+                    {showDescriptionPreview ? 'Ẩn' : 'Xem'} chi tiết
+                  </Button>
+                </div>
+
+                {showDescriptionPreview && (
+                  <div className="space-y-3">
+                    {/* Primary Description */}
+                    <div className="bg-white rounded p-3 border-l-4 border-green-500">
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-green-700 font-medium">✅ Mô tả chính:</Label>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => copyToClipboard(description)}
-                          className="text-purple-600 hover:text-purple-800"
+                          onClick={() => copyToClipboard(generatedDescriptions.primary)}
+                          className="h-6 w-6 p-0"
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
-                      <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
+                      <p className="text-sm text-gray-700 bg-green-50 p-2 rounded">
+                        {generatedDescriptions.primary}
+                      </p>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Category-driven Consultation Fields */}
-            {categoryConfig.config && categoryConfig.config.enabled_types.length > 0 && (
-              <Card className="border-green-200 bg-green-50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-green-600" />
-                    <CardTitle className="text-lg text-green-800">🤖 Thông tin tư vấn chuyên nghiệp</CardTitle>
+                    {/* RASA Variations */}
+                    <div className="bg-white rounded p-3 border-l-4 border-blue-500">
+                      <Label className="text-blue-700 font-medium mb-2 block">🤖 RASA Chat Variations:</Label>
+                      <div className="grid gap-2">
+                        {Object.entries(generatedDescriptions.rasa_variations || {}).map(([index, description]) => {
+                          const contextLabels = {
+                            "0": "🛡️ An toàn",
+                            "1": "⚡ Tiện lợi", 
+                            "2": "⭐ Chất lượng",
+                            "3": "💚 Sức khỏe"
+                          };
+                          return (
+                            <div key={index} className="flex items-start gap-2 bg-blue-50 p-2 rounded">
+                              <span className="text-xs font-medium text-blue-600 min-w-fit">
+                                {contextLabels[index as keyof typeof contextLabels]}:
+                              </span>
+                              <span className="text-sm text-gray-700 flex-1">{description}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(description)}
+                                className="h-5 w-5 p-0 flex-shrink-0"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2 italic">
+                        💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations || {}).length} mô tả này khi chat với khách hàng
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-green-700">
-                    Điền thông tin chuyên nghiệp để AI tạo nội dung tư vấn chính xác
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Required Fields */}
-                  {categoryConfig.config.required_fields?.map(fieldId => (
-                    <div key={fieldId}>
-                      <Label htmlFor={fieldId} className="text-sm font-medium text-green-800">
-                        <span className="text-red-500">*</span> {getFieldLabel(fieldId)}
-                      </Label>
-                      <Textarea
-                        id={fieldId}
-                        value={consultationFields[fieldId] || ''}
-                        onChange={(e) => setConsultationFields(prev => ({ ...prev, [fieldId]: e.target.value }))}
-                        placeholder={`Nhập ${getFieldLabel(fieldId).toLowerCase()}...`}
-                        className={`mt-1 ${requiredFieldsError.includes(fieldId) ? 'border-red-300 focus:border-red-500' : 'border-green-300 focus:border-green-500'}`}
-                        rows={3}
-                      />
-                      {requiredFieldsError.includes(fieldId) && (
-                        <p className="text-xs text-red-500 mt-1">Trường này là bắt buộc</p>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Optional Fields */}
-                  {categoryConfig.config.optional_fields?.map(fieldId => (
-                    <div key={fieldId}>
-                      <Label htmlFor={fieldId} className="text-sm font-medium text-green-700">
-                        {getFieldLabel(fieldId)} (Tuỳ chọn)
-                      </Label>
-                      <Textarea
-                        id={fieldId}
-                        value={consultationFields[fieldId] || ''}
-                        onChange={(e) => setConsultationFields(prev => ({ ...prev, [fieldId]: e.target.value }))}
-                        placeholder={`Nhập ${getFieldLabel(fieldId).toLowerCase()}...`}
-                        className="mt-1 border-green-200 focus:border-green-400"
-                        rows={2}
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                )}
+              </div>
             )}
 
-            {/* Image Upload */}
+            {/* Media Upload - Images and Videos */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">Hình ảnh sản phẩm</Label>
+              <Label>Hình ảnh & Video sản phẩm</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Upload hình ảnh và video để giới thiệu sản phẩm một cách sinh động
+              </p>
               <ImageUploader
-                value={formData.images}
-                onChange={(media: (CloudinaryImage | CloudinaryVideo)[]) => setFormData(prev => ({ ...prev, images: media.filter(m => 'width' in m) as CloudinaryImage[] }))}
-                maxFiles={10}
-                className="w-full"
+                value={[...formData.images, ...formData.videos]}
+                onChange={(media) => {
+                  const images = media.filter((m): m is CloudinaryImage => m.resource_type === 'image');
+                  const videos = media.filter((m): m is CloudinaryVideo => m.resource_type === 'video');
+                  setFormData(prev => ({ ...prev, images, videos }));
+                }}
+                maxFiles={8}
+                maxFileSize={50}
+                acceptImages={true}
+                acceptVideos={true}
+                folder="products"
+                className="mt-2"
               />
             </div>
 
-            {/* Status */}
-            <div>
-              <Label htmlFor="status" className="text-sm font-medium">Trạng thái</Label>
-              <Select onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))} value={formData.status}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Hoạt động</SelectItem>
-                  <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
-                  <SelectItem value="out-of-stock">Hết hàng</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Backward compatibility - Legacy Image URL */}
+            {formData.image && (
+              <div>
+                <Label htmlFor="image">URL hình ảnh (legacy)</Label>
+                <Input
+                  id="image"
+                  type="url"
+                  value={formData.image}
+                  onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.value }))}
+                  placeholder="https://example.com/image.jpg"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Chỉ hiển thị nếu có dữ liệu cũ. Khuyến nghị sử dụng upload ở trên.
+                </p>
+              </div>
+            )}
 
-            {/* Submit Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+                data-testid="button-cancel"
+              >
                 Hủy
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={saveMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="flex-1"
+                data-testid="button-save-product"
               >
-                {saveMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang lưu...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    {isEditing ? 'Cập nhật' : 'Tạo sản phẩm'}
-                  </>
-                )}
+                <Save className="h-4 w-4 mr-2" />
+                {saveMutation.isPending 
+                  ? 'Đang lưu...' 
+                  : (isEditing ? 'Cập nhật' : 'Thêm sản phẩm')
+                }
               </Button>
             </div>
-
           </form>
-
-          {/* Sales Techniques Management */}
-          {isEditing && product && (
-            <SalesTechniquesManagement 
-              productId={product.id} 
-              initialData={memoizedSalesTechniquesData}
-            />
-          )}
-
         </CardContent>
       </Card>
 
-      {/* QR Scanner Modal */}
-      {isQRScannerOpen && (
-        <QRScanner
-          isOpen={isQRScannerOpen}
-          onClose={() => setIsQRScannerOpen(false)}
-          onScan={(result) => {
-            setFormData(prev => ({ ...prev, itemCode: result }));
-            setIsQRScannerOpen(false);
-          }}
+      {/* 🎯 FAQ Management - Outside form to avoid nested forms */}
+      {isEditing && product?.id && (
+        <Card className="w-full max-w-2xl mt-4">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg">Quản lý FAQ</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <FAQManagement 
+              productId={product.id}
+              className=""
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 🚀 SALES TECHNIQUES MANAGEMENT - Advanced sales technique configuration */}
+      {isEditing && product?.id && (
+        <SalesTechniquesManagement 
+          productId={product.id}
+          initialData={memoizedSalesTechniquesData}
         />
       )}
+
+      {/* QR Scanner Modal */}
+      <QRScanner
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScan={handleQRScan}
+      />
     </div>
   );
-};
+}
