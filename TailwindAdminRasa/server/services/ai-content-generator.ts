@@ -314,6 +314,7 @@ Respond with JSON in this format:
     options: {
       targetLanguage?: 'vietnamese' | 'english';
       customContext?: string;
+      consultationData?: Record<string, string>; // 🧠 Add consultation data support
     } = {}
   ): Promise<{
     primary: string;
@@ -327,8 +328,28 @@ Respond with JSON in this format:
 
     const { 
       targetLanguage = 'vietnamese',
-      customContext = ''
+      customContext = '',
+      consultationData = {}
     } = options;
+
+    // 🧠 Enhanced consultation context for professional descriptions
+    let consultationGuidance = '';
+    if (Object.keys(consultationData).length > 0) {
+      const consultationEntries = Object.entries(consultationData)
+        .filter(([_, value]) => value && typeof value === 'string' && value.trim())
+        .map(([key, value]) => `- ${key}: ${value}`);
+      
+      if (consultationEntries.length > 0) {
+        consultationGuidance = `\n\n🩺 THÔNG TIN TƯ VẤN CHUYÊN NGHIỆP (Sử dụng để tạo mô tả CHÍNH XÁC và THUYẾT PHỤC):
+${consultationEntries.join('\n')}
+
+⚡ QUAN TRỌNG: Sử dụng thông tin tư vấn này để tạo mô tả CHỜ TỎ HƠN, nhấn mạnh:
+- Cách sử dụng chính xác
+- Lợi ích thực tế mà khách hàng quan tâm
+- Thông tin an toàn và lưu ý quan trọng
+- Kết quả cụ thể mà khách hàng mong đợi`;
+      }
+    }
 
     const systemPrompt = `Bạn là chuyên gia viết mô tả sản phẩm chuyên nghiệp cho thương mại điện tử và chatbot RASA.
 
@@ -336,7 +357,7 @@ NHIỆM VỤ:
 Tạo 1 mô tả chính + 4 biến thể benefit-focused cho sản phẩm "${productName}"
 ${industryName ? `Ngành hàng: "${industryName}"` : ''}
 ${categoryName ? `Danh mục: "${categoryName}"` : ''}
-${customContext ? `Bối cảnh đặc biệt: "${customContext}"` : ''}
+${customContext ? `Bối cảnh đặc biệt: "${customContext}"` : ''}${consultationGuidance}
 
 YÊU CẦU CHẤT LƯỢNG:
 ✅ Ngôn ngữ: ${targetLanguage === 'vietnamese' ? 'Tiếng Việt tự nhiên, thân thiện' : 'Natural English'}

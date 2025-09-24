@@ -360,6 +360,18 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
       const selectedIndustry = industries.find(i => i.id === formData.industryId);
       const selectedCategory = categories.find(c => c.id === formData.categoryId);
 
+      // 🧠 Build intelligent consultation context
+      let consultationContext = '';
+      if (Object.keys(consultationFields).length > 0) {
+        const consultationEntries = Object.entries(consultationFields)
+          .filter(([_, value]) => value && value.trim())
+          .map(([key, value]) => `${getFieldLabel(key)}: ${value}`);
+        
+        if (consultationEntries.length > 0) {
+          consultationContext = `THÔNG TIN TƯ VẤN CHUYÊN NGHIỆP:\n${consultationEntries.join('\n')}`;
+        }
+      }
+
       const response = await fetch('/api/ai/generate-product-descriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -367,9 +379,10 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           productName: formData.name,
           industryName: selectedIndustry?.name,
           categoryName: selectedCategory?.name,
+          consultationData: consultationFields, // 🤖 Pass structured consultation data
           options: {
             targetLanguage: 'vietnamese',
-            customContext: ''
+            customContext: consultationContext // 🧠 Include professional consultation context
           }
         }),
       });

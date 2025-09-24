@@ -6,7 +6,7 @@ const router = express.Router();
 // POST /api/ai/generate-product-descriptions
 router.post('/generate-product-descriptions', async (req, res) => {
   try {
-    const { productName, industryName, categoryName, options = {} } = req.body;
+    const { productName, industryName, categoryName, consultationData = {}, options = {} } = req.body;
 
     // Validate required fields
     if (!productName || typeof productName !== 'string' || productName.trim().length === 0) {
@@ -15,7 +15,8 @@ router.post('/generate-product-descriptions', async (req, res) => {
       });
     }
 
-    console.log('Generating AI descriptions for:', productName, 'Industry:', industryName, 'Category:', categoryName);
+    console.log('🤖 Generating AI descriptions for:', productName, 'Industry:', industryName, 'Category:', categoryName);
+    console.log('🧠 Consultation data available:', Object.keys(consultationData).length > 0 ? 'Yes' : 'No');
 
     // Generate product descriptions using AI Content Generator
     const result = await aiContentGenerator.generateProductDescriptions(
@@ -24,7 +25,8 @@ router.post('/generate-product-descriptions', async (req, res) => {
       categoryName,
       {
         targetLanguage: options.targetLanguage || 'vietnamese',
-        customContext: options.customContext || ''
+        customContext: options.customContext || '',
+        consultationData: consultationData // 🧠 Pass consultation data to AI generator
       }
     );
 
