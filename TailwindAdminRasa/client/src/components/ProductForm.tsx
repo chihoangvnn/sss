@@ -1003,22 +1003,24 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900/95 via-purple-900/95 to-slate-900/95 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       {/* 🎨 Modern Wizard Container */}
-      <Card className="w-full max-w-4xl max-h-[95vh] overflow-hidden shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+      <Card className="w-full max-w-4xl mx-auto max-h-[95vh] overflow-hidden shadow-2xl border-0 bg-white/95 backdrop-blur-sm
+        sm:max-w-2xl md:max-w-3xl lg:max-w-4xl
+        sm:mx-4 md:mx-6 lg:mx-8">
         {/* ✨ Stunning Header with Gradient */}
-        <CardHeader className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white p-6">
+        <CardHeader className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white p-4 sm:p-6">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 backdrop-blur-sm"></div>
           <div className="relative flex items-center justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-2xl font-bold flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                   {(() => {
                     const IconComponent = wizardSteps[currentStep].icon;
-                    return IconComponent ? <IconComponent className="h-6 w-6" /> : null;
+                    return IconComponent ? <IconComponent className="h-5 w-5 sm:h-6 sm:w-6" /> : null;
                   })()}
                 </div>
-                {isEditing ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}
+                <span className="truncate">{isEditing ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</span>
               </CardTitle>
-              <p className="text-white/80 text-sm">
+              <p className="text-white/80 text-xs sm:text-sm mt-1">
                 {wizardSteps[currentStep].description}
               </p>
             </div>
@@ -1026,7 +1028,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="text-white hover:bg-white/20 transition-colors"
+              className="text-white hover:bg-white/20 transition-colors min-h-[44px] min-w-[44px] p-2"
               data-testid="button-close-form"
             >
               <X className="h-5 w-5" />
@@ -1035,7 +1037,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         </CardHeader>
 
         {/* 🌟 Beautiful Progress Indicator */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
           {/* 🚀 Auto-save Status Indicator */}
           {!isEditing && (
             <div className="flex items-center justify-center mb-4">
@@ -1073,7 +1075,37 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
             </div>
           )}
           
-          <div className="flex items-center justify-between">
+          {/* 📱 Mobile: Compact Progress Bar */}
+          <div className="block sm:hidden">
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`
+                flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300
+                bg-gradient-to-r ${wizardSteps[currentStep].gradient} text-white shadow-lg
+              `}>
+                {(() => {
+                  const IconComponent = wizardSteps[currentStep].icon;
+                  return IconComponent ? <IconComponent className="h-4 w-4" /> : null;
+                })()}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">{wizardSteps[currentStep].title}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
+                      style={{ width: `${((currentStep + 1) / wizardSteps.length) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">
+                    {currentStep + 1}/{wizardSteps.length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 🖥️ Desktop: Full Step Indicator */}
+          <div className="hidden sm:flex items-center justify-between">
             {wizardSteps.map((step, index) => {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
@@ -1084,7 +1116,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   {/* Step Circle */}
                   <div 
                     className={`
-                      relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 cursor-pointer
+                      relative flex items-center justify-center w-8 sm:w-10 h-8 sm:h-10 rounded-full transition-all duration-300 cursor-pointer
                       ${isCompleted 
                         ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg' 
                         : isActive 
@@ -1095,10 +1127,10 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                     onClick={() => goToStep(index)}
                   >
                     {isCompleted ? (
-                      <CheckCircle className="h-5 w-5" />
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                     ) : (() => {
                       const IconComponent = step.icon;
-                      return IconComponent ? <IconComponent className="h-5 w-5" /> : null;
+                      return IconComponent ? <IconComponent className="h-4 w-4 sm:h-5 sm:w-5" /> : null;
                     })()}
                     {isActive && (
                       <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/30 to-transparent animate-pulse"></div>
@@ -1106,8 +1138,8 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   </div>
                   
                   {/* Step Info */}
-                  <div className="ml-3 flex-1">
-                    <p className={`text-sm font-medium transition-colors ${
+                  <div className="ml-2 sm:ml-3 flex-1 min-w-0">
+                    <p className={`text-xs sm:text-sm font-medium transition-colors truncate ${
                       isActive ? 'text-gray-900' : isCompleted ? 'text-green-600' : 'text-gray-500'
                     }`}>
                       {step.title}
@@ -1116,7 +1148,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   
                   {/* Progress Line */}
                   {!isLast && (
-                    <div className="flex-1 mx-4">
+                    <div className="flex-1 mx-2 sm:mx-4 min-w-[20px]">
                       <div className="h-0.5 bg-gray-200 rounded-full overflow-hidden">
                         <div className={`h-full transition-all duration-500 ${
                           isCompleted ? 'w-full bg-gradient-to-r from-green-500 to-emerald-500' : 'w-0'
@@ -1131,7 +1163,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
         </div>
 
         {/* 📋 Dynamic Step Content with Smooth Animations */}
-        <CardContent className="p-6 min-h-[500px] max-h-[65vh] overflow-y-auto">
+        <CardContent className="p-4 sm:p-6 min-h-[400px] sm:min-h-[500px] max-h-[65vh] overflow-y-auto">
           {/* ✨ Step Content Wrapper with Animation */}
           <div className="transition-all duration-500 ease-in-out">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -1150,7 +1182,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   </div>
 
                   {/* Product Name & SKU */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                     <div className="md:col-span-2">
                       <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2">
                         <span className="text-red-500">*</span>
@@ -1161,7 +1193,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         value={formData.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
                         placeholder="Nhập tên sản phẩm..."
-                        className={`mt-2 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                        className={`mt-2 h-12 sm:h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
                           fieldErrors.name && fieldTouched.name ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''
                         }`}
                         data-testid="input-product-name"
@@ -1180,7 +1212,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         value={formData.sku || (isEditing ? "Chưa có SKU" : "Auto-gen")}
                         readOnly
                         disabled
-                        className="mt-2 h-11 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 border-gray-200"
+                        className="mt-2 h-12 sm:h-11 bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 border-gray-200"
                         data-testid="input-product-sku"
                       />
                       <p className="text-xs text-gray-500 mt-1">
@@ -1190,22 +1222,22 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   </div>
 
                   {/* Item Code with QR Scanner */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 sm:space-y-3">
                     <Label htmlFor="itemCode" className="text-sm font-medium">Mã sản phẩm (Item Code)</Label>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <Input
                         id="itemCode"
                         value={formData.itemCode}
                         onChange={(e) => handleFieldChange('itemCode', e.target.value)}
                         placeholder="Nhập mã sản phẩm hoặc quét QR..."
-                        className="flex-1 h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
+                        className="w-full sm:flex-1 h-12 sm:h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
                         data-testid="input-product-itemcode"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setIsQRScannerOpen(true)}
-                        className="h-11 px-4 border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
+                        className="w-full sm:w-auto h-12 sm:h-11 px-4 border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all duration-300 transform hover:scale-105 hover:shadow-lg group min-h-[48px] touch-manipulation"
                         data-testid="button-qr-scanner"
                       >
                         <QrCode className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
@@ -1218,7 +1250,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                   </div>
 
                   {/* Price & Stock */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <Label htmlFor="price" className="text-sm font-medium flex items-center gap-2">
                         <span className="text-red-500">*</span>
@@ -1232,7 +1264,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         placeholder="0"
                         min="0"
                         step="1000"
-                        className={`mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm ${
+                        className={`mt-2 h-12 sm:h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm ${
                           fieldErrors.price && fieldTouched.price ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''
                         }`}
                         data-testid="input-product-price"
@@ -1253,7 +1285,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                         onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
                         placeholder="0"
                         min="0"
-                        className="mt-2 h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
+                        className="mt-2 h-12 sm:h-11 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 hover:border-gray-400 hover:shadow-sm"
                         data-testid="input-product-stock"
                       />
                     </div>
@@ -1276,19 +1308,19 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
           </div>
 
           {/* 🎮 Navigation Buttons */}
-          <div className="flex justify-between items-center p-6 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 p-4 sm:p-6 bg-gradient-to-r from-gray-50 to-white border-t border-gray-200">
             <Button
               type="button"
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 0}
-              className="flex items-center gap-2 h-11 px-6 disabled:opacity-50 border-gray-300 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 transition-all duration-300 transform hover:scale-105 hover:shadow-md group"
+              className="flex items-center gap-2 h-12 sm:h-11 px-4 sm:px-6 disabled:opacity-50 border-gray-300 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 transition-all duration-300 transform hover:scale-105 hover:shadow-md group min-h-[48px] touch-manipulation w-full sm:w-auto justify-center"
             >
               <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
               <span className="font-medium">Quay lại</span>
             </Button>
 
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-gray-500 order-first sm:order-none">
               Bước {currentStep + 1} / {wizardSteps.length}
             </div>
 
@@ -1297,7 +1329,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 type="submit"
                 form="product-form"
                 disabled={saveMutation.isPending || !canGoNext()}
-                className="h-11 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium"
+                className="h-12 sm:h-11 px-4 sm:px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium min-h-[48px] touch-manipulation w-full sm:w-auto"
                 onClick={handleSubmit}
               >
                 {saveMutation.isPending ? (
@@ -1317,7 +1349,7 @@ export function ProductForm({ product, onClose, onSuccess }: ProductFormProps) {
                 type="button"
                 onClick={nextStep}
                 disabled={!canGoNext()}
-                className="flex items-center gap-2 h-11 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium disabled:opacity-50"
+                className="flex items-center gap-2 h-12 sm:h-11 px-4 sm:px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium disabled:opacity-50 min-h-[48px] touch-manipulation w-full sm:w-auto justify-center"
               >
                 Tiếp theo
                 <ChevronRight className="h-4 w-4" />
