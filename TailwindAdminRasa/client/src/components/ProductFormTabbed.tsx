@@ -150,57 +150,71 @@ export function ProductFormTabbed({ product, onClose, onSuccess }: ProductFormPr
   const [showDescriptionPreview, setShowDescriptionPreview] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   
-  // Default sales data factory
+  // Default sales data factory - matches exact shared schema
   const createDefaultSalesData = () => ({
     urgencyData: {
-      demand_level: "medium" as "low" | "medium" | "high",
-      sales_velocity: 0,
-      is_limited_edition: false,
       low_stock_threshold: 10,
+      is_limited_edition: false,
+      sales_velocity: 0,
       urgency_messages: [],
-      trending_platforms: [],
-      flash_sale_end: undefined
+      flash_sale_end: undefined,
+      demand_level: "medium" as "low" | "medium" | "high",
+      trending_platforms: []
     },
     socialProofData: {
-      total_customers: 0,
+      total_sold: 0,
+      total_reviews: 0,
       average_rating: 0,
-      review_count: 0,
       featured_reviews: [],
-      social_mentions: 0,
-      trending_hashtags: [],
-      customer_photos: [],
-      testimonials: [],
-      press_mentions: [],
-      influencer_endorsements: []
+      expert_endorsements: [],
+      celebrity_users: [],
+      awards_certifications: [],
+      media_mentions: [],
+      repurchase_rate: 0,
+      trending_hashtags: []
     },
     personalizationData: {
-      target_demographics: [],
-      customer_segments: [],
-      personalized_messages: {},
-      recommended_products: [],
-      seasonal_relevance: [],
+      target_demographics: {
+        primary: {
+          age_range: "",
+          gender: [],
+          income_level: "middle" as "low" | "middle" | "high" | "premium",
+          lifestyle: [],
+          location: []
+        },
+        secondary: {
+          age_range: "",
+          concerns: []
+        }
+      },
+      skin_types: [],
+      lifestyle_tags: [],
+      personality_match: [],
       usage_scenarios: [],
-      lifestyle_fit: [],
-      pain_points: [],
-      value_propositions: {}
+      problem_solving: [],
+      seasonal_relevance: [],
+      profession_fit: [],
+      income_bracket: "500k-1m"
     },
     leadingQuestionsData: {
-      questions: [],
-      conversation_flow: {},
-      trigger_conditions: [],
-      follow_up_actions: {},
-      escalation_rules: {},
-      success_metrics: {}
+      pain_point_questions: [],
+      desire_questions: [],
+      discovery_prompts: [],
+      comparison_triggers: [],
+      emotional_hooks: [],
+      closing_questions: [],
+      objection_anticipation: []
     },
     objectionHandlingData: {
       common_objections: [],
-      objection_responses: {},
-      alternative_solutions: [],
-      escalation_triggers: [],
-      confidence_builders: [],
-      guarantee_terms: {
-        money_back: false,
-        warranty_period: "",
+      price_justification: {
+        daily_cost: "",
+        comparison_points: [],
+        value_proposition: ""
+      },
+      quality_proof_points: [],
+      safety_assurance: [],
+      effectiveness_guarantee: {
         guarantee_text: "",
         timeline: "",
         success_rate: ""
