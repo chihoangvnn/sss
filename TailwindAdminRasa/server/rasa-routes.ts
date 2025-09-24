@@ -1854,6 +1854,274 @@ export function setupRasaRoutes(app: Express) {
       total
     };
   }
+
+  // === CONSULTATION APIs FOR RASA BOT ===
+  
+  /**
+   * GET /api/consultation/product/:productId
+   * Get consultation data for a specific product
+   */
+  app.get("/api/consultation/product/:productId", async (req, res) => {
+    try {
+      const { productId } = req.params;
+      
+      // Get product with consultation data and category configuration
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({
+          status: "error",
+          message: "Không tìm thấy sản phẩm",
+          data: null
+        });
+      }
+
+      // Get category consultation configuration
+      let categoryConfig = null;
+      if (product.categoryId) {
+        const category = await storage.getCategory(product.categoryId);
+        if (category) {
+          categoryConfig = {
+            id: category.id,
+            name: category.name,
+            consultationConfig: category.consultationConfig,
+            consultationTemplates: category.consultationTemplates,
+            salesAdviceTemplate: category.salesAdviceTemplate
+          };
+        }
+      }
+
+      // Format consultation response for RASA
+      const consultationData = {
+        productId: product.id,
+        productName: product.name,
+        price: product.price,
+        image: product.image,
+        categoryConfig,
+        consultationData: product.consultationData || {},
+        hasConsultationData: !!(product.consultationData && Object.keys(product.consultationData).length > 0)
+      };
+
+      res.json({
+        status: "success",
+        data: consultationData
+      });
+
+    } catch (error) {
+      console.error("RASA API Error - Get Product Consultation:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Lỗi khi lấy thông tin tư vấn sản phẩm"
+      });
+    }
+  });
+
+  /**
+   * GET /api/consultation/categories
+   * Get all categories with consultation configuration
+   */
+  app.get("/api/consultation/categories", async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      
+      // Filter categories that have consultation configuration
+      const consultationCategories = categories
+        .filter(cat => cat.isActive && cat.consultationConfig && Object.keys(cat.consultationConfig).length > 0)
+        .map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          description: cat.description,
+          consultationTypes: cat.consultationConfig?.enabled_types || [],
+          autoPrompts: cat.consultationConfig?.auto_prompts || [],
+          requiredFields: cat.consultationConfig?.required_fields || [],
+          optionalFields: cat.consultationConfig?.optional_fields || []
+        }));
+
+      res.json({
+        status: "success",
+        data: {
+          categories: consultationCategories,
+          totalCategories: consultationCategories.length
+        }
+      });
+
+    } catch (error) {
+      console.error("RASA API Error - Get Consultation Categories:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Lỗi khi lấy danh sách danh mục tư vấn"
+      });
+    }
+  });
+
+  /**
+   * GET /api/consultation/search
+   * Search products with consultation data by keywords
+   */
+  app.get("/api/consultation/search", async (req, res) => {
+    try {
+      const { q, category, consultation_type } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({
+          status: "error",
+          message: "Từ khóa tìm kiếm là bắt buộc"
+        });
+      }
+
+      // Get all products with search and proper category filtering
+      const allProducts = await storage.getProducts(100, category as string, q as string);
+      
+      // Filter products that have consultation data
+      const consultationProducts = [];
+      
+      for (const product of allProducts) {
+        if (product.consultationData && Object.keys(product.consultationData).length > 0) {
+          // Get category info
+          let categoryInfo = null;
+          if (product.categoryId) {
+            const cat = await storage.getCategory(product.categoryId);
+            if (cat && cat.consultationConfig) {
+              categoryInfo = {
+                id: cat.id,
+                name: cat.name,
+                consultationTypes: cat.consultationConfig?.enabled_types || []
+              };
+            }
+          }
+
+          // Apply category filter if specified
+          if (category && product.categoryId !== category) {
+            continue;
+          }
+
+          // Apply consultation type filter if specified
+          if (consultation_type && categoryInfo) {
+            if (!categoryInfo.consultationTypes.includes(consultation_type)) {
+              continue;
+            }
+          }
+
+          consultationProducts.push({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            image: product.image,
+            category: categoryInfo,
+            consultationData: product.consultationData,
+            relevantQuestions: categoryInfo?.consultationTypes || []
+          });
+        }
+      }
+
+      res.json({
+        status: "success",
+        data: {
+          products: consultationProducts,
+          totalResults: consultationProducts.length,
+          searchQuery: q,
+          filters: {
+            category: category || null,
+            consultationType: consultation_type || null
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error("RASA API Error - Search Consultation Products:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Lỗi khi tìm kiếm sản phẩm tư vấn"
+      });
+    }
+  });
+
+  /**
+   * POST /api/consultation/generate-advice
+   * Generate consultation advice based on product data and customer question
+   */
+  app.post("/api/consultation/generate-advice", async (req, res) => {
+    try {
+      const { productId, questionType, customerQuestion } = req.body;
+      
+      if (!productId || !questionType) {
+        return res.status(400).json({
+          status: "error",
+          message: "Product ID và loại câu hỏi là bắt buộc"
+        });
+      }
+
+      // Get product consultation data
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({
+          status: "error",
+          message: "Không tìm thấy sản phẩm"
+        });
+      }
+
+      // Get category templates
+      let templates = {};
+      if (product.categoryId) {
+        const category = await storage.getCategory(product.categoryId);
+        if (category && category.consultationTemplates) {
+          templates = category.consultationTemplates;
+        }
+      }
+
+      // Generate advice based on consultation data and templates
+      const consultationData = product.consultationData || {};
+      let advice = "";
+
+      switch (questionType) {
+        case "usage_guide":
+          if (templates.usage_guide_template && consultationData.cách_thoa) {
+            advice = templates.usage_guide_template
+              .replace(/\{cách_thoa\}/g, consultationData.cách_thoa)
+              .replace(/\{tần_suất\}/g, consultationData.tần_suất || "theo hướng dẫn");
+          }
+          break;
+        case "safety_profile":
+          if (templates.safety_template && consultationData.lưu_ý_an_toàn) {
+            advice = templates.safety_template
+              .replace(/\{lưu_ý_an_toàn\}/g, consultationData.lưu_ý_an_toàn)
+              .replace(/\{patch_test_required\}/g, consultationData.patch_test_required || "");
+          }
+          break;
+        case "care_instructions":
+          if (templates.care_template && consultationData.bảo_quản) {
+            advice = templates.care_template
+              .replace(/\{bảo_quản\}/g, consultationData.bảo_quản);
+          }
+          break;
+        default:
+          advice = "Xin lỗi, tôi chưa có thông tin tư vấn cho loại câu hỏi này.";
+      }
+
+      if (!advice) {
+        advice = `Xin lỗi, tôi chưa có thông tin chi tiết về ${questionType} cho sản phẩm ${product.name}. Bạn có thể liên hệ tư vấn viên để được hỗ trợ tốt hơn.`;
+      }
+
+      res.json({
+        status: "success",
+        data: {
+          productId,
+          productName: product.name,
+          questionType,
+          customerQuestion: customerQuestion || "",
+          advice,
+          consultationData: consultationData
+        }
+      });
+
+    } catch (error) {
+      console.error("RASA API Error - Generate Consultation Advice:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Lỗi khi tạo lời tư vấn"
+      });
+    }
+  });
 }
 
 // Helper function to get product unit
