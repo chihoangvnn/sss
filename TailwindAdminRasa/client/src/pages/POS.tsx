@@ -50,6 +50,9 @@ import {
   Grid3x3,
   Activity
 } from "lucide-react";
+
+// Default customer for walk-in customers (khách vãng lai)
+const DEFAULT_CUSTOMER_ID = 'feefc007-c238-4758-bdbd-9b49ed89c11c';
 import { CustomerSearchInput, CustomerSearchInputRef } from "@/components/CustomerSearchInput";
 import { QRPayment } from "@/components/QRPayment";
 import { QRScanner } from "@/components/QRScanner";
@@ -665,7 +668,7 @@ export default function POS({}: POSProps) {
     const cartSnapshot = [...cart]; // Create snapshot at submit time
     
     const orderData = {
-      customerId: selectedCustomer?.id || null,
+      customerId: selectedCustomer?.id || DEFAULT_CUSTOMER_ID, // Use default customer for walk-in sales
       total: roundedCartTotal.toString(), // Convert to string for validation
       status: 'pending',
       items: cartSnapshot.map(item => ({
