@@ -20,8 +20,7 @@ router.get('/', async (req, res) => {
         or(
           like(books.title, `%${search}%`),
           like(books.author, `%${search}%`),
-          like(books.isbn, `%${search}%`),
-          like(books.isbn10, `%${search}%`)
+          like(books.isbn, `%${search}%`)
         )
       );
     }
@@ -34,7 +33,6 @@ router.get('/', async (req, res) => {
     const booksWithPrices = await db
       .select({
         isbn: books.isbn,
-        isbn10: books.isbn10,
         title: books.title,
         author: books.author,
         format: books.format,
@@ -43,7 +41,6 @@ router.get('/', async (req, res) => {
         coverImageUrl: books.coverImageUrl,
         ranking: books.ranking,
         isTopSeller: books.isTopSeller,
-        salesVelocity: books.salesVelocity,
         createdAt: books.createdAt,
         updatedAt: books.updatedAt,
         priceCount: sql<number>`count(${bookPrices.id})::int`,
@@ -98,6 +95,33 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Error fetching books:', error);
     res.status(500).json({ error: 'Failed to fetch books' });
+  }
+});
+
+// Get statistics - MUST be before /:isbn route
+router.get('/stats', async (req, res) => {
+  try {
+    const stats = await db
+      .select({
+        totalBooks: sql<number>`count(distinct ${books.isbn})::int`,
+        totalPrices: sql<number>`count(${bookPrices.id})::int`,
+        topSellersCount: sql<number>`count(*) filter (where ${books.isTopSeller} = true)::int`,
+        avgPrice: sql<number>`avg(${bookPrices.price})::numeric`,
+        avgRating: sql<number>`avg(${books.averageRating})::numeric`,
+      })
+      .from(books)
+      .leftJoin(bookPrices, eq(books.isbn, bookPrices.bookIsbn));
+    
+    res.json(stats[0] || {
+      totalBooks: 0,
+      totalPrices: 0,
+      topSellersCount: 0,
+      avgPrice: 0,
+      avgRating: 0
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
@@ -354,27 +378,6 @@ router.delete('/:isbn', async (req, res) => {
   } catch (error) {
     console.error('Error deleting book:', error);
     res.status(500).json({ error: 'Failed to delete book' });
-  }
-});
-
-// Get stats
-router.get('/stats', async (req, res) => {
-  try {
-    const stats = await db
-      .select({
-        totalBooks: sql<number>`count(distinct ${books.isbn})::int`,
-        totalPrices: sql<number>`count(${bookPrices.id})::int`,
-        topSellersCount: sql<number>`count(*) filter (where ${books.isTopSeller} = true)::int`,
-        avgPrice: sql<number>`avg(${bookPrices.price})::numeric`,
-        avgRating: sql<number>`avg(${books.averageRating})::numeric`,
-      })
-      .from(books)
-      .leftJoin(bookPrices, eq(books.isbn, bookPrices.bookIsbn));
-    
-    res.json(stats[0]);
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 

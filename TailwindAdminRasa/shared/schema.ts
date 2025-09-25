@@ -3637,30 +3637,27 @@ export type BookPriceSource = "amazon" | "walmart" | "barnes_noble" | "target" |
 
 // Books table - Core book information
 export const books = pgTable("books", {
-  isbn: varchar("isbn", { length: 13 }).primaryKey(), // Primary key is ISBN-13
-  isbn10: varchar("isbn10", { length: 10 }), // Optional ISBN-10
-  title: text("title").notNull(),
-  author: text("author").notNull(),
-  format: text("format", { enum: ["Paperback", "Hardcover", "eBook", "Audiobook", "Unknown"] }).notNull().default("Unknown"),
+  isbn: varchar("isbn").primaryKey(), // Primary key is ISBN-13
+  title: varchar("title").notNull(),
+  author: varchar("author").notNull(),
+  format: varchar("format").default("Paperback"),
   
   // Review and rating data
-  reviewCount: integer("review_count").notNull().default(0),
-  averageRating: decimal("average_rating", { precision: 3, scale: 2 }).default("0.00"), // 0.00 to 5.00
+  reviewCount: integer("review_count").default(0),
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }).default("0.0"),
   
   // Media
-  coverImageUrl: text("cover_image_url"),
+  coverImageUrl: varchar("cover_image_url"),
   
   // Ranking and analytics
   ranking: integer("ranking").default(999999), // Lower number = better rank
-  isTopSeller: boolean("is_top_seller").notNull().default(false),
-  salesVelocity: integer("sales_velocity").default(0), // Books sold per day estimate
+  isTopSeller: boolean("is_top_seller").default(false),
   
   // Metadata
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   // Indexes for efficient searching
-  isbn10Index: index("books_isbn10_idx").on(table.isbn10),
   titleIndex: index("books_title_idx").on(table.title),
   authorIndex: index("books_author_idx").on(table.author),
   rankingIndex: index("books_ranking_idx").on(table.ranking),
@@ -3669,34 +3666,25 @@ export const books = pgTable("books", {
 // Book prices table - Price tracking from multiple sources
 export const bookPrices = pgTable("book_prices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  bookIsbn: varchar("book_isbn", { length: 13 }).notNull().references(() => books.isbn, { onDelete: 'cascade' }),
+  bookIsbn: varchar("book_isbn").notNull().references(() => books.isbn, { onDelete: 'cascade' }),
   
   // Source information
-  source: text("source").$type<BookPriceSource>().notNull(),
-  customSourceName: text("custom_source_name"), // For custom sources
+  source: varchar("source").notNull(),
   
   // Price data
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
   
   // Availability
-  status: text("status", { enum: ["In Stock", "Out of Stock", "Pre-order", "Limited Stock", "Unknown"] }).notNull().default("Unknown"),
+  status: varchar("status").default("In Stock"),
   
   // URLs and metadata
-  sourceUrl: text("source_url"),
-  productId: text("product_id"), // Source-specific product identifier
+  sourceUrl: varchar("source_url"),
+  productId: varchar("product_id"), // Source-specific product identifier
   
   // Tracking
   lastUpdatedAt: timestamp("last_updated_at").defaultNow(),
-  updateStatus: text("update_status", { enum: ["success", "failed", "pending"] }).notNull().default("success"),
-  errorMessage: text("error_message"),
-  
-  // Crawler configuration
-  isAutoCrawlEnabled: boolean("is_auto_crawl_enabled").notNull().default(true),
-  crawlInterval: integer("crawl_interval").default(14400), // Seconds, default 4 hours
   
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   // Unique constraint: one price per book per source
   uniqueBookSource: unique().on(table.bookIsbn, table.source),

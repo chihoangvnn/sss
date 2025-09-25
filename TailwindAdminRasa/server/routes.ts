@@ -4138,7 +4138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   // 📚 BOOKS MANAGEMENT ROUTES
   // ==========================================
-  app.use("/api/books", requireAuth, booksRouter);
+  app.use("/api/books", booksRouter);
 
   // ==========================================
   // API CONFIGURATIONS MANAGEMENT ROUTES
