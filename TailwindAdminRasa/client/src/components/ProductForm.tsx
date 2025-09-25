@@ -295,7 +295,13 @@ function SalesTechniquesManagement({ productId, initialData }: SalesTechniquesMa
         {/* Urgency Data */}
         <UrgencyDataForm
           data={salesData.urgencyData}
-          onChange={(data) => setSalesData(prev => ({ ...prev, urgencyData: data }))}
+          onChange={(data) => setSalesData(prev => ({ 
+            ...prev, 
+            urgencyData: {
+              ...data,
+              trending_platforms: data.trending_platforms || []
+            }
+          }))}
         />
 
         {/* Social Proof Data */}

@@ -1633,7 +1633,8 @@ function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setS
                       <div className="space-y-3">
                         {Object.keys(generatedDescriptions.contexts || {}).length > 0 ? (
                           Object.entries(generatedDescriptions.contexts || {}).map(([context, rasaIndex]) => {
-                            const rasaVariation = generatedDescriptions.rasa_variations?.[rasaIndex as string];
+                            const rasaIndexStr = String(rasaIndex);
+                            const rasaVariation = generatedDescriptions.rasa_variations?.[rasaIndexStr];
                             return (
                               <div key={context} className="flex justify-between items-start p-3 bg-orange-50 rounded-lg border border-orange-200">
                                 <div className="flex-1">
@@ -1643,7 +1644,7 @@ function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setS
                                       {context.replace('_', ' ')}
                                     </span>
                                     <span className="text-xs text-orange-600 bg-orange-200 px-2 py-1 rounded">
-                                      → RASA #{rasaIndex}
+                                      → RASA #{rasaIndexStr}
                                     </span>
                                   </div>
                                   {rasaVariation && (
@@ -1656,7 +1657,7 @@ function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setS
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => copyToClipboard(rasaVariation || `Context: ${context} → RASA Variant #${rasaIndex}`)}
+                                  onClick={() => copyToClipboard(rasaVariation || `Context: ${context} → RASA Variant #${rasaIndexStr}`)}
                                   className="h-7 w-7 p-0 hover:bg-orange-100 ml-2"
                                 >
                                   <Copy className="h-3 w-3" />
