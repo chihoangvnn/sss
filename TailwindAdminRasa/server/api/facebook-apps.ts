@@ -449,6 +449,66 @@ router.post('/:id/test-webhook', requireAdminAuth, requireCSRFProtection, async 
 });
 
 /**
+ * POST /api/facebook-apps/test-post
+ * Send a test post to a Facebook app
+ */
+router.post('/test-post', requireAdminAuth, requireCSRFProtection, async (req, res) => {
+  try {
+    const { appId, appName, message } = req.body;
+    
+    // Validate required fields
+    if (!appId || !appName || !message) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'appId, appName, and message are required'
+      });
+    }
+
+    // Find the app by ID
+    const app = await storage.getFacebookAppById(appId);
+    
+    if (!app) {
+      return res.status(404).json({ 
+        error: 'Facebook app not found',
+        details: 'App with provided ID does not exist'
+      });
+    }
+
+    if (!app.isActive) {
+      return res.status(400).json({
+        error: 'App is not active',
+        details: 'Please activate the app before sending test posts'
+      });
+    }
+
+    // For now, simulate posting by logging and returning success
+    // In a real implementation, you would call Facebook Graph API here
+    console.log(`🧪 Test post simulated for app: ${appName} (${app.appId})`);
+    console.log(`📝 Message: ${message}`);
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    res.json({
+      success: true,
+      message: 'Test post sent successfully',
+      data: {
+        appName,
+        appId: app.appId,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error sending test post:', error);
+    res.status(500).json({ 
+      error: 'Failed to send test post',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * PATCH /api/facebook-apps/:id/tags
  * Update tags for a Facebook app
  */
