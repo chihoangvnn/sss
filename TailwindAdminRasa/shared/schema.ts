@@ -3627,3 +3627,114 @@ export type TemplateCompilation = typeof templateCompilations.$inferSelect;
 export type InsertTemplateCompilation = z.infer<typeof insertTemplateCompilationSchema>;
 export type ProjectTemplate = typeof projectTemplates.$inferSelect;
 export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
+
+// =====================================================
+// 📚 BOOKS MANAGEMENT SYSTEM - ISBN-based Book Tracking
+// =====================================================
+
+// Book price source types
+export type BookPriceSource = "amazon" | "walmart" | "barnes_noble" | "target" | "book_depository" | "ebay" | "abe_books" | "costco" | "custom";
+
+// Books table - Core book information
+export const books = pgTable("books", {
+  isbn: varchar("isbn", { length: 13 }).primaryKey(), // Primary key is ISBN-13
+  isbn10: varchar("isbn10", { length: 10 }), // Optional ISBN-10
+  title: text("title").notNull(),
+  author: text("author").notNull(),
+  format: text("format", { enum: ["Paperback", "Hardcover", "eBook", "Audiobook", "Unknown"] }).notNull().default("Unknown"),
+  
+  // Review and rating data
+  reviewCount: integer("review_count").notNull().default(0),
+  averageRating: decimal("average_rating", { precision: 3, scale: 2 }).default("0.00"), // 0.00 to 5.00
+  
+  // Media
+  coverImageUrl: text("cover_image_url"),
+  
+  // Ranking and analytics
+  ranking: integer("ranking").default(999999), // Lower number = better rank
+  isTopSeller: boolean("is_top_seller").notNull().default(false),
+  salesVelocity: integer("sales_velocity").default(0), // Books sold per day estimate
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Indexes for efficient searching
+  isbn10Index: index("books_isbn10_idx").on(table.isbn10),
+  titleIndex: index("books_title_idx").on(table.title),
+  authorIndex: index("books_author_idx").on(table.author),
+  rankingIndex: index("books_ranking_idx").on(table.ranking),
+}));
+
+// Book prices table - Price tracking from multiple sources
+export const bookPrices = pgTable("book_prices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bookIsbn: varchar("book_isbn", { length: 13 }).notNull().references(() => books.isbn, { onDelete: 'cascade' }),
+  
+  // Source information
+  source: text("source").$type<BookPriceSource>().notNull(),
+  customSourceName: text("custom_source_name"), // For custom sources
+  
+  // Price data
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+  
+  // Availability
+  status: text("status", { enum: ["In Stock", "Out of Stock", "Pre-order", "Limited Stock", "Unknown"] }).notNull().default("Unknown"),
+  
+  // URLs and metadata
+  sourceUrl: text("source_url"),
+  productId: text("product_id"), // Source-specific product identifier
+  
+  // Tracking
+  lastUpdatedAt: timestamp("last_updated_at").defaultNow(),
+  updateStatus: text("update_status", { enum: ["success", "failed", "pending"] }).notNull().default("success"),
+  errorMessage: text("error_message"),
+  
+  // Crawler configuration
+  isAutoCrawlEnabled: boolean("is_auto_crawl_enabled").notNull().default(true),
+  crawlInterval: integer("crawl_interval").default(14400), // Seconds, default 4 hours
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint: one price per book per source
+  uniqueBookSource: unique().on(table.bookIsbn, table.source),
+  // Indexes for efficient queries
+  bookIsbnIndex: index("book_prices_isbn_idx").on(table.bookIsbn),
+  sourceIndex: index("book_prices_source_idx").on(table.source),
+  lastUpdatedIndex: index("book_prices_updated_idx").on(table.lastUpdatedAt),
+}));
+
+// Source configuration
+export const BOOK_PRICE_SOURCES: Record<BookPriceSource, { name: string; icon: string; baseUrl: string }> = {
+  amazon: { name: "Amazon", icon: "🛒", baseUrl: "https://amazon.com" },
+  walmart: { name: "Walmart", icon: "🏪", baseUrl: "https://walmart.com" },
+  barnes_noble: { name: "Barnes & Noble", icon: "📖", baseUrl: "https://barnesandnoble.com" },
+  target: { name: "Target", icon: "🎯", baseUrl: "https://target.com" },
+  book_depository: { name: "Book Depository", icon: "📚", baseUrl: "https://bookdepository.com" },
+  ebay: { name: "eBay", icon: "🔄", baseUrl: "https://ebay.com" },
+  abe_books: { name: "AbeBooks", icon: "📖", baseUrl: "https://abebooks.com" },
+  costco: { name: "Costco", icon: "🏪", baseUrl: "https://costco.com" },
+  custom: { name: "Custom Source", icon: "🔗", baseUrl: "" },
+};
+
+// Zod schemas for Books system
+export const insertBookSchema = createInsertSchema(books);
+export const insertBookPriceSchema = createInsertSchema(bookPrices);
+
+// TypeScript types
+export type Book = typeof books.$inferSelect;
+export type InsertBook = typeof books.$inferInsert;
+export type BookPrice = typeof bookPrices.$inferSelect;
+export type InsertBookPrice = typeof bookPrices.$inferInsert;
+
+// Book with prices interface
+export interface BookWithPrices extends Book {
+  prices: BookPrice[];
+  bestPrice?: BookPrice;
+  lowestPrice?: number;
+  highestPrice?: number;
+  averagePrice?: number;
+  priceRange?: string;
+}

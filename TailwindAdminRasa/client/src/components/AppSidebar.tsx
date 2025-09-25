@@ -25,7 +25,8 @@ import {
   Cloud,
   Star,
   Bot,
-  CreditCard
+  CreditCard,
+  BookOpen
 } from "lucide-react";
 
 // TikTok Icon Component with enhanced styling
@@ -89,6 +90,14 @@ const coreBusinessItems = [
     icon: Users,
     gradient: "gradient-purple",
     description: "Quản lý thông tin khách hàng"
+  },
+  {
+    title: "Books Management",
+    url: "/books",
+    icon: BookOpen,
+    badge: "NEW",
+    gradient: "gradient-blue",
+    description: "ISBN-based books with price comparison"
   },
   {
     title: "Danh mục",

@@ -49,6 +49,7 @@ import BotStatusDashboard from "@/pages/BotStatusDashboard";
 import NgrokConfig from "@/pages/NgrokConfig";
 import POS from "@/pages/POS";
 import MobileStorefront from "@/pages/MobileStorefront";
+import BooksManagement from "@/components/BooksManagement";
 
 // Admin Routes (inside sidebar layout)
 function AdminRouter() {
@@ -90,6 +91,7 @@ function AdminRouter() {
       <Route path="/bot-status" component={BotStatusDashboard} />
       <Route path="/ngrok-config" component={NgrokConfig} />
       <Route path="/pos" component={POS} />
+      <Route path="/books" component={BooksManagement} />
       <Route path="/mobile" component={MobileStorefront} />
       <Route path="/template-builder" component={() => <TemplateBuilder className="h-screen" />} />
       <Route component={NotFound} />
