@@ -15,7 +15,13 @@ import {
   User,
   Calendar,
   Package,
-  DollarSign
+  DollarSign,
+  CheckCircle,
+  Clock,
+  Truck,
+  PackageCheck,
+  XCircle,
+  Bell
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -146,6 +152,64 @@ export default function OrderDetails() {
     },
   });
 
+  // Status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      await apiRequest('PUT', `/api/orders/${id}/status`, { status: newStatus });
+    },
+    onSuccess: (data, newStatus) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/orders', id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      toast({
+        title: "Cập nhật thành công",
+        description: `Trạng thái đơn hàng đã được chuyển sang: ${getStatusLabel(newStatus)}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi cập nhật",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Helper function to get status label
+  const getStatusLabel = (status: string) => {
+    const statusConfig = {
+      pending: "Chờ xử lý",
+      processing: "Đang xử lý", 
+      shipped: "Đã gửi",
+      delivered: "Đã giao",
+      cancelled: "Đã hủy",
+    };
+    return statusConfig[status as keyof typeof statusConfig] || status;
+  };
+
+  // Helper function to get next status options
+  const getNextStatusOptions = (currentStatus: string) => {
+    const statusFlow = {
+      pending: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      delivered: [],
+      cancelled: [],
+    };
+    return statusFlow[currentStatus as keyof typeof statusFlow] || [];
+  };
+
+  // Helper function to get status icon
+  const getStatusIcon = (status: string) => {
+    const statusIcons = {
+      pending: Clock,
+      processing: Package,
+      shipped: Truck,
+      delivered: PackageCheck,
+      cancelled: XCircle,
+    };
+    return statusIcons[status as keyof typeof statusIcons] || Clock;
+  };
+
   const handleDelete = () => {
     deleteMutation.mutate();
     setIsDeleteDialogOpen(false);
@@ -236,6 +300,113 @@ export default function OrderDetails() {
             Cập nhật lần cuối: {formatDate(order.updatedAt)}
           </span>
         </div>
+
+        {/* Status Update UI */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Cập nhật trạng thái đơn hàng
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Progress Indicator */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                {(['pending', 'processing', 'shipped', 'delivered'] as const).map((status, index) => {
+                  const StatusIcon = getStatusIcon(status);
+                  const isActive = order.status === status;
+                  const isCompleted = ['pending', 'processing', 'shipped', 'delivered'].indexOf(order.status) > index;
+                  const isCancelled = order.status === 'cancelled';
+                  
+                  return (
+                    <div key={status} className="flex flex-col items-center flex-1">
+                      <div className={`
+                        w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors
+                        ${isActive ? 'bg-primary border-primary text-primary-foreground' : 
+                          isCompleted ? 'bg-green-500 border-green-500 text-white' :
+                          isCancelled ? 'bg-gray-300 border-gray-300 text-gray-500' :
+                          'bg-gray-100 border-gray-300 text-gray-500'}
+                      `}>
+                        <StatusIcon className="h-5 w-5" />
+                      </div>
+                      <span className={`text-xs mt-2 text-center ${
+                        isActive ? 'font-semibold text-primary' :
+                        isCompleted ? 'text-green-600' :
+                        isCancelled ? 'text-gray-400' :
+                        'text-muted-foreground'
+                      }`}>
+                        {getStatusLabel(status)}
+                      </span>
+                      {index < 3 && (
+                        <div className={`
+                          h-0.5 w-full mt-2 -ml-4 -mr-4 transition-colors
+                          ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}
+                        `} style={{ marginTop: '-20px', zIndex: -1 }} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Cancelled Status Indicator */}
+              {order.status === 'cancelled' && (
+                <div className="flex items-center justify-center p-4 bg-red-50 rounded-lg border border-red-200">
+                  <XCircle className="h-5 w-5 text-red-500 mr-2" />
+                  <span className="text-red-700 font-medium">Đơn hàng đã bị hủy</span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                Thao tác nhanh
+              </h4>
+              
+              <div className="flex gap-2 flex-wrap">
+                {getNextStatusOptions(order.status).map((nextStatus) => {
+                  const StatusIcon = getStatusIcon(nextStatus);
+                  return (
+                    <Button
+                      key={nextStatus}
+                      variant={nextStatus === 'cancelled' ? 'destructive' : 'default'}
+                      size="sm"
+                      onClick={() => updateStatusMutation.mutate(nextStatus)}
+                      disabled={updateStatusMutation.isPending}
+                      className="flex items-center gap-2"
+                    >
+                      <StatusIcon className="h-4 w-4" />
+                      {nextStatus === 'cancelled' ? 'Hủy đơn hàng' : `Chuyển sang: ${getStatusLabel(nextStatus)}`}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {getNextStatusOptions(order.status).length === 0 && order.status !== 'cancelled' && (
+                <p className="text-sm text-muted-foreground">
+                  ✅ Đơn hàng đã hoàn thành! Không có thao tác nào khả dụng.
+                </p>
+              )}
+
+              {order.status === 'cancelled' && (
+                <p className="text-sm text-muted-foreground">
+                  ❌ Đơn hàng đã bị hủy. Không thể thay đổi trạng thái.
+                </p>
+              )}
+            </div>
+
+            {/* Loading indicator */}
+            {updateStatusMutation.isPending && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-blue-700 text-sm">Đang cập nhật trạng thái...</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

@@ -1584,6 +1584,130 @@ export const productLandingPages = pgTable("product_landing_pages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// =====================================================
+// 🔔 NOTIFICATION SYSTEM TABLES
+// =====================================================
+
+// Notification Templates - Vietnamese optimized message templates
+export const notificationTemplates = pgTable("notification_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "order_status_shipped", "payment_confirmation"
+  title: text("title").notNull(), // Vietnamese template title
+  
+  // Multi-channel message content
+  smsContent: text("sms_content"), // SMS version (160 chars max)
+  emailSubject: text("email_subject"), // Email subject line
+  emailContent: text("email_content"), // HTML email content
+  messengerContent: text("messenger_content"), // Facebook Messenger version
+  
+  // Template variables support (e.g., {{customerName}}, {{orderTotal}})
+  variables: jsonb("variables").$type<string[]>().default(sql`'[]'::jsonb`), // Array of template variable names
+  
+  // Trigger conditions
+  triggerEvent: text("trigger_event", { 
+    enum: ["order_status_change", "payment_received", "manual", "scheduled"] 
+  }).notNull(),
+  statusTrigger: text("status_trigger", { 
+    enum: ["pending", "processing", "shipped", "delivered", "cancelled"] 
+  }), // For order status triggers
+  
+  // Settings
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(1), // 1=high, 2=medium, 3=low
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Customer Notifications - Individual notification records
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Recipients
+  customerId: varchar("customer_id").references(() => customers.id),
+  orderId: varchar("order_id").references(() => orders.id), // Optional order context
+  
+  // Template reference
+  templateId: varchar("template_id").references(() => notificationTemplates.id),
+  
+  // Message content (processed from template)
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  
+  // Delivery channels
+  channels: jsonb("channels").$type<string[]>().default(sql`'["sms"]'::jsonb`), // ["sms", "email", "messenger"]
+  
+  // Target contact info (at time of sending)
+  recipientPhone: text("recipient_phone"), // Phone number for SMS
+  recipientEmail: text("recipient_email"), // Email address
+  recipientMessengerId: text("recipient_messenger_id"), // Facebook Messenger ID
+  
+  // Scheduling
+  scheduledAt: timestamp("scheduled_at"), // When to send (null = immediate)
+  sentAt: timestamp("sent_at"), // When actually sent
+  
+  // Status tracking
+  status: text("status", { 
+    enum: ["pending", "scheduled", "sending", "sent", "failed", "cancelled"] 
+  }).notNull().default("pending"),
+  
+  // Error handling
+  errorMessage: text("error_message"), // If failed, why?
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  
+  // Business rules
+  priority: integer("priority").default(2), // 1=high, 2=medium, 3=low
+  context: jsonb("context").default(sql`'{}'::jsonb`), // Additional context data
+  
+  // Cost estimation (for Vietnamese SMS/email)
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 4 }), // VND estimated cost
+  estimatedSmsSegments: integer("estimated_sms_segments"), // Estimated SMS segments
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Notification Logs - Detailed delivery tracking
+export const notificationLogs = pgTable("notification_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Reference to notification
+  notificationId: varchar("notification_id").notNull().references(() => notifications.id),
+  
+  // Delivery attempt details
+  channel: text("channel", { enum: ["sms", "email", "messenger"] }).notNull(),
+  attempt: integer("attempt").notNull().default(1), // Which retry attempt
+  
+  // Status and timing
+  status: text("status", { 
+    enum: ["pending", "sending", "delivered", "failed", "rejected"] 
+  }).notNull(),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  
+  // Provider details (for debugging)
+  provider: text("provider"), // "twilio", "sendgrid", "facebook", etc.
+  providerMessageId: text("provider_message_id"), // External tracking ID
+  providerResponse: jsonb("provider_response").default(sql`'{}'::jsonb`), // Raw provider response
+  
+  // Cost tracking (for Vietnamese SMS rates) 
+  cost: decimal("cost", { precision: 10, scale: 4 }), // VND cost per message
+  costCurrency: text("cost_currency").default("VND"),
+  smsSegments: integer("sms_segments").default(1), // Number of SMS segments (160 chars each)
+  smsLength: integer("sms_length"), // Actual message length in characters
+  vietnameseSmsRate: decimal("vietnamese_sms_rate", { precision: 8, scale: 4 }), // VND per SMS for carrier
+  
+  // Error details
+  errorCode: text("error_code"),
+  errorMessage: text("error_message"),
+  
+  // Metadata
+  recipientInfo: jsonb("recipient_info").default(sql`'{}'::jsonb`), // Snapshot of recipient details
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Advanced Theme Configurations table
 export const themeConfigurations = pgTable("theme_configurations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3171,6 +3295,40 @@ export type InventoryAlert = typeof inventoryAlerts.$inferSelect;
 export type InsertInventoryAlert = z.infer<typeof insertInventoryAlertSchema>;
 export type BulkOperationsLog = typeof bulkOperationsLog.$inferSelect;
 export type InsertBulkOperationsLog = z.infer<typeof insertBulkOperationsLogSchema>;
+
+// =====================================================
+// 🔔 NOTIFICATION SYSTEM INSERT SCHEMAS & TYPES
+// =====================================================
+
+// Insert schemas for notification tables
+export const insertNotificationTemplateSchema = createInsertSchema(notificationTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  customerId: z.string().optional(), // Allow notifications without customer
+  orderId: z.string().optional(), // Allow non-order notifications
+  templateId: z.string().optional(), // Allow manual notifications without template
+});
+
+export const insertNotificationLogSchema = createInsertSchema(notificationLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// TypeScript types for notification system
+export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
+export type InsertNotificationTemplate = z.infer<typeof insertNotificationTemplateSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type NotificationLog = typeof notificationLogs.$inferSelect;
+export type InsertNotificationLog = z.infer<typeof insertNotificationLogSchema>;
 
 // Template Persistence System types
 export type UserTemplate = typeof userTemplates.$inferSelect;

@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "@google/genai": "^1.20.0",
+    "@sendgrid/mail": "^8.1.6",
     "@types/cors": "^2.8.19",
     "@types/dompurify": "^3.0.5",
     "@types/jsonwebtoken": "^9.0.10",

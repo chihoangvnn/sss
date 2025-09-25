@@ -24,6 +24,7 @@ import { tiktokShopOrdersService } from './tiktok-shop-orders';
 import { tiktokShopSellerService } from './tiktok-shop-seller';
 import { tiktokShopFulfillmentService } from './tiktok-shop-fulfillment';
 import { orderSyncService } from './services/order-sync-service';
+import { notificationService, VIETNAMESE_ORDER_TEMPLATES } from './services/notificationService';
 import { generateSKU } from "./utils/sku-generator";
 import multer from 'multer';
 import { uploadToCloudinary, deleteFromCloudinary, convertToCloudinaryMedia } from './services/cloudinary';
@@ -1084,7 +1085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.createOrderItem({
             orderId: order.id,
             productId: item.productId,
-            quantity: Number(item.quantity), // explicitly convert to number
+            quantity: String(item.quantity), // explicitly convert to string
             price: String(item.price) // explicitly convert to string
           });
         }
@@ -1107,10 +1108,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!status) {
         return res.status(400).json({ error: "Status is required" });
       }
+      
       const order = await storage.updateOrderStatus(req.params.id, status);
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
+
+      // 🔔 Auto-send Vietnamese customer notifications (non-blocking)
+      try {
+        // Get customer info for notifications
+        const customer = order.customerId ? await storage.getCustomer(order.customerId) : null;
+        
+        if (customer && (customer.phone || customer.email)) {
+          // Send notification based on status change
+          const notificationChannels: ('email' | 'sms' | 'messenger')[] = [];
+          if (customer.phone) notificationChannels.push('sms');
+          if (customer.email) notificationChannels.push('email');
+          
+          // Determine template based on status
+          let templateType = '';
+          if (status === 'shipped') templateType = 'order_status_shipped';
+          else if (status === 'delivered') templateType = 'order_status_delivered';
+          else if (status === 'paid') templateType = 'payment_confirmed';
+          
+          if (templateType && notificationChannels.length > 0) {
+            console.log(`📱 Sending ${templateType} notification to customer ${customer.name} via ${notificationChannels.join(', ')}`);
+            
+            // Get template data from VIETNAMESE_ORDER_TEMPLATES
+            const template = VIETNAMESE_ORDER_TEMPLATES[templateType as keyof typeof VIETNAMESE_ORDER_TEMPLATES];
+            if (template) {
+              const variables = {
+                customerName: customer.name || 'Khách hàng',
+                orderNumber: order.id.slice(-8).toUpperCase(),
+                orderTotal: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(order.total)),
+                shippedDate: new Date().toLocaleDateString('vi-VN'),
+                paymentTime: new Date().toLocaleString('vi-VN'),
+                amount: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(order.total))
+              };
+
+              // Send separate notifications per channel with appropriate content
+              const notificationPromises = [];
+              
+              // Send SMS notification if phone available
+              if (notificationChannels.includes('sms') && customer.phone) {
+                notificationPromises.push(
+                  notificationService.sendNotification({
+                    customerId: customer.id,
+                    orderId: order.id,
+                    templateId: templateType,
+                    title: template.title,
+                    content: template.sms, // Use SMS template
+                    recipientPhone: customer.phone,
+                    channels: ['sms'],
+                    variables: variables
+                  }).catch(notifError => {
+                    console.error('🚨 SMS notification failed (non-critical):', notifError);
+                  })
+                );
+              }
+              
+              // Send email notification if email available
+              if (notificationChannels.includes('email') && customer.email) {
+                notificationPromises.push(
+                  notificationService.sendNotification({
+                    customerId: customer.id,
+                    orderId: order.id,
+                    templateId: templateType,
+                    title: template.title,
+                    content: template.email, // Use email template
+                    recipientEmail: customer.email,
+                    channels: ['email'],
+                    variables: variables
+                  }).catch(notifError => {
+                    console.error('🚨 Email notification failed (non-critical):', notifError);
+                  })
+                );
+              }
+              
+              // Execute all notifications (async, don't wait)
+              if (notificationPromises.length > 0) {
+                Promise.all(notificationPromises).catch(() => {
+                  // All errors already logged individually
+                });
+              }
+            }
+          }
+        }
+      } catch (notifError) {
+        // Log notification error but don't fail the status update
+        console.error('🚨 Customer notification error (non-critical):', notifError);
+      }
+
       res.json(order);
     } catch (error) {
       console.error("Error updating order status:", error);
@@ -1211,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderItem = await storage.createOrderItem({
         orderId,
         productId, 
-        quantity: Number(quantity), // explicitly convert to number
+        quantity: String(quantity), // explicitly convert to string
         price: String(price) // explicitly convert to string
       });
       
