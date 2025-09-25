@@ -162,6 +162,7 @@ export function FacebookAppsManagerPanel() {
   const [selectedApp, setSelectedApp] = useState<FacebookApp | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
+  const [testingPost, setTestingPost] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [environmentFilter, setEnvironmentFilter] = useState<string>("all");
@@ -353,6 +354,46 @@ export function FacebookAppsManagerPanel() {
         variant: "destructive",
       });
     },
+  });
+
+  // Test post mutation
+  const testPostMutation = useMutation({
+    mutationFn: async (app: FacebookApp) => {
+      const response = await secureFetch('/api/facebook-apps/test-post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          appId: app.id,
+          appName: app.appName,
+          message: `🧪 Test post từ ${app.appName}\nThời gian: ${new Date().toLocaleString('vi-VN')}\n#test #facebook_apps_manager`
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send test post');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data, app) => {
+      setTestingPost(null);
+      toast({
+        title: "✅ Test post sent!",
+        description: `Test post sent for ${app.appName}`,
+      });
+    },
+    onError: (error: any, app) => {
+      setTestingPost(null);
+      toast({
+        title: "❌ Test post failed",
+        description: error.message || `Could not send test post for ${app.appName}`,
+        variant: "destructive"
+      });
+    }
   });
 
   // Toggle app status mutation
@@ -635,6 +676,20 @@ export function FacebookAppsManagerPanel() {
 
   const handleToggleStatus = (id: string, isActive: boolean) => {
     toggleStatusMutation.mutate({ id, isActive });
+  };
+
+  const handleTestPost = (app: FacebookApp) => {
+    if (!app.isActive) {
+      toast({
+        title: "⚠️ App not active",
+        description: "Please activate the app before testing",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setTestingPost(app.id);
+    testPostMutation.mutate(app);
   };
 
   // Removed toggleSecretVisibility function - no longer needed for security
