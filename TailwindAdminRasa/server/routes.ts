@@ -661,6 +661,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const partialProductSchema = insertProductSchema.partial();
       const validatedData = partialProductSchema.parse(req.body);
+      
+      // Fix: Handle empty categoryId - convert empty string to null
+      if (validatedData.categoryId === '' || validatedData.categoryId === undefined) {
+        validatedData.categoryId = null;
+      }
+      
       const product = await storage.updateProduct(req.params.id, validatedData);
       if (!product) {
         return res.status(404).json({ error: "Product not found" });
