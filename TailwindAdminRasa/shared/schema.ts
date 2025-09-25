@@ -358,6 +358,228 @@ export interface ObjectionHandlingData {
   trust_builders: string[];             // ["5000+ review tích cực", "Được bác sĩ khuyên dùng"]
 }
 
+// 🤖 EXTENDED RASA CONSULTATION INTERFACES
+
+// 6. Smart FAQ - Câu hỏi thường gặp thông minh
+export interface SmartFAQData {
+  questions: Array<{
+    question: string;                   // "Sản phẩm này có phù hợp với da nhạy cảm không?"
+    answer: string;                     // "Có, công thức không chứa cồn và paraben"
+    keywords: string[];                 // ["da nhạy cảm", "sensitive", "kích ứng"]
+    context: string;                    // "skincare_safety"
+    confidence_score: number;           // 0.85 (từ 0-1)
+    related_questions: string[];        // IDs của câu hỏi liên quan
+  }>;
+  context_mapping: {
+    [context: string]: string[];        // "skincare_safety": ["question_1", "question_3"]
+  };
+  confidence_thresholds: {
+    high: number;                       // 0.8
+    medium: number;                     // 0.6
+    low: number;                        // 0.4
+  };
+  follow_up_suggestions: Array<{
+    trigger_question: string;           // "question_1"
+    suggestions: string[];              // ["Bạn có muốn tìm hiểu về patch test không?"]
+  }>;
+}
+
+// 7. Needs Assessment - Đánh giá nhu cầu khách hàng
+export interface NeedsAssessmentData {
+  assessment_questions: Array<{
+    question: string;                   // "Da bạn thuộc loại nào?"
+    type: "single_choice" | "multiple_choice" | "text" | "scale";
+    options?: string[];                 // ["Da dầu", "Da khô", "Da hỗn hợp"]
+    weight: number;                     // Trọng số (1-10)
+    category: string;                   // "skin_type"
+  }>;
+  problem_mapping: {
+    [problem: string]: {
+      indicators: string[];             // ["da khô", "nứt nẻ", "bong tróc"]
+      solution_ids: string[];           // IDs sản phẩm phù hợp
+      urgency_level: "low" | "medium" | "high";
+    };
+  };
+  solution_pathways: Array<{
+    problem_combination: string[];      // ["da khô", "lão hóa"]
+    recommended_products: string[];     // Product IDs
+    consultation_script: string;        // Template tư vấn
+    success_rate: number;              // Tỷ lệ thành công (0-1)
+  }>;
+  matching_algorithm: "weighted_score" | "rule_based" | "ml_based";
+}
+
+// 8. Bot Personality - Tính cách chatbot  
+export interface BotPersonalityData {
+  tone: "friendly" | "professional" | "casual" | "expert" | "caring";
+  style: "concise" | "detailed" | "conversational" | "formal";
+  empathy_responses: Array<{
+    trigger: string;                    // "stress", "frustrated", "confused"
+    responses: string[];                // ["Tôi hiểu cảm giác của bạn", "Đừng lo lắng"]
+  }>;
+  conversation_starters: string[];      // ["Chào bạn! Da bạn đang gặp vấn đề gì?"]
+  escalation_triggers: Array<{
+    condition: string;                  // "unresolved_after_3_attempts"
+    action: string;                     // "transfer_to_human"
+    message: string;                    // "Để tôi kết nối bạn với chuyên gia"
+  }>;
+  cultural_adaptation: {
+    vietnamese_context: boolean;        // true
+    regional_preferences: string[];     // ["miền_nam", "miền_bắc"]
+    local_expressions: string[];        // ["chị ơi", "em yêu", "bạn nha"]
+  };
+}
+
+// 9. Consultation Scenarios - Kịch bản tư vấn
+export interface ConsultationScenariosData {
+  scenarios: Array<{
+    scenario_id: string;                // "acne_treatment_consultation"
+    name: string;                       // "Tư vấn điều trị mụn"
+    trigger_conditions: string[];       // ["keyword:mụn", "problem:acne"]
+    conversation_flow: Array<{
+      step: number;                     // 1, 2, 3...
+      bot_message: string;              // "Mụn của bạn loại nào?"
+      expected_user_responses: string[]; // ["mụn đầu đen", "mụn viêm"]
+      next_step_mapping: {
+        [response: string]: number;     // "mụn đầu đen": 2
+      };
+    }>;
+    success_indicators: string[];       // ["user_satisfied", "product_recommended"]
+  }>;
+  decision_trees: {
+    [scenario_id: string]: {
+      root_question: string;
+      branches: {
+        [answer: string]: {
+          next_question?: string;
+          recommendation?: string;
+          confidence_score: number;
+        };
+      };
+    };
+  };
+  outcome_mapping: {
+    [scenario_id: string]: {
+      successful_outcomes: string[];    // ["purchase", "information_satisfied"]
+      failure_indicators: string[];     // ["user_left", "escalated"]
+    };
+  };
+  success_metrics: {
+    [scenario_id: string]: {
+      conversion_rate: number;          // 0.15 (15%)
+      satisfaction_score: number;       // 4.2/5
+      avg_conversation_length: number;  // 8.5 messages
+    };
+  };
+}
+
+// 10. Competitor Comparison - So sánh đối thủ
+export interface CompetitorComparisonData {
+  competitors: Array<{
+    name: string;                       // "The Ordinary"
+    price_comparison: {
+      their_price: number;              // 450000
+      our_price: number;                // 299000
+      savings_percentage: number;       // 33.6
+    };
+    feature_comparison: {
+      [feature: string]: {
+        theirs: string;                 // "10% Niacinamide"
+        ours: string;                   // "12% Niacinamide + Zinc"
+        advantage: "better" | "same" | "worse";
+      };
+    };
+    market_position: "premium" | "mid_range" | "budget";
+  }>;
+  comparison_matrix: {
+    [attribute: string]: {
+      our_score: number;                // 1-10
+      competitor_scores: {
+        [competitor: string]: number;   // "The Ordinary": 7
+      };
+      weight: number;                   // Importance weight 1-10
+    };
+  };
+  unique_advantages: string[];          // ["Công thức Việt Nam", "Free ship"]
+  pricing_strategy: {
+    positioning: "value" | "premium" | "budget";
+    justification: string[];            // ["Chất lượng cao hơn", "Giá rẻ hơn 30%"]
+  };
+  market_positioning: string;           // "Chất lượng quốc tế, giá Việt Nam"
+}
+
+// 11. Cross-sell Data - Gợi ý sản phẩm bổ sung
+export interface CrossSellData {
+  related_products: Array<{
+    product_id: string;                 // UUID of related product
+    relationship_type: "complement" | "upgrade" | "alternative";
+    relevance_score: number;            // 0-1
+    timing: "immediate" | "follow_up" | "seasonal";
+    context: string;                    // "skincare_routine"
+  }>;
+  bundle_suggestions: Array<{
+    bundle_name: string;                // "Bộ chăm sóc da mụn hoàn chỉnh"
+    product_ids: string[];              // [product1_id, product2_id]
+    discount_percentage: number;        // 15
+    value_proposition: string;          // "Tiết kiệm 200k + hiệu quả gấp đôi"
+    success_rate: number;               // 0.23
+  }>;
+  upsell_opportunities: Array<{
+    trigger_condition: string;          // "cart_value_over_500k"
+    suggested_product: string;          // product_id
+    incentive: string;                  // "Thêm 100k có ngay serum cao cấp"
+    conversion_rate: number;            // 0.18
+  }>;
+  timing_triggers: Array<{
+    event: string;                      // "product_added_to_cart"
+    delay: string;                      // "immediate", "5_minutes", "24_hours"
+    suggested_products: string[];       // product_ids
+    message_template: string;           // "Khách mua [product] thường kết hợp với..."
+  }>;
+  success_rates: {
+    [strategy: string]: {
+      conversion_rate: number;          // 0.15
+      avg_order_value_increase: number; // 150000 (VND)
+      customer_satisfaction: number;    // 4.3/5
+    };
+  };
+}
+
+// 12. Consultation Tracking - Theo dõi hiệu quả tư vấn
+export interface ConsultationTrackingData {
+  interaction_patterns: {
+    common_questions: Array<{
+      question: string;                 // "Sản phẩm này có phù hợp không?"
+      frequency: number;                // Số lần được hỏi
+      satisfaction_rate: number;        // Tỷ lệ hài lòng với câu trả lời
+    }>;
+    conversation_flows: Array<{
+      flow_id: string;                  // "skincare_consultation"
+      completion_rate: number;          // 0.67
+      dropout_points: string[];         // ["step_3", "step_7"]
+    }>;
+  };
+  success_metrics: {
+    conversion_rate: number;            // 0.15 (15% users buy)
+    satisfaction_score: number;         // 4.2/5
+    resolution_rate: number;            // 0.78 (78% questions resolved)
+    avg_conversation_length: number;    // 6.5 messages
+    response_accuracy: number;          // 0.89 (89% accurate responses)
+  };
+  improvement_areas: Array<{
+    area: string;                       // "product_knowledge"
+    current_score: number;              // 7.5/10
+    target_score: number;               // 9.0/10
+    action_items: string[];             // ["Add more FAQs", "Update training data"]
+  }>;
+  optimization_suggestions: Array<{
+    suggestion: string;                 // "Thêm câu hỏi gợi ý cho da khô"
+    priority: "high" | "medium" | "low";
+    expected_impact: string;            // "Tăng conversion rate 5%"
+    implementation_effort: "easy" | "moderate" | "complex";
+  }>;
+}
+
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -495,6 +717,74 @@ export const products = pgTable("products", {
     "competitor_advantages": [],
     "risk_mitigation": [],
     "trust_builders": []
+  }'::jsonb`),
+
+  // 🤖 EXTENDED RASA CONSULTATION FEATURES
+  // 6. Smart FAQ - Câu hỏi thường gặp thông minh
+  smartFAQ: jsonb("smart_faq").$type<SmartFAQData>().default(sql`'{
+    "questions": [],
+    "context_mapping": {},
+    "confidence_thresholds": {
+      "high": 0.8,
+      "medium": 0.6,
+      "low": 0.4
+    },
+    "follow_up_suggestions": []
+  }'::jsonb`),
+
+  // 7. Needs Assessment - Đánh giá nhu cầu khách hàng
+  needsAssessment: jsonb("needs_assessment").$type<NeedsAssessmentData>().default(sql`'{
+    "assessment_questions": [],
+    "problem_mapping": {},
+    "solution_pathways": [],
+    "matching_algorithm": "weighted_score"
+  }'::jsonb`),
+
+  // 8. Bot Personality - Tính cách chatbot
+  botPersonality: jsonb("bot_personality").$type<BotPersonalityData>().default(sql`'{
+    "tone": "friendly",
+    "style": "professional",
+    "empathy_responses": [],
+    "conversation_starters": [],
+    "escalation_triggers": []
+  }'::jsonb`),
+
+  // 9. Consultation Scenarios - Kịch bản tư vấn
+  consultationScenarios: jsonb("consultation_scenarios").$type<ConsultationScenariosData>().default(sql`'{
+    "scenarios": [],
+    "decision_trees": {},
+    "outcome_mapping": {},
+    "success_metrics": {}
+  }'::jsonb`),
+
+  // 10. Competitor Comparison - So sánh đối thủ
+  competitorComparison: jsonb("competitor_comparison").$type<CompetitorComparisonData>().default(sql`'{
+    "competitors": [],
+    "comparison_matrix": {},
+    "unique_advantages": [],
+    "pricing_strategy": {},
+    "market_positioning": ""
+  }'::jsonb`),
+
+  // 11. Cross-sell Data - Gợi ý sản phẩm bổ sung
+  crossSellData: jsonb("cross_sell_data").$type<CrossSellData>().default(sql`'{
+    "related_products": [],
+    "bundle_suggestions": [],
+    "upsell_opportunities": [],
+    "timing_triggers": [],
+    "success_rates": {}
+  }'::jsonb`),
+
+  // 12. Consultation Tracking - Theo dõi hiệu quả tư vấn
+  consultationTracking: jsonb("consultation_tracking").$type<ConsultationTrackingData>().default(sql`'{
+    "interaction_patterns": {},
+    "success_metrics": {
+      "conversion_rate": 0,
+      "satisfaction_score": 0,
+      "resolution_rate": 0
+    },
+    "improvement_areas": [],
+    "optimization_suggestions": []
   }'::jsonb`),
   
   createdAt: timestamp("created_at").defaultNow(),
