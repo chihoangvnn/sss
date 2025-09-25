@@ -32,7 +32,8 @@ import {
   TestTube,
   CheckCircle2,
   Activity,
-  Facebook
+  Facebook,
+  Send
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1688,6 +1689,27 @@ export function FacebookAppsManagerPanel() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Edit Tags</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleTestPost(app)}
+                            disabled={testingPost === app.id}
+                            className="h-6 w-6 p-0"
+                          >
+                            {testingPost === app.id ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Send className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Test Post</p>
                         </TooltipContent>
                       </Tooltip>
                       
