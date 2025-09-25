@@ -288,4 +288,119 @@ router.post('/conversations/:sessionId/messages', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/rasa/conversations/backend/chat-logs
+ * Backend Chat Logs Viewer - Raw format for backend access
+ */
+router.get('/conversations/backend/chat-logs', async (req, res) => {
+  try {
+    const { limit = '10', format = 'json' } = req.query;
+    const limitNum = parseInt(limit as string, 10);
+    
+    // Get recent conversations
+    const conversations = await storage.getChatbotConversations(limitNum);
+
+    if (format === 'text') {
+      // Format as readable text for backend viewing
+      let output = `=== BACKEND CHAT LOGS (Latest ${limitNum}) ===\n\n`;
+      
+      for (let i = 0; i < conversations.length; i++) {
+        const conv = conversations[i];
+        output += `--- Conversation ${i + 1} ---\n`;
+        output += `🆔 ID: ${conv.id}\n`;
+        output += `👤 Session: ${conv.sessionId}\n`;
+        output += `📊 Status: ${conv.status}\n`;
+        output += `⏰ Created: ${conv.createdAt}\n`;
+        output += `💬 Message Count: ${conv.messages ? JSON.parse(conv.messages as string).length : 0}\n\n`;
+        
+        try {
+          const messages = conv.messages ? JSON.parse(conv.messages as string) : [];
+          messages.forEach((msg: any, msgIndex: number) => {
+            const timestamp = new Date(msg.timestamp).toLocaleString('vi-VN');
+            output += `  [${msgIndex + 1}] ${timestamp}\n`;
+            output += `  ${msg.senderType === 'user' ? '👤 USER' : '🤖 BOT'}: ${msg.content}\n`;
+            
+            if (msg.metadata?.buttons && msg.metadata.buttons.length > 0) {
+              output += `      🔘 Buttons: ${msg.metadata.buttons.map((b: any) => b.title).join(', ')}\n`;
+            }
+            
+            if (msg.metadata?.custom) {
+              output += `      ℹ️  Custom: ${JSON.stringify(msg.metadata.custom)}\n`;
+            }
+            output += `\n`;
+          });
+        } catch (e) {
+          output += `  ❌ [Error parsing messages: ${e instanceof Error ? e.message : String(e)}]\n`;
+        }
+        
+        output += `${'='.repeat(60)}\n\n`;
+      }
+
+      // Add summary
+      output += `\n📈 SUMMARY:\n`;
+      output += `Total Conversations: ${conversations.length}\n`;
+      output += `Active Conversations: ${conversations.filter(c => c.status === 'active').length}\n`;
+      output += `Generated: ${new Date().toLocaleString('vi-VN')}\n`;
+
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.send(output);
+    }
+
+    // Default JSON format - detailed for backend use
+    const detailedConversations = conversations.map(conv => {
+      try {
+        const messages = conv.messages ? JSON.parse(conv.messages as string) : [];
+        return {
+          id: conv.id,
+          sessionId: conv.sessionId,
+          status: conv.status,
+          messageCount: messages.length,
+          createdAt: conv.createdAt,
+          messages: messages.map((msg: any) => ({
+            id: msg.id,
+            senderType: msg.senderType,
+            senderName: msg.senderName,
+            content: msg.content,
+            messageType: msg.messageType,
+            timestamp: msg.timestamp,
+            hasButtons: msg.metadata?.hasButtons || false,
+            buttons: msg.metadata?.buttons || [],
+            metadata: msg.metadata
+          })),
+          latestMessage: messages.length > 0 ? messages[messages.length - 1].content : null,
+          latestMessageTime: messages.length > 0 ? messages[messages.length - 1].timestamp : null
+        };
+      } catch (e) {
+        return {
+          id: conv.id,
+          sessionId: conv.sessionId,
+          status: conv.status,
+          messageCount: 0,
+          createdAt: conv.createdAt,
+          messages: [],
+          error: `Failed to parse messages: ${e instanceof Error ? e.message : String(e)}`
+        };
+      }
+    });
+
+    res.json({
+      status: 'success',
+      message: 'Backend chat logs retrieved successfully',
+      timestamp: new Date().toISOString(),
+      totalConversations: conversations.length,
+      activeConversations: conversations.filter(c => c.status === 'active').length,
+      conversations: detailedConversations
+    });
+
+  } catch (error) {
+    console.error('🚨 Backend chat logs error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Failed to fetch backend chat logs', 
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 export default router;
