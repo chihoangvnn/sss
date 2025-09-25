@@ -1008,3 +1008,13 @@ export function ObjectionHandlingDataForm({ data, onChange }: ObjectionHandlingD
     </div>
   );
 }
+// Re-export consultation forms
+export {
+  SmartFAQForm,
+  NeedsAssessmentForm,
+  BotPersonalityForm,
+  ConsultationScenariosForm,
+  CompetitorComparisonForm,
+  CrossSellDataForm,
+  ConsultationTrackingForm
+} from "./ConsultationForms";

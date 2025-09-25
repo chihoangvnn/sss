@@ -19,7 +19,14 @@ import {
   PersonalizationDataForm, 
   LeadingQuestionsDataForm, 
   ObjectionHandlingDataForm,
-  SalesModuleSection
+  SalesModuleSection,
+  SmartFAQForm,
+  NeedsAssessmentForm,
+  BotPersonalityForm,
+  ConsultationScenariosForm,
+  CompetitorComparisonForm,
+  CrossSellDataForm,
+  ConsultationTrackingForm
 } from "./admin/SalesModuleComponents";
 import type { 
   CloudinaryImage, 
@@ -29,7 +36,14 @@ import type {
   SocialProofData, 
   PersonalizationData,
   LeadingQuestionsData,
-  ObjectionHandlingData
+  ObjectionHandlingData,
+  SmartFAQData,
+  NeedsAssessmentData,
+  BotPersonalityData,
+  ConsultationScenariosData,
+  CompetitorComparisonData,
+  CrossSellData,
+  ConsultationTrackingData
 } from "@shared/schema";
 
 // Types remain the same as original
@@ -1382,6 +1396,112 @@ function AITab({
                 onChange={(data) => setSalesData((prev: any) => ({ ...prev, objectionHandlingData: data }))}
               />
             </SalesModuleSection>
+
+            {/* 🤖 EXTENDED RASA CONSULTATION FEATURES */}
+            <div className="border-t pt-6 mt-6">
+              <h5 className="text-lg font-semibold text-gray-900 mb-4">🤖 RASA Consultation Enhancement</h5>
+              <p className="text-sm text-gray-600 mb-4">
+                Các tính năng tư vấn nâng cao cho RASA bot, giúp cải thiện trải nghiệm khách hàng và tỷ lệ chuyển đổi.
+              </p>
+
+              {/* 6. Smart FAQ */}
+              <SalesModuleSection
+                title="💡 Smart FAQ - Câu hỏi thường gặp thông minh"
+                icon={<HelpCircle className="h-5 w-5 text-yellow-600" />}
+                moduleKey="smartFAQ"
+                isOpen={moduleCollapseState.smartFAQ}
+                onToggle={toggleModuleCollapse}
+              >
+                <SmartFAQForm
+                  data={salesData.smartFAQ || { questions: [], context_mapping: {}, confidence_thresholds: { high: 0.8, medium: 0.6, low: 0.4 }, follow_up_suggestions: [] }}
+                  onChange={(data) => setSalesData((prev: any) => ({ ...prev, smartFAQ: data }))}
+                />
+              </SalesModuleSection>
+
+              {/* 7. Needs Assessment */}
+              <SalesModuleSection
+                title="🎯 Needs Assessment - Đánh giá nhu cầu khách hàng"
+                icon={<Target className="h-5 w-5 text-indigo-600" />}
+                moduleKey="needsAssessment"
+                isOpen={moduleCollapseState.needsAssessment}
+                onToggle={toggleModuleCollapse}
+              >
+                <NeedsAssessmentForm
+                  data={salesData.needsAssessment || { assessment_questions: [], problem_mapping: {}, solution_pathways: [], matching_algorithm: "weighted_score" }}
+                  onChange={(data) => setSalesData((prev: any) => ({ ...prev, needsAssessment: data }))}
+                />
+              </SalesModuleSection>
+
+              {/* 8. Bot Personality */}
+              <SalesModuleSection
+                title="🤖 Bot Personality - Tính cách chatbot"
+                icon={<MessageCircle className="h-5 w-5 text-pink-600" />}
+                moduleKey="botPersonality"
+                isOpen={moduleCollapseState.botPersonality}
+                onToggle={toggleModuleCollapse}
+              >
+                <BotPersonalityForm
+                  data={salesData.botPersonality || { tone: "friendly", style: "professional", empathy_responses: [], conversation_starters: [], escalation_triggers: [], cultural_adaptation: { vietnamese_context: true, regional_preferences: [], local_expressions: [] } }}
+                  onChange={(data) => setSalesData((prev: any) => ({ ...prev, botPersonality: data }))}
+                />
+              </SalesModuleSection>
+
+              {/* 9. Consultation Scenarios */}
+              <SalesModuleSection
+                title="📋 Consultation Scenarios - Kịch bản tư vấn"
+                icon={<MessageCircle className="h-5 w-5 text-teal-600" />}
+                moduleKey="consultationScenarios"
+                isOpen={moduleCollapseState.consultationScenarios}
+                onToggle={toggleModuleCollapse}
+              >
+                <ConsultationScenariosForm
+                  data={salesData.consultationScenarios || { scenarios: [], decision_trees: {}, outcome_mapping: {}, success_metrics: {} }}
+                  onChange={(data) => setSalesData((prev: any) => ({ ...prev, consultationScenarios: data }))}
+                />
+              </SalesModuleSection>
+
+              {/* 10. Competitor Comparison */}
+              <SalesModuleSection
+                title="⚖️ Competitor Comparison - So sánh đối thủ"
+                icon={<Target className="h-5 w-5 text-red-600" />}
+                moduleKey="competitorComparison"
+                isOpen={moduleCollapseState.competitorComparison}
+                onToggle={toggleModuleCollapse}
+              >
+                <CompetitorComparisonForm
+                  data={salesData.competitorComparison || { competitors: [], comparison_matrix: {}, unique_advantages: [], pricing_strategy: { positioning: "value", justification: [] }, market_positioning: "" }}
+                  onChange={(data) => setSalesData((prev: any) => ({ ...prev, competitorComparison: data }))}
+                />
+              </SalesModuleSection>
+
+              {/* 11. Cross-sell Data */}
+              <SalesModuleSection
+                title="🔗 Cross-sell Data - Gợi ý sản phẩm bổ sung"
+                icon={<Target className="h-5 w-5 text-cyan-600" />}
+                moduleKey="crossSellData"
+                isOpen={moduleCollapseState.crossSellData}
+                onToggle={toggleModuleCollapse}
+              >
+                <CrossSellDataForm
+                  data={salesData.crossSellData || { related_products: [], bundle_suggestions: [], upsell_opportunities: [], timing_triggers: [], success_rates: {} }}
+                  onChange={(data) => setSalesData((prev: any) => ({ ...prev, crossSellData: data }))}
+                />
+              </SalesModuleSection>
+
+              {/* 12. Consultation Tracking */}
+              <SalesModuleSection
+                title="📊 Consultation Tracking - Theo dõi hiệu quả tư vấn"
+                icon={<Target className="h-5 w-5 text-gray-600" />}
+                moduleKey="consultationTracking"
+                isOpen={moduleCollapseState.consultationTracking}
+                onToggle={toggleModuleCollapse}
+              >
+                <ConsultationTrackingForm
+                  data={salesData.consultationTracking || { interaction_patterns: { common_questions: [], conversation_flows: [] }, success_metrics: { conversion_rate: 0, satisfaction_score: 0, resolution_rate: 0, avg_conversation_length: 0, response_accuracy: 0 }, improvement_areas: [], optimization_suggestions: [] }}
+                  onChange={(data) => setSalesData((prev: any) => ({ ...prev, consultationTracking: data }))}
+                />
+              </SalesModuleSection>
+            </div>
           </div>
         </div>
       ) : (
