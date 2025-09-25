@@ -767,19 +767,19 @@ export function FacebookAppsManagerPanel() {
   }
 
   return (
-    <div className="space-y-6 transform scale-[0.8] origin-top-left">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Facebook Apps Manager</h1>
-          <p className="text-gray-600 mt-1">Quản lý cấu hình Facebook Apps và webhook</p>
+          <h1 className="text-3xl font-bold text-gray-900">Facebook Apps Manager</h1>
+          <p className="text-base text-gray-600 mt-2">Quản lý cấu hình Facebook Apps và webhook</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Template Downloads */}
           <FacebookAppTemplateDownload variant="compact" />
           {/* Add Facebook App Button */}
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-base">
+            <Plus className="h-5 w-5 mr-2" />
             Kết nối Facebook App
           </Button>
         </div>
@@ -787,20 +787,20 @@ export function FacebookAppsManagerPanel() {
 
       {/* 📤 BULK IMPORT SECTION */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <Upload className="h-6 w-6" />
             Bulk Import Facebook Apps
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+        <CardContent className="pt-2">
+          <div className="space-y-6">
+            <p className="text-base text-gray-600">
               Upload CSV or JSON file để import nhiều Facebook Apps cùng lúc
             </p>
             
             {/* File Upload Area */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
               <input
                 type="file"
                 accept=".csv,.json"
@@ -809,23 +809,23 @@ export function FacebookAppsManagerPanel() {
                 onChange={() => {/* TODO: Handle file upload */}}
               />
               <label htmlFor="bulk-upload" className="cursor-pointer">
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-900 mb-2">
+                <Upload className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+                <p className="text-xl font-medium text-gray-900 mb-3">
                   Click to upload hoặc drag & drop
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-base text-gray-500">
                   CSV, JSON files (max 10MB)
                 </p>
               </label>
             </div>
             
             <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-500">
+              <div className="text-base text-gray-500">
                 Tải template: 
                 <FacebookAppTemplateDownload variant="compact" />
               </div>
-              <Button disabled className="opacity-50">
-                <Upload className="h-4 w-4 mr-2" />
+              <Button disabled className="opacity-50 px-6 py-3 text-base">
+                <Upload className="h-5 w-5 mr-2" />
                 Import Apps
               </Button>
             </div>
@@ -1323,55 +1323,55 @@ export function FacebookAppsManagerPanel() {
         </Dialog>
 
         {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Settings className="h-5 w-5 text-blue-600" />
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Settings className="h-7 w-7 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Tổng Apps</p>
-                <p className="text-xl font-semibold">{apps.length}</p>
+                <p className="text-base text-gray-600">Tổng Apps</p>
+                <p className="text-2xl font-semibold">{apps.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle className="h-7 w-7 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Đang hoạt động</p>
-                <p className="text-xl font-semibold">{apps.filter(app => app.isActive).length}</p>
+                <p className="text-base text-gray-600">Đang hoạt động</p>
+                <p className="text-2xl font-semibold">{apps.filter(app => app.isActive).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <XCircle className="h-5 w-5 text-red-600" />
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <XCircle className="h-7 w-7 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Tạm dừng</p>
-                <p className="text-xl font-semibold">{apps.filter(app => !app.isActive).length}</p>
+                <p className="text-base text-gray-600">Tạm dừng</p>
+                <p className="text-2xl font-semibold">{apps.filter(app => !app.isActive).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Globe className="h-5 w-5 text-orange-600" />
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-100 rounded-lg">
+                <Globe className="h-7 w-7 text-orange-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Production</p>
-                <p className="text-xl font-semibold">{apps.filter(app => app.environment === 'production').length}</p>
+                <p className="text-base text-gray-600">Production</p>
+                <p className="text-2xl font-semibold">{apps.filter(app => app.environment === 'production').length}</p>
               </div>
             </div>
           </CardContent>
@@ -1380,21 +1380,21 @@ export function FacebookAppsManagerPanel() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <Input
                   placeholder="Tìm kiếm theo tên app hoặc App ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-12 h-12 text-base"
                 />
               </div>
             </div>
             <Select value={environmentFilter} onValueChange={setEnvironmentFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
+              <SelectTrigger className="w-full md:w-[200px] h-12 text-base">
                 <SelectValue placeholder="Môi trường" />
               </SelectTrigger>
               <SelectContent>
@@ -1405,7 +1405,7 @@ export function FacebookAppsManagerPanel() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[140px]">
+              <SelectTrigger className="w-full md:w-[160px] h-12 text-base">
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
               <SelectContent>
@@ -1627,16 +1627,16 @@ export function FacebookAppsManagerPanel() {
                     </div>
                     
                     {/* Actions Column */}
-                    <div className="flex-1 flex items-center gap-1">
+                    <div className="flex-1 flex items-center gap-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="default"
                             onClick={() => handleToggleStatus(app.id, !app.isActive)}
-                            className="h-6 w-6 p-0"
+                            className="h-9 w-9 p-0"
                           >
-                            {app.isActive ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                            {app.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1648,11 +1648,11 @@ export function FacebookAppsManagerPanel() {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="default"
                             onClick={() => window.open(`https://developers.facebook.com/apps/${app.appId}/settings/basic/`, '_blank', 'noopener,noreferrer')}
-                            className="h-6 w-6 p-0"
+                            className="h-9 w-9 p-0"
                           >
-                            <ExternalLink className="h-3 w-3" />
+                            <ExternalLink className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1664,11 +1664,11 @@ export function FacebookAppsManagerPanel() {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="default"
                             onClick={() => handleEditApp(app)}
-                            className="h-6 w-6 p-0"
+                            className="h-9 w-9 p-0"
                           >
-                            <Edit3 className="h-3 w-3" />
+                            <Edit3 className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1680,11 +1680,11 @@ export function FacebookAppsManagerPanel() {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="default"
                             onClick={() => handleEditAppTags(app)}
-                            className="h-6 w-6 p-0"
+                            className="h-9 w-9 p-0"
                           >
-                            <Tags className="h-3 w-3" />
+                            <Tags className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1696,15 +1696,15 @@ export function FacebookAppsManagerPanel() {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="default"
                             onClick={() => handleTestPost(app)}
                             disabled={testingPost === app.id}
-                            className="h-6 w-6 p-0"
+                            className="h-9 w-9 p-0"
                           >
                             {testingPost === app.id ? (
-                              <RefreshCw className="h-3 w-3 animate-spin" />
+                              <RefreshCw className="h-4 w-4 animate-spin" />
                             ) : (
-                              <Send className="h-3 w-3" />
+                              <Send className="h-4 w-4" />
                             )}
                           </Button>
                         </TooltipTrigger>
@@ -1717,8 +1717,8 @@ export function FacebookAppsManagerPanel() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-600 hover:text-red-700">
-                                <Trash2 className="h-3 w-3" />
+                              <Button variant="ghost" size="default" className="h-9 w-9 p-0 text-red-600 hover:text-red-700">
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
                           </TooltipTrigger>
