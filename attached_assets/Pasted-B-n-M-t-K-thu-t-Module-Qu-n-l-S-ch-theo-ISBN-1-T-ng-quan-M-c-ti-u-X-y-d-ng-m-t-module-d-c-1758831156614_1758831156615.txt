@@ -1,0 +1,139 @@
+Bản Mô tả Kỹ thuật: Module Quản lý Sách theo ISBN
+1. Tổng quan & Mục tiêu 🎯
+Xây dựng một module dịch vụ (microservice) độc lập để quản lý và tổng hợp thông tin sách từ nhiều nguồn khác nhau. Module này sẽ hoạt động như một cơ sở dữ liệu trung tâm về sách, được cập nhật bởi một công cụ crawler và cung cấp dữ liệu cho các trang web khác thông qua API.
+
+Định danh duy nhất: ISBN (hỗ trợ cả ISBN-10 và ISBN-13).
+
+Chức năng chính:
+
+Lưu trữ thông tin cốt lõi của sách.
+
+Theo dõi giá và tình trạng sách từ nhiều nhà cung cấp (Amazon, Walmart, v.v.).
+
+Ghi lại lịch sử cập nhật giá.
+
+Cung cấp API công khai (read-only) để các hệ thống khác truy xuất dữ liệu.
+
+2. Cấu trúc Dữ liệu (Database Schema) 🗃️
+Chúng ta sẽ cần ít nhất hai bảng chính để lưu trữ dữ liệu một cách hiệu quả.
+
+Bảng 1: Books (Thông tin cốt lõi của sách)
+Bảng này chứa các thông tin ít thay đổi của một đầu sách.
+
+Tên cột	Kiểu dữ liệu	Mô tả	Ghi chú
+isbn	VARCHAR(13)	Mã ISBN-13 của sách.	Primary Key
+isbn10	VARCHAR(10)	Mã ISBN-10 (nếu có).	Indexed
+title	VARCHAR(255)	Tên sách.	
+author	VARCHAR(255)	Tác giả.	
+format	ENUM('Paperback', 'Hardcover', 'eBook', 'Unknown')	Phân loại bìa sách.	
+review_count	INT	Tổng số lượt đánh giá (lấy từ nguồn chính).	
+average_rating	DECIMAL(3, 2)	Điểm đánh giá trung bình (ví dụ: 4.50).	
+cover_image_url	VARCHAR(255)	URL ảnh bìa sách.	
+created_at	TIMESTAMP	Thời gian tạo record.	
+updated_at	TIMESTAMP	Thời gian cập nhật record gần nhất.	
+
+Xuất sang Trang tính
+Bảng 2: BookPrices (Giá và Tình trạng từ các Nguồn)
+Bảng này lưu trữ thông tin thường xuyên thay đổi từ các nhà cung cấp.
+
+Tên cột	Kiểu dữ liệu	Mô tả	Ghi chú
+id	BIGINT	ID tự tăng.	Primary Key
+book_isbn	VARCHAR(13)	Khóa ngoại, liên kết tới Books.isbn.	Foreign Key, Indexed
+source	VARCHAR(50)	Nguồn cung cấp (ví dụ: 'Amazon', 'Walmart').	Indexed
+price	DECIMAL(10, 2)	Giá sách.	
+currency	VARCHAR(3)	Đơn vị tiền tệ (ví dụ: 'USD', 'VND').	
+status	ENUM('In Stock', 'Out of Stock', 'Pre-order')	Tình trạng còn hàng.	
+source_url	VARCHAR(255)	Link đến trang sản phẩm của nguồn đó.	
+last_updated_at	TIMESTAMP	Thời gian crawler gọi API để cập nhật.	
+
+Xuất sang Trang tính
+3. Luồng Dữ liệu (Data Flow) 🌊
+Luồng cập nhật dữ liệu:
+Crawler Tool ➡️ [POST] Internal Update API ➡️ Book Service Logic ➡️ Lưu vào Database (Bảng Books & BookPrices)
+
+Luồng truy xuất dữ liệu:
+Website bên ngoài ➡️ [GET] Public Data API ➡️ Book Service Logic ➡️ Đọc từ Database ➡️ Trả về dữ liệu JSON
+
+4. Thiết kế API ⚙️
+Module cần cung cấp hai nhóm API: Internal (để crawler cập nhật) và Public (để các bên khác lấy dữ liệu).
+
+4.1. Internal API (Dành cho Crawler - Yêu cầu xác thực bằng API Key)
+Endpoint: POST /api/internal/books/update
+
+Mô tả: Thêm mới hoặc cập nhật đồng thời thông tin sách và giá từ một nguồn cụ thể. Service sẽ tự kiểm tra xem ISBN đã tồn tại hay chưa để quyết định tạo mới hay cập nhật.
+
+Request Body (JSON):
+
+JSON
+
+{
+  "isbn": "9780593359396",
+  "isbn10": "0593359391",
+  "title": "A Court of Thorns and Roses",
+  "author": "Sarah J. Maas",
+  "format": "Paperback",
+  "review_count": 150000,
+  "average_rating": 4.7,
+  "cover_image_url": "http://example.com/cover.jpg",
+  "price_data": {
+    "source": "Amazon",
+    "price": 12.99,
+    "currency": "USD",
+    "status": "In Stock",
+    "source_url": "http://amazon.com/dp/0593359391"
+  }
+}
+Response:
+
+200 OK: { "status": "success", "message": "Book data updated." }
+
+400 Bad Request: { "status": "error", "message": "Invalid input data." }
+
+401 Unauthorized: Lỗi sai API Key.
+
+4.2. Public API (Công khai, Read-only)
+Endpoint 1: Lấy thông tin chi tiết sách theo ISBN
+GET /api/public/books/{isbn}
+
+Mô tả: Lấy toàn bộ thông tin chi tiết của một cuốn sách, bao gồm giá từ tất cả các nguồn đã được cập nhật.
+
+Response (JSON):
+
+JSON
+
+{
+  "isbn": "9780593359396",
+  "isbn10": "0593359391",
+  "title": "A Court of Thorns and Roses",
+  "author": "Sarah J. Maas",
+  "format": "Paperback",
+  "review_count": 150000,
+  "average_rating": 4.7,
+  "cover_image_url": "http://example.com/cover.jpg",
+  "updated_at": "2025-09-26T10:00:00Z",
+  "prices": [
+    {
+      "source": "Amazon",
+      "price": 12.99,
+      "currency": "USD",
+      "status": "In Stock",
+      "source_url": "http://amazon.com/dp/0593359391",
+      "last_updated_at": "2025-09-26T09:30:00Z"
+    },
+    {
+      "source": "Walmart",
+      "price": 13.50,
+      "currency": "USD",
+      "status": "Out of Stock",
+      "source_url": "http://walmart.com/...",
+      "last_updated_at": "2025-09-26T08:45:00Z"
+    }
+  ]
+}
+Endpoint 2: Tìm kiếm sách
+GET /api/public/books/search?q={keyword}&limit=20&page=1
+
+Mô tả: Tìm kiếm sách theo title hoặc author.
+
+Response: Trả về một danh sách các đối tượng sách (có thể không kèm giá để tăng tốc độ), có phân trang.
+
