@@ -1621,38 +1621,42 @@ function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setS
                 </div>
               )}
 
-              {/* Contexts Tab */}
+              {/* Contexts Tab - Temporarily commented out due to syntax issues
               {activeTab === 'contexts' && (
                 <div className="space-y-4">
                   <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 px-3 py-1">
-                    🎯 Context Variations • {Object.keys(generatedDescriptions.contexts || {}).length} contexts
+                    🎯 Context Mappings • {Object.keys(generatedDescriptions.contexts || {}).length} contexts
                   </Badge>
                   <div className="grid gap-4">
-                    {Object.entries(generatedDescriptions.contexts || {}).map(([context, description]: [string, any]) => (
-                      <Card key={context} className="border border-orange-200 hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <h6 className="font-semibold text-gray-800 capitalize flex items-center gap-2">
-                              <Tag className="h-4 w-4 text-orange-600" />
-                              {context.replace('_', ' ')}
-                            </h6>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(description)}
-                              className="h-7 w-7 p-0 hover:bg-gray-100"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <p className="text-gray-700 text-sm leading-relaxed">{description}</p>
+                    {Object.entries(generatedDescriptions.contexts || {}).map(([context, rasaIndex]: [string, any]) => {
+                      const rasaVariation = generatedDescriptions.rasa_variations?.[rasaIndex as string];
+                      return (
+                        <Card key={context} className="border border-orange-200 hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h6 className="font-semibold text-gray-800 capitalize flex items-center gap-2">
+                                <Tag className="h-4 w-4 text-orange-600" />
+                                {context.replace('_', ' ')} → RASA Variant #{rasaIndex}
+                              </h6>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(rasaVariation || 'No variation found')}
+                                className="h-7 w-7 p-0 hover:bg-gray-100"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <p className="text-gray-700 text-sm leading-relaxed">
+                              {rasaVariation || <span className="text-gray-400 italic">No variation mapped</span>}
+                            </p>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* SEO Data Tab */}
               {activeTab === 'seo' && (
