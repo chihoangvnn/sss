@@ -1,7 +1,7 @@
 import { Express } from 'express';
 import { storage } from './storage';
 import { firebaseStorage } from './firebase-storage';
-import { RasaDescriptions } from '../shared/schema';
+import { RasaDescriptions, ConsultationType } from '../shared/schema';
 import { z } from 'zod';
 
 // Authentication middleware for RASA endpoints
@@ -1149,7 +1149,7 @@ export function setupRasaRoutes(app: Express) {
         });
       }
 
-      const customer = await storage.getCustomer(order.customerId);
+      const customer = order.customerId ? await storage.getCustomer(order.customerId) : null;
 
       res.json({
         status: "success",
@@ -1995,8 +1995,8 @@ export function setupRasaRoutes(app: Express) {
           }
 
           // Apply consultation type filter if specified
-          if (consultation_type && categoryInfo) {
-            if (!categoryInfo.consultationTypes.includes(consultation_type)) {
+          if (consultation_type && categoryInfo && typeof consultation_type === 'string') {
+            if (!categoryInfo.consultationTypes.includes(consultation_type as ConsultationType)) {
               continue;
             }
           }
@@ -2075,23 +2075,23 @@ export function setupRasaRoutes(app: Express) {
 
       switch (questionType) {
         case "usage_guide":
-          if (templates.usage_guide_template && consultationData.cách_thoa) {
-            advice = templates.usage_guide_template
-              .replace(/\{cách_thoa\}/g, consultationData.cách_thoa)
-              .replace(/\{tần_suất\}/g, consultationData.tần_suất || "theo hướng dẫn");
+          if ((templates as any).usage_guide_template && (consultationData as any).cách_thoa) {
+            advice = (templates as any).usage_guide_template
+              .replace(/\{cách_thoa\}/g, (consultationData as any).cách_thoa)
+              .replace(/\{tần_suất\}/g, (consultationData as any).tần_suất || "theo hướng dẫn");
           }
           break;
         case "safety_profile":
-          if (templates.safety_template && consultationData.lưu_ý_an_toàn) {
-            advice = templates.safety_template
-              .replace(/\{lưu_ý_an_toàn\}/g, consultationData.lưu_ý_an_toàn)
-              .replace(/\{patch_test_required\}/g, consultationData.patch_test_required || "");
+          if ((templates as any).safety_template && (consultationData as any).lưu_ý_an_toàn) {
+            advice = (templates as any).safety_template
+              .replace(/\{lưu_ý_an_toàn\}/g, (consultationData as any).lưu_ý_an_toàn)
+              .replace(/\{patch_test_required\}/g, (consultationData as any).patch_test_required || "");
           }
           break;
         case "care_instructions":
-          if (templates.care_template && consultationData.bảo_quản) {
-            advice = templates.care_template
-              .replace(/\{bảo_quản\}/g, consultationData.bảo_quản);
+          if ((templates as any).care_template && (consultationData as any).bảo_quản) {
+            advice = (templates as any).care_template
+              .replace(/\{bảo_quản\}/g, (consultationData as any).bảo_quản);
           }
           break;
         default:
