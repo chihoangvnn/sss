@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle, Target, AlertTriangle, Users, MessageCircle, ShieldCheck } from "lucide-react";
+import { X, Save, Wand2, Loader2, Eye, EyeOff, Copy, QrCode, HelpCircle, Target, AlertTriangle, Users, MessageCircle, ShieldCheck, FileText, Bot, Tag, Search } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ImageUploader } from "./ImageUploader";
 import { QRScanner } from "./QRScanner";
@@ -1215,84 +1216,14 @@ function AITab({
             </p>
           )}
 
-          {/* Generated Descriptions Preview */}
+          {/* Enhanced AI Generated Descriptions Preview with Tabs */}
           {generatedDescriptions && (
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h5 className="text-sm font-medium text-green-700">✅ Mô tả đã tạo bởi AI</h5>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
-                >
-                  {showDescriptionPreview ? (
-                    <EyeOff className="h-3 w-3 mr-1" />
-                  ) : (
-                    <Eye className="h-3 w-3 mr-1" />
-                  )}
-                  {showDescriptionPreview ? 'Ẩn' : 'Xem'} chi tiết
-                </Button>
-              </div>
-
-              {showDescriptionPreview && (
-                <div className="space-y-3">
-                  {/* Primary Description */}
-                  <div className="bg-white rounded p-3 border-l-4 border-green-500">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-green-700">Mô tả chính:</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(generatedDescriptions.primary)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <p className="text-sm text-gray-700 bg-green-50 p-2 rounded">
-                      {generatedDescriptions.primary}
-                    </p>
-                  </div>
-
-                  {/* RASA Variations */}
-                  <div className="bg-white rounded p-3 border-l-4 border-blue-500">
-                    <span className="text-sm font-medium text-blue-700 mb-2 block">🤖 RASA Chat Variations:</span>
-                    <div className="grid gap-2">
-                      {Object.entries(generatedDescriptions.rasa_variations || {}).map(([index, description]: [string, any]) => {
-                        const contextLabels = {
-                          "0": "🛡️ An toàn",
-                          "1": "⚡ Tiện lợi", 
-                          "2": "⭐ Chất lượng",
-                          "3": "💚 Sức khỏe"
-                        };
-                        return (
-                          <div key={index} className="flex items-start gap-2 bg-blue-50 p-2 rounded">
-                            <span className="text-xs font-medium text-blue-600 min-w-fit">
-                              {contextLabels[index as keyof typeof contextLabels]}:
-                            </span>
-                            <span className="text-sm text-gray-700 flex-1">{description}</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(description)}
-                              className="h-5 w-5 p-0 flex-shrink-0"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-blue-600 mt-2 italic">
-                      💡 RASA sẽ tự động chọn ngẫu nhiên 1 trong {Object.keys(generatedDescriptions.rasa_variations || {}).length} mô tả này khi chat với khách hàng
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            <EnhancedAIPreview 
+              generatedDescriptions={generatedDescriptions}
+              showDescriptionPreview={showDescriptionPreview}
+              setShowDescriptionPreview={setShowDescriptionPreview}
+              copyToClipboard={copyToClipboard}
+            />
           )}
         </div>
       </SalesModuleSection>
@@ -1515,6 +1446,268 @@ function AITab({
             Hãy điền thông tin cơ bản và lưu sản phẩm trước.
           </p>
         </div>
+      )}
+    </div>
+  );
+}
+
+// Enhanced AI Preview Component with Professional Tabs UI
+function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setShowDescriptionPreview, copyToClipboard }: any) {
+  const [activeTab, setActiveTab] = useState('primary');
+
+  const tabs = [
+    { id: 'primary', label: '📝 Mô tả chính', icon: <FileText className="h-4 w-4" />, count: 1 },
+    { id: 'rasa', label: '🤖 RASA Variants', icon: <Bot className="h-4 w-4" />, count: Object.keys(generatedDescriptions.rasa_variations || {}).length },
+    { id: 'contexts', label: '🎯 Contexts', icon: <Tag className="h-4 w-4" />, count: Object.keys(generatedDescriptions.contexts || {}).length },
+    { id: 'seo', label: '🔍 SEO', icon: <Search className="h-4 w-4" />, count: (generatedDescriptions.seo_title || generatedDescriptions.seo_description) ? 1 : 0 }
+  ];
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="absolute inset-0 w-4 h-4 bg-green-400 rounded-full animate-ping opacity-75"></div>
+          </div>
+          <h5 className="text-sm font-semibold text-green-700 flex items-center gap-2">
+            ✨ AI Content Generated Successfully
+            <Badge variant="secondary" className="text-xs">
+              {tabs.reduce((sum, tab) => sum + tab.count, 0)} items
+            </Badge>
+          </h5>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowDescriptionPreview(!showDescriptionPreview)}
+          className="text-gray-600 hover:text-gray-800 border-green-200 hover:border-green-300"
+        >
+          {showDescriptionPreview ? (
+            <EyeOff className="h-4 w-4 mr-2" />
+          ) : (
+            <Eye className="h-4 w-4 mr-2" />
+          )}
+          {showDescriptionPreview ? 'Thu gọn preview' : 'Xem chi tiết'}
+        </Button>
+      </div>
+
+      {showDescriptionPreview && (
+        <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 via-white to-blue-50 shadow-lg">
+          <CardContent className="p-6">
+            {/* Professional Tab Navigation */}
+            <div className="flex flex-wrap gap-2 mb-6 p-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'bg-white text-blue-700 shadow-md ring-2 ring-blue-100'
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-white/60'
+                  }`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <Badge variant={activeTab === tab.id ? "default" : "outline"} className="text-xs min-w-[20px] h-5">
+                      {tab.count}
+                    </Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Enhanced Tab Content */}
+            <div className="space-y-6">
+              {/* Primary Description Tab */}
+              {activeTab === 'primary' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 px-3 py-1">
+                      📝 Primary Content • {generatedDescriptions.primary?.length || 0} characters
+                    </Badge>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(generatedDescriptions.primary)}
+                      className="h-8 gap-2 hover:bg-green-50 border-green-200"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copy Text
+                    </Button>
+                  </div>
+                  <Card className="border border-green-200">
+                    <CardContent className="p-4">
+                      <p className="text-gray-800 leading-relaxed text-sm">
+                        {generatedDescriptions.primary}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* RASA Variations Tab */}
+              {activeTab === 'rasa' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 px-3 py-1">
+                      🤖 RASA Chatbot Variations • {Object.keys(generatedDescriptions.rasa_variations || {}).length} variants
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4">
+                    {Object.entries(generatedDescriptions.rasa_variations || {}).map(([index, description]: [string, any]) => {
+                      const contextLabels = {
+                        "0": { label: "🛡️ An toàn & Tin cậy", color: "bg-green-100 text-green-800 border-green-300", accent: "border-l-green-500" },
+                        "1": { label: "⚡ Tiện lợi & Nhanh chóng", color: "bg-yellow-100 text-yellow-800 border-yellow-300", accent: "border-l-yellow-500" }, 
+                        "2": { label: "⭐ Chất lượng cao", color: "bg-purple-100 text-purple-800 border-purple-300", accent: "border-l-purple-500" },
+                        "3": { label: "💚 Sức khỏe & Tự nhiên", color: "bg-emerald-100 text-emerald-800 border-emerald-300", accent: "border-l-emerald-500" }
+                      };
+                      const context = contextLabels[index as keyof typeof contextLabels];
+                      return (
+                        <Card key={index} className={`border-l-4 ${context?.accent} border-gray-200 hover:shadow-md transition-shadow`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <Badge variant="outline" className={context?.color}>
+                                {context?.label}
+                              </Badge>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(description)}
+                                className="h-7 w-7 p-0 hover:bg-gray-100"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <p className="text-gray-700 text-sm leading-relaxed">{description}</p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                  <div className="text-center mt-4">
+                    <Badge variant="secondary" className="text-blue-600 px-4 py-2">
+                      💡 RASA bot sẽ tự động chọn variation phù hợp dựa trên context cuộc hội thoại
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Contexts Tab */}
+              {activeTab === 'contexts' && (
+                <div className="space-y-4">
+                  <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 px-3 py-1">
+                    🎯 Context Variations • {Object.keys(generatedDescriptions.contexts || {}).length} contexts
+                  </Badge>
+                  <div className="grid gap-4">
+                    {Object.entries(generatedDescriptions.contexts || {}).map(([context, description]: [string, any]) => (
+                      <Card key={context} className="border border-orange-200 hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h6 className="font-semibold text-gray-800 capitalize flex items-center gap-2">
+                              <Tag className="h-4 w-4 text-orange-600" />
+                              {context.replace('_', ' ')}
+                            </h6>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(description)}
+                              className="h-7 w-7 p-0 hover:bg-gray-100"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-gray-700 text-sm leading-relaxed">{description}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SEO Data Tab */}
+              {activeTab === 'seo' && (
+                <div className="space-y-4">
+                  <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-300 px-3 py-1">
+                    🔍 SEO Optimization Data
+                  </Badge>
+                  <Card className="border border-indigo-200">
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        {generatedDescriptions.seo_title && (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <Search className="h-4 w-4" />
+                                SEO Title
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(generatedDescriptions.seo_title)}
+                                className="h-6 w-6 p-0 hover:bg-gray-100"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <Card className="bg-gray-50 border border-gray-200">
+                              <CardContent className="p-3">
+                                <p className="text-gray-800 text-sm font-medium">
+                                  {generatedDescriptions.seo_title}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
+                        {generatedDescriptions.seo_description && (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                SEO Description
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(generatedDescriptions.seo_description)}
+                                className="h-6 w-6 p-0 hover:bg-gray-100"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <Card className="bg-gray-50 border border-gray-200">
+                              <CardContent className="p-3">
+                                <p className="text-gray-800 text-sm">
+                                  {generatedDescriptions.seo_description}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
+                        {!generatedDescriptions.seo_title && !generatedDescriptions.seo_description && (
+                          <div className="text-center py-12">
+                            <Search className="h-16 w-16 text-gray-400 mx-auto mb-4 opacity-50" />
+                            <p className="text-gray-500 font-medium">SEO data not available</p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              Try regenerating content with SEO optimization enabled
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
