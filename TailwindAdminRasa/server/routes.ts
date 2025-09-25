@@ -43,6 +43,75 @@ import satellitesRouter from './api/satellites';
 import postsRouter from './api/posts';
 import workersRouter from './api/workers';
 import regionAssignmentRouter from './api/region-assignment';
+
+// Vietnamese slug utility function
+function generateSlug(input: string): string {
+  if (!input || input.trim().length === 0) {
+    return 'san-pham';
+  }
+  
+  // Convert to lowercase and normalize Vietnamese diacritics
+  const slug = input
+    .toLowerCase()
+    .trim()
+    // Replace Vietnamese diacritics
+    .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g, 'a')
+    .replace(/[èéẹẻẽêềếệểễ]/g, 'e')
+    .replace(/[ìíịỉĩ]/g, 'i')
+    .replace(/[òóọỏõôồốộổỗơờớợởỡ]/g, 'o')
+    .replace(/[ùúụủũưừứựửữ]/g, 'u')
+    .replace(/[ỳýỵỷỹ]/g, 'y')
+    .replace(/đ/g, 'd')
+    // Remove non-alphanumeric characters except hyphens
+    .replace(/[^a-z0-9\s-]/g, '')
+    // Replace spaces with hyphens
+    .replace(/\s+/g, '-')
+    // Remove multiple consecutive hyphens
+    .replace(/-+/g, '-')
+    // Remove leading/trailing hyphens
+    .replace(/^-|-$/g, '');
+  
+  // Ensure slug is not empty
+  if (slug.length === 0) {
+    return 'san-pham';
+  }
+  
+  // Limit slug length
+  if (slug.length > 100) {
+    return slug.substring(0, 100).replace(/-$/, '');
+  }
+  
+  return slug;
+}
+
+// Generate unique slug with suffix handling
+async function generateUniqueSlug(baseSlug: string): Promise<string> {
+  let uniqueSlug = baseSlug;
+  let counter = 1;
+  
+  // Keep checking until we find a unique slug
+  while (true) {
+    try {
+      const existingProduct = await storage.getProductBySlug(uniqueSlug);
+      if (!existingProduct) {
+        // Slug is unique, return it
+        return uniqueSlug;
+      }
+      // Slug exists, try with suffix
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter++;
+      
+      // Safety check to prevent infinite loop
+      if (counter > 1000) {
+        return `${baseSlug}-${Date.now()}`;
+      }
+    } catch (error) {
+      // If there's an error checking, return the slug as-is
+      console.error("Error checking slug uniqueness:", error);
+      return uniqueSlug;
+    }
+  }
+}
 import jobCallbacksRouter from './api/job-callbacks';
 import systemHealthRouter from './api/system-health';
 import orchestratorRouter from './api/orchestrator';
@@ -563,9 +632,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error("Could not generate unique SKU after 10 attempts");
         }
       }
+      // Generate slug from name if not provided or empty
+      const baseSlug = validatedData.slug && validatedData.slug.trim().length > 0 
+        ? validatedData.slug.trim()
+        : generateSlug(validatedData.name || '');
+      
+      // Ensure slug is unique
+      const uniqueSlug = await generateUniqueSlug(baseSlug);
+      
       const productData = {
         ...validatedData,
-        sku: generatedSKU
+        sku: generatedSKU,
+        slug: uniqueSlug
       };
       
       const product = await storage.createProduct(productData);
