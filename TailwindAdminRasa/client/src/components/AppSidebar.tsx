@@ -275,6 +275,13 @@ const adminTechnicalItems = [
     description: "Quản lý và giám sát AI Chatbot",
     gradient: "gradient-orange"
   },
+  {
+    title: "Bot Status",
+    url: "/bot-status",
+    icon: Activity,
+    description: "Trạng thái bot real-time và logs",
+    gradient: "gradient-green"
+  },
 ];
 
 // Helper for social platform styling  
