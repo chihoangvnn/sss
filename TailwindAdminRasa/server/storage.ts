@@ -73,18 +73,18 @@ export interface IStorage {
   getProductsWithCategory(limit?: number, categoryId?: string, search?: string, offset?: number): Promise<(Product & { categoryName?: string })[]>;
 
   // Customer methods
-  getCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
-  getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]>;
+  getCustomer(id: string): Promise<(Customer & { totalDebt: string; creditLimit: string }) | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
   deleteCustomer(id: string): Promise<boolean>;
   getCustomerRecentAddress(customerId: string): Promise<string | null>;
   
   // Customer analytics methods for POS suggestions
-  searchCustomers(searchTerm: string, limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
-  getRecentCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
-  getVipCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
-  getFrequentCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]>;
+  searchCustomers(searchTerm: string, limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]>;
+  getRecentCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]>;
+  getVipCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]>;
+  getFrequentCustomers(limit?: number): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]>;
 
   // Order methods
   getOrders(limit?: number): Promise<(Order & { customerName: string; customerEmail: string })[]>;
@@ -99,6 +99,10 @@ export interface IStorage {
   getOrderItems(orderId: string): Promise<OrderItem[]>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
   deleteOrderItem(id: string): Promise<boolean>;
+
+  // Debt management methods
+  updateCustomerDebt(customerId: string, paymentAmount: number): Promise<Customer | undefined>;
+  getCustomerDebtInfo(customerId: string): Promise<{ totalDebt: number; creditLimit: number } | undefined>;
 
   // Social account methods
   getSocialAccounts(): Promise<SocialAccount[]>;
@@ -669,7 +673,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Customer methods
-  async getCustomers(limit = 50): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+  async getCustomers(limit = 50): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]> {
     const baseCustomers = await db.select().from(customers).orderBy(desc(customers.joinDate)).limit(limit);
     
     // Calculate enriched data for each customer
@@ -690,7 +694,9 @@ export class DatabaseStorage implements IStorage {
           ...customer,
           totalOrders: Number(stats.totalOrders) || 0,
           totalSpent: Number(stats.totalSpent) || 0,
-          lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+          lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString(),
+          totalDebt: customer.totalDebt || '0',
+          creditLimit: customer.creditLimit || '0'
         };
       })
     );
@@ -698,9 +704,15 @@ export class DatabaseStorage implements IStorage {
     return enrichedCustomers;
   }
 
-  async getCustomer(id: string): Promise<Customer | undefined> {
+  async getCustomer(id: string): Promise<(Customer & { totalDebt: string; creditLimit: string }) | undefined> {
     const [customer] = await db.select().from(customers).where(eq(customers.id, id));
-    return customer || undefined;
+    if (!customer) return undefined;
+    
+    return {
+      ...customer,
+      totalDebt: customer.totalDebt || '0',
+      creditLimit: customer.creditLimit || '0'
+    };
   }
 
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
@@ -761,7 +773,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Customer analytics methods for POS suggestions
-  async searchCustomers(searchTerm: string, limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+  async searchCustomers(searchTerm: string, limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]> {
     try {
       // Search customers by name, phone, or email
       const baseCustomers = await db
@@ -795,7 +807,9 @@ export class DatabaseStorage implements IStorage {
             ...customer,
             totalOrders: Number(stats.totalOrders) || 0,
             totalSpent: Number(stats.totalSpent) || 0,
-            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString(),
+            totalDebt: customer.totalDebt || '0',
+            creditLimit: customer.creditLimit || '0'
           };
         })
       );
@@ -807,7 +821,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getRecentCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+  async getRecentCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]> {
     try {
       // Get customers with orders in the last 30 days
       const thirtyDaysAgo = new Date();
@@ -848,7 +862,9 @@ export class DatabaseStorage implements IStorage {
             ...customer,
             totalOrders: Number(stats.totalOrders) || 0,
             totalSpent: Number(stats.totalSpent) || 0,
-            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString(),
+            totalDebt: customer.totalDebt || '0',
+            creditLimit: customer.creditLimit || '0'
           };
         })
       );
@@ -863,7 +879,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getVipCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+  async getVipCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]> {
     try {
       const baseCustomers = await db
         .select()
@@ -890,7 +906,9 @@ export class DatabaseStorage implements IStorage {
             ...customer,
             totalOrders: Number(stats.totalOrders) || 0,
             totalSpent: Number(stats.totalSpent) || 0,
-            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+            lastOrderDate: stats.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString(),
+            totalDebt: customer.totalDebt || '0',
+            creditLimit: customer.creditLimit || '0'
           };
         })
       );
@@ -903,7 +921,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getFrequentCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string })[]> {
+  async getFrequentCustomers(limit = 10): Promise<(Customer & { totalOrders: number; totalSpent: number; lastOrderDate: string; totalDebt: string; creditLimit: string })[]> {
     try {
       // Get customers with their order counts
       const customerOrderCounts = await db
@@ -937,7 +955,9 @@ export class DatabaseStorage implements IStorage {
           ...customer,
           totalOrders: Number(stats?.totalOrders) || 0,
           totalSpent: Number(stats?.totalSpent) || 0,
-          lastOrderDate: stats?.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString()
+          lastOrderDate: stats?.lastOrderDate || customer.joinDate?.toISOString() || new Date().toISOString(),
+          totalDebt: customer.totalDebt || '0',
+          creditLimit: customer.creditLimit || '0'
         };
       });
 
@@ -981,10 +1001,24 @@ export class DatabaseStorage implements IStorage {
     const orderData = {
       ...order,
       source: order.source || 'admin',
-      syncStatus: order.syncStatus || 'manual'
+      syncStatus: order.syncStatus || 'manual',
+      paymentMethod: order.paymentMethod || 'cash'
     };
     
     const [newOrder] = await db.insert(orders).values(orderData).returning();
+    
+    // Handle debt payment: update customer's total debt
+    if (orderData.paymentMethod === 'debt' && orderData.customerId) {
+      const orderTotal = parseFloat(orderData.total);
+      
+      await db
+        .update(customers)
+        .set({
+          totalDebt: sql`COALESCE(total_debt, 0) + ${orderTotal}`
+        })
+        .where(eq(customers.id, orderData.customerId));
+    }
+    
     return newOrder;
   }
 
@@ -1074,6 +1108,35 @@ export class DatabaseStorage implements IStorage {
   async deleteOrderItem(id: string): Promise<boolean> {
     const result = await db.delete(orderItems).where(eq(orderItems.id, id));
     return result.rowCount > 0;
+  }
+
+  // Debt management methods
+  async updateCustomerDebt(customerId: string, paymentAmount: number): Promise<Customer | undefined> {
+    const [updatedCustomer] = await db
+      .update(customers)
+      .set({
+        totalDebt: sql`GREATEST(0, COALESCE(total_debt, 0) - ${paymentAmount})`
+      })
+      .where(eq(customers.id, customerId))
+      .returning();
+    return updatedCustomer || undefined;
+  }
+
+  async getCustomerDebtInfo(customerId: string): Promise<{ totalDebt: number; creditLimit: number } | undefined> {
+    const [customer] = await db
+      .select({
+        totalDebt: customers.totalDebt,
+        creditLimit: customers.creditLimit
+      })
+      .from(customers)
+      .where(eq(customers.id, customerId));
+    
+    if (!customer) return undefined;
+    
+    return {
+      totalDebt: parseFloat(customer.totalDebt || '0'),
+      creditLimit: parseFloat(customer.creditLimit || '0')
+    };
   }
 
   // Social account methods

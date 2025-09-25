@@ -55,6 +55,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
   const [formData, setFormData] = useState({
     customerId: "", // No default - customer selection required
     status: "pending" as "pending" | "processing" | "shipped" | "delivered" | "cancelled",
+    paymentMethod: "cash" as "cash" | "bank_transfer" | "debt",
   });
 
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -65,6 +66,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
       setFormData({
         customerId: order.customerId,
         status: order.status,
+        paymentMethod: (order as any).paymentMethod || "cash",
       });
       
       // Convert order items to the format expected by the form
@@ -195,6 +197,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
           total: data.total,
           status: data.status,
           items: data.items,
+          paymentMethod: data.paymentMethod,
         };
         
         const newOrderResponse = await apiRequest('POST', '/api/orders', orderData);
@@ -272,6 +275,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
           total: data.total,
           status: data.status,
           items: data.items,
+          paymentMethod: data.paymentMethod,
         };
         
         const newOrderResponse = await apiRequest('POST', '/api/orders', orderData);
@@ -355,6 +359,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
       total: totalAmount.toString(),
       status: formData.status,
       items: totalItems,
+      paymentMethod: formData.paymentMethod,
     });
   };
 
@@ -508,6 +513,24 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
                   <SelectItem value="shipped">Đã gửi</SelectItem>
                   <SelectItem value="delivered">Đã giao</SelectItem>
                   <SelectItem value="cancelled">Đã hủy</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-2">
+              <Label htmlFor="paymentMethod">Hình thức thanh toán</Label>
+              <Select
+                value={formData.paymentMethod}
+                onValueChange={(value) => setFormData({ ...formData, paymentMethod: value as any })}
+              >
+                <SelectTrigger data-testid="select-payment-method">
+                  <SelectValue placeholder="Chọn hình thức thanh toán" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">💵 Tiền mặt</SelectItem>
+                  <SelectItem value="bank_transfer">🏦 Chuyển khoản</SelectItem>
+                  <SelectItem value="debt">📋 Trả sau (Ghi nợ)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -704,6 +727,7 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
                     total: totalAmount.toString(),
                     status: formData.status,
                     items: totalItems,
+                    paymentMethod: formData.paymentMethod,
                   });
                 }}
                 data-testid="button-save-and-print"

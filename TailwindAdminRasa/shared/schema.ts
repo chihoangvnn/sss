@@ -510,6 +510,8 @@ export const customers = pgTable("customers", {
   phone: text("phone"),
   avatar: text("avatar"),
   status: text("status", { enum: ["active", "inactive", "vip"] }).notNull().default("active"),
+  totalDebt: decimal("total_debt", { precision: 15, scale: 2 }).notNull().default("0"),
+  creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }).notNull().default("0"),
   joinDate: timestamp("join_date").defaultNow(),
 });
 
@@ -519,6 +521,7 @@ export const orders = pgTable("orders", {
   customerId: varchar("customer_id").references(() => customers.id),
   total: decimal("total", { precision: 15, scale: 2 }).notNull(),
   status: text("status", { enum: ["pending", "processing", "shipped", "delivered", "cancelled"] }).notNull().default("pending"),
+  paymentMethod: text("payment_method", { enum: ["cash", "bank_transfer", "debt"] }).notNull().default("cash"),
   items: integer("items").notNull(),
   
   // 🚀 Unified Order Source Tracking

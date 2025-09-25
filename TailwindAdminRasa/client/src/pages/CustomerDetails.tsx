@@ -19,7 +19,9 @@ import {
   DollarSign,
   ShoppingCart,
   TrendingUp,
-  Eye
+  Eye,
+  CreditCard,
+  Receipt
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -42,6 +44,8 @@ interface CustomerWithStats extends Customer {
   totalOrders: number;
   totalSpent: number;
   lastOrderDate: string;
+  totalDebt: string;
+  creditLimit: string;
 }
 
 // Order type with customer info for table display
@@ -352,6 +356,40 @@ export default function CustomerDetails() {
             <div className="text-2xl font-bold">{formatPrice(stats.averageOrderValue)}</div>
             <p className="text-xs text-muted-foreground">
               Trung bình mỗi đơn hàng
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-total-debt">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Công nợ hiện tại
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${parseFloat(customer.totalDebt || '0') > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {formatPrice(parseFloat(customer.totalDebt || '0'))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tổng số tiền nợ
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-credit-limit">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Hạn mức tín dụng
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {formatPrice(parseFloat(customer.creditLimit || '0'))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Giới hạn trả sau
             </p>
           </CardContent>
         </Card>

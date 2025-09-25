@@ -25,6 +25,8 @@ export interface Customer extends BaseCustomer {
   totalOrders: number;
   totalSpent: number;
   lastOrderDate: string;
+  totalDebt: string;
+  creditLimit: string;
 }
 
 interface CustomerListProps {
@@ -318,6 +320,22 @@ export function CustomerList({
                     {formatPrice(customer.totalSpent)}
                   </p>
                   <p className="text-xs text-muted-foreground">Đã mua</p>
+                </div>
+              </div>
+
+              {/* Debt Information */}
+              <div className="grid grid-cols-2 gap-4 text-center border-t pt-3">
+                <div>
+                  <p className={`text-lg font-bold ${parseFloat(customer.totalDebt || '0') > 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`customer-debt-${customer.id}`}>
+                    {formatPrice(parseFloat(customer.totalDebt || '0'))}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Công nợ</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-blue-600" data-testid={`customer-credit-${customer.id}`}>
+                    {formatPrice(parseFloat(customer.creditLimit || '0'))}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Hạn mức</p>
                 </div>
               </div>
 
