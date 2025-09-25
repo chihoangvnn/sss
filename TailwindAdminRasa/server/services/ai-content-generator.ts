@@ -752,92 +752,138 @@ Trả về JSON đúng format:`;
       required: ["primary", "rasa_variations", "contexts"]
     };
 
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: "application/json",
-          responseSchema
-        },
-        contents: `
-        Sản phẩm cần tạo mô tả: "${productName}"
-        ${industryName ? `Thuộc ngành hàng: "${industryName}"` : ''}
-        ${categoryName ? `Danh mục: "${categoryName}"` : ''}
+    // Retry logic with exponential backoff for Google API overload
+    const maxRetries = 3;
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 AI Generation attempt ${attempt}/${maxRetries} for: ${productName}`);
         
-        Hãy tạo 1 mô tả chính + 4 biến thể benefit-focused theo format yêu cầu.
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-pro",
+          config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: "application/json",
+            responseSchema
+          },
+          contents: `
+          Sản phẩm cần tạo mô tả: "${productName}"
+          ${industryName ? `Thuộc ngành hàng: "${industryName}"` : ''}
+          ${categoryName ? `Danh mục: "${categoryName}"` : ''}
+          
+          Hãy tạo 1 mô tả chính + 4 biến thể benefit-focused theo format yêu cầu.
+          
+          Lưu ý: Mỗi mô tả phải khác biệt rõ ràng, tập trung vào benefit cụ thể.
+          `
+        });
         
-        Lưu ý: Mỗi mô tả phải khác biệt rõ ràng, tập trung vào benefit cụ thể.
-        `
-      });
-
-      const rawJson = response.text;
-      
-      if (rawJson) {
-        try {
-          const result = JSON.parse(rawJson);
-          
-          // Validate result structure
-          if (!result.primary || !result.rasa_variations || !result.contexts) {
-            throw new Error("Invalid response structure from AI");
-          }
-          
-          // Ensure all required variations exist
-          const requiredKeys = ["0", "1", "2", "3"];
-          for (const key of requiredKeys) {
-            if (!result.rasa_variations[key] || result.rasa_variations[key].trim().length === 0) {
-              throw new Error(`Missing or empty variation for key: ${key}`);
+        // If we get here, the request succeeded
+        console.log(`✅ AI Generation successful on attempt ${attempt}`);
+        
+        const rawJson = response.text;
+        
+        if (rawJson) {
+          try {
+            const result = JSON.parse(rawJson);
+            
+            // Validate result structure
+            if (!result.primary || !result.rasa_variations || !result.contexts) {
+              throw new Error("Invalid response structure from AI");
             }
-          }
-          
-          // Validate contexts mapping
-          const expectedContexts = { safety: "0", convenience: "1", quality: "2", health: "3" };
-          if (!result.contexts || JSON.stringify(result.contexts) !== JSON.stringify(expectedContexts)) {
-            console.warn('AI returned invalid contexts, using default mapping');
-            result.contexts = expectedContexts;
-          }
-          
-          // Enforce word count limits (max 120 words per description)
-          const enforceWordLimit = (text: string): string => {
-            const words = text.trim().split(/\s+/);
-            return words.length > 120 ? words.slice(0, 120).join(' ') + '...' : text;
-          };
-          
-          result.primary = enforceWordLimit(result.primary);
-          Object.keys(result.rasa_variations).forEach(key => {
-            result.rasa_variations[key] = enforceWordLimit(result.rasa_variations[key]);
-          });
-          
-          return result;
-          
-        } catch (parseError) {
-          console.error('Failed to parse product description response:', parseError, 'Raw:', rawJson);
-          
-          // Graceful fallback: generate simple benefit-focused descriptions
-          console.log('Using fallback description generation for:', productName);
-          return {
-            primary: `${productName} - chất lượng cao, giá trị tuyệt vời cho khách hàng`,
-            rasa_variations: {
-              "0": `${productName} an toàn, đáng tin cậy cho mọi gia đình`,
-              "1": `${productName} tiện lợi, dễ sử dụng hàng ngày`, 
-              "2": `${productName} chất lượng cao, hiệu quả vượt trội`,
-              "3": `${productName} tốt cho sức khỏe, mang lại hạnh phúc`
-            },
-            contexts: {
-              safety: "0",
-              convenience: "1", 
-              quality: "2",
-              health: "3"
+            
+            // Ensure all required variations exist
+            const requiredKeys = ["0", "1", "2", "3"];
+            for (const key of requiredKeys) {
+              if (!result.rasa_variations[key] || result.rasa_variations[key].trim().length === 0) {
+                throw new Error(`Missing or empty variation for key: ${key}`);
+              }
             }
-          };
+            
+            // Validate contexts mapping
+            const expectedContexts = { safety: "0", convenience: "1", quality: "2", health: "3" };
+            if (!result.contexts || JSON.stringify(result.contexts) !== JSON.stringify(expectedContexts)) {
+              console.warn('AI returned invalid contexts, using default mapping');
+              result.contexts = expectedContexts;
+            }
+            
+            // Enforce word count limits (max 120 words per description)
+            const enforceWordLimit = (text: string): string => {
+              const words = text.trim().split(/\s+/);
+              return words.length > 120 ? words.slice(0, 120).join(' ') + '...' : text;
+            };
+            
+            result.primary = enforceWordLimit(result.primary);
+            Object.keys(result.rasa_variations).forEach(key => {
+              result.rasa_variations[key] = enforceWordLimit(result.rasa_variations[key]);
+            });
+            
+            return result;
+            
+          } catch (parseError) {
+            console.error('Failed to parse product description response:', parseError, 'Raw:', rawJson);
+            
+            // Graceful fallback: generate simple benefit-focused descriptions
+            console.log('Using fallback description generation for:', productName);
+            return {
+              primary: `${productName} - chất lượng cao, giá trị tuyệt vời cho khách hàng`,
+              rasa_variations: {
+                "0": `${productName} an toàn, đáng tin cậy cho mọi gia đình`,
+                "1": `${productName} tiện lợi, dễ sử dụng hàng ngày`, 
+                "2": `${productName} chất lượng cao, hiệu quả vượt trội`,
+                "3": `${productName} tốt cho sức khỏe, mang lại hạnh phúc`
+              },
+              contexts: {
+                safety: "0",
+                convenience: "1", 
+                quality: "2",
+                health: "3"
+              }
+            };
+          }
+        } else {
+          throw new Error("Empty response from Gemini API");
         }
-      } else {
-        throw new Error("Empty response from Gemini API");
+        
+      } catch (error: any) {
+        lastError = error;
+        console.error(`❌ AI Generation attempt ${attempt} failed:`, error.message);
+        
+        // Check if it's a 503 overload error that we should retry
+        if (error.status === 503 && attempt < maxRetries) {
+          const backoffTime = Math.pow(2, attempt - 1) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`⏳ API overloaded, retrying in ${backoffTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+          continue;
+        }
+        
+        // For non-retryable errors, break immediately  
+        break;
       }
-    } catch (error) {
-      console.error('Product description generation failed:', error);
-      throw new Error(`Failed to generate product descriptions: ${error}`);
     }
+    
+    // If we get here, all retries failed - return graceful fallback with telemetry
+    console.error(`💥 AI Generation failed after ${maxRetries} attempts for: ${productName}`);
+    if (lastError) {
+      console.error(`📊 Final error details:`, lastError.message);
+    }
+    console.log('🔄 Using graceful fallback descriptions due to API failures');
+    
+    return {
+      primary: `${productName} - chất lượng cao, giá trị tuyệt vời cho khách hàng`,
+      rasa_variations: {
+        "0": `${productName} an toàn, đáng tin cậy cho mọi gia đình`,
+        "1": `${productName} tiện lợi, dễ sử dụng hàng ngày`, 
+        "2": `${productName} chất lượng cao, hiệu quả vượt trội`,
+        "3": `${productName} tốt cho sức khỏe, mang lại hạnh phúc`
+      },
+      contexts: {
+        safety: "0",
+        convenience: "1", 
+        quality: "2",
+        health: "3"
+      }
+    };
   }
 }
 
