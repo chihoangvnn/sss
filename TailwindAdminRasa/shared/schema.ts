@@ -3717,12 +3717,185 @@ export type InsertBook = typeof books.$inferInsert;
 export type BookPrice = typeof bookPrices.$inferSelect;
 export type InsertBookPrice = typeof bookPrices.$inferInsert;
 
-// Book with prices interface
+// =====================================================
+// 🔄 ABEBOOKS MULTI-ACCOUNT & VENDOR MANAGEMENT SYSTEM  
+// =====================================================
+
+// AbeBooks account management for multi-account support
+export const abebooksAccounts = pgTable("abebooks_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountName: varchar("account_name").notNull(), // User-friendly name
+  apiKey: varchar("api_key").notNull(),
+  clientId: varchar("client_id").notNull(),
+  affiliateTag: varchar("affiliate_tag").notNull(),
+  
+  // Account status and configuration
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false), // Default account to use
+  maxRequestsPerMinute: integer("max_requests_per_minute").default(60),
+  
+  // Geographic targeting
+  targetCountries: jsonb("target_countries").$type<string[]>().default([]), // ["US", "CA", "UK"]
+  preferredCurrency: varchar("preferred_currency").default("USD"),
+  
+  // Account metadata
+  lastUsed: timestamp("last_used"),
+  totalRequests: integer("total_requests").default(0),
+  totalErrors: integer("total_errors").default(0),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  accountNameIndex: index("abebooks_accounts_name_idx").on(table.accountName),
+  isActiveIndex: index("abebooks_accounts_active_idx").on(table.isActive),
+}));
+
+// AbeBooks detailed vendor/seller listings with multi-account support
+export const abebooksListings = pgTable("abebooks_listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bookIsbn: varchar("book_isbn").notNull().references(() => books.isbn, { onDelete: 'cascade' }),
+  accountId: varchar("account_id").notNull().references(() => abebooksAccounts.id, { onDelete: 'cascade' }),
+  
+  // AbeBooks vendor/seller information
+  vendorId: varchar("vendor_id").notNull(), // AbeBooks vendor identifier
+  vendorName: varchar("vendor_name").notNull(),
+  vendorCountry: varchar("vendor_country"),
+  vendorCity: varchar("vendor_city"),
+  
+  // Vendor reputation
+  vendorRating: decimal("vendor_rating", { precision: 3, scale: 2 }), // 4.8/5.0
+  vendorTotalRatings: integer("vendor_total_ratings").default(0),
+  vendorYearsSelling: integer("vendor_years_selling").default(0),
+  vendorIsLocal: boolean("vendor_is_local").default(false),
+  
+  // Book condition (critical for used/rare books)
+  condition: varchar("condition").notNull(), // "New", "Like New", "Very Good", "Good", "Acceptable"
+  conditionDescription: text("condition_description"), // Detailed condition notes
+  
+  // Pricing information
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("USD"),
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }), // Before discount
+  
+  // Shipping details
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }).default("0.00"),
+  shippingMethod: varchar("shipping_method"), // "Standard", "Express", "Free"
+  estimatedDeliveryDays: integer("estimated_delivery_days"),
+  shippingCountries: jsonb("shipping_countries").$type<string[]>().default([]), // Countries they ship to
+  
+  // Book specifics
+  edition: varchar("edition"), // "1st Edition", "Special Edition"
+  publisher: varchar("publisher"),
+  publicationYear: integer("publication_year"),
+  language: varchar("language").default("English"),
+  pages: integer("pages"),
+  
+  // Availability and inventory
+  quantity: integer("quantity").default(1),
+  availability: varchar("availability").default("In Stock"), // "In Stock", "Limited", "Out of Stock"
+  
+  // Media and links
+  imageUrl: varchar("image_url"),
+  detailUrl: varchar("detail_url"), // Link to AbeBooks listing
+  abebooksListingId: varchar("abebooks_listing_id").unique(), // AbeBooks internal ID
+  
+  // Performance tracking
+  views: integer("views").default(0),
+  lastViewed: timestamp("last_viewed"),
+  
+  // Sync and tracking
+  lastSyncAt: timestamp("last_sync_at").defaultNow(),
+  syncStatus: varchar("sync_status").default("active"), // "active", "error", "disabled"
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Composite indexes for efficient queries
+  bookAccountIndex: index("abebooks_listings_book_account_idx").on(table.bookIsbn, table.accountId),
+  vendorIndex: index("abebooks_listings_vendor_idx").on(table.vendorId),
+  conditionIndex: index("abebooks_listings_condition_idx").on(table.condition),
+  priceIndex: index("abebooks_listings_price_idx").on(table.price),
+  availabilityIndex: index("abebooks_listings_availability_idx").on(table.availability),
+  lastSyncIndex: index("abebooks_listings_sync_idx").on(table.lastSyncAt),
+}));
+
+// AbeBooks search history and analytics
+export const abebooksSearchHistory = pgTable("abebooks_search_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id").notNull().references(() => abebooksAccounts.id, { onDelete: 'cascade' }),
+  
+  // Search parameters
+  searchQuery: text("search_query").notNull(),
+  searchType: varchar("search_type").notNull(), // "isbn", "title", "author", "keyword"
+  filters: jsonb("filters").$type<Record<string, any>>().default({}), // Additional search filters
+  
+  // Results and performance
+  resultsFound: integer("results_found").default(0),
+  processingTimeMs: integer("processing_time_ms"),
+  apiResponseTime: integer("api_response_time"),
+  
+  // Error tracking
+  isSuccess: boolean("is_success").default(true),
+  errorMessage: text("error_message"),
+  
+  // Timestamps
+  searchedAt: timestamp("searched_at").defaultNow(),
+}, (table) => ({
+  accountIndex: index("abebooks_search_account_idx").on(table.accountId),
+  searchTypeIndex: index("abebooks_search_type_idx").on(table.searchType),
+  searchedAtIndex: index("abebooks_search_date_idx").on(table.searchedAt),
+}));
+
+// Book condition grades for used/rare books
+export const BOOK_CONDITIONS = {
+  "New": { grade: 5, description: "Brand new, unread copy" },
+  "Like New": { grade: 4, description: "No visible wear, minimal handling" },
+  "Very Good": { grade: 3, description: "Minor wear, all pages intact" },
+  "Good": { grade: 2, description: "Moderate wear, some page discoloration" },
+  "Acceptable": { grade: 1, description: "Heavy wear but complete and readable" },
+  "Poor": { grade: 0, description: "Significant damage, missing pages possible" }
+} as const;
+
+export type BookCondition = keyof typeof BOOK_CONDITIONS;
+
+// Zod schemas for AbeBooks system
+export const insertAbebooksAccountSchema = createInsertSchema(abebooksAccounts);
+export const insertAbebooksListingSchema = createInsertSchema(abebooksListings);
+export const insertAbebooksSearchHistorySchema = createInsertSchema(abebooksSearchHistory);
+
+// TypeScript types for AbeBooks system
+export type AbebooksAccount = typeof abebooksAccounts.$inferSelect;
+export type InsertAbebooksAccount = typeof abebooksAccounts.$inferInsert;
+export type AbebooksListing = typeof abebooksListings.$inferSelect;
+export type InsertAbebooksListing = typeof abebooksListings.$inferInsert;
+export type AbebooksSearchHistory = typeof abebooksSearchHistory.$inferSelect;
+export type InsertAbebooksSearchHistory = typeof abebooksSearchHistory.$inferInsert;
+
+// Enhanced interfaces for AbeBooks integration
+export interface AbebooksListingWithAccount extends AbebooksListing {
+  account: AbebooksAccount;
+}
+
+export interface BookWithAbebooksListings extends Book {
+  abebooksListings: AbebooksListingWithAccount[];
+  bestAbebooksPrice?: AbebooksListing;
+  conditionRange?: { best: BookCondition; worst: BookCondition };
+  vendorCount?: number;
+  averageVendorRating?: number;
+}
+
+// Book with all price sources and AbeBooks details
 export interface BookWithPrices extends Book {
   prices: BookPrice[];
+  abebooksListings?: AbebooksListingWithAccount[];
   bestPrice?: BookPrice;
+  bestAbebooksPrice?: AbebooksListing;
   lowestPrice?: number;
   highestPrice?: number;
   averagePrice?: number;
   priceRange?: string;
+  totalVendors?: number;
+  conditionSummary?: Record<BookCondition, number>;
 }
