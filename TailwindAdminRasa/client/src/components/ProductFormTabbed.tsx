@@ -1483,7 +1483,8 @@ function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setS
     { id: 'primary', label: '📝 Mô tả chính', icon: <FileText className="h-4 w-4" />, count: 1 },
     { id: 'rasa', label: '🤖 RASA Variants', icon: <Bot className="h-4 w-4" />, count: Object.keys(generatedDescriptions.rasa_variations || {}).length },
     { id: 'contexts', label: '🎯 Contexts', icon: <Tag className="h-4 w-4" />, count: Object.keys(generatedDescriptions.contexts || {}).length },
-    { id: 'seo', label: '🔍 SEO', icon: <Search className="h-4 w-4" />, count: (generatedDescriptions.seo_title || generatedDescriptions.seo_description) ? 1 : 0 }
+    { id: 'seo', label: '🔍 SEO', icon: <Search className="h-4 w-4" />, count: (generatedDescriptions.seo_title || generatedDescriptions.seo_description) ? 1 : 0 },
+    { id: 'custom', label: '🔥 Custom', icon: <HelpCircle className="h-4 w-4" />, count: 1 }
   ];
 
   return (
@@ -1728,6 +1729,71 @@ function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setS
                             </p>
                           </div>
                         )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Custom Tab - NEW */}
+              {activeTab === 'custom' && (
+                <div className="space-y-4">
+                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300 px-3 py-1">
+                    🔥 Custom Content & Advanced Features
+                  </Badge>
+                  <Card className="border border-purple-200">
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                              <HelpCircle className="h-4 w-4" />
+                              Custom Product Features
+                            </Label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard("Custom content for advanced product features")}
+                              className="h-6 w-6 p-0 hover:bg-gray-100"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <Card className="bg-purple-50 border border-purple-200">
+                            <CardContent className="p-3">
+                              <p className="text-purple-800 text-sm">
+                                🎯 Advanced product customization options
+                              </p>
+                              <p className="text-purple-700 text-xs mt-2">
+                                • Custom variations and configurations<br/>
+                                • Advanced pricing rules<br/>
+                                • Special promotional content<br/>
+                                • Extended product specifications
+                              </p>
+                            </CardContent>
+                          </Card>
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                              <Target className="h-4 w-4" />
+                              Enhanced Descriptions
+                            </Label>
+                          </div>
+                          <Card className="bg-purple-50 border border-purple-200">
+                            <CardContent className="p-3">
+                              <p className="text-purple-800 text-sm font-medium">
+                                Nội dung tùy chỉnh cho sản phẩm đặc biệt
+                              </p>
+                              <p className="text-purple-700 text-xs mt-2">
+                                Tab này có thể chứa các thông tin mở rộng, mô tả chi tiết hơn về sản phẩm, 
+                                hoặc các tính năng đặc biệt mà bạn muốn highlight cho khách hàng.
+                              </p>
+                            </CardContent>
+                          </Card>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
