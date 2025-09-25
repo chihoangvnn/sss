@@ -499,8 +499,32 @@ export function ProductFormTabbed({ product, onClose, onSuccess }: ProductFormPr
       }
 
       const data = await response.json();
-      setGeneratedDescriptions(data.descriptions);
+      console.log('🤖 AI Response received:', data);
+      
+      // Fix: API returns data directly, not in data.descriptions
+      const aiDescriptions = {
+        primary: data.primary || '',
+        rasa_variations: data.rasa_variations || {},
+        contexts: data.contexts || {}
+      };
+      
+      console.log('🤖 Processed AI descriptions:', aiDescriptions);
+      setGeneratedDescriptions(aiDescriptions);
       setShowDescriptionPreview(true);
+      
+      // 🔄 Auto-populate form fields with AI-generated content
+      if (aiDescriptions.primary) {
+        setFormData(prev => ({
+          ...prev,
+          description: aiDescriptions.primary,
+          shortDescription: aiDescriptions.primary.substring(0, 160) // SEO-friendly length
+        }));
+        
+        toast({
+          title: "✨ Content Applied",
+          description: "AI content has been applied to form fields. You can edit before saving.",
+        });
+      }
       
       toast({
         title: "Thành công",
