@@ -46,6 +46,7 @@ import { SocialMediaHub } from "@/components/SocialMediaHub";
 import { TemplateBuilder } from "@/components/template-builder/TemplateBuilder";
 import RasaDashboard from "@/pages/RasaDashboard";
 import BotStatusDashboard from "@/pages/BotStatusDashboard";
+import NgrokConfig from "@/pages/NgrokConfig";
 import POS from "@/pages/POS";
 import MobileStorefront from "@/pages/MobileStorefront";
 
@@ -87,6 +88,7 @@ function AdminRouter() {
       <Route path="/worker-management" component={WorkerManagement} />
       <Route path="/rasa-dashboard" component={RasaDashboard} />
       <Route path="/bot-status" component={BotStatusDashboard} />
+      <Route path="/ngrok-config" component={NgrokConfig} />
       <Route path="/pos" component={POS} />
       <Route path="/mobile" component={MobileStorefront} />
       <Route path="/template-builder" component={() => <TemplateBuilder className="h-screen" />} />

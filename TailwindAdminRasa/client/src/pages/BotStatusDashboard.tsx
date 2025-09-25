@@ -18,7 +18,9 @@ import {
   Database,
   Zap,
   Users,
-  TrendingUp
+  TrendingUp,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 
 interface BotStatus {
@@ -28,9 +30,20 @@ interface BotStatus {
   responseTime?: number;
 }
 
+interface NgrokStatus {
+  isRunning: boolean;
+  tunnelUrl: string | null;
+  whiteId: string;
+  uptime: string | null;
+  connections: number;
+  region: string;
+  error: string | null;
+}
+
 interface SystemHealth {
   server: boolean;
   rasa: BotStatus;
+  ngrok: NgrokStatus;
   botResponse: {
     status: string;
     response?: any;
@@ -76,12 +89,39 @@ const formatTime = (timestamp: string): string => {
   return new Date(timestamp).toLocaleString('vi-VN');
 };
 
+// Fetch ngrok status
+const fetchNgrokStatus = async (): Promise<NgrokStatus> => {
+  const response = await fetch('/api/ngrok/status');
+  if (!response.ok) {
+    return {
+      isRunning: false,
+      tunnelUrl: null,
+      whiteId: '9c3313cc-33fd-4764-9a29-c3d52979e891',
+      uptime: null,
+      connections: 0,
+      region: 'ap',
+      error: 'Failed to fetch ngrok status'
+    };
+  }
+  const data = await response.json();
+  return data.status;
+};
+
 // Fetch bot system health
 const fetchBotHealth = async (): Promise<SystemHealth> => {
-  const [serverRes, rasaRes, conversationsRes] = await Promise.all([
+  const [serverRes, rasaRes, conversationsRes, ngrokStatus] = await Promise.all([
     fetch('/api/health').catch(() => ({ ok: false })),
     fetch('/api/rasa-management/server/status').catch(() => ({ ok: false, json: () => ({}) })),
-    fetch('/api/rasa/conversations?limit=5').catch(() => ({ ok: false, json: () => ({}) }))
+    fetch('/api/rasa/conversations?limit=5').catch(() => ({ ok: false, json: () => ({}) })),
+    fetchNgrokStatus().catch(() => ({
+      isRunning: false,
+      tunnelUrl: null,
+      whiteId: '9c3313cc-33fd-4764-9a29-c3d52979e891',
+      uptime: null,
+      connections: 0,
+      region: 'ap',
+      error: 'Failed to fetch ngrok status'
+    }))
   ]);
 
   const server = serverRes.ok;
@@ -96,6 +136,7 @@ const fetchBotHealth = async (): Promise<SystemHealth> => {
       lastCheck: rasaData?.lastCheck,
       responseTime: rasaRes.ok ? 200 : 0
     },
+    ngrok: ngrokStatus,
     botResponse: {
       status: server && rasaData?.isRunning ? 'working' : 'failed'
     },
@@ -345,6 +386,32 @@ export default function BotStatusDashboard() {
               </CardContent>
             </Card>
 
+            {/* Ngrok Tunnel */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ngrok Tunnel</CardTitle>
+                <Globe className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <StatusIndicator 
+                  status={health?.ngrok?.isRunning || false}
+                  label="Public URL"
+                  details={health?.ngrok?.tunnelUrl ? 'Connected' : 'Offline'}
+                  loading={healthLoading}
+                />
+                {health?.ngrok?.tunnelUrl && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span>Connections:</span>
+                      <Badge variant="outline" className="text-xs px-1 py-0">
+                        {health.ngrok.connections}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Conversations */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -361,6 +428,112 @@ export default function BotStatusDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Ngrok Status Details */}
+          {health?.ngrok && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Ngrok Tunnel Status
+                </CardTitle>
+                <CardDescription>Public URL tunnel for RASA webhook</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Status:</span>
+                      <Badge variant={health.ngrok.isRunning ? 'default' : 'destructive'}>
+                        {health.ngrok.isRunning ? 'Online' : 'Offline'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Region:</span>
+                      <span className="text-sm font-mono uppercase">
+                        {health.ngrok.region}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Connections:</span>
+                      <Badge variant="outline">
+                        {health.ngrok.connections}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">White ID:</span>
+                      <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                        {health.ngrok.whiteId?.slice(0, 8)}...
+                      </code>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {health.ngrok.tunnelUrl ? (
+                      <div>
+                        <span className="font-medium">Public URL:</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 p-2 bg-gray-50 rounded text-sm font-mono break-all">
+                            {health.ngrok.tunnelUrl}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="shrink-0"
+                          >
+                            <a 
+                              href={health.ngrok.tunnelUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Open
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          <AlertTriangle className="h-4 w-4 inline mr-2" />
+                          No public URL available. Ngrok may be offline.
+                        </p>
+                      </div>
+                    )}
+
+                    {health.ngrok.error && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-800">
+                          <XCircle className="h-4 w-4 inline mr-2" />
+                          {health.ngrok.error}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href="/ngrok-config">
+                        <Globe className="h-4 w-4 mr-2" />
+                        Manage Ngrok
+                      </a>
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Go to Ngrok Configuration to start/stop/restart tunnel
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Latest Activity */}
           {health?.conversations?.latest && (

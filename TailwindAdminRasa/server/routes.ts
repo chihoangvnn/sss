@@ -43,6 +43,7 @@ import satellitesRouter from './api/satellites';
 import postsRouter from './api/posts';
 import workersRouter from './api/workers';
 import regionAssignmentRouter from './api/region-assignment';
+import ngrokConfigRouter from './api/ngrok-config';
 
 // Vietnamese slug utility function
 function generateSlug(input: string): string {
@@ -4117,6 +4118,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // REGION ASSIGNMENT API ROUTES
   // ==========================================
   app.use("/api/regions", regionAssignmentRouter);
+
+  // ==========================================
+  // NGROK CONFIGURATION API ROUTES
+  // ==========================================
+  app.use("/api/ngrok", ngrokConfigRouter);
 
   // ==========================================
   // JOB CALLBACK & RESULT PROCESSING ROUTES
