@@ -1622,42 +1622,62 @@ function EnhancedAIPreview({ generatedDescriptions, showDescriptionPreview, setS
                 </div>
               )}
 
-              {/* Contexts Tab - Temporarily commented out due to syntax issues
+              {/* Contexts Tab - Fixed Implementation */}
               {activeTab === 'contexts' && (
                 <div className="space-y-4">
                   <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 px-3 py-1">
                     🎯 Context Mappings • {Object.keys(generatedDescriptions.contexts || {}).length} contexts
                   </Badge>
-                  <div className="grid gap-4">
-                    {Object.entries(generatedDescriptions.contexts || {}).map(([context, rasaIndex]: [string, any]) => {
-                      const rasaVariation = generatedDescriptions.rasa_variations?.[rasaIndex as string];
-                      return (
-                        <Card key={context} className="border border-orange-200 hover:shadow-md transition-shadow">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <h6 className="font-semibold text-gray-800 capitalize flex items-center gap-2">
-                                <Tag className="h-4 w-4 text-orange-600" />
-                                {context.replace('_', ' ')} → RASA Variant #{rasaIndex}
-                              </h6>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyToClipboard(rasaVariation || 'No variation found')}
-                                className="h-7 w-7 p-0 hover:bg-gray-100"
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <p className="text-gray-700 text-sm leading-relaxed">
-                              {rasaVariation || <span className="text-gray-400 italic">No variation mapped</span>}
+                  <Card className="border border-orange-200">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {Object.keys(generatedDescriptions.contexts || {}).length > 0 ? (
+                          Object.entries(generatedDescriptions.contexts || {}).map(([context, rasaIndex]) => {
+                            const rasaVariation = generatedDescriptions.rasa_variations?.[rasaIndex as string];
+                            return (
+                              <div key={context} className="flex justify-between items-start p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Tag className="h-4 w-4 text-orange-600" />
+                                    <span className="font-medium text-orange-800 capitalize">
+                                      {context.replace('_', ' ')}
+                                    </span>
+                                    <span className="text-xs text-orange-600 bg-orange-200 px-2 py-1 rounded">
+                                      → RASA #{rasaIndex}
+                                    </span>
+                                  </div>
+                                  {rasaVariation && (
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                      {rasaVariation}
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyToClipboard(rasaVariation || `Context: ${context} → RASA Variant #${rasaIndex}`)}
+                                  className="h-7 w-7 p-0 hover:bg-orange-100 ml-2"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-8">
+                            <Tag className="h-12 w-12 text-orange-400 mx-auto mb-3 opacity-50" />
+                            <p className="text-orange-600 font-medium">No context mappings available</p>
+                            <p className="text-xs text-orange-500 mt-1">
+                              Context mappings will appear here after AI generation
                             </p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              )} */}
+              )}
 
               {/* SEO Data Tab */}
               {activeTab === 'seo' && (
