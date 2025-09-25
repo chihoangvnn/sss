@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OrderForm } from "@/components/OrderForm";
 import { QRPayment } from "@/components/QRPayment";
-import { formatOrderId, getShortOrderId } from "@/utils/orderUtils";
+import { formatOrderId } from "@/utils/orderUtils";
 import { useState } from "react";
 import {
   AlertDialog,

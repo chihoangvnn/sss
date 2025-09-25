@@ -539,11 +539,6 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
           /* 📱 MOBILE CARD LAYOUT - Touch-Friendly Design */
           <div className={`space-y-4 ${touchGap}`}>
             {filteredOrders.map((order, index) => {
-              // 🎯 Logic Order Number: Date + Sequential
-              const orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
-              const dateStr = orderDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-              const sequentialNum = (filteredOrders.length - index).toString().padStart(3, '0');
-              const logicOrderId = `${dateStr}-${sequentialNum}`;
               
               return (
                 <div
@@ -558,8 +553,7 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
                   <div className="relative flex items-start justify-between">
                     <div className="space-y-2">
                       <div className="flex flex-col">
-                        <span className="font-mono text-lg font-bold text-[hsl(var(--activity-teal))]">#{logicOrderId}</span>
-                        <span className="text-sm text-muted-foreground">ID: {getShortOrderId(order)}</span>
+                        <span className="font-mono text-lg font-bold text-[hsl(var(--activity-teal))]">#{formatOrderId(order)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {getSourceBadge(order.sourceInfo)}
@@ -666,19 +660,11 @@ export function OrderTable({ onViewOrder }: OrderTableProps) {
             </TableHeader>
             <TableBody>
               {filteredOrders.map((order, index) => {
-                // 🎯 Logic Order Number: Date + Sequential
-                const orderDate = order.createdAt ? new Date(order.createdAt) : new Date();
-                const dateStr = orderDate.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-                const sequentialNum = (filteredOrders.length - index).toString().padStart(3, '0');
-                const logicOrderId = `${dateStr}-${sequentialNum}`;
                 
                 return (
                   <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
                     <TableCell className="font-medium" data-testid={`order-id-${order.id}`}>
-                      <div className="flex flex-col">
-                        <span className="font-mono text-sm font-semibold text-blue-600">#{logicOrderId}</span>
-                        <span className="text-xs text-muted-foreground">ID: {getShortOrderId(order)}</span>
-                      </div>
+                      <span className="font-mono text-sm font-semibold text-blue-600">#{formatOrderId(order)}</span>
                     </TableCell>
                     <TableCell>
                       <div>

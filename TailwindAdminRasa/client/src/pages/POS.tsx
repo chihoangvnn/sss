@@ -24,6 +24,8 @@ import {
   testVietnameseSearch 
 } from "@/utils/vietnameseSearch";
 
+import { formatOrderId } from "@/utils/orderUtils";
+
 import { 
   Search, 
   Plus, 
@@ -640,7 +642,7 @@ export default function POS({}: POSProps) {
       
       toast({
         title: "Đơn hàng đã tạo",
-        description: `Đơn hàng ${order.id} đã được tạo thành công. Giỏ hàng đã được dọn dẹp.`,
+        description: `Đơn hàng #${formatOrderId(order)} đã được tạo thành công. Giỏ hàng đã được dọn dẹp.`,
       });
     },
     onError: (error: any) => {
