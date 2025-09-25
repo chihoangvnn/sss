@@ -5,6 +5,7 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { pool } from "./db";
+import { createApiManagementMiddleware } from "./middleware/api-management";
 
 const app = express();
 
@@ -122,6 +123,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Register API Management Middleware before routes
+  console.log("🚀 Registering API Management Middleware...");
+  app.use(createApiManagementMiddleware());
+  console.log("✅ API Management Middleware registered successfully");
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

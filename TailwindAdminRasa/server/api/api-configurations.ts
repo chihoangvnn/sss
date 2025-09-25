@@ -249,7 +249,11 @@ router.get('/stats/summary', async (req, res) => {
  */
 router.post('/cache/clear', async (req, res) => {
   try {
+    // Clear both caches to ensure complete refresh
     apiCache.clear();
+    // Import configCache from middleware and clear pattern cache
+    const { configCache } = await import('../middleware/api-management');
+    configCache.clear();
     res.json({ message: 'API configuration cache cleared successfully' });
   } catch (error) {
     console.error('Error clearing API cache:', error);
@@ -270,6 +274,33 @@ router.get('/categories', async (req, res) => {
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+/**
+ * POST /api/api-configurations/populate
+ * Populate system with all API configurations
+ */
+router.post('/populate', async (req, res) => {
+  try {
+    console.log("🚀 API Configurations population requested");
+    
+    // Import the comprehensive populate function
+    const { populateComprehensiveApiConfigurations } = await import('../../populate-comprehensive-configs');
+    
+    const result = await populateComprehensiveApiConfigurations();
+    
+    res.json({
+      success: true,
+      message: "API configurations populated successfully",
+      ...result
+    });
+  } catch (error) {
+    console.error('Error populating API configurations:', error);
+    res.status(500).json({ 
+      error: 'Failed to populate API configurations',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 

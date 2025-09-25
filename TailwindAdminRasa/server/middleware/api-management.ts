@@ -1,62 +1,85 @@
 import type { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 import type { ApiConfiguration } from '@shared/schema';
+import pathToRegexp from 'path-to-regexp';
 
-// Cache for API configurations to avoid database hits on every request
-interface CacheEntry {
-  config: ApiConfiguration | null;
+// Enhanced cache for API configurations with pattern matching support
+interface PatternCacheEntry {
+  configs: ApiConfiguration[];
+  compiledPatterns: Map<string, { pattern: RegExp; config: ApiConfiguration }>;
   timestamp: number;
 }
 
 class ApiConfigurationCache {
-  private cache = new Map<string, CacheEntry>();
+  private allConfigsCache: PatternCacheEntry | null = null;
   private readonly TTL = 5 * 60 * 1000; // 5 minutes cache
 
-  private getCacheKey(endpoint: string, method: string): string {
-    return `${method}:${endpoint}`;
-  }
-
-  private isExpired(entry: CacheEntry): boolean {
+  private isExpired(entry: PatternCacheEntry): boolean {
     return Date.now() - entry.timestamp > this.TTL;
   }
 
-  async get(endpoint: string, method: string): Promise<ApiConfiguration | null> {
-    const key = this.getCacheKey(endpoint, method);
-    const cached = this.cache.get(key);
-
-    if (cached && !this.isExpired(cached)) {
-      return cached.config;
+  async getAllConfigs(): Promise<PatternCacheEntry> {
+    if (this.allConfigsCache && !this.isExpired(this.allConfigsCache)) {
+      return this.allConfigsCache;
     }
 
-    // Fetch from database
-    const config = await storage.getApiConfigurationByEndpoint(endpoint, method);
+    // Fetch all configurations from database
+    const configs = await storage.getApiConfigurations();
     
-    // Cache the result (even if null)
-    this.cache.set(key, {
-      config: config || null,
+    // Compile patterns for each configuration
+    const compiledPatterns = new Map<string, { pattern: RegExp; config: ApiConfiguration }>();
+    
+    for (const config of configs) {
+      try {
+        // Create a unique key for method + endpoint pattern
+        const key = `${config.method}:${config.endpoint}`;
+        const pattern = pathToRegexp(config.endpoint);
+        console.log(`✅ Compiled pattern for ${config.endpoint}: ${pattern instanceof RegExp} - ${pattern.toString()}`);
+        compiledPatterns.set(key, { pattern, config });
+      } catch (error) {
+        console.warn(`Failed to compile pattern for ${config.method} ${config.endpoint}:`, error);
+      }
+    }
+
+    // Cache the compiled patterns
+    this.allConfigsCache = {
+      configs,
+      compiledPatterns,
       timestamp: Date.now()
-    });
+    };
 
-    return config || null;
+    return this.allConfigsCache;
   }
 
-  clear(): void {
-    this.cache.clear();
-  }
-
-  // Clear cache for specific endpoint
-  invalidate(endpoint: string, method?: string): void {
-    if (method) {
-      const key = this.getCacheKey(endpoint, method);
-      this.cache.delete(key);
-    } else {
-      // Clear all entries for this endpoint
-      for (const key of Array.from(this.cache.keys())) {
-        if (key.includes(`:${endpoint}`)) {
-          this.cache.delete(key);
+  async findMatchingConfig(requestPath: string, method: string): Promise<ApiConfiguration | null> {
+    const cacheEntry = await this.getAllConfigs();
+    
+    // First try exact match for performance
+    const exactKey = `${method}:${requestPath}`;
+    const exactMatch = cacheEntry.compiledPatterns.get(exactKey);
+    if (exactMatch) {
+      return exactMatch.config;
+    }
+    
+    // Then try pattern matching
+    for (const [key, { pattern, config }] of Array.from(cacheEntry.compiledPatterns)) {
+      if (key.startsWith(`${method}:`)) {
+        if (pattern.test(requestPath)) {
+          return config;
         }
       }
     }
+    
+    return null;
+  }
+
+  clear(): void {
+    this.allConfigsCache = null;
+  }
+
+  // Invalidate the entire cache when configurations change
+  invalidate(): void {
+    this.allConfigsCache = null;
   }
 }
 
@@ -90,19 +113,19 @@ export function createApiManagementMiddleware() {
       return next();
     }
 
-    const endpoint = req.path;
+    const requestPath = req.path;
     const method = req.method;
     const startTime = Date.now();
 
     try {
-      // Get API configuration from cache or database
-      const config = await configCache.get(endpoint, method);
+      // Find matching API configuration using pattern matching
+      const config = await configCache.findMatchingConfig(requestPath, method);
 
       if (!config) {
         // No configuration found - create default tracking for unconfigured APIs
         const defaultConfig = {
           id: 'unconfigured',
-          endpoint: endpoint,
+          endpoint: requestPath,
           method: method,
           isEnabled: true,
           maintenanceMode: false,
@@ -123,7 +146,7 @@ export function createApiManagementMiddleware() {
           error: 'API Disabled',
           message: 'This API endpoint is currently disabled',
           code: 'API_DISABLED',
-          endpoint: endpoint,
+          endpoint: requestPath,
           timestamp: new Date().toISOString()
         });
       }
@@ -134,7 +157,7 @@ export function createApiManagementMiddleware() {
           error: 'Maintenance Mode',
           message: config.maintenanceMessage || 'This API is under maintenance',
           code: 'MAINTENANCE_MODE',
-          endpoint: endpoint,
+          endpoint: requestPath,
           // No specific maintenance end time in schema
           timestamp: new Date().toISOString()
         });
@@ -144,7 +167,7 @@ export function createApiManagementMiddleware() {
       if (config.rateLimitEnabled && config.rateLimitRequests && config.rateLimitWindowSeconds) {
         // For now, we just log rate limit info
         // A full implementation would require redis or in-memory tracking
-        console.log(`Rate limit check: ${config.rateLimitRequests} requests per ${config.rateLimitWindowSeconds}s for ${endpoint}`);
+        console.log(`Rate limit check: ${config.rateLimitRequests} requests per ${config.rateLimitWindowSeconds}s for ${requestPath}`);
       }
 
       // Store config and start time for response tracking
@@ -155,7 +178,9 @@ export function createApiManagementMiddleware() {
       next();
 
     } catch (error) {
-      console.error('API Management Middleware Error:', error);
+      console.error('🚨 API Management Middleware Error:', error);
+      console.error('🚨 Error details:', error instanceof Error ? error.message : String(error));
+      console.error('🚨 Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
       // On error, allow request to proceed to avoid breaking the application
       next();
     }
@@ -216,7 +241,7 @@ export function createApiResponseMiddleware() {
  */
 export const apiCache = {
   clear: () => configCache.clear(),
-  invalidate: (endpoint: string, method?: string) => configCache.invalidate(endpoint, method)
+  invalidate: () => configCache.invalidate()
 };
 
 /**
