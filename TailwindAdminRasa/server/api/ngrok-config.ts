@@ -6,20 +6,21 @@ import { z } from 'zod';
 const router = Router();
 const storage = new DatabaseStorage();
 
-// Authentication middleware
-const requireAuth = (req: Request, res: Response, next: any) => {
-  // Basic authentication check - in production this should be more robust
-  const authHeader = req.headers.authorization;
-  const sessionId = req.headers['x-session-id'] || req.cookies?.sessionId;
-  
-  if (!authHeader && !sessionId) {
-    return res.status(401).json({ 
-      success: false,
-      error: 'Authentication required for ngrok control',
-      code: 'AUTH_REQUIRED'
-    });
+// Authentication middleware - follows same pattern as other admin routes
+const requireAuth = (req: any, res: any, next: any) => {
+  // In development, allow all requests (same as other admin routes)
+  if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+    next();
+    return;
   }
   
+  // Production: check session authentication
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ 
+      error: "Unauthorized. Please log in as an administrator.",
+      code: "AUTH_REQUIRED"
+    });
+  }
   next();
 };
 
