@@ -76,8 +76,9 @@ const ProductCard = React.memo(({
       }`}
       onClick={isOutOfStock ? undefined : handleAddToCart}
     >
-      <CardContent className="p-4 h-full flex flex-col">
-        <div className="aspect-square mb-3 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+      <CardContent className="p-3 h-full flex flex-col">
+        {/* Image section - fixed size */}
+        <div className="aspect-square mb-2 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
           {shouldLoadImage && imageUrl ? (
             <img
               src={imageUrl}
@@ -98,35 +99,41 @@ const ProductCard = React.memo(({
           )}
         </div>
         
-        <div className="flex-1 flex flex-col justify-between space-y-2">
-          <div className="flex items-start justify-between">
-            <h3 className="font-medium text-sm leading-tight line-clamp-2" title={product.name}>
+        {/* Content section - flexible but with minimum space for price */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Product name and status */}
+          <div className="flex items-start justify-between mb-1">
+            <h3 className="font-medium text-sm leading-tight line-clamp-2 flex-1 mr-2" title={product.name}>
               {product.name}
             </h3>
-            <Badge variant={stockStatus.color} className="ml-2 text-xs flex-shrink-0">
+            <Badge variant={stockStatus.color} className="text-xs flex-shrink-0">
               <StockIcon className="h-3 w-3 mr-1" />
               {stockStatus.label}
             </Badge>
           </div>
           
-          {/* Product description */}
+          {/* Product description - limited height */}
           {product.description && (
-            <div className="text-xs text-gray-600 line-clamp-2" 
+            <div className="text-xs text-gray-600 line-clamp-1 mb-2" 
                  title={product.description.replace(/<[^>]*>/g, '')}>
               {product.description.replace(/<[^>]*>/g, '')}
             </div>
           )}
           
-          <div className="text-lg font-bold text-green-600">
-            {formattedPrice}
+          {/* Push content to bottom with flex-grow spacer */}
+          <div className="flex-1"></div>
+          
+          {/* Price section - always visible at bottom */}
+          <div className="mt-auto space-y-1">
+            <div className="text-lg font-bold text-green-600 truncate" title={formattedPrice}>
+              {formattedPrice}
+            </div>
+            
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span className="truncate mr-2">Mã: {product.sku || product.id.slice(-8)}</span>
+              <span className="flex-shrink-0">Còn: {product.stock || 0}</span>
+            </div>
           </div>
-          
-          
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Mã: {product.sku || product.id.slice(-8)}</span>
-            <span>Còn: {product.stock || 0}</span>
-          </div>
-          
         </div>
       </CardContent>
     </Card>
