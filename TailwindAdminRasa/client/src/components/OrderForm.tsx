@@ -64,13 +64,14 @@ export function OrderForm({ order, onClose, onSuccess }: OrderFormProps) {
   useEffect(() => {
     if (order) {
       setFormData({
-        customerId: order.customerId,
+        customerId: order.customerId || "",
         status: order.status,
         paymentMethod: (order as any).paymentMethod || "cash",
       });
       
       // Convert order items to the format expected by the form
-      const items = order.orderItems.map(item => ({
+      // Handle case where orderItems might be undefined
+      const items = (order.orderItems || []).map(item => ({
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
