@@ -1,0 +1,58 @@
+# Phần 2: Chiến lược Tối ưu SEO Toàn diện
+Đây là phần quan trọng nhất để biến tool của bạn thành một "nam châm" hút traffic.
+
+1. Cấu trúc URL "vĩnh cửu"
+Tạo ra một URL có cấu trúc, dễ đọc cho mỗi ngày. Đây là nền tảng để xếp hạng cho các từ khóa "xem ngày X".
+
+Mẫu URL: nhangsach.net/lich-van-nien/xem-ngay-dd-mm-yyyy
+
+Ví dụ: nhangsach.net/lich-van-nien/xem-ngay-24-09-2025
+
+Cách làm trong Next.js: Tạo file pages/lich-van-nien/xem-ngay-[date].js.
+
+2. Dùng getStaticPaths để tạo hàng loạt trang tĩnh
+Trong file [date].js, bạn sẽ dùng hàm getStaticPaths để báo cho Next.js biết nó cần tạo ra những trang nào. Bạn có thể viết code để tự động tạo ra danh sách ngày cho 10 năm tới.
+
+3. Tối ưu Thẻ Meta Động cho mỗi ngày
+Đây là "vũ khí" bí mật. Mỗi trang ngày phải có title và meta description độc nhất, được tạo tự động từ dữ liệu.
+
+Ví dụ code trong getStaticProps:
+
+JavaScript
+
+// pages/lich-van-nien/xem-ngay-[date].js
+export async function getStaticProps({ params }) {
+  // Gọi API backend để lấy thông tin chi tiết của ngày `params.date`
+  const dayData = await fetchApiForDate(params.date);
+
+  return {
+    props: {
+      dayData, // Trả data về cho component
+    },
+  };
+}
+Ví dụ trong component:
+
+JavaScript
+
+import Head from 'next/head';
+
+function ViewDayPage({ dayData }) {
+  const pageTitle = `Xem ngày ${dayData.solar_day}/${dayData.solar_month}/${dayData.solar_year} - Ngày ${dayData.can_chi_day} Tốt hay Xấu?`;
+  const pageDesc = `Xem chi tiết ngày ${dayData.date} (tức ${dayData.lunar_day}/${dayData.lunar_month} Âm lịch). Thông tin Can Chi, giờ hoàng đạo, việc nên làm, kiêng kỵ trong ngày.`;
+
+  return (
+    <>
+      <Head>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        {/* Thêm các thẻ Open Graph ở đây */}
+      </Head>
+      {/* Nội dung trang... */}
+    </>
+  );
+}
+4. Liên kết Nội bộ (Internal Linking) chặt chẽ
+Trên mỗi trang chi tiết ngày: Luôn có link điều hướng "« Ngày hôm trước" và "Ngày hôm sau »".
+
+Tạo trang Lịch tháng: Tạo một trang chính nhangsach.net/lich-van-nien hiển thị lịch của tháng hiện tại. Mỗi ô ngày trong lịch tháng này sẽ là một link trỏ đến trang chi tiết của ngày đó.
