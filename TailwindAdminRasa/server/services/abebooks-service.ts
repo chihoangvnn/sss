@@ -126,7 +126,7 @@ export class AbeBooksMultiAccountService {
       })[0];
 
     const requestsUsed = Math.floor(Math.random() * 80) + 10; // Simulate usage
-    const requestsRemaining = currentAccount.maxRequestsPerMinute - requestsUsed;
+    const requestsRemaining = (currentAccount.maxRequestsPerMinute || 60) - requestsUsed;
     
     return {
       currentAccount,
@@ -140,7 +140,7 @@ export class AbeBooksMultiAccountService {
     const account = this.mockAccounts.find(acc => acc.id === accountId);
     if (account) {
       account.lastUsed = new Date();
-      account.totalRequests += 1;
+      account.totalRequests = (account.totalRequests || 0) + 1;
     }
   }
 
@@ -213,12 +213,12 @@ export class AbeBooksMultiAccountService {
 
     // Find best options
     const bestPrice = listings.reduce((best, current) => 
-      parseFloat(current.price) < parseFloat(best.price) ? current : best
+      parseFloat(current.price || "0") < parseFloat(best.price || "0") ? current : best
     );
 
     const cheapestWithShipping = listings.reduce((best, current) => {
-      const bestTotal = parseFloat(best.price) + parseFloat(best.shippingCost);
-      const currentTotal = parseFloat(current.price) + parseFloat(current.shippingCost);
+      const bestTotal = parseFloat(best.price || "0") + parseFloat(best.shippingCost || "0");
+      const currentTotal = parseFloat(current.price || "0") + parseFloat(current.shippingCost || "0");
       return currentTotal < bestTotal ? current : best;
     });
 
@@ -235,7 +235,7 @@ export class AbeBooksMultiAccountService {
     const localVendors = listings.filter(listing => listing.vendorIsLocal);
 
     // Calculate analytics
-    const prices = listings.map(l => parseFloat(l.price));
+    const prices = listings.map(l => parseFloat(l.price || "0"));
     const averagePrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
     const priceRange = { min: Math.min(...prices), max: Math.max(...prices) };
 
@@ -280,7 +280,7 @@ export class AbeBooksMultiAccountService {
 
     // Apply filters
     if (criteria.maxPrice) {
-      listings = listings.filter(l => parseFloat(l.price) <= criteria.maxPrice!);
+      listings = listings.filter(l => parseFloat(l.price || "0") <= criteria.maxPrice!);
     }
 
     if (criteria.minCondition) {
@@ -295,7 +295,7 @@ export class AbeBooksMultiAccountService {
     }
 
     if (criteria.maxShipping) {
-      listings = listings.filter(l => parseFloat(l.shippingCost) <= criteria.maxShipping!);
+      listings = listings.filter(l => parseFloat(l.shippingCost || "0") <= criteria.maxShipping!);
     }
 
     // Score listings by value (price + shipping + condition + rating)
@@ -497,11 +497,11 @@ export class AbeBooksMultiAccountService {
     }
 
     return {
-      totalRequests: account.totalRequests,
-      successRate: ((account.totalRequests - account.totalErrors) / account.totalRequests * 100),
+      totalRequests: account.totalRequests || 0,
+      successRate: (((account.totalRequests || 0) - (account.totalErrors || 0)) / (account.totalRequests || 1) * 100),
       averageResponseTime: 250 + Math.random() * 200, // 250-450ms
       topSearches: ["Programming Books", "Science Fiction", "History", "Art Books"],
-      recentErrors: account.totalErrors > 0 ? ["Rate limit exceeded", "API timeout"] : []
+      recentErrors: (account.totalErrors || 0) > 0 ? ["Rate limit exceeded", "API timeout"] : []
     };
   }
 }
