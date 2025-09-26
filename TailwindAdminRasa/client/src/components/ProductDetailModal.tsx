@@ -184,12 +184,13 @@ export function ProductDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-60 flex items-end pointer-events-none">
-      {/* No backdrop - allow background interaction, close only via drag or X button */}
+    <div className="fixed inset-0 z-60 flex items-end">
+      {/* Semi-transparent backdrop for better focus */}
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose}></div>
       
       <div 
         ref={drawerRef}
-        className="bg-white w-full h-full relative shadow-2xl transition-transform duration-300 pointer-events-auto flex flex-col"
+        className="bg-gray-50 w-full h-full relative shadow-2xl transition-transform duration-300 pointer-events-auto flex flex-col"
         style={{
           transform: `translateY(${dragDistance}px)`,
           opacity: isDragging ? Math.max(1 - dragDistance / 300, 0.3) : 1
@@ -205,18 +206,18 @@ export function ProductDetailModal({
         </div>
 
         {/* Header */}
-        <div className="sticky top-0 bg-white z-10 p-4 border-b flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-          <h2 className="text-lg font-bold text-gray-900">Chi tiết sản phẩm</h2>
+        <div className="sticky top-0 bg-green-600 z-10 p-4 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+          <h2 className="text-xl font-bold text-white">Chi tiết sản phẩm</h2>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }} className="text-white hover:text-green-100">
               <Calendar 
-                className="h-5 w-5 text-blue-500" 
+                className="h-5 w-5" 
               />
             </Button>
-            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-              <Share2 className="h-5 w-5 text-gray-400" />
+            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="text-white hover:text-green-100">
+              <Share2 className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onClose(); }}>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-white hover:text-green-100">
               <X className="h-6 w-6" />
             </Button>
           </div>
@@ -315,7 +316,7 @@ export function ProductDetailModal({
           </div>
 
           {/* Product Info */}
-          <div className="px-4 pb-4">
+          <div className="bg-white rounded-t-lg mx-4 mt-4 p-4 shadow-sm border border-gray-100">
             <div className="mb-4">
               <h1 className="text-xl font-bold text-gray-900 mb-2">
                 {product.name}
@@ -368,7 +369,7 @@ export function ProductDetailModal({
               )}
 
               {/* Action Buttons - Positioned After Description */}
-              <div ref={actionButtonsRef} id="action-buttons" className="mb-6 space-y-3">
+              <div ref={actionButtonsRef} id="action-buttons" className="mb-6 space-y-4">
                 {/* Quantity Selector Row */}
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <Button
@@ -394,27 +395,24 @@ export function ProductDetailModal({
                   </Button>
                 </div>
 
-                {/* Two Action Buttons - Professional Vietnamese Style */}
-                <div className="flex items-center gap-3">
-                  {/* Add to Cart Button */}
+                {/* Unified Action Button - Matching Storefront Style */}
+                <div className="flex flex-col gap-3">
                   <Button
                     onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3.5 rounded-2xl font-bold shadow-lg hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-200 border-0"
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-[1.02] active:scale-95"
                     disabled={product.stock === 0}
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
-                    <span className="text-sm tracking-wide">Thêm vào Giỏ hàng</span>
+                    Thêm vào Giỏ hàng
                   </Button>
                   
-                  {/* Thỉnh Nhang (Premium Purchase) Button */}
                   <Button
                     onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
-                    className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-3.5 rounded-2xl font-bold shadow-lg hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-200 border-0 relative overflow-hidden"
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-[1.02] active:scale-95"
                     disabled={product.stock === 0}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-transparent"></div>
-                    <Calendar className="h-5 w-5 mr-2 relative z-10" />
-                    <span className="text-sm tracking-wide relative z-10">Thỉnh Nhang</span>
+                    <Calendar className="h-5 w-5 mr-2" />
+                    Thỉnh Nhang
                   </Button>
                 </div>
                 
@@ -425,7 +423,7 @@ export function ProductDetailModal({
               </div>
 
               {/* Benefits Section - Organic Food Vietnamese Style */}
-              <div className="mb-6 bg-green-50 rounded-xl p-4">
+              <div className="mb-6 bg-green-50 rounded-lg p-4 border border-green-100">
                 <h3 className="font-semibold text-gray-900 mb-3 text-lg">🌿 Lợi ích chính</h3>
                 
                 {/* Smart benefits based on product data */}
@@ -468,7 +466,7 @@ export function ProductDetailModal({
               </div>
 
               {/* Shipping Info Section with Checkmarks */}
-              <div className="mb-6 bg-blue-50 rounded-xl p-4">
+              <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="font-semibold text-gray-900 mb-3 text-lg">🚚 Thông tin giao hàng</h3>
                 
                 <div className="space-y-3">
@@ -492,12 +490,12 @@ export function ProductDetailModal({
               </div>
 
               {/* Accordion Sections for Detailed Information */}
-              <div className="mb-6">
+              <div className="mb-6 bg-white rounded-lg border border-gray-100 overflow-hidden">
                 {/* Product Description Accordion */}
                 <div className="border-b border-gray-200">
                   <button
                     onClick={() => toggleAccordion('description')}
-                    className="w-full flex items-center justify-between py-4 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between py-4 px-4 text-left hover:bg-gray-50 transition-colors"
                   >
                     <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
                       📋 Mô tả sản phẩm
@@ -509,7 +507,7 @@ export function ProductDetailModal({
                     )}
                   </button>
                   {openAccordions.description && (
-                    <div className="pb-4 text-gray-700 leading-relaxed">
+                    <div className="pb-4 px-4 text-gray-700 leading-relaxed">
                       <p className="mb-3">
                         {product.description || 'Sản phẩm hữu cơ chất lượng cao, được sản xuất theo tiêu chuẩn VietGAP. Không sử dụng hóa chất độc hại, đảm bảo an toàn cho sức khỏe người tiêu dùng.'}
                       </p>

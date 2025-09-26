@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, MessageCircle, X, Filter, SortAsc, SortDesc } from 'lucide-react';
+import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -421,7 +421,7 @@ function MobileStorefront() {
                 Lịch sử đơn hàng
               </Button>
               <Button variant="outline" className="w-full justify-start text-left" onClick={() => window.location.href = '/calendar'}>
-                <MessageCircle className="h-5 w-5 mr-3" />
+                <Heart className="h-5 w-5 mr-3" />
                 Lịch âm dương
               </Button>
             </div>
@@ -705,7 +705,7 @@ function MobileStorefront() {
                 onClick={() => setActiveTab('calendar')}
                 className="relative text-white hover:text-green-100 transition-colors"
               >
-                <MessageCircle className={`h-6 w-6 ${activeTab === 'calendar' ? 'fill-current' : ''}`} />
+                <Heart className={`h-6 w-6 ${activeTab === 'calendar' ? 'fill-current' : ''}`} />
                 <span className="absolute -top-1 -right-1 text-xs">📅</span>
               </button>
               <button 
