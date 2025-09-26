@@ -306,6 +306,30 @@ export function ProductDetailModal({
                 </div>
               </div>
 
+              {/* Shipping Info Section with Checkmarks */}
+              <div className="mb-6 bg-blue-50 rounded-xl p-4">
+                <h3 className="font-semibold text-gray-900 mb-3 text-lg">🚚 Thông tin giao hàng</h3>
+                
+                <div className="space-y-3">
+                  {[
+                    'Miễn phí vận chuyển đơn hàng từ 300.000₫',
+                    'Giao hàng trong 24h khu vực nội thành',
+                    'Đóng gói an toàn, giữ tươi ngon',
+                    'Kiểm tra hàng trước khi thanh toán',
+                    'Đổi trả trong 7 ngày nếu không hài lòng'
+                  ].map((shippingInfo, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <div className="mt-0.5 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <span className="text-gray-700 leading-relaxed">{shippingInfo}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Reviews Section */}
               <div className="mb-6">
                 <h3 className="font-semibold text-gray-900 mb-3">
