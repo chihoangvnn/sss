@@ -792,7 +792,8 @@ function MobileStorefront() {
                   if (!e.target.value.trim()) {
                     // Small delay to prevent flickering when switching between elements
                     setTimeout(() => {
-                      if (window.scrollY > 80) setShowSearchBar(false);
+                      const container = scrollContainerRef.current;
+                      if (container && container.scrollTop > 80) setShowSearchBar(false);
                     }, 200);
                   }
                 }}
