@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import ChatbotWidget from '@/components/ChatbotWidget';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
+import { ProductDetailModal } from '@/components/ProductDetailModal';
 
 interface Product {
   id: string;
@@ -37,6 +38,7 @@ function MobileStorefront() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [showCart, setShowCart] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
@@ -354,8 +356,11 @@ function MobileStorefront() {
   const renderProductCard = (product: Product) => (
     <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div className="flex items-center gap-4">
-        {/* Product Info - Left Side */}
-        <div className="flex-1">
+        {/* Product Info - Left Side - Clickable */}
+        <button 
+          onClick={() => setSelectedProduct(product)}
+          className="flex-1 text-left hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+        >
           <h3 className="font-semibold text-gray-900 text-base leading-tight mb-1">
             {product.name}
           </h3>
@@ -370,28 +375,36 @@ function MobileStorefront() {
             </span>
             <span className="text-xs text-gray-500">Còn {product.stock}</span>
           </div>
-        </div>
+        </button>
         
         {/* Image + Actions - Right Side */}
         <div className="flex flex-col items-center gap-3">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-              onError={(e) => {
-                e.currentTarget.src = '/api/placeholder/80/80';
-              }}
-            />
-          ) : (
-            <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📦</span>
-            </div>
-          )}
+          <button
+            onClick={() => setSelectedProduct(product)}
+            className="hover:scale-105 transition-transform"
+          >
+            {product.image ? (
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                onError={(e) => {
+                  e.currentTarget.src = '/api/placeholder/80/80';
+                }}
+              />
+            ) : (
+              <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">📦</span>
+              </div>
+            )}
+          </button>
           
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => toggleWishlist(product)}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleWishlist(product);
+              }}
               size="sm"
               variant="ghost"
               className={`w-10 h-10 p-0 rounded-full ${
@@ -405,7 +418,10 @@ function MobileStorefront() {
               />
             </Button>
             <Button
-              onClick={() => addToCart(product)}
+              onClick={(e) => {
+                e.stopPropagation();
+                addToCart(product);
+              }}
               size="sm"
               className="bg-green-500 hover:bg-green-600 text-white rounded-full w-10 h-10 p-0 shadow-lg hover:shadow-xl transition-all"
             >
@@ -551,6 +567,22 @@ function MobileStorefront() {
         cartCount={getTotalItems()}
         wishlistCount={wishlist.length}
       />
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={(quantity) => {
+            for(let i = 0; i < quantity; i++) {
+              addToCart(selectedProduct);
+            }
+            setSelectedProduct(null);
+          }}
+          onToggleWishlist={() => toggleWishlist(selectedProduct)}
+          isInWishlist={isInWishlist(selectedProduct.id)}
+        />
+      )}
 
       {/* Chatbot Widget - positioned above bottom nav */}
       <div className="fixed bottom-20 right-4 z-40">
