@@ -354,6 +354,32 @@ router.delete('/:isbn/prices/:priceId', async (req, res) => {
   }
 });
 
+// Import AbeBooks functionality
+import * as abebooks from './abebooks';
+
+// 🔄 ABEBOOKS ENDPOINTS - Multi-Account Management
+// Search endpoints
+router.get('/abebooks/search/isbn/:isbn', abebooks.searchBooksByISBN);
+router.get('/abebooks/search/:query', abebooks.searchBooks);
+
+// Pricing & vendor comparison endpoints
+router.get('/abebooks/pricing/:isbn', abebooks.getMultiVendorPricing);
+router.get('/abebooks/best-value/:isbn', abebooks.getBestValueListings);
+
+// Condition & quality filtering endpoints
+router.get('/abebooks/condition/:condition', abebooks.filterByCondition);
+
+// Account management endpoints
+router.get('/abebooks/accounts', abebooks.getActiveAccounts);
+router.post('/abebooks/accounts/rotate', abebooks.rotateAccount);
+router.get('/abebooks/accounts/:accountId/metrics', abebooks.getAccountMetrics);
+
+// Analytics & history endpoints
+router.get('/abebooks/history', abebooks.getSearchHistory);
+
+// Health & status endpoints
+router.get('/abebooks/status', abebooks.getServiceStatus);
+
 // Get available price sources
 router.get('/sources', (req, res) => {
   res.json(BOOK_PRICE_SOURCES);
