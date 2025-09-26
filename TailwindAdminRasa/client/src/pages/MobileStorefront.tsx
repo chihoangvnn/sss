@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { Search, ShoppingCart, User, Heart, ArrowLeft, Plus, Minus, MessageCircle, X, Filter, SortAsc, SortDesc } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,11 @@ function MobileStorefront() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [minRating, setMinRating] = useState(0);
+  
+  // Auto-hide search bar state
+  const [showSearchBar, setShowSearchBar] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollThreshold = 10; // Minimum scroll distance to trigger hide/show
 
   // Infinite scroll setup - fetch products with pagination
   const { 
@@ -178,8 +183,28 @@ function MobileStorefront() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  // Scroll detection for infinite loading - improved trigger with threshold
+  // Enhanced scroll detection for both infinite loading and auto-hide search
   const handleScroll = useCallback(() => {
+    const currentScrollY = window.scrollY;
+    
+    // Auto-hide search bar logic with improved edge cases
+    if (Math.abs(currentScrollY - lastScrollY.current) > scrollThreshold) {
+      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+        // Scrolling down and past header - hide search bar
+        setShowSearchBar(false);
+      } else if (currentScrollY < lastScrollY.current || currentScrollY <= 40) {
+        // Scrolling up or near top - show search bar
+        setShowSearchBar(true);
+      }
+      lastScrollY.current = currentScrollY;
+    }
+    
+    // Always show search bar when at very top
+    if (currentScrollY <= 10) {
+      setShowSearchBar(true);
+    }
+    
+    // Infinite loading logic
     const threshold = 100; // pixels from bottom to trigger load
     const currentScroll = window.innerHeight + document.documentElement.scrollTop;
     const maxScroll = document.documentElement.offsetHeight;
@@ -187,7 +212,7 @@ function MobileStorefront() {
     if (currentScroll >= maxScroll - threshold && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, scrollThreshold]);
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
@@ -656,8 +681,8 @@ function MobileStorefront() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Professional Green Header */}
-      <div className="bg-green-600 sticky top-0 z-[10000] shadow-lg">
+      {/* Professional Green Header with Auto-hide Search */}
+      <div className="bg-green-600 sticky top-0 z-[10000] shadow-lg transition-transform duration-300 ease-in-out">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <h1 
@@ -698,15 +723,31 @@ function MobileStorefront() {
             </div>
           </div>
           
-          {/* Prominent Search Bar */}
+          {/* Auto-hide Search Bar with Smooth Animation */}
           {(activeTab === 'home' || activeTab === 'categories') && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div 
+              className={`relative transition-all duration-300 ease-in-out overflow-hidden ${
+                showSearchBar 
+                  ? 'max-h-16 opacity-100 transform translate-y-0' 
+                  : 'max-h-0 opacity-0 transform -translate-y-2'
+              }`}
+            >
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
               <Input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSearchBar(true)} // Always show when user wants to search
+                onBlur={(e) => {
+                  // Keep search visible if there's text typed
+                  if (!e.target.value.trim()) {
+                    // Small delay to prevent flickering when switching between elements
+                    setTimeout(() => {
+                      if (window.scrollY > 80) setShowSearchBar(false);
+                    }, 150);
+                  }
+                }}
                 className="pl-10 rounded-lg bg-white border-0 focus:ring-2 focus:ring-green-300 shadow-sm"
               />
             </div>
