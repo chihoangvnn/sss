@@ -1,0 +1,87 @@
+## Mô phỏng Bố cục Trang Chi tiết trên Mobile
+Hãy tưởng tượng người dùng đang lướt từ trên xuống dưới.
+
+Màn hình Đầu tiên (Những gì khách thấy ngay lập tức)
+Đây là khu vực quan trọng nhất để giữ chân khách hàng.
+
++---------------------------------+
+|                                 |
+|     [ <   Hình ảnh chính   > ]   |  <-- Một carousel ảnh, cho phép lướt ngang
+|     (Nhang cháy, nguyên liệu)    |      để xem nhiều góc độ.
+|            o O o o              |
+|                                 |
++---------------------------------+
+|                                 |
+|  **Nhang Trầm Hương Thanh Tịnh** |  <-- Tên sản phẩm, H1, chữ to, rõ ràng.
+|                                 |
+|  ⭐⭐⭐⭐⭐ (2,189 đánh giá)      |  <-- Bằng chứng xã hội ngay lập tắp.
+|                                 |
+|  **150.000đ** / hộp 100 nén     |  <-- Giá tiền nổi bật.
+|                                 |
+|  ✅ 100% Tự nhiên  ✅ Ít khói    |  <-- 3 lợi ích cốt lõi, dễ quét bằng mắt.
+|  ✅ An toàn cho sức khỏe        |
+|                                 |
++---------------------------------+
+Khu vực Hành động (Ngay bên dưới, không cần cuộn nhiều)
+Đây là nơi kêu gọi hành động, phải cực kỳ dễ dàng và tin cậy.
+
++---------------------------------+
+|                                 |
+|  [   Thêm vào Giỏ hàng   ]      |  <-- Nút chính, to, đầy đủ chiều ngang,
+|                                 |      màu sắc tương phản cao.
++---------------------------------+
+|                                 |
+|  [      Thỉnh Nhang      ]      |  <-- Nút phụ, có thể có style khác
+|                                 |      (ví dụ: chỉ có viền).
++---------------------------------+
+| (Logo Visa)(Mastercard)(Bảo mật) |  <-- Tín hiệu tin cậy ngay khu vực nút.
+|                                 |
+|  geprüft Giao hàng Toàn quốc           |
+| ✓ Kiểm tra hàng khi nhận        |
+|                                 |
++---------------------------------+
+Thông tin Chi tiết (Người dùng cuộn xuống để đọc thêm)
+Sử dụng các mục có thể thu gọn/mở rộng (accordion) để tránh tạo ra một "bức tường chữ" dài ngoằng.
+
++---------------------------------+
+|                                 |
+| [ + ] Mô tả Sản phẩm            |  <-- Bấm vào để mở rộng nội dung.
+|---------------------------------|
+| [ + ] Thành phần & Nguồn gốc     |
+|---------------------------------|
+| [ + ] Hướng dẫn Sử dụng         |
+|                                 |
++---------------------------------+
+Đánh giá từ Khách hàng
+Hiển thị những đánh giá tốt nhất một cách trực quan.
+
++---------------------------------+
+|                                 |
+| **Khách hàng nói gì về chúng tôi** |
+|                                 |
+| ⭐⭐⭐⭐⭐                       |
+| "Hương thơm rất dễ chịu, tôi rất  |
+| an tâm khi thắp trên bàn thờ..." |
+| - Chú Minh, 62 tuổi, Đà Nẵng     |
+|                                 |
+|   [ Xem tất cả 2,189 đánh giá ]  |
+|                                 |
++---------------------------------+
+Sản phẩm Liên quan
+Cuối trang, gợi ý các sản phẩm khác.
+
++---------------------------------+
+|                                 |
+| **Có thể bạn cũng quan tâm** |
+|                                 |
+| [Ảnh SP A] [Ảnh SP B] [Ảnh SP C] | <-- Carousel lướt ngang.
+|                                 |
++---------------------------------+
+## 4 Lưu ý Vàng cho Bố cục Mobile (Target 30-6x)
+"Ngón tay cái là Vua": Tất cả các nút quan trọng (Thêm vào giỏ hàng, Mua ngay) và các link phải nằm ở khu vực mà ngón tay cái có thể chạm tới một cách thoải mái, thường là ở giữa hoặc nửa dưới màn hình.
+
+Cỡ chữ Lớn, Tương phản Cao: Đảm bảo văn bản dễ đọc. Sử dụng chữ màu tối trên nền sáng (hoặc ngược lại). Cỡ chữ cho mô tả nên từ 16px trở lên.
+
+Không Pop-up Che khuất: Tránh sử dụng các pop-up quảng cáo che mất nội dung. Đối tượng khách hàng này rất ghét và thường không biết cách tắt chúng.
+
+Tốc độ Tải trang: Tối ưu hóa hình ảnh để trang web tải nhanh trên kết nối di động. Khách hàng lớn tuổi sẽ không đủ kiên nhẫn để chờ một trang web tải chậm.
