@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Plus, Minus, Heart, Star, Share2, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,11 @@ export function ProductDetailModal({
 }: ProductDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  
+  // Sticky button behavior state
+  const [showStickyButtons, setShowStickyButtons] = useState(false);
+  const actionButtonsRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Drag to close functionality
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -106,6 +111,30 @@ export function ProductDetailModal({
     // TODO: Could trigger special checkout flow or blessing ceremony booking
     console.log('Thỉnh Nhang (Premium Purchase) initiated');
   };
+
+  // Sticky button scroll detection
+  const handleScroll = useCallback(() => {
+    const scrollContainer = scrollContainerRef.current;
+    const actionButtons = actionButtonsRef.current;
+    
+    if (!scrollContainer || !actionButtons) return;
+    
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const buttonRect = actionButtons.getBoundingClientRect();
+    
+    // Show sticky buttons when action buttons are scrolled past view
+    const buttonsScrolledPast = buttonRect.bottom < containerRect.top + 100;
+    setShowStickyButtons(buttonsScrolledPast);
+  }, []);
+
+  // Attach scroll listener to content area
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
 
   // Toggle accordion sections
   const toggleAccordion = (section: string) => {
@@ -197,6 +226,7 @@ export function ProductDetailModal({
 
         {/* Scrollable Content */}
         <div 
+          ref={scrollContainerRef}
           className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
@@ -338,6 +368,62 @@ export function ProductDetailModal({
                   </div>
                 </div>
               )}
+
+              {/* Action Buttons - Positioned After Description */}
+              <div ref={actionButtonsRef} id="action-buttons" className="mb-6 space-y-3">
+                {/* Quantity Selector Row */}
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); handleQuantityChange(-1); }}
+                    disabled={quantity <= 1}
+                    className="w-10 h-10 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-16 text-center font-semibold text-lg">
+                    {quantity}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); handleQuantityChange(1); }}
+                    disabled={quantity >= product.stock}
+                    className="w-10 h-10 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Two Action Buttons */}
+                <div className="flex items-center gap-3">
+                  {/* Add to Cart Button */}
+                  <Button
+                    onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
+                    disabled={product.stock === 0}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-1" />
+                    <span className="text-sm">Thêm vào Giỏ hàng</span>
+                  </Button>
+                  
+                  {/* Thỉnh Nhang (Premium Purchase) Button */}
+                  <Button
+                    onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
+                    disabled={product.stock === 0}
+                  >
+                    <Heart className="h-4 w-4 mr-1" />
+                    <span className="text-sm">Thỉnh Nhang</span>
+                  </Button>
+                </div>
+                
+                {/* Price Display */}
+                <div className="text-center mt-2 text-gray-600 text-sm">
+                  Tổng: <span className="font-semibold text-green-600">{(product.price * quantity).toLocaleString('vi-VN')}₫</span>
+                </div>
+              </div>
 
               {/* Benefits Section - Organic Food Vietnamese Style */}
               <div className="mb-6 bg-green-50 rounded-xl p-4">
@@ -654,61 +740,63 @@ export function ProductDetailModal({
           </div>
         </div>
 
-        {/* Fixed Bottom Actions - Two Button Layout */}
-        <div className="bg-white border-t p-4 mt-auto" onClick={(e) => e.stopPropagation()}>
-          {/* Quantity Selector Row */}
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); handleQuantityChange(-1); }}
-              disabled={quantity <= 1}
-              className="w-10 h-10 p-0"
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <span className="w-16 text-center font-semibold text-lg">
-              {quantity}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); handleQuantityChange(1); }}
-              disabled={quantity >= product.stock}
-              className="w-10 h-10 p-0"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+        {/* Sticky Bottom Buttons - Follow Scroll Like Bottom Nav */}
+        {showStickyButtons && (
+          <div className="absolute bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-20" onClick={(e) => e.stopPropagation()}>
+            {/* Quantity Selector Row */}
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); handleQuantityChange(-1); }}
+                disabled={quantity <= 1}
+                className="w-10 h-10 p-0"
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="w-16 text-center font-semibold text-lg">
+                {quantity}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); handleQuantityChange(1); }}
+                disabled={quantity >= product.stock}
+                className="w-10 h-10 p-0"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
 
-          {/* Two Action Buttons */}
-          <div className="flex items-center gap-3">
-            {/* Add to Cart Button */}
-            <Button
-              onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
-              disabled={product.stock === 0}
-            >
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              <span className="text-sm">Thêm vào Giỏ hàng</span>
-            </Button>
+            {/* Two Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Add to Cart Button */}
+              <Button
+                onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
+                disabled={product.stock === 0}
+              >
+                <ShoppingCart className="h-4 w-4 mr-1" />
+                <span className="text-sm">Thêm vào Giỏ hàng</span>
+              </Button>
+              
+              {/* Thỉnh Nhang (Premium Purchase) Button */}
+              <Button
+                onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
+                disabled={product.stock === 0}
+              >
+                <Heart className="h-4 w-4 mr-1" />
+                <span className="text-sm">Thỉnh Nhang</span>
+              </Button>
+            </div>
             
-            {/* Thỉnh Nhang (Premium Purchase) Button */}
-            <Button
-              onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
-              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
-              disabled={product.stock === 0}
-            >
-              <Heart className="h-4 w-4 mr-1" />
-              <span className="text-sm">Thỉnh Nhang</span>
-            </Button>
+            {/* Price Display */}
+            <div className="text-center mt-2 text-gray-600 text-sm">
+              Tổng: <span className="font-semibold text-green-600">{(product.price * quantity).toLocaleString('vi-VN')}₫</span>
+            </div>
           </div>
-          
-          {/* Price Display */}
-          <div className="text-center mt-2 text-gray-600 text-sm">
-            Tổng: <span className="font-semibold text-green-600">{(product.price * quantity).toLocaleString('vi-VN')}₫</span>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
