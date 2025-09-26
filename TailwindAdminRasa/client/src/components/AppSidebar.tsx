@@ -92,22 +92,6 @@ const coreBusinessItems = [
     description: "Quản lý thông tin khách hàng"
   },
   {
-    title: "Books Management",
-    url: "/books",
-    icon: BookOpen,
-    badge: "NEW",
-    gradient: "gradient-blue",
-    description: "ISBN-based books with price comparison"
-  },
-  {
-    title: "AbeBooks Management", 
-    url: "/books-abebooks",
-    icon: BookOpen,
-    badge: "NEW",
-    gradient: "gradient-indigo",
-    description: "Multi-account AbeBooks integration"
-  },
-  {
     title: "Danh mục",
     url: "/categories",
     icon: Tags,
@@ -128,6 +112,26 @@ const coreBusinessItems = [
     gradient: "gradient-orange",
     description: "AI seeding và quản lý đánh giá sản phẩm"
   },
+];
+
+// Books Management - ISBN tracking and price comparison tools
+const booksManagementItems = [
+  {
+    title: "Books Management",
+    url: "/books",
+    icon: BookOpen,
+    badge: "NEW",
+    gradient: "gradient-blue",
+    description: "ISBN-based books with price comparison"
+  },
+  {
+    title: "AbeBooks Management", 
+    url: "/books-abebooks",
+    icon: BookOpen,
+    badge: "NEW",
+    gradient: "gradient-indigo",
+    description: "Multi-account AbeBooks integration"
+  }
 ];
 
 // Social Management - Combined social platforms and content tools
@@ -362,6 +366,60 @@ export function AppSidebar() {
         >
           <SidebarMenu className="space-y-2">
               {coreBusinessItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === item.url}
+                    className={`group relative overflow-hidden rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-md ${
+                      location === item.url 
+                        ? 'bg-primary/10 text-primary border-primary/20 border shadow-sm' 
+                        : 'hover:bg-card/80 hover:shadow-sm'
+                    }`}
+                    data-testid={`nav-${item.title.toLowerCase()}`}
+                  >
+                    <Link href={item.url} className="flex items-center gap-3 p-3">
+                      <div className={`
+                        relative flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200
+                        ${location === item.url 
+                          ? 'bg-primary text-primary-foreground shadow-sm' 
+                          : 'bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+                        }
+                      `}>
+                        <item.icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-sm">{item.title}</span>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                      {item.badge && (
+                        <Badge 
+                          variant="secondary" 
+                          className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-0.5"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+          </SidebarMenu>
+        </CollapsibleSidebarGroup>
+
+        {/* Books Management - ISBN tracking and price comparison */}
+        <CollapsibleSidebarGroup 
+          title="BOOKS MANAGEMENT"
+          icon="📚"
+          defaultCollapsed={false}
+          persistKey="books_management"
+          itemCount={booksManagementItems.length}
+        >
+          <SidebarMenu className="space-y-2">
+              {booksManagementItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 
