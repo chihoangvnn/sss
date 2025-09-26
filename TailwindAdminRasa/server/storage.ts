@@ -66,7 +66,7 @@ export interface IStorage {
   deleteCategory(id: string): Promise<boolean>;
 
   // Product methods
-  getProducts(limit?: number, categoryId?: string, search?: string, offset?: number): Promise<Product[]>;
+  getProducts(limit?: number, categoryId?: string, search?: string, offset?: number, sortBy?: string, sortOrder?: string): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
   getProductBySKU(sku: string): Promise<Product | undefined>;
   getProductBySlug(slug: string): Promise<Product | undefined>;
@@ -422,7 +422,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Product methods
-  async getProducts(limit = 50, categoryId?: string, search?: string, offsetNum = 0): Promise<Product[]> {
+  async getProducts(limit = 50, categoryId?: string, search?: string, offsetNum = 0, sortBy = 'newest', sortOrder = 'desc'): Promise<Product[]> {
     // Build where conditions
     const conditions = [];
     
@@ -441,20 +441,37 @@ export class DatabaseStorage implements IStorage {
       );
     }
     
+    // Build order by clause based on sortBy and sortOrder
+    let orderByClause;
+    const isDesc = sortOrder === 'desc';
+    
+    switch (sortBy) {
+      case 'price':
+        orderByClause = isDesc ? desc(products.price) : products.price;
+        break;
+      case 'name':
+        orderByClause = isDesc ? desc(products.name) : products.name;
+        break;
+      case 'newest':
+      default:
+        orderByClause = isDesc ? desc(products.createdAt) : products.createdAt;
+        break;
+    }
+    
     // Build query with or without conditions
     if (conditions.length > 0) {
       return await db
         .select()
         .from(products)
         .where(conditions.length === 1 ? conditions[0] : and(...conditions))
-        .orderBy(desc(products.createdAt))
+        .orderBy(orderByClause)
         .limit(limit)
         .offset(offsetNum);
     } else {
       return await db
         .select()
         .from(products)
-        .orderBy(desc(products.createdAt))
+        .orderBy(orderByClause)
         .limit(limit)
         .offset(offsetNum);
     }

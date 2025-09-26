@@ -20,16 +20,27 @@ const requireAuth = (req: any, res: any, next: any) => {
   next();
 };
 
-// GET /api/products - List all products with search support
+// GET /api/products - List all products with search and sort support
 router.get('/', async (req, res) => {
   try {
-    const { limit, categoryId, search, offset } = req.query;
+    const { limit, categoryId, search, offset, sortBy, sortOrder } = req.query;
     const limitNum = limit ? parseInt(limit as string) : 50;
     const offsetNum = offset ? parseInt(offset as string) : 0;
+    const sortByStr = sortBy as string || 'newest';
+    const sortOrderStr = sortOrder as string || 'desc';
     
-    console.log('📊 API: Getting products with filters:', { limitNum, categoryId, search, offsetNum });
+    console.log('📊 API: Getting products with filters:', { 
+      limitNum, categoryId, search, offsetNum, sortBy: sortByStr, sortOrder: sortOrderStr 
+    });
     
-    const products = await storage.getProducts(limitNum, categoryId as string, search as string, offsetNum);
+    const products = await storage.getProducts(
+      limitNum, 
+      categoryId as string, 
+      search as string, 
+      offsetNum,
+      sortByStr,
+      sortOrderStr
+    );
     res.json(products);
   } catch (error) {
     console.error('❌ Error fetching products:', error);

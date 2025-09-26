@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, Heart, ArrowLeft, Plus, Minus, MessageCircle, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { Search, ShoppingCart, User, Heart, ArrowLeft, Plus, Minus, MessageCircle, X, Filter, SortAsc, SortDesc } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -44,28 +44,49 @@ function MobileStorefront() {
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'newest'>('newest');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
+  const [minRating, setMinRating] = useState(0);
 
-  // Fetch products with loading states
+  // Infinite scroll setup - fetch products with pagination
   const { 
-    data: products = [], 
+    data: productsData,
     isLoading: productsLoading, 
     error: productsError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isRefetching: productsRefetching 
-  } = useQuery<Product[]>({
-    queryKey: ['mobile-products', selectedCategory, searchQuery],
-    queryFn: async () => {
-      let url = '/api/products?limit=50';
+  } = useInfiniteQuery<Product[]>({
+    queryKey: ['mobile-products', selectedCategory, searchQuery, sortBy, sortOrder],
+    queryFn: async ({ pageParam = 0 }) => {
+      let url = `/api/products?limit=20&offset=${pageParam}`;
       if (selectedCategory !== 'all') {
         url += `&categoryId=${selectedCategory}`;
       }
       if (searchQuery) {
         url += `&search=${encodeURIComponent(searchQuery)}`;
       }
+      
+      // Add sorting parameters
+      url += `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+      
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch products');
       return response.json();
-    }
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      // If we got less than limit, no more pages
+      if (lastPage.length < 20) return undefined;
+      return allPages.length * 20;
+    },
+    initialPageParam: 0,
   });
+  
+  // Flatten pages into single array
+  const products = productsData?.pages.flat() || [];
 
   // Fetch real categories with loading states
   const { 
@@ -157,9 +178,56 @@ function MobileStorefront() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
+  // Scroll detection for infinite loading - improved trigger with threshold
+  const handleScroll = useCallback(() => {
+    const threshold = 100; // pixels from bottom to trigger load
+    const currentScroll = window.innerHeight + document.documentElement.scrollTop;
+    const maxScroll = document.documentElement.offsetHeight;
+    
+    if (currentScroll >= maxScroll - threshold && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // Advanced filtering and sorting
   const filteredProducts = products
-    .filter(product => product.status === 'active' && product.stock > 0)
-    .slice(0, 20); // Limit to 20 products for better mobile performance
+    .filter(product => {
+      // Basic filters
+      if (product.status !== 'active' || product.stock <= 0) return false;
+      
+      // Price range filter
+      if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
+      
+      // Rating filter - implemented with graceful fallback
+      // When rating data is available, filter by minimum rating
+      // For now, treat products without rating as 0-star (show when minRating is 0)
+      if (minRating > 0) {
+        const productRating = (product as any).rating || 0; // Future: add rating to Product interface
+        if (productRating < minRating) return false;
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'price':
+          return sortOrder === 'asc' ? a.price - b.price : b.price - a.price;
+        case 'name':
+          return sortOrder === 'asc' 
+            ? a.name.localeCompare(b.name, 'vi')
+            : b.name.localeCompare(a.name, 'vi');
+        case 'newest':
+        default:
+          // For newest sorting, rely on backend ordering from API
+          // Backend already handles the sortOrder parameter correctly
+          return 0; // Maintain API order (backend-sorted)
+      }
+    });
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -358,6 +426,95 @@ function MobileStorefront() {
               </div>
             </div>
 
+            {/* Filter and Sort Bar */}
+            <div className="bg-white border-b px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  Lọc
+                </Button>
+                
+                <div className="flex items-center gap-2">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'name' | 'price' | 'newest')}
+                    className="text-sm border rounded-md px-2 py-1"
+                  >
+                    <option value="newest">Mới nhất</option>
+                    <option value="name">Tên A-Z</option>
+                    <option value="price">Giá</option>
+                  </select>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-2"
+                  >
+                    {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Expandable Filter Options */}
+              {showFilters && (
+                <div className="mt-3 pt-3 border-t space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">
+                      Khoảng giá: {priceRange[0].toLocaleString('vi-VN')}₫ - {priceRange[1].toLocaleString('vi-VN')}₫
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        placeholder="Từ"
+                        value={priceRange[0]}
+                        onChange={(e) => setPriceRange([Number(e.target.value) || 0, priceRange[1]])}
+                        className="text-sm"
+                      />
+                      <span className="text-gray-500">-</span>
+                      <Input
+                        type="number"
+                        placeholder="Đến"
+                        value={priceRange[1]}
+                        onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value) || 1000000])}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Rating Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">
+                      Đánh giá tối thiểu: {minRating} ⭐ trở lên
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {[0, 1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          onClick={() => setMinRating(rating)}
+                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                            minRating === rating
+                              ? 'bg-yellow-500 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {rating === 0 ? 'Tất cả' : `${rating}⭐+`}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Lưu ý: Chức năng đánh giá sẽ hoạt động khi có dữ liệu đánh giá sản phẩm
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Product Grid */}
             <div className="p-4">
               <div className="space-y-3">
@@ -382,7 +539,34 @@ function MobileStorefront() {
                   <>
                     {filteredProducts.map((product) => renderProductCard(product))}
                     
-                    {filteredProducts.length === 0 && (
+                    {/* Infinite Scroll Loading */}
+                    {isFetchingNextPage && (
+                      <div className="py-4">
+                        <ProductListSkeleton count={3} />
+                      </div>
+                    )}
+                    
+                    {/* Load More Button for fallback */}
+                    {hasNextPage && !isFetchingNextPage && (
+                      <div className="text-center py-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => fetchNextPage()}
+                          className="w-full"
+                        >
+                          Tải thêm sản phẩm
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* No More Items */}
+                    {!hasNextPage && products.length > 0 && (
+                      <div className="text-center py-4 text-gray-500 text-sm">
+                        🎉 Đã hiển thị tất cả sản phẩm
+                      </div>
+                    )}
+                    
+                    {filteredProducts.length === 0 && !productsLoading && (
                       <div className="text-center py-8">
                         <span className="text-4xl mb-4 block">🛍️</span>
                         <p className="text-gray-500">
