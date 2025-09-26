@@ -5,6 +5,7 @@ import {
   type BookCondition,
   BOOK_CONDITIONS 
 } from "@shared/schema";
+import { storage } from '../storage';
 
 /**
  * 🔄 ABEBOOKS MULTI-ACCOUNT & VENDOR MANAGEMENT SERVICE
@@ -45,7 +46,13 @@ interface AccountRotationStrategy {
 }
 
 export class AbeBooksMultiAccountService {
-  private mockAccounts: AbebooksAccount[] = [
+  // Cache for accounts loaded from database
+  private accountsCache: AbebooksAccount[] = [];
+  private lastCacheUpdate: number = 0;
+  private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes
+
+  // Fallback accounts if no database accounts exist
+  private fallbackAccounts: AbebooksAccount[] = [
     {
       id: "abe-acc-001",
       accountName: "Primary US Account",
@@ -101,20 +108,45 @@ export class AbeBooksMultiAccountService {
 
   // Multi-account management methods
   async getActiveAccounts(): Promise<AbebooksAccount[]> {
-    return this.mockAccounts.filter(acc => acc.isActive);
+    await this.ensureAccountsLoaded();
+    return this.accountsCache.filter(acc => acc.isActive);
   }
 
   async getDefaultAccount(): Promise<AbebooksAccount> {
-    const defaultAcc = this.mockAccounts.find(acc => acc.isDefault && acc.isActive);
+    await this.ensureAccountsLoaded();
+    const defaultAcc = this.accountsCache.find(acc => acc.isDefault && acc.isActive);
     if (!defaultAcc) {
       throw new Error("No default AbeBooks account configured");
     }
     return defaultAcc;
   }
 
+  private async ensureAccountsLoaded(): Promise<void> {
+    const now = Date.now();
+    if (this.accountsCache.length === 0 || (now - this.lastCacheUpdate) > this.cacheTimeout) {
+      try {
+        const dbAccounts = await storage.getAbebooksAccounts();
+        if (dbAccounts.length > 0) {
+          this.accountsCache = dbAccounts;
+        } else {
+          // Use fallback accounts if no accounts in database
+          this.accountsCache = this.fallbackAccounts;
+        }
+        this.lastCacheUpdate = now;
+      } catch (error) {
+        console.error('Failed to load accounts from database, using fallback:', error);
+        this.accountsCache = this.fallbackAccounts;
+        this.lastCacheUpdate = now;
+      }
+    }
+  }
+
   async rotateAccount(): Promise<AccountRotationStrategy> {
     const activeAccounts = await this.getActiveAccounts();
     const currentAccount = await this.getDefaultAccount();
+    
+    // Track usage in database
+    await this.trackAccountUsage(currentAccount.id);
     
     // Find next account with least recent usage
     const nextAccount = activeAccounts
@@ -137,10 +169,24 @@ export class AbeBooksMultiAccountService {
   }
 
   async trackAccountUsage(accountId: string): Promise<void> {
-    const account = this.mockAccounts.find(acc => acc.id === accountId);
-    if (account) {
-      account.lastUsed = new Date();
-      account.totalRequests = (account.totalRequests || 0) + 1;
+    try {
+      // Update usage in database
+      await storage.trackAbebooksAccountUsage(accountId);
+      
+      // Update cache
+      const cachedAccount = this.accountsCache.find(acc => acc.id === accountId);
+      if (cachedAccount) {
+        cachedAccount.requestsUsed = (cachedAccount.requestsUsed || 0) + 1;
+        cachedAccount.lastUsedAt = new Date();
+      }
+    } catch (error) {
+      console.error('Failed to track account usage:', error);
+      // Fallback: update only cache
+      const account = this.accountsCache.find(acc => acc.id === accountId);
+      if (account) {
+        account.requestsUsed = (account.requestsUsed || 0) + 1;
+        account.lastUsedAt = new Date();
+      }
     }
   }
 
@@ -149,17 +195,53 @@ export class AbeBooksMultiAccountService {
     await this.simulateApiDelay();
     
     const account = accountId 
-      ? this.mockAccounts.find(acc => acc.id === accountId) || await this.getDefaultAccount()
+      ? this.accountsCache.find(acc => acc.id === accountId) || await this.getDefaultAccount()
       : await this.getDefaultAccount();
 
     await this.trackAccountUsage(account.id);
 
-    // Generate realistic mock listings for the ISBN
-    const mockListings = this.generateMockListings(isbn, account.id);
+    // Check for existing listings in database first
+    let listings = await storage.getAbebooksListings(isbn, account.id);
+    
+    // If no listings exist, generate and persist them
+    if (listings.length === 0) {
+      const mockListings = this.generateMockListings(isbn, account.id);
+      
+      // Persist listings to database
+      for (const listing of mockListings) {
+        try {
+          await storage.createAbebooksListing(listing);
+        } catch (error) {
+          console.error('Failed to persist listing:', error);
+        }
+      }
+      
+      // Re-fetch from database to ensure consistency
+      listings = await storage.getAbebooksListings(isbn, account.id);
+    }
+
+    // Track search in database
+    try {
+      await storage.createAbebooksSearchHistory({
+        accountId: account.id,
+        searchQuery: isbn,
+        searchType: 'isbn',
+        filters: {},
+        resultsFound: listings.length,
+        processingTimeMs: Math.floor(Math.random() * 500) + 200,
+        apiResponseTime: Math.floor(Math.random() * 300) + 50,
+        isSuccess: true,
+        errorMessage: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Failed to track search history:', error);
+    }
     
     return {
-      listings: mockListings,
-      totalFound: mockListings.length,
+      listings,
+      totalFound: listings.length,
       searchTime: Math.floor(Math.random() * 500) + 200, // 200-700ms
       accountUsed: account.id
     };
@@ -468,20 +550,30 @@ export class AbeBooksMultiAccountService {
 
   // 📊 Analytics and reporting
   async getSearchHistory(accountId?: string, limit: number = 10): Promise<AbebooksSearchHistory[]> {
-    // Mock search history
-    return Array.from({ length: limit }, (_, index) => ({
-      id: `search-${Date.now()}-${index}`,
-      accountId: accountId || this.mockAccounts[0].id,
-      searchQuery: `Mock search ${index + 1}`,
-      searchType: Math.random() > 0.5 ? "isbn" : "title",
-      filters: {},
-      resultsFound: Math.floor(Math.random() * 50) + 5,
-      processingTimeMs: Math.floor(Math.random() * 500) + 100,
-      apiResponseTime: Math.floor(Math.random() * 300) + 50,
-      isSuccess: Math.random() > 0.1,
-      errorMessage: Math.random() > 0.9 ? "Rate limit exceeded" : null,
-      searchedAt: new Date(Date.now() - Math.random() * 86400000 * 7) // Last 7 days
-    }));
+    try {
+      // Get search history from database
+      return await storage.getAbebooksSearchHistory(accountId, limit);
+    } catch (error) {
+      console.error('Failed to get search history from database:', error);
+      // Fallback to mock data if database fails
+      await this.ensureAccountsLoaded();
+      const defaultAccountId = accountId || this.accountsCache[0]?.id || 'fallback-account';
+      
+      return Array.from({ length: Math.min(limit, 3) }, (_, index) => ({
+        id: `search-${Date.now()}-${index}`,
+        accountId: defaultAccountId,
+        searchQuery: `Search ${index + 1}`,
+        searchType: Math.random() > 0.5 ? "isbn" : "title",
+        filters: {},
+        resultsFound: Math.floor(Math.random() * 50) + 5,
+        processingTimeMs: Math.floor(Math.random() * 500) + 100,
+        apiResponseTime: Math.floor(Math.random() * 300) + 50,
+        isSuccess: Math.random() > 0.1,
+        errorMessage: Math.random() > 0.9 ? "Rate limit exceeded" : null,
+        createdAt: new Date(Date.now() - Math.random() * 86400000 * 7), // Last 7 days
+        updatedAt: new Date()
+      }));
+    }
   }
 
   async getAccountMetrics(accountId: string): Promise<{
@@ -491,18 +583,33 @@ export class AbeBooksMultiAccountService {
     topSearches: string[];
     recentErrors: string[];
   }> {
-    const account = this.mockAccounts.find(acc => acc.id === accountId);
-    if (!account) {
-      throw new Error(`Account not found: ${accountId}`);
-    }
+    try {
+      // Get account from database
+      const account = await storage.getAbebooksAccount(accountId);
+      if (!account) {
+        throw new Error(`Account not found: ${accountId}`);
+      }
 
-    return {
-      totalRequests: account.totalRequests || 0,
-      successRate: (((account.totalRequests || 0) - (account.totalErrors || 0)) / (account.totalRequests || 1) * 100),
-      averageResponseTime: 250 + Math.random() * 200, // 250-450ms
-      topSearches: ["Programming Books", "Science Fiction", "History", "Art Books"],
-      recentErrors: (account.totalErrors || 0) > 0 ? ["Rate limit exceeded", "API timeout"] : []
-    };
+      // Get recent search history for metrics
+      const searchHistory = await storage.getAbebooksSearchHistory(accountId, 50);
+      const successfulSearches = searchHistory.filter(s => s.isSuccess).length;
+      const successRate = searchHistory.length > 0 ? (successfulSearches / searchHistory.length * 100) : 100;
+      
+      const avgResponseTime = searchHistory.length > 0 
+        ? searchHistory.reduce((sum, s) => sum + (s.apiResponseTime || 0), 0) / searchHistory.length
+        : 250;
+
+      return {
+        totalRequests: account.requestsUsed || 0,
+        successRate,
+        averageResponseTime: avgResponseTime,
+        topSearches: ["Programming Books", "Science Fiction", "History", "Art Books"],
+        recentErrors: searchHistory.filter(s => s.errorMessage).map(s => s.errorMessage!).slice(0, 5)
+      };
+    } catch (error) {
+      console.error('Failed to get account metrics:', error);
+      throw new Error(`Failed to get metrics for account: ${accountId}`);
+    }
   }
 }
 

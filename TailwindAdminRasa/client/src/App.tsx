@@ -49,7 +49,7 @@ import BotStatusDashboard from "@/pages/BotStatusDashboard";
 import NgrokConfig from "@/pages/NgrokConfig";
 import POS from "@/pages/POS";
 import MobileStorefront from "@/pages/MobileStorefront";
-import BooksManagement from "@/components/BooksManagement";
+import BooksManagement from "@/pages/BooksManagement";
 
 // Admin Routes (inside sidebar layout)
 function AdminRouter() {

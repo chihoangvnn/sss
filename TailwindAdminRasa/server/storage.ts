@@ -2781,6 +2781,104 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updated || undefined;
   }
+
+  // AbeBooks methods
+  async getAbebooksAccounts(): Promise<AbebooksAccount[]> {
+    return await db.select().from(abebooksAccounts).orderBy(abebooksAccounts.createdAt);
+  }
+
+  async getAbebooksAccount(id: string): Promise<AbebooksAccount | undefined> {
+    const [account] = await db.select().from(abebooksAccounts).where(eq(abebooksAccounts.id, id));
+    return account || undefined;
+  }
+
+  async getDefaultAbebooksAccount(): Promise<AbebooksAccount | undefined> {
+    const [account] = await db.select().from(abebooksAccounts)
+      .where(eq(abebooksAccounts.isDefault, true))
+      .limit(1);
+    return account || undefined;
+  }
+
+  async createAbebooksAccount(account: InsertAbebooksAccount): Promise<AbebooksAccount> {
+    const [created] = await db.insert(abebooksAccounts).values(account).returning();
+    return created;
+  }
+
+  async updateAbebooksAccount(id: string, account: Partial<InsertAbebooksAccount>): Promise<AbebooksAccount | undefined> {
+    const [updated] = await db.update(abebooksAccounts)
+      .set({ ...account, updatedAt: new Date() })
+      .where(eq(abebooksAccounts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async trackAbebooksAccountUsage(accountId: string): Promise<AbebooksAccount | undefined> {
+    const [updated] = await db.update(abebooksAccounts)
+      .set({ 
+        requestsUsed: sql`${abebooksAccounts.requestsUsed} + 1`,
+        lastUsedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(abebooksAccounts.id, accountId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getAbebooksListings(bookIsbn?: string, accountId?: string): Promise<AbebooksListing[]> {
+    const query = db.select().from(abebooksListings);
+    const conditions = [];
+    
+    if (bookIsbn) {
+      conditions.push(eq(abebooksListings.bookIsbn, bookIsbn));
+    }
+    if (accountId) {
+      conditions.push(eq(abebooksListings.accountId, accountId));
+    }
+    
+    if (conditions.length > 0) {
+      query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(abebooksListings.createdAt));
+  }
+
+  async getAbebooksListing(id: string): Promise<AbebooksListing | undefined> {
+    const [listing] = await db.select().from(abebooksListings).where(eq(abebooksListings.id, id));
+    return listing || undefined;
+  }
+
+  async createAbebooksListing(listing: InsertAbebooksListing): Promise<AbebooksListing> {
+    const [created] = await db.insert(abebooksListings).values(listing).returning();
+    return created;
+  }
+
+  async updateAbebooksListing(id: string, listing: Partial<InsertAbebooksListing>): Promise<AbebooksListing | undefined> {
+    const [updated] = await db.update(abebooksListings)
+      .set({ ...listing, updatedAt: new Date() })
+      .where(eq(abebooksListings.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteAbebooksListing(id: string): Promise<boolean> {
+    const result = await db.delete(abebooksListings).where(eq(abebooksListings.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getAbebooksSearchHistory(accountId?: string, limit: number = 50): Promise<AbebooksSearchHistory[]> {
+    const query = db.select().from(abebooksSearchHistory);
+    
+    if (accountId) {
+      query.where(eq(abebooksSearchHistory.accountId, accountId));
+    }
+    
+    return await query.orderBy(desc(abebooksSearchHistory.createdAt)).limit(limit);
+  }
+
+  async createAbebooksSearchHistory(history: InsertAbebooksSearchHistory): Promise<AbebooksSearchHistory> {
+    const [created] = await db.insert(abebooksSearchHistory).values(history).returning();
+    return created;
+  }
 }
 
 export const storage = new DatabaseStorage();
