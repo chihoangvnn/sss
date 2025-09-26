@@ -661,8 +661,8 @@ function MobileStorefront() {
       
       {/* Compact Product Info */}
       <div className="px-3 py-2">
-        {/* Product Name - Fixed 2 Lines */}
-        <h3 className="font-semibold text-gray-900 text-sm mb-1.5 line-clamp-2 leading-4 h-8 overflow-hidden">
+        {/* Product Name - Single Line with Ellipsis */}
+        <h3 className="font-semibold text-gray-900 text-sm mb-1.5 truncate">
           {product.name}
         </h3>
         
