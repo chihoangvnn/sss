@@ -56,6 +56,7 @@ function MobileStorefront() {
   const lastScrollY = useRef(0);
   const scrollThreshold = 10; // Minimum scroll distance to trigger hide/show
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Infinite scroll setup - fetch products with pagination
   const { 
@@ -185,14 +186,18 @@ function MobileStorefront() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  // Throttled scroll detection with focus protection
+  // Throttled scroll detection with focus protection - Fixed for scrollable container
   const handleScroll = useCallback(() => {
     if (scrollTimeoutRef.current) return; // Throttle scroll events
     
     scrollTimeoutRef.current = setTimeout(() => {
       scrollTimeoutRef.current = null;
       
-      const currentScrollY = window.scrollY;
+      // Get scroll position from the actual scrollable container
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      
+      const currentScrollY = container.scrollTop;
       
       // Auto-hide logic ONLY when search is not focused
       if (!isSearchFocused && Math.abs(currentScrollY - lastScrollY.current) > scrollThreshold) {
@@ -211,10 +216,10 @@ function MobileStorefront() {
         setShowSearchBar(true);
       }
       
-      // Infinite loading logic
+      // Infinite loading logic for scrollable container
       const threshold = 100; // pixels from bottom to trigger load
-      const currentScroll = window.innerHeight + document.documentElement.scrollTop;
-      const maxScroll = document.documentElement.offsetHeight;
+      const currentScroll = container.scrollTop + container.clientHeight;
+      const maxScroll = container.scrollHeight;
       
       if (currentScroll >= maxScroll - threshold && hasNextPage && !isFetchingNextPage) {
         fetchNextPage();
@@ -222,9 +227,17 @@ function MobileStorefront() {
     }, 16); // ~60fps throttling
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, scrollThreshold, isSearchFocused]);
 
+  // Attach scroll listener to the correct container in admin layout
   useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const mainContainer = document.querySelector('main.flex-1.overflow-auto') || 
+                         document.querySelector('main[class*="overflow-auto"]') ||
+                         document.querySelector('main');
+    
+    if (mainContainer) {
+      scrollContainerRef.current = mainContainer as HTMLDivElement;
+      mainContainer.addEventListener('scroll', handleScroll);
+      return () => mainContainer.removeEventListener('scroll', handleScroll);
+    }
   }, [handleScroll]);
 
   // Advanced filtering and sorting
