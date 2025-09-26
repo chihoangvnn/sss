@@ -121,9 +121,9 @@ export function ProductDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-60 flex items-end">
+    <div className="fixed top-0 left-0 right-0 bottom-20 bg-black/50 z-60 flex items-end">
       <div 
-        className="bg-white w-full rounded-t-3xl max-h-[95vh] relative cursor-pointer"
+        className="bg-white w-full rounded-t-3xl max-h-[calc(100vh-5rem)] relative cursor-pointer"
         onClick={onClose}
       >
         {/* Header */}
