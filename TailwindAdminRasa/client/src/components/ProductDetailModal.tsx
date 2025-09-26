@@ -122,22 +122,25 @@ export function ProductDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-60 flex items-end">
-      <div className="bg-white w-full rounded-t-3xl max-h-[95vh] relative">
+      <div 
+        className="bg-white w-full rounded-t-3xl max-h-[95vh] relative cursor-pointer"
+        onClick={onClose}
+      >
         {/* Header */}
-        <div className="sticky top-0 bg-white z-10 p-4 border-b flex items-center justify-between">
+        <div className="sticky top-0 bg-white z-10 p-4 border-b flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
           <h2 className="text-lg font-bold text-gray-900">Chi tiết sản phẩm</h2>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onToggleWishlist}>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}>
               <Heart 
                 className={`h-5 w-5 ${
                   isInWishlist ? 'text-red-500 fill-current' : 'text-gray-400'
                 }`} 
               />
             </Button>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
               <Share2 className="h-5 w-5 text-gray-400" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onClose(); }}>
               <X className="h-6 w-6" />
             </Button>
           </div>
@@ -600,13 +603,13 @@ export function ProductDetailModal({
         </div>
 
         {/* Sticky Bottom Actions - Two Button Layout */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white border-t p-4 z-10">
+        <div className="absolute bottom-0 left-0 right-0 bg-white border-t p-4 z-10" onClick={(e) => e.stopPropagation()}>
           {/* Quantity Selector Row */}
           <div className="flex items-center justify-center gap-2 mb-3">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleQuantityChange(-1)}
+              onClick={(e) => { e.stopPropagation(); handleQuantityChange(-1); }}
               disabled={quantity <= 1}
               className="w-10 h-10 p-0"
             >
@@ -618,7 +621,7 @@ export function ProductDetailModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleQuantityChange(1)}
+              onClick={(e) => { e.stopPropagation(); handleQuantityChange(1); }}
               disabled={quantity >= product.stock}
               className="w-10 h-10 p-0"
             >
@@ -630,7 +633,7 @@ export function ProductDetailModal({
           <div className="flex items-center gap-3">
             {/* Add to Cart Button */}
             <Button
-              onClick={handleAddToCart}
+              onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
               className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
               disabled={product.stock === 0}
             >
@@ -640,7 +643,7 @@ export function ProductDetailModal({
             
             {/* Thỉnh Nhang (Premium Purchase) Button */}
             <Button
-              onClick={handleThinhNhang}
+              onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
               className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
               disabled={product.stock === 0}
             >
