@@ -121,10 +121,10 @@ export function ProductDetailModal({
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-20 bg-black/50 z-60 flex items-end">
+    <div className="fixed top-0 left-0 right-0 bottom-20 bg-black/50 z-60 flex items-end" onClick={onClose}>
       <div 
-        className="bg-white w-full rounded-t-3xl max-h-[calc(100vh-5rem)] relative cursor-pointer"
-        onClick={onClose}
+        className="bg-white w-full rounded-t-3xl max-h-[calc(100vh-5rem)] relative"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 p-4 border-b flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
