@@ -50,10 +50,12 @@ function MobileStorefront() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [minRating, setMinRating] = useState(0);
   
-  // Auto-hide search bar state
+  // Auto-hide search bar state with focus protection
   const [showSearchBar, setShowSearchBar] = useState(true);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const lastScrollY = useRef(0);
   const scrollThreshold = 10; // Minimum scroll distance to trigger hide/show
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Infinite scroll setup - fetch products with pagination
   const { 
@@ -183,36 +185,42 @@ function MobileStorefront() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  // Enhanced scroll detection for both infinite loading and auto-hide search
+  // Throttled scroll detection with focus protection
   const handleScroll = useCallback(() => {
-    const currentScrollY = window.scrollY;
+    if (scrollTimeoutRef.current) return; // Throttle scroll events
     
-    // Auto-hide search bar logic with improved edge cases
-    if (Math.abs(currentScrollY - lastScrollY.current) > scrollThreshold) {
-      if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
-        // Scrolling down and past header - hide search bar
-        setShowSearchBar(false);
-      } else if (currentScrollY < lastScrollY.current || currentScrollY <= 40) {
-        // Scrolling up or near top - show search bar
+    scrollTimeoutRef.current = setTimeout(() => {
+      scrollTimeoutRef.current = null;
+      
+      const currentScrollY = window.scrollY;
+      
+      // Auto-hide logic ONLY when search is not focused
+      if (!isSearchFocused && Math.abs(currentScrollY - lastScrollY.current) > scrollThreshold) {
+        if (currentScrollY > lastScrollY.current && currentScrollY > 80) {
+          // Scrolling down and past header - hide search bar
+          setShowSearchBar(false);
+        } else if (currentScrollY < lastScrollY.current || currentScrollY <= 40) {
+          // Scrolling up or near top - show search bar
+          setShowSearchBar(true);
+        }
+        lastScrollY.current = currentScrollY;
+      }
+      
+      // Always show search bar when at very top or when focused
+      if (currentScrollY <= 10 || isSearchFocused) {
         setShowSearchBar(true);
       }
-      lastScrollY.current = currentScrollY;
-    }
-    
-    // Always show search bar when at very top
-    if (currentScrollY <= 10) {
-      setShowSearchBar(true);
-    }
-    
-    // Infinite loading logic
-    const threshold = 100; // pixels from bottom to trigger load
-    const currentScroll = window.innerHeight + document.documentElement.scrollTop;
-    const maxScroll = document.documentElement.offsetHeight;
-    
-    if (currentScroll >= maxScroll - threshold && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, scrollThreshold]);
+      
+      // Infinite loading logic
+      const threshold = 100; // pixels from bottom to trigger load
+      const currentScroll = window.innerHeight + document.documentElement.scrollTop;
+      const maxScroll = document.documentElement.offsetHeight;
+      
+      if (currentScroll >= maxScroll - threshold && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    }, 16); // ~60fps throttling
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, scrollThreshold, isSearchFocused]);
 
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
@@ -738,14 +746,18 @@ function MobileStorefront() {
                 placeholder="Tìm kiếm sản phẩm..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowSearchBar(true)} // Always show when user wants to search
+                onFocus={() => {
+                  setIsSearchFocused(true);
+                  setShowSearchBar(true);
+                }}
                 onBlur={(e) => {
+                  setIsSearchFocused(false);
                   // Keep search visible if there's text typed
                   if (!e.target.value.trim()) {
                     // Small delay to prevent flickering when switching between elements
                     setTimeout(() => {
                       if (window.scrollY > 80) setShowSearchBar(false);
-                    }, 150);
+                    }, 200);
                   }
                 }}
                 className="pl-10 rounded-lg bg-white border-0 focus:ring-2 focus:ring-green-300 shadow-sm"
