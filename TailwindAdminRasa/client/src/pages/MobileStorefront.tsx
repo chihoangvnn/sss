@@ -662,12 +662,12 @@ function MobileStorefront() {
       {/* Compact Product Info */}
       <div className="px-3 py-2">
         {/* Product Name - Single Line with Ellipsis */}
-        <h3 className="font-semibold text-gray-900 text-sm mb-1.5 truncate">
+        <h3 className="font-semibold text-gray-900 text-sm mb-1 truncate">
           {product.name}
         </h3>
         
         {/* Star Rating */}
-        <div className="flex items-center gap-1 mb-1.5">
+        <div className="flex items-center gap-1 mb-1">
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map((star) => (
               <span key={star} className="text-yellow-400 text-xs">★</span>
@@ -677,7 +677,7 @@ function MobileStorefront() {
         </div>
         
         {/* Price */}
-        <div className="mb-2.5">
+        <div className="mb-1.5">
           <span className="text-base font-bold text-gray-900">
             {product.price.toLocaleString('vi-VN')}₫
           </span>
