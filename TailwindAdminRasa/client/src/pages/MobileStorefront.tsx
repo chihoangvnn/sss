@@ -228,7 +228,7 @@ function MobileStorefront() {
     }, 16); // ~60fps throttling
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, scrollThreshold, isSearchFocused]);
 
-  // Attach scroll listener to the correct container in admin layout
+  // Attach scroll listener to the admin layout's scrollable container
   useEffect(() => {
     const mainContainer = document.querySelector('main.flex-1.overflow-auto') || 
                          document.querySelector('main[class*="overflow-auto"]') ||
