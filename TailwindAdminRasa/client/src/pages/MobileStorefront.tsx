@@ -635,8 +635,8 @@ function MobileStorefront() {
       className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
       onClick={() => setSelectedProduct(product)}
     >
-      {/* Placeholder Image Section with Dashed Border */}
-      <div className="aspect-square bg-white relative border-2 border-dashed border-gray-300 m-3 rounded-lg">
+      {/* Full-Width Placeholder Image Section */}
+      <div className="aspect-square bg-white relative border-2 border-dashed border-gray-300 rounded-t-lg">
         <div className="w-full h-full flex items-center justify-center text-gray-500">
           <span className="text-sm font-medium">[ Hình ảnh / video ]</span>
         </div>
@@ -647,51 +647,51 @@ function MobileStorefront() {
             e.stopPropagation();
             toggleWishlist(product);
           }}
-          className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transition-all duration-200 ${
+          className={`absolute top-3 right-3 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transition-all duration-200 ${
             isInWishlist(product.id) 
               ? 'text-red-500 scale-110' 
               : 'text-gray-400 hover:text-red-500'
           }`}
         >
           <Heart 
-            className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} 
+            className={`h-3.5 w-3.5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} 
           />
         </button>
       </div>
       
-      {/* Product Info */}
-      <div className="px-3 pb-3">
+      {/* Compact Product Info */}
+      <div className="px-3 py-2">
         {/* Product Name */}
-        <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 leading-5 min-h-[2.5rem]">
+        <h3 className="font-semibold text-gray-900 text-sm mb-1.5 line-clamp-2 leading-4">
           {product.name}
         </h3>
         
         {/* Star Rating */}
-        <div className="flex items-center gap-1 mb-2">
+        <div className="flex items-center gap-1 mb-1.5">
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map((star) => (
-              <span key={star} className="text-yellow-400 text-sm">★</span>
+              <span key={star} className="text-yellow-400 text-xs">★</span>
             ))}
           </div>
           <span className="text-xs text-gray-500 ml-1">(45 đánh giá)</span>
         </div>
         
         {/* Price */}
-        <div className="mb-3">
-          <span className="text-lg font-bold text-gray-900">
+        <div className="mb-2.5">
+          <span className="text-base font-bold text-gray-900">
             {product.price.toLocaleString('vi-VN')}₫
           </span>
         </div>
         
-        {/* Buttons Row */}
-        <div className="flex items-center gap-2">
+        {/* Compact Buttons Row */}
+        <div className="flex items-center gap-1.5">
           {/* Learn More Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setSelectedProduct(product);
             }}
-            className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors duration-200"
+            className="flex-1 py-1.5 px-3 border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition-colors duration-200"
           >
             Tìm hiểu Thêm
           </button>
@@ -703,9 +703,9 @@ function MobileStorefront() {
               addToCart(product);
             }}
             disabled={product.stock === 0}
-            className="w-10 h-10 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-md flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-105 active:scale-95"
+            className="w-8 h-8 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-105 active:scale-95"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
           </button>
         </div>
       </div>
