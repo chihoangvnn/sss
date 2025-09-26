@@ -155,10 +155,12 @@ export function ProductDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-60 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-60 flex items-end pointer-events-none">
+      {/* No backdrop - allow background interaction, close only via drag or X button */}
+      
       <div 
         ref={drawerRef}
-        className="bg-white w-full rounded-t-3xl h-[80vh] relative shadow-2xl transition-transform duration-300"
+        className="bg-white w-full rounded-t-3xl h-[80vh] relative shadow-2xl transition-transform duration-300 pointer-events-auto"
         style={{
           transform: `translateY(${dragDistance}px)`,
           opacity: isDragging ? Math.max(1 - dragDistance / 300, 0.3) : 1
