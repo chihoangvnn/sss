@@ -396,26 +396,27 @@ export function ProductDetailModal({
                   </Button>
                 </div>
 
-                {/* Two Action Buttons */}
+                {/* Two Action Buttons - Professional Vietnamese Style */}
                 <div className="flex items-center gap-3">
                   {/* Add to Cart Button */}
                   <Button
                     onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-3.5 rounded-2xl font-bold shadow-lg hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-200 border-0"
                     disabled={product.stock === 0}
                   >
-                    <ShoppingCart className="h-4 w-4 mr-1" />
-                    <span className="text-sm">Thêm vào Giỏ hàng</span>
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    <span className="text-sm tracking-wide">Thêm vào Giỏ hàng</span>
                   </Button>
                   
                   {/* Thỉnh Nhang (Premium Purchase) Button */}
                   <Button
                     onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
-                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
+                    className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-3.5 rounded-2xl font-bold shadow-lg hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-200 border-0 relative overflow-hidden"
                     disabled={product.stock === 0}
                   >
-                    <Heart className="h-4 w-4 mr-1" />
-                    <span className="text-sm">Thỉnh Nhang</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-transparent"></div>
+                    <Heart className="h-5 w-5 mr-2 relative z-10" />
+                    <span className="text-sm tracking-wide relative z-10">Thỉnh Nhang</span>
                   </Button>
                 </div>
                 
@@ -740,60 +741,70 @@ export function ProductDetailModal({
           </div>
         </div>
 
-        {/* Sticky Bottom Buttons - Follow Scroll Like Bottom Nav */}
+        {/* Sticky Bottom Buttons - Professional & Above Bottom Nav */}
         {showStickyButtons && (
-          <div className="absolute bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-20" onClick={(e) => e.stopPropagation()}>
-            {/* Quantity Selector Row */}
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => { e.stopPropagation(); handleQuantityChange(-1); }}
-                disabled={quantity <= 1}
-                className="w-10 h-10 p-0"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="w-16 text-center font-semibold text-lg">
-                {quantity}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => { e.stopPropagation(); handleQuantityChange(1); }}
-                disabled={quantity >= product.stock}
-                className="w-10 h-10 p-0"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Two Action Buttons */}
-            <div className="flex items-center gap-3">
-              {/* Add to Cart Button */}
-              <Button
-                onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
-                disabled={product.stock === 0}
-              >
-                <ShoppingCart className="h-4 w-4 mr-1" />
-                <span className="text-sm">Thêm vào Giỏ hàng</span>
-              </Button>
-              
-              {/* Thỉnh Nhang (Premium Purchase) Button */}
-              <Button
-                onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
-                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
-                disabled={product.stock === 0}
-              >
-                <Heart className="h-4 w-4 mr-1" />
-                <span className="text-sm">Thỉnh Nhang</span>
-              </Button>
-            </div>
+          <div className="fixed bottom-20 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-2xl p-4 z-[9999] mx-auto max-w-md" onClick={(e) => e.stopPropagation()}>
+            {/* Enhanced Background Blur */}
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-white/90 rounded-t-2xl"></div>
             
-            {/* Price Display */}
-            <div className="text-center mt-2 text-gray-600 text-sm">
-              Tổng: <span className="font-semibold text-green-600">{(product.price * quantity).toLocaleString('vi-VN')}₫</span>
+            {/* Content with relative positioning */}
+            <div className="relative z-10">
+              {/* Quantity Selector Row */}
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); handleQuantityChange(-1); }}
+                  disabled={quantity <= 1}
+                  className="w-12 h-12 p-0 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 transition-all rounded-xl"
+                >
+                  <Minus className="h-5 w-5 text-green-600" />
+                </Button>
+                <div className="w-20 text-center">
+                  <span className="text-xl font-bold text-gray-900 bg-green-50 px-4 py-2 rounded-xl border-2 border-green-100">
+                    {quantity}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); handleQuantityChange(1); }}
+                  disabled={quantity >= product.stock}
+                  className="w-12 h-12 p-0 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 transition-all rounded-xl"
+                >
+                  <Plus className="h-5 w-5 text-green-600" />
+                </Button>
+              </div>
+
+              {/* Two Action Buttons - Identical Professional Style */}
+              <div className="flex items-center gap-3">
+                {/* Add to Cart Button */}
+                <Button
+                  onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-200 border-0"
+                  disabled={product.stock === 0}
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  <span className="text-sm tracking-wide">Giỏ hàng</span>
+                </Button>
+                
+                {/* Thỉnh Nhang (Premium Purchase) Button */}
+                <Button
+                  onClick={(e) => { e.stopPropagation(); handleThinhNhang(); }}
+                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl transform hover:scale-[1.02] transition-all duration-200 border-0 relative overflow-hidden"
+                  disabled={product.stock === 0}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-transparent"></div>
+                  <Heart className="h-5 w-5 mr-2 relative z-10" />
+                  <span className="text-sm tracking-wide relative z-10">Thỉnh Nhang</span>
+                </Button>
+              </div>
+              
+              {/* Enhanced Price Display */}
+              <div className="text-center mt-3 bg-green-50 py-2 px-4 rounded-xl border border-green-100">
+                <span className="text-gray-600 text-sm">Tổng cộng: </span>
+                <span className="font-bold text-green-700 text-lg">{(product.price * quantity).toLocaleString('vi-VN')}₫</span>
+              </div>
             </div>
           </div>
         )}
