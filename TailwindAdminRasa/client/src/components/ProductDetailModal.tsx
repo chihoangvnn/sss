@@ -115,60 +115,87 @@ export function ProductDetailModal({
 
         {/* Scrollable Content */}
         <div className="overflow-y-auto pb-32">
-          {/* Product Images */}
-          <div className="p-4">
+          {/* Hero Image Carousel Section */}
+          <div className="relative">
             {productImages.length > 0 ? (
               <>
-                <div className="mb-4">
-                  <img
-                    src={productImages[selectedImage]}
-                    alt={product.name}
-                    className="w-full h-80 object-cover rounded-xl border border-gray-200"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      if (e.currentTarget.nextElementSibling) {
-                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                      }
-                    }}
-                  />
-                  {/* Error fallback for main image */}
-                  <div className="hidden w-full h-80 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-center">
-                    <div>
-                      <span className="text-6xl block mb-2">🖼️</span>
-                      <p className="text-gray-500">Không thể tải hình ảnh</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Image Thumbnails - Only show if multiple images */}
-                {productImages.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto">
+                {/* Main Image Carousel */}
+                <div className="relative w-full h-80 overflow-hidden">
+                  <div 
+                    className="flex transition-transform duration-300 ease-in-out h-full"
+                    style={{ transform: `translateX(-${selectedImage * 100}%)` }}
+                  >
                     {productImages.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedImage(index)}
-                        className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 ${
-                          selectedImage === index ? 'border-green-500' : 'border-gray-200'
-                        }`}
-                      >
+                      <div key={index} className="w-full h-full flex-shrink-0">
                         <img
                           src={image}
                           alt={`${product.name} ${index + 1}`}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextElementSibling) {
+                              (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                            }
+                          }}
                         />
-                      </button>
+                        {/* Error fallback for each image */}
+                        <div className="hidden w-full h-full bg-gray-100 flex items-center justify-center text-center">
+                          <div>
+                            <span className="text-6xl block mb-2">🖼️</span>
+                            <p className="text-gray-500">Không thể tải hình ảnh</p>
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                )}
+                  
+                  {/* Dots Indicators - Mockup Style: o O o o */}
+                  {productImages.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                      {productImages.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedImage(index)}
+                          className={`transition-all duration-200 ${
+                            selectedImage === index 
+                              ? 'w-3 h-3 bg-white rounded-full shadow-lg' 
+                              : 'w-2 h-2 bg-white/60 rounded-full'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Touch/Swipe Navigation Hints */}
+                  {productImages.length > 1 && (
+                    <>
+                      {selectedImage > 0 && (
+                        <button
+                          onClick={() => setSelectedImage(selectedImage - 1)}
+                          className="absolute left-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-black/30 text-white rounded-full flex items-center justify-center hover:bg-black/50 transition-colors"
+                        >
+                          ‹
+                        </button>
+                      )}
+                      {selectedImage < productImages.length - 1 && (
+                        <button
+                          onClick={() => setSelectedImage(selectedImage + 1)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-black/30 text-white rounded-full flex items-center justify-center hover:bg-black/50 transition-colors"
+                        >
+                          ›
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </>
             ) : (
-              // No product images available - show placeholder
-              <div className="mb-4">
-                <div className="w-full h-80 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center">
-                  <div className="text-center">
-                    <span className="text-6xl mb-4 block">📦</span>
-                    <p className="text-gray-500">Không có hình ảnh sản phẩm</p>
-                  </div>
+              // No product images - Enhanced placeholder matching mockup
+              <div className="w-full h-80 bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                  <span className="text-8xl mb-4 block">📸</span>
+                  <p className="text-gray-600 text-lg font-medium">[ Hình ảnh / video ]</p>
+                  <p className="text-gray-400 text-sm mt-1">Nhang cháy, nguyên liệu</p>
                 </div>
               </div>
             )}
