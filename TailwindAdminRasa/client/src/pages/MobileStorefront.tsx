@@ -397,9 +397,9 @@ function MobileStorefront() {
       default: // 'home'
         return (
           <div>
-            {/* Category Tabs */}
-            <div className="bg-white px-4 py-3 border-b">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {/* Professional Category Tabs */}
+            <div className="bg-white px-4 py-3 border-b border-gray-100">
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
                 {categoriesLoading ? (
                   <CategorySkeleton />
                 ) : categoriesError ? (
@@ -408,56 +408,53 @@ function MobileStorefront() {
                   </div>
                 ) : (
                   categories.map((category) => (
-                  <Button
+                  <button
                     key={category.id}
-                    variant={selectedCategory === category.id ? 'default' : 'ghost'}
-                    size="sm"
                     onClick={() => setSelectedCategory(category.id)}
-                    className={selectedCategory === category.id 
-                      ? 'bg-green-500 hover:bg-green-600 text-white rounded-full px-4 whitespace-nowrap flex items-center gap-1' 
-                      : 'text-gray-600 rounded-full px-4 whitespace-nowrap flex items-center gap-1'
-                    }
+                    className={`
+                      flex items-center gap-2 px-4 py-2.5 rounded-full whitespace-nowrap text-sm font-semibold transition-all duration-200 flex-shrink-0 border
+                      ${selectedCategory === category.id 
+                        ? 'bg-green-500 text-white border-green-500 shadow-md transform scale-105' 
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }
+                    `}
                   >
-                    <span>{category.icon}</span>
-                    <span className="text-sm">{category.name}</span>
-                  </Button>
+                    <span className="text-base">{category.icon}</span>
+                    <span>{category.name}</span>
+                  </button>
                   ))
                 )}
               </div>
             </div>
 
-            {/* Filter and Sort Bar */}
-            <div className="bg-white border-b px-4 py-3">
+            {/* Professional Filter Bar */}
+            <div className="bg-white border-b px-4 py-3 shadow-sm">
               <div className="flex items-center justify-between gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
                 >
                   <Filter className="h-4 w-4" />
-                  Lọc
-                </Button>
+                  <span className="text-sm font-semibold">Lọc</span>
+                </button>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as 'name' | 'price' | 'newest')}
-                    className="text-sm border rounded-md px-2 py-1"
+                    className="text-sm border border-gray-200 rounded-lg px-3 py-2.5 bg-white font-medium focus:ring-2 focus:ring-green-300 focus:border-green-300"
                   >
                     <option value="newest">Mới nhất</option>
                     <option value="name">Tên A-Z</option>
-                    <option value="price">Giá</option>
+                    <option value="price">Giá thấp - cao</option>
                   </select>
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
                     onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="px-2"
+                    className="p-2.5 bg-gray-50 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
                   >
                     {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -517,7 +514,7 @@ function MobileStorefront() {
 
             {/* Product Grid */}
             <div className="p-4">
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 {productsLoading || productsRefetching ? (
                   <ProductListSkeleton count={8} />
                 ) : productsError ? (
@@ -587,90 +584,71 @@ function MobileStorefront() {
   };
 
   const renderProductCard = (product: Product) => (
-    <div key={product.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-4">
-        {/* Product Info - Left Side - Clickable */}
-        <button 
-          onClick={() => setSelectedProduct(product)}
-          className="flex-1 text-left hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+    <div 
+      key={product.id}
+      className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:scale-[1.02]"
+      onClick={() => setSelectedProduct(product)}
+    >
+      <div className="aspect-square bg-gray-50 relative overflow-hidden">
+        {product.image ? (
+          <img 
+            src={product.image} 
+            alt={product.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="text-center">
+              <div className="text-4xl mb-2">📦</div>
+              <div className="text-xs font-medium">No Image</div>
+            </div>
+          </div>
+        )}
+        
+        {/* Wishlist Button - Top Right */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleWishlist(product);
+          }}
+          className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transition-all duration-200 ${
+            isInWishlist(product.id) 
+              ? 'text-red-500 scale-110' 
+              : 'text-gray-400 hover:text-red-500'
+          }`}
         >
-          <h3 className="font-semibold text-gray-900 text-base leading-tight mb-1">
-            {product.name}
-          </h3>
-          {product.short_description && (
-            <p className="text-sm text-gray-600 mt-1 line-clamp-2 mb-2">
-              {product.short_description}
-            </p>
-          )}
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold text-green-600">
+          <Heart 
+            className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} 
+          />
+        </button>
+      </div>
+      
+      <div className="p-3">
+        <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 leading-5 min-h-[2.5rem]">
+          {product.name}
+        </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-lg font-bold text-green-600">
               {product.price.toLocaleString('vi-VN')}₫
             </span>
-            <span className="text-xs text-gray-500">Còn {product.stock}</span>
+            {product.stock > 0 ? (
+              <span className="text-xs text-gray-500">Còn {product.stock}</span>
+            ) : (
+              <span className="text-xs text-red-500 font-medium">Hết hàng</span>
+            )}
           </div>
-        </button>
-        
-        {/* Image + Actions - Right Side */}
-        <div className="flex flex-col items-center gap-3">
           <button
-            onClick={() => setSelectedProduct(product)}
-            className="hover:scale-105 transition-transform"
+            onClick={(e) => {
+              e.stopPropagation();
+              addToCart(product);
+            }}
+            disabled={product.stock === 0}
+            className="w-9 h-9 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-110 active:scale-95"
           >
-            {product.image ? (
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  if (e.currentTarget.nextElementSibling) {
-                    (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                  }
-                }}
-              />
-            ) : null}
-            {/* Fallback placeholder - shows when no image or image fails to load */}
-            <div 
-              className={`w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center text-center ${
-                product.image ? 'hidden' : 'flex'
-              }`}
-            >
-              <div>
-                <span className="text-xl block">📦</span>
-                <span className="text-xs text-gray-500">No Image</span>
-              </div>
-            </div>
+            <Plus className="h-5 w-5" />
           </button>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleWishlist(product);
-              }}
-              size="sm"
-              variant="ghost"
-              className={`w-10 h-10 p-0 rounded-full ${
-                isInWishlist(product.id) 
-                  ? 'text-red-500 hover:text-red-600' 
-                  : 'text-gray-400 hover:text-red-500'
-              }`}
-            >
-              <Heart 
-                className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} 
-              />
-            </Button>
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                addToCart(product);
-              }}
-              size="sm"
-              className="bg-green-500 hover:bg-green-600 text-white rounded-full w-10 h-10 p-0 shadow-lg hover:shadow-xl transition-all"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-          </div>
         </div>
       </div>
     </div>
@@ -678,43 +656,41 @@ function MobileStorefront() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Mobile Header */}
-      <div className="bg-white sticky top-0 z-[10000] border-b shadow-sm">
+      {/* Professional Green Header */}
+      <div className="bg-green-600 sticky top-0 z-[10000] shadow-lg">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h1 
-                className="text-lg font-bold text-gray-900 cursor-pointer hover:text-green-600 transition-colors"
-                onClick={() => setActiveTab('home')}
-              >
-                NHANGSACH.NET
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
+            <h1 
+              className="text-lg font-bold text-white cursor-pointer hover:text-green-100 transition-colors"
+              onClick={() => setActiveTab('home')}
+            >
+              NHANGSACH.NET
+            </h1>
+            <div className="flex items-center gap-4">
               <button 
                 onClick={() => setActiveTab('wishlist')}
-                className={`${activeTab === 'wishlist' ? 'text-red-500' : 'text-gray-600'}`}
+                className="relative text-white hover:text-green-100 transition-colors"
               >
-                <Heart className="h-5 w-5" />
+                <Heart className={`h-6 w-6 ${activeTab === 'wishlist' ? 'fill-current' : ''}`} />
                 {wishlist.length > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs flex items-center justify-center p-0">
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0">
                     {wishlist.length}
                   </Badge>
                 )}
               </button>
               <button 
                 onClick={() => setActiveTab('profile')}
-                className={`${activeTab === 'profile' ? 'text-green-500' : 'text-gray-600'}`}
+                className="text-white hover:text-green-100 transition-colors"
               >
-                <User className="h-5 w-5" />
+                <User className="h-6 w-6" />
               </button>
               <button 
                 onClick={() => setShowCart(true)}
-                className="relative"
+                className="relative text-white hover:text-green-100 transition-colors"
               >
-                <ShoppingCart className="h-5 w-5 text-gray-600" />
+                <ShoppingCart className="h-6 w-6" />
                 {getTotalItems() > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-green-500 text-xs flex items-center justify-center p-0">
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0">
                     {getTotalItems()}
                   </Badge>
                 )}
@@ -722,7 +698,7 @@ function MobileStorefront() {
             </div>
           </div>
           
-          {/* Search Bar - Show on home and categories tab */}
+          {/* Prominent Search Bar */}
           {(activeTab === 'home' || activeTab === 'categories') && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -731,7 +707,7 @@ function MobileStorefront() {
                 placeholder="Tìm kiếm sản phẩm..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 rounded-full bg-gray-100 border-0 focus:ring-2 focus:ring-green-500"
+                className="pl-10 rounded-lg bg-white border-0 focus:ring-2 focus:ring-green-300 shadow-sm"
               />
             </div>
           )}
@@ -831,18 +807,18 @@ function MobileStorefront() {
         />
       )}
 
-      {/* Chatbot Widget - positioned above bottom nav */}
-      <div className="fixed bottom-20 right-4 z-40">
+      {/* Optimized Chat Widget - positioned above green bottom nav */}
+      <div className="fixed bottom-24 right-4 z-30">
         <ChatbotWidget 
           pageType="storefront"
           pageContext={{
-            products: filteredProducts.map(p => ({
+            products: filteredProducts.slice(0, 10).map(p => ({
               id: p.id,
               name: p.name,
               price: p.price.toString(),
               category: selectedCategory
             })),
-            cartItems: cart.map(item => ({
+            cartItems: cart.slice(0, 5).map(item => ({
               productId: item.product.id,
               name: item.product.name,
               quantity: item.quantity
