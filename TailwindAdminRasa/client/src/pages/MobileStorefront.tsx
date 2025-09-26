@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc } from 'lucide-react';
+import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,11 @@ import {
   CategorySkeleton, 
   SearchSkeleton 
 } from '@/components/LoadingSkeleton';
+
+// Import hero images for incense business
+const heroImage1 = '/incense-hero-1.png';
+const heroImage2 = '/incense-hero-2.png';
+const heroImage3 = '/incense-hero-3.png';
 
 interface Product {
   id: string;
@@ -59,6 +64,59 @@ function MobileStorefront() {
   const scrollThreshold = 10; // Minimum scroll distance to trigger hide/show
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  
+  // Hero carousel state for incense business
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const autoSlideRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Hero slides data for Vietnamese incense business
+  const heroSlides = [
+    {
+      image: heroImage1,
+      title: "Nhang Sạch Tự Nhiên",
+      subtitle: "Thanh Tịnh Tâm Hồn",
+      description: "100% thành phần tự nhiên, không hóa chất độc hại",
+      cta: "Khám Phá Ngay",
+      bgGradient: "from-amber-900/80 to-orange-800/80"
+    },
+    {
+      image: heroImage2, 
+      title: "Nhang Trầm Hương Cao Cấp",
+      subtitle: "Hương Thơm Thiên Nhiên",
+      description: "Từ cây trầm hương quý hiếm, mang đến không gian linh thiêng",
+      cta: "Xem Sản Phẩm",
+      bgGradient: "from-emerald-900/80 to-teal-800/80"
+    },
+    {
+      image: heroImage3,
+      title: "Thắp Hương Cúng Phật",
+      subtitle: "Truyền Thống Việt Nam", 
+      description: "Gìn giữ nét đẹp tâm linh, thể hiện lòng thành kính của người Việt",
+      cta: "Tìm Hiểu Thêm",
+      bgGradient: "from-red-900/80 to-orange-800/80"
+    }
+  ];
+  
+  // Auto-slide functionality for hero carousel
+  const startAutoSlide = useCallback(() => {
+    if (autoSlideRef.current) clearTimeout(autoSlideRef.current);
+    autoSlideRef.current = setTimeout(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 4000); // 4 seconds per slide
+  }, [heroSlides.length]);
+  
+  const goToSlide = useCallback((index: number) => {
+    setCurrentSlide(index);
+    startAutoSlide(); // Reset auto-slide timer
+  }, [startAutoSlide]);
+  
+  // Start auto-slide on component mount and cleanup on unmount
+  useEffect(() => {
+    startAutoSlide();
+    return () => {
+      if (autoSlideRef.current) clearTimeout(autoSlideRef.current);
+    };
+  }, [startAutoSlide]);
 
   // Infinite scroll setup - fetch products with pagination
   const { 
@@ -431,7 +489,86 @@ function MobileStorefront() {
       default: // 'home'
         return (
           <div>
-            {/* Professional Category Tabs */}
+            {/* Hero Carousel for Vietnamese Incense Business */}
+            <div className="relative bg-gray-900 overflow-hidden">
+              {/* Carousel Container */}
+              <div className="relative h-64 sm:h-80">
+                <div 
+                  className="flex transition-transform duration-500 ease-out h-full"
+                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                >
+                  {heroSlides.map((slide, index) => (
+                    <div key={index} className="w-full h-full flex-shrink-0 relative">
+                      {/* Background Image */}
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                        style={{ backgroundImage: `url(${slide.image})` }}
+                      />
+                      
+                      {/* Gradient Overlay */}
+                      <div className={`absolute inset-0 bg-gradient-to-r ${slide.bgGradient}`} />
+                      
+                      {/* Content */}
+                      <div className="relative z-10 h-full flex items-center justify-center px-6">
+                        <div className="text-center text-white max-w-md">
+                          <h2 className="text-2xl sm:text-3xl font-bold mb-2 drop-shadow-lg">
+                            {slide.title}
+                          </h2>
+                          <h3 className="text-lg sm:text-xl font-semibold mb-3 text-yellow-200 drop-shadow-md">
+                            {slide.subtitle}
+                          </h3>
+                          <p className="text-sm sm:text-base mb-4 opacity-90 drop-shadow-sm">
+                            {slide.description}
+                          </p>
+                          <button 
+                            onClick={() => {
+                              // Navigate based on slide content
+                              if (index === 0) setSelectedCategory('all');
+                              else if (index === 1) setSelectedCategory('premium');
+                              else setSelectedCategory('traditional');
+                            }}
+                            className="bg-white text-gray-900 px-6 py-3 rounded-full font-semibold hover:bg-yellow-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                          >
+                            {slide.cta}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Navigation Arrows */}
+                <button
+                  onClick={() => goToSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length)}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-all duration-200"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={() => goToSlide((currentSlide + 1) % heroSlides.length)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-all duration-200"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+                
+                {/* Dots Indicator */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                  {heroSlides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToSlide(index)}
+                      className={`transition-all duration-200 ${
+                        currentSlide === index 
+                          ? 'w-8 h-3 bg-white rounded-full' 
+                          : 'w-3 h-3 bg-white/60 rounded-full hover:bg-white/80'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Quick Category Filter Below Hero */}
             <div className="bg-white px-4 py-3 border-b border-gray-100">
               <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
                 {categoriesLoading ? (
@@ -446,52 +583,53 @@ function MobileStorefront() {
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
                     className={`
-                      flex items-center gap-2 px-4 py-2.5 rounded-full whitespace-nowrap text-sm font-semibold transition-all duration-200 flex-shrink-0 border
+                      flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-xs font-semibold transition-all duration-200 flex-shrink-0 border
                       ${selectedCategory === category.id 
-                        ? 'bg-green-500 text-white border-green-500 shadow-md transform scale-105' 
-                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                        ? 'bg-amber-500 text-white border-amber-500 shadow-md' 
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-amber-50 hover:text-amber-700'
                       }
                     `}
                   >
-                    <span className="text-base">{category.icon}</span>
+                    <span className="text-sm">{category.icon}</span>
                     <span>{category.name}</span>
                   </button>
                   ))
                 )}
               </div>
             </div>
-
-            {/* Professional Filter Bar */}
-            <div className="bg-white border-b px-4 py-3 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
-                >
-                  <Filter className="h-4 w-4" />
-                  <span className="text-sm font-semibold">Lọc</span>
-                </button>
-                
-                <div className="flex items-center gap-3">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'name' | 'price' | 'newest')}
-                    className="text-sm border border-gray-200 rounded-lg px-3 py-2.5 bg-white font-medium focus:ring-2 focus:ring-green-300 focus:border-green-300"
-                  >
-                    <option value="newest">Mới nhất</option>
-                    <option value="name">Tên A-Z</option>
-                    <option value="price">Giá thấp - cao</option>
-                  </select>
-                  
+            
+            {/* Sort Options - Moved to smaller, cleaner design */}
+            <div className="bg-white border-b px-4 py-2">
+                <div className="flex items-center justify-between">
                   <button
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="p-2.5 bg-gray-50 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 px-3 py-2 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors text-sm"
                   >
-                    {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                    <Filter className="h-4 w-4" />
+                    <span>Lọc</span>
                   </button>
+                  
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'name' | 'price' | 'newest')}
+                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:ring-1 focus:ring-amber-300 focus:border-amber-300"
+                    >
+                      <option value="newest">Mới nhất</option>
+                      <option value="name">Tên A-Z</option>
+                      <option value="price">Giá thấp - cao</option>
+                    </select>
+                    
+                    <button
+                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                      className="p-1.5 bg-gray-50 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                    >
+                      {sortOrder === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />}
+                    </button>
+                  </div>
                 </div>
               </div>
-
+              
               {/* Expandable Filter Options */}
               {showFilters && (
                 <div className="mt-3 pt-3 border-t space-y-3">
