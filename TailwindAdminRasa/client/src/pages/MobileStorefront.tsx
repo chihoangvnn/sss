@@ -756,13 +756,13 @@ function MobileStorefront() {
             </div>
           </div>
           
-          {/* Auto-hide Search Bar with Smooth Animation */}
+          {/* Auto-hide Search Bar with Smooth Animation - Fixed Jump Issue */}
           {(activeTab === 'home' || activeTab === 'categories') && (
             <div 
-              className={`relative transition-all duration-300 ease-in-out overflow-hidden ${
+              className={`relative transition-all duration-200 ease-out overflow-hidden ${
                 showSearchBar 
-                  ? 'max-h-16 opacity-100 transform translate-y-0' 
-                  : 'max-h-0 opacity-0 transform -translate-y-2'
+                  ? 'max-h-16 opacity-100' 
+                  : 'max-h-0 opacity-0'
               }`}
             >
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
