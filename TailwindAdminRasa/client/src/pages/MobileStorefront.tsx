@@ -7,6 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import ChatbotWidget from '@/components/ChatbotWidget';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
+import { 
+  ProductListSkeleton, 
+  CategorySkeleton, 
+  SearchSkeleton 
+} from '@/components/LoadingSkeleton';
 
 interface Product {
   id: string;
@@ -40,8 +45,13 @@ function MobileStorefront() {
   const [showCart, setShowCart] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Fetch products
-  const { data: products = [] } = useQuery<Product[]>({
+  // Fetch products with loading states
+  const { 
+    data: products = [], 
+    isLoading: productsLoading, 
+    error: productsError,
+    isRefetching: productsRefetching 
+  } = useQuery<Product[]>({
     queryKey: ['mobile-products', selectedCategory, searchQuery],
     queryFn: async () => {
       let url = '/api/products?limit=50';
@@ -57,8 +67,12 @@ function MobileStorefront() {
     }
   });
 
-  // Fetch real categories and limit to top 2-3 for simplified experience
-  const { data: allCategories = [] } = useQuery<Category[]>({
+  // Fetch real categories with loading states
+  const { 
+    data: allCategories = [], 
+    isLoading: categoriesLoading,
+    error: categoriesError 
+  } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => {
       const response = await fetch('/api/categories');
@@ -68,7 +82,7 @@ function MobileStorefront() {
   });
   
   // Create simplified category list with real IDs (limit to 2-3 categories)
-  const categories = [
+  const categories = categoriesLoading ? [] : [
     { id: 'all', name: 'Tất cả', icon: '🛍️' },
     ...allCategories.slice(0, 2).map(cat => ({
       id: cat.id,
@@ -318,7 +332,14 @@ function MobileStorefront() {
             {/* Category Tabs */}
             <div className="bg-white px-4 py-3 border-b">
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                {categories.map((category) => (
+                {categoriesLoading ? (
+                  <CategorySkeleton />
+                ) : categoriesError ? (
+                  <div className="text-red-500 text-sm px-4 py-2">
+                    Lỗi tải danh mục
+                  </div>
+                ) : (
+                  categories.map((category) => (
                   <Button
                     key={category.id}
                     variant={selectedCategory === category.id ? 'default' : 'ghost'}
@@ -330,23 +351,51 @@ function MobileStorefront() {
                     }
                   >
                     <span>{category.icon}</span>
-                    {category.name}
+                    <span className="text-sm">{category.name}</span>
                   </Button>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
             {/* Product Grid */}
             <div className="p-4">
               <div className="space-y-3">
-                {filteredProducts.map((product) => renderProductCard(product))}
+                {productsLoading || productsRefetching ? (
+                  <ProductListSkeleton count={8} />
+                ) : productsError ? (
+                  <div className="text-center py-8">
+                    <span className="text-4xl mb-4 block">⚠️</span>
+                    <p className="text-gray-500 mb-4">Lỗi tải sản phẩm</p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        // Use react-query refetch instead of hard reload
+                        window.location.reload();
+                      }}
+                      className="bg-white"
+                    >
+                      Thử lại
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {filteredProducts.map((product) => renderProductCard(product))}
+                    
+                    {filteredProducts.length === 0 && (
+                      <div className="text-center py-8">
+                        <span className="text-4xl mb-4 block">🛍️</span>
+                        <p className="text-gray-500">
+                          {searchQuery || selectedCategory !== 'all' 
+                            ? 'Không tìm thấy sản phẩm nào' 
+                            : 'Chưa có sản phẩm nào'
+                          }
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-
-              {filteredProducts.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">Không tìm thấy sản phẩm nào</p>
-                </div>
-              )}
             </div>
           </div>
         );
@@ -389,14 +438,24 @@ function MobileStorefront() {
                 alt={product.name}
                 className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                 onError={(e) => {
-                  e.currentTarget.src = '/api/placeholder/80/80';
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextElementSibling) {
+                    (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                  }
                 }}
               />
-            ) : (
-              <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">📦</span>
+            ) : null}
+            {/* Fallback placeholder - shows when no image or image fails to load */}
+            <div 
+              className={`w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center text-center ${
+                product.image ? 'hidden' : 'flex'
+              }`}
+            >
+              <div>
+                <span className="text-xl block">📦</span>
+                <span className="text-xs text-gray-500">No Image</span>
               </div>
-            )}
+            </div>
           </button>
           
           <div className="flex items-center gap-2">

@@ -125,9 +125,19 @@ export function ProductDetailModal({
                     alt={product.name}
                     className="w-full h-80 object-cover rounded-xl border border-gray-200"
                     onError={(e) => {
-                      e.currentTarget.src = '/api/placeholder/400/400';
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextElementSibling) {
+                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                      }
                     }}
                   />
+                  {/* Error fallback for main image */}
+                  <div className="hidden w-full h-80 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-center">
+                    <div>
+                      <span className="text-6xl block mb-2">🖼️</span>
+                      <p className="text-gray-500">Không thể tải hình ảnh</p>
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Image Thumbnails - Only show if multiple images */}
