@@ -679,12 +679,16 @@ function MobileStorefront() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Mobile Header */}
-      <div className="bg-white sticky top-0 z-50 border-b shadow-sm">
+      <div className="bg-white sticky top-0 z-[10000] border-b shadow-sm">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-              <h1 className="text-lg font-bold text-gray-900">NHANGSACH.NET</h1>
+              <h1 
+                className="text-lg font-bold text-gray-900 cursor-pointer hover:text-green-600 transition-colors"
+                onClick={() => setActiveTab('home')}
+              >
+                NHANGSACH.NET
+              </h1>
             </div>
             <div className="flex items-center gap-3">
               <button 
