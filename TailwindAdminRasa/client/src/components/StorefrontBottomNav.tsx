@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, Grid3X3, ShoppingCart, User, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLocation } from 'wouter';
 
 interface StorefrontBottomNavProps {
   activeTab: string;
@@ -10,6 +11,7 @@ interface StorefrontBottomNavProps {
 }
 
 export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wishlistCount = 0 }: StorefrontBottomNavProps) {
+  const [, setLocation] = useLocation();
   const tabs = [
     {
       id: 'home',
@@ -53,7 +55,14 @@ export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wis
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              onClick={() => {
+                if (tab.id === 'calendar') {
+                  // Navigate to full screen calendar
+                  setLocation('/calendar');
+                } else {
+                  onTabChange(tab.id);
+                }
+              }}
               className={`
                 flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 relative
                 transition-all duration-200 ease-in-out

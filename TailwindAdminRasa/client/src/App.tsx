@@ -51,6 +51,7 @@ import POS from "@/pages/POS";
 import MobileStorefront from "@/pages/MobileStorefront";
 import BooksManagement from "@/pages/BooksManagement";
 import ExistingBooksManagement from "@/components/BooksManagement";
+import FullLunarCalendarPage from "@/pages/FullLunarCalendarPage";
 
 // Admin Routes (inside sidebar layout)
 function AdminRouter() {
@@ -114,6 +115,7 @@ function App() {
         {/* Public Routes (outside admin layout) */}
         <Switch>
           <Route path="/shop" component={ShopeeHomePage} />
+          <Route path="/calendar" component={FullLunarCalendarPage} />
           <Route path="/lp/:slug" component={PublicLandingPage} />
           <Route path="/sf/:name" component={PublicStorefront} />
           <Route path="/product/:slug" component={ProductPage} />

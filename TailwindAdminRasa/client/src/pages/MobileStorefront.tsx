@@ -385,13 +385,6 @@ function MobileStorefront() {
           </div>
         );
 
-      case 'calendar':
-        return (
-          <div className="p-4 pt-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Lịch Âm Dương Việt Nam</h2>
-            <VietnameseLunarCalendar className="w-full" />
-          </div>
-        );
 
       case 'profile':
         return (
@@ -427,7 +420,7 @@ function MobileStorefront() {
                 <ShoppingCart className="h-5 w-5 mr-3" />
                 Lịch sử đơn hàng
               </Button>
-              <Button variant="outline" className="w-full justify-start text-left" onClick={() => setActiveTab('calendar')}>
+              <Button variant="outline" className="w-full justify-start text-left" onClick={() => window.location.href = '/calendar'}>
                 <MessageCircle className="h-5 w-5 mr-3" />
                 Lịch âm dương
               </Button>
