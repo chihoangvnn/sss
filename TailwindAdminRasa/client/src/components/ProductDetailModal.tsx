@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Minus, Heart, Star, Share2, ShoppingCart } from 'lucide-react';
+import { X, Plus, Minus, Heart, Star, Share2, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -35,6 +35,14 @@ export function ProductDetailModal({
   const [selectedImage, setSelectedImage] = useState(0);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  
+  // Accordion state management
+  const [openAccordions, setOpenAccordions] = useState<{[key: string]: boolean}>({
+    description: false,
+    ingredients: false,
+    usage: false,
+    faq: false
+  });
 
   // Use only real product images - no fabricated ones
   const productImages = product.image ? [product.image] : [];
@@ -86,6 +94,14 @@ export function ProductDetailModal({
     setQuantity(1);
     // TODO: Could trigger special checkout flow or blessing ceremony booking
     console.log('Thỉnh Nhang (Premium Purchase) initiated');
+  };
+
+  // Toggle accordion sections
+  const toggleAccordion = (section: string) => {
+    setOpenAccordions(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   const renderStars = (rating: number) => {
@@ -327,6 +343,134 @@ export function ProductDetailModal({
                       <span className="text-gray-700 leading-relaxed">{shippingInfo}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Accordion Sections for Detailed Information */}
+              <div className="mb-6">
+                {/* Product Description Accordion */}
+                <div className="border-b border-gray-200">
+                  <button
+                    onClick={() => toggleAccordion('description')}
+                    className="w-full flex items-center justify-between py-4 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                      📋 Mô tả sản phẩm
+                    </h3>
+                    {openAccordions.description ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+                  {openAccordions.description && (
+                    <div className="pb-4 text-gray-700 leading-relaxed">
+                      <p className="mb-3">
+                        {product.description || 'Sản phẩm hữu cơ chất lượng cao, được sản xuất theo tiêu chuẩn VietGAP. Không sử dụng hóa chất độc hại, đảm bảo an toàn cho sức khỏe người tiêu dùng.'}
+                      </p>
+                      <p>
+                        Được trồng và chăm sóc theo phương pháp tự nhiên, giữ nguyên hương vị đặc trưng và giá trị dinh dưỡng cao nhất.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ingredients Accordion */}
+                <div className="border-b border-gray-200">
+                  <button
+                    onClick={() => toggleAccordion('ingredients')}
+                    className="w-full flex items-center justify-between py-4 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                      🌿 Thành phần
+                    </h3>
+                    {openAccordions.ingredients ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+                  {openAccordions.ingredients && (
+                    <div className="pb-4 text-gray-700 leading-relaxed">
+                      <ul className="space-y-2">
+                        <li>• 100% thành phần tự nhiên</li>
+                        <li>• Không chất bảo quản</li>
+                        <li>• Không hương liệu nhân tạo</li>
+                        <li>• Không chất màu tổng hợp</li>
+                        <li>• Được chứng nhận hữu cơ</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Usage Instructions Accordion */}
+                <div className="border-b border-gray-200">
+                  <button
+                    onClick={() => toggleAccordion('usage')}
+                    className="w-full flex items-center justify-between py-4 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                      📖 Hướng dẫn sử dụng
+                    </h3>
+                    {openAccordions.usage ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+                  {openAccordions.usage && (
+                    <div className="pb-4 text-gray-700 leading-relaxed">
+                      <div className="space-y-3">
+                        <div>
+                          <strong>Bảo quản:</strong> Nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp
+                        </div>
+                        <div>
+                          <strong>Sử dụng:</strong> Rửa sạch trước khi chế biến
+                        </div>
+                        <div>
+                          <strong>Hạn sử dụng:</strong> Xem trên bao bì sản phẩm
+                        </div>
+                        <div>
+                          <strong>Lưu ý:</strong> Sản phẩm tự nhiên, có thể có sự khác biệt về màu sắc và kích thước
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* FAQ Accordion */}
+                <div className="border-b border-gray-200">
+                  <button
+                    onClick={() => toggleAccordion('faq')}
+                    className="w-full flex items-center justify-between py-4 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                      ❓ FAQ thường gặp
+                    </h3>
+                    {openAccordions.faq ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+                  {openAccordions.faq && (
+                    <div className="pb-4 text-gray-700 leading-relaxed">
+                      <div className="space-y-4">
+                        <div>
+                          <strong>Q: Sản phẩm có an toàn cho trẻ em không?</strong>
+                          <p>A: Hoàn toàn an toàn. Sản phẩm được sản xuất theo tiêu chuẩn hữu cơ, không chứa hóa chất độc hại.</p>
+                        </div>
+                        <div>
+                          <strong>Q: Tôi có thể trả hàng nếu không hài lòng?</strong>
+                          <p>A: Có, bạn có thể đổi trả trong vòng 7 ngày nếu sản phẩm còn nguyên vẹn.</p>
+                        </div>
+                        <div>
+                          <strong>Q: Sản phẩm có được chứng nhận không?</strong>
+                          <p>A: Có, sản phẩm đạt chứng nhận VietGAP và các tiêu chuẩn chất lượng quốc tế.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
