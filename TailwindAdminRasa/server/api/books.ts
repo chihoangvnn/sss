@@ -354,8 +354,8 @@ router.delete('/:isbn/prices/:priceId', async (req, res) => {
   }
 });
 
-// Import AbeBooks functionality
-import * as abebooks from './abebooks';
+// Import AbeBooks functionality  
+import * as abebooks from './abebooks.js';
 
 // 🔄 ABEBOOKS ENDPOINTS - Multi-Account Management
 // Search endpoints
