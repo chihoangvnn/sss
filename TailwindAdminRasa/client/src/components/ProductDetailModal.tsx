@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Plus, Minus, Heart, Star, Share2, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,12 @@ export function ProductDetailModal({
 }: ProductDetailModalProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  
+  // Drag to close functionality
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const [dragDistance, setDragDistance] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startY = useRef(0);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   
@@ -109,6 +115,34 @@ export function ProductDetailModal({
     }));
   };
 
+  // Drag functionality for mobile drawer
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0].clientY;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    
+    const currentY = e.touches[0].clientY;
+    const distance = currentY - startY.current;
+    
+    // Only allow dragging down (positive distance)
+    if (distance > 0) {
+      setDragDistance(distance);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (dragDistance > 150) {
+      // Close modal if dragged down more than 150px
+      onClose();
+    }
+    
+    setDragDistance(0);
+    setIsDragging(false);
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
@@ -121,11 +155,24 @@ export function ProductDetailModal({
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-20 bg-black/50 z-60 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/30 z-60 flex items-end" onClick={onClose}>
       <div 
-        className="bg-white w-full rounded-t-3xl max-h-[calc(100vh-5rem)] relative"
+        ref={drawerRef}
+        className="bg-white w-full rounded-t-3xl h-[80vh] relative shadow-2xl transition-transform duration-300"
+        style={{
+          transform: `translateY(${dragDistance}px)`,
+          opacity: isDragging ? Math.max(1 - dragDistance / 300, 0.3) : 1
+        }}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drawer Handle */}
+        <div className="flex justify-center pt-2 pb-1" onClick={(e) => e.stopPropagation()}>
+          <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+        </div>
+
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 p-4 border-b flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
           <h2 className="text-lg font-bold text-gray-900">Chi tiết sản phẩm</h2>
