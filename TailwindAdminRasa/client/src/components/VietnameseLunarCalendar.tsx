@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Calendar, Search, Filter, Star, Sun, Moon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface LunarDay {
   solarDate: string; // ISO date string
@@ -29,6 +33,15 @@ interface VietnameseLunarCalendarProps {
   className?: string;
 }
 
+interface CalendarCache {
+  [key: string]: LunarMonthData;
+}
+
+interface SelectedDayDetail {
+  day: LunarDay;
+  solarDayNumber: number;
+}
+
 export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -36,35 +49,92 @@ export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalen
   const [lunarData, setLunarData] = useState<LunarMonthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Enhanced state for new features
+  const [cache, setCache] = useState<CalendarCache>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<SelectedDayDetail | null>(null);
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [filterQuality, setFilterQuality] = useState<'all' | 'good' | 'bad' | 'holiday'>('all');
 
-  // Fetch real Vietnamese lunar calendar data from API
-  const fetchLunarData = async (year: number, month: number) => {
+  // Enhanced API fetch with caching for performance
+  const fetchLunarData = useCallback(async (year: number, month: number, useCache = true, updateUI = true) => {
+    const cacheKey = `${year}-${month}`;
+    
+    // Check cache first for performance
+    if (useCache && cache[cacheKey]) {
+      if (updateUI) {
+        setLunarData(cache[cacheKey]);
+        setLoading(false);
+      }
+      return;
+    }
+    
     try {
-      setLoading(true);
-      setError(null);
+      if (updateUI) {
+        setLoading(true);
+        setError(null);
+      }
       
-      const response = await fetch(`/api/lunar-calendar?year=${year}&month=${month + 1}`);
+      const response = await fetch(`/api/lunar-calendar/bulk?startYear=${year}&startMonth=${month + 1}&months=3`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch lunar calendar: ${response.statusText}`);
       }
       
-      const data: LunarMonthData = await response.json();
-      setLunarData(data);
+      const bulkData: { [key: string]: LunarMonthData } = await response.json();
+      
+      // Update cache with all fetched months for better performance
+      const newCache = { ...cache };
+      Object.entries(bulkData).forEach(([key, data]) => {
+        const [bulkYear, bulkMonth] = key.split('-').map(Number);
+        const bulkCacheKey = `${bulkYear}-${bulkMonth - 1}`; // Convert back to 0-based month
+        newCache[bulkCacheKey] = data;
+      });
+      setCache(newCache);
+      
+      // Only update UI if this is the foreground fetch
+      if (updateUI) {
+        const currentKey = `${year}-${month + 1}`;
+        if (bulkData[currentKey]) {
+          setLunarData(bulkData[currentKey]);
+        } else {
+          throw new Error('Current month data not found in bulk response');
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load lunar calendar');
-      console.error('Lunar calendar fetch error:', err);
+      if (updateUI) {
+        setError(err instanceof Error ? err.message : 'Failed to load lunar calendar');
+        console.error('Lunar calendar fetch error:', err);
+      }
     } finally {
-      setLoading(false);
+      if (updateUI) {
+        setLoading(false);
+      }
     }
-  };
+  }, [cache]);
 
-  // Fetch data when month/year changes
+  // Fetch data when month/year changes with prefetching for performance
   useEffect(() => {
-    fetchLunarData(currentYear, currentMonth);
-  }, [currentYear, currentMonth]);
+    // Foreground fetch - this updates the UI
+    fetchLunarData(currentYear, currentMonth, true, true);
+    
+    // Prefetch adjacent months for smooth navigation (cache-only, no UI updates)
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    
+    // Prefetch with slight delay to not block current request - cache only
+    setTimeout(() => {
+      fetchLunarData(nextYear, nextMonth, true, false); // updateUI = false
+      fetchLunarData(prevYear, prevMonth, true, false); // updateUI = false
+    }, 200);
+  }, [currentYear, currentMonth, fetchLunarData]);
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
+  // Enhanced navigation with smooth transitions
+  const navigateMonth = useCallback((direction: 'prev' | 'next') => {
     if (direction === 'prev') {
       if (currentMonth === 0) {
         setCurrentMonth(11);
@@ -80,14 +150,71 @@ export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalen
         setCurrentMonth(currentMonth + 1);
       }
     }
-  };
+  }, [currentMonth, currentYear]);
+  
+  // Navigate to today
+  const goToToday = useCallback(() => {
+    const today = new Date();
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+  }, []);
+  
+  // Handle day click
+  const handleDayClick = useCallback((day: LunarDay) => {
+    const solarDayNumber = parseInt(day.solarDate.split('-')[2]);
+    setSelectedDay({ day, solarDayNumber });
+  }, []);
 
+  // Search functionality using the /search API endpoint
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim()) return;
+    
+    try {
+      const response = await fetch(
+        `/api/lunar-calendar/search?query=${encodeURIComponent(query)}&year=${currentYear}&month=${currentMonth + 1}&filter=${filterQuality}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.statusText}`);
+      }
+      
+      const searchResults = await response.json();
+      console.log('Search results:', searchResults);
+      
+      // Could implement search results display here
+      // For now, just log the results
+      
+    } catch (err) {
+      console.error('Search error:', err);
+    }
+  }, [currentYear, currentMonth, filterQuality]);
+
+  // Debounced search for better performance
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        performSearch(searchQuery);
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, performSearch]);
+
+  // Vietnamese month and day names with traditional styling
   const monthNames = [
-    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    'Tháng Giêng', 'Tháng Hai', 'Tháng Ba', 'Tháng Tư', 'Tháng Năm', 'Tháng Sáu',
+    'Tháng Bảy', 'Tháng Tám', 'Tháng Chín', 'Tháng Mười', 'Tháng Mười Một', 'Tháng Chạp'
   ];
 
-  const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const weekDays = [
+    { short: 'CN', full: 'Chủ nhật' },
+    { short: 'T2', full: 'Thứ hai' },
+    { short: 'T3', full: 'Thứ ba' },
+    { short: 'T4', full: 'Thứ tư' },
+    { short: 'T5', full: 'Thứ năm' },
+    { short: 'T6', full: 'Thứ sáu' },
+    { short: 'T7', full: 'Thứ bảy' }
+  ];
 
   // Generate calendar grid with proper alignment
   const generateCalendarGrid = (): (LunarDay | null)[] => {
@@ -113,30 +240,74 @@ export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalen
     return grid;
   };
 
-  const getDayStyle = (day: LunarDay | null) => {
-    if (!day) return 'min-h-[60px]'; // Empty cell
+  // Enhanced styling with traditional Vietnamese colors and better UX
+  const getDayStyle = useCallback((day: LunarDay | null) => {
+    if (!day) return 'min-h-[70px] border border-transparent'; // Empty cell
     
-    let baseStyle = 'flex flex-col items-center justify-center p-1 rounded-lg min-h-[60px] relative cursor-pointer hover:bg-gray-50 ';
+    let baseStyle = `
+      flex flex-col items-center justify-center p-2 rounded-xl min-h-[70px] relative cursor-pointer 
+      transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg border-2
+    `;
     
     if (day.isToday) {
-      baseStyle += 'bg-blue-500 text-white font-bold ';
+      baseStyle += 'bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold shadow-lg border-blue-300 ';
     } else if (day.isHoliday) {
-      baseStyle += 'bg-red-100 text-red-800 ';
+      baseStyle += 'bg-gradient-to-br from-red-100 to-red-200 text-red-800 border-red-300 shadow-md ';
     } else if (day.dayQuality === 'good') {
-      baseStyle += 'bg-green-100 text-green-800 ';
+      baseStyle += 'bg-gradient-to-br from-green-100 to-green-200 text-green-800 border-green-300 ';
     } else if (day.dayQuality === 'bad') {
-      baseStyle += 'bg-gray-100 text-gray-600 ';
+      baseStyle += 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 border-gray-300 ';
     } else {
-      baseStyle += 'text-gray-700 ';
+      baseStyle += 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 ';
     }
     
     return baseStyle;
-  };
+  }, []);
+  
+  // Filter days based on search and quality filter
+  const filteredDays = useMemo(() => {
+    if (!lunarData) return [];
+    
+    return lunarData.days.filter(day => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          day.canChi.toLowerCase().includes(query) ||
+          day.holidayName?.toLowerCase().includes(query) ||
+          day.productSuggestions.some(p => p.toLowerCase().includes(query));
+        if (!matchesSearch) return false;
+      }
+      
+      // Quality filter
+      if (filterQuality !== 'all') {
+        if (filterQuality === 'holiday' && !day.isHoliday) return false;
+        if (filterQuality === 'good' && day.dayQuality !== 'good') return false;
+        if (filterQuality === 'bad' && day.dayQuality !== 'bad') return false;
+      }
+      
+      return true;
+    });
+  }, [lunarData, searchQuery, filterQuality]);
 
-  const calendarGrid = generateCalendarGrid();
+  // Memoized calendar grid for performance
+  const calendarGrid = useMemo(() => generateCalendarGrid(), [lunarData, currentYear, currentMonth]);
+  
+  // Get quality statistics for the month
+  const monthStats = useMemo(() => {
+    if (!lunarData) return { good: 0, bad: 0, holiday: 0, normal: 0 };
+    
+    return lunarData.days.reduce((stats, day) => {
+      if (day.isHoliday) stats.holiday++;
+      else if (day.dayQuality === 'good') stats.good++;
+      else if (day.dayQuality === 'bad') stats.bad++;
+      else stats.normal++;
+      return stats;
+    }, { good: 0, bad: 0, holiday: 0, normal: 0 });
+  }, [lunarData]);
 
   return (
-    <div className={`bg-white rounded-lg p-4 ${className}`}>
+    <div className={`bg-gradient-to-br from-white to-green-50 rounded-2xl p-6 shadow-xl border border-green-100 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <button
@@ -176,9 +347,9 @@ export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalen
 
       {/* Week days */}
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {weekDays.map((day) => (
-          <div key={day} className="text-center text-sm font-medium text-gray-600 p-2">
-            {day}
+        {weekDays.map((day, index) => (
+          <div key={index} className="text-center text-sm font-medium text-gray-600 p-2" title={day.full}>
+            {day.short}
           </div>
         ))}
       </div>

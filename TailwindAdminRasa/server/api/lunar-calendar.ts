@@ -61,7 +61,7 @@ function solarToLunar(solarDate: Date): { lunarDate: number; lunarMonth: number;
       lunarDate: lunarDate.date,
       lunarMonth: lunarDate.month,
       lunarYear: lunarDate.year,
-      isLeapMonth: lunarDate.isLeapMonth || false
+      isLeapMonth: lunarDate.leap || false // Use proper leap month detection from library
     };
   } catch (error) {
     console.error('Error converting solar to lunar date:', error);
@@ -230,7 +230,7 @@ router.get('/', async (req, res) => {
       monthInfo: {
         lunarMonth: targetMonth,
         lunarYear: targetYear,
-        canChiMonth: getCanChiYear(targetYear),
+        canChiMonth: getCanChiMonth(targetYear, targetMonth),
         seasonContext: targetMonth <= 3 ? 'Xuân' : targetMonth <= 6 ? 'Hạ' : targetMonth <= 9 ? 'Thu' : 'Đông'
       }
     };
@@ -277,5 +277,180 @@ router.get('/today', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Bulk endpoint for performance - get multiple months at once  
+router.get('/bulk', async (req, res) => {
+  try {
+    const { startYear, startMonth, months = 3 } = req.query;
+    
+    if (!startYear || !startMonth) {
+      return res.status(400).json({ error: 'startYear and startMonth parameters are required' });
+    }
+    
+    const year = parseInt(startYear as string);
+    const month = parseInt(startMonth as string);
+    const monthCount = Math.min(parseInt(months as string), 12); // Max 12 months
+    
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+      return res.status(400).json({ error: 'Invalid year or month' });
+    }
+    
+    const result: { [key: string]: LunarMonthData } = {};
+    
+    // Generate data for requested months
+    for (let i = 0; i < monthCount; i++) {
+      let currentYear = year;
+      let currentMonth = month + i;
+      
+      // Handle year overflow
+      while (currentMonth > 12) {
+        currentMonth -= 12;
+        currentYear += 1;
+      }
+      
+      const monthKey = `${currentYear}-${currentMonth}`;
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const today = new Date();
+      const days: LunarDay[] = [];
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const currentDate = new Date(currentYear, currentMonth - 1, day);
+        const lunar = solarToLunar(currentDate);
+        const canChi = getCanChiDay(currentDate);
+        const isToday = currentDate.toDateString() === today.toDateString();
+        
+        // Check for holidays
+        const holidayKey = `${lunar.lunarMonth}-${lunar.lunarDate}`;
+        const holiday = VIETNAMESE_HOLIDAYS[holidayKey as keyof typeof VIETNAMESE_HOLIDAYS];
+        const isHoliday = !!holiday;
+        
+        const dayQuality = getDayQuality(lunar.lunarDate, canChi);
+        const productSuggestions = getProductSuggestions(lunar.lunarDate, lunar.lunarMonth, dayQuality, isHoliday);
+        
+        days.push({
+          solarDate: currentDate.toISOString().split('T')[0],
+          lunarDate: lunar.lunarDate,
+          lunarMonth: lunar.lunarMonth,
+          lunarYear: lunar.lunarYear,
+          canChi,
+          isGoodDay: dayQuality === 'good',
+          isHoliday,
+          holidayName: holiday?.name,
+          isToday,
+          dayQuality,
+          productSuggestions
+        });
+      }
+      
+      result[monthKey] = {
+        days,
+        monthInfo: {
+          lunarMonth: currentMonth,
+          lunarYear: currentYear,
+          canChiMonth: getCanChiMonth(currentYear, currentMonth),
+          seasonContext: currentMonth <= 3 ? 'Xuân' : currentMonth <= 6 ? 'Hạ' : currentMonth <= 9 ? 'Thu' : 'Đông'
+        }
+      };
+    }
+    
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Bulk lunar calendar API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Search endpoint for enhanced search features
+router.get('/search', async (req, res) => {
+  try {
+    const { query, year, month, filter } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    
+    const searchQuery = (query as string).toLowerCase();
+    const searchYear = year ? parseInt(year as string) : new Date().getFullYear();
+    const searchMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+    
+    // Get month data
+    const daysInMonth = new Date(searchYear, searchMonth, 0).getDate();
+    const today = new Date();
+    const results: LunarDay[] = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(searchYear, searchMonth - 1, day);
+      const lunar = solarToLunar(currentDate);
+      const canChi = getCanChiDay(currentDate);
+      const isToday = currentDate.toDateString() === today.toDateString();
+      
+      // Check for holidays
+      const holidayKey = `${lunar.lunarMonth}-${lunar.lunarDate}`;
+      const holiday = VIETNAMESE_HOLIDAYS[holidayKey as keyof typeof VIETNAMESE_HOLIDAYS];
+      const isHoliday = !!holiday;
+      
+      const dayQuality = getDayQuality(lunar.lunarDate, canChi);
+      const productSuggestions = getProductSuggestions(lunar.lunarDate, lunar.lunarMonth, dayQuality, isHoliday);
+      
+      const dayData: LunarDay = {
+        solarDate: currentDate.toISOString().split('T')[0],
+        lunarDate: lunar.lunarDate,
+        lunarMonth: lunar.lunarMonth,
+        lunarYear: lunar.lunarYear,
+        canChi,
+        isGoodDay: dayQuality === 'good',
+        isHoliday,
+        holidayName: holiday?.name,
+        isToday,
+        dayQuality,
+        productSuggestions
+      };
+      
+      // Search filtering
+      const matchesSearch = 
+        canChi.toLowerCase().includes(searchQuery) ||
+        holiday?.name?.toLowerCase().includes(searchQuery) ||
+        productSuggestions.some(p => p.toLowerCase().includes(searchQuery));
+      
+      // Filter by quality if specified
+      let matchesFilter = true;
+      if (filter) {
+        if (filter === 'good' && dayQuality !== 'good') matchesFilter = false;
+        if (filter === 'bad' && dayQuality !== 'bad') matchesFilter = false;
+        if (filter === 'holiday' && !isHoliday) matchesFilter = false;
+      }
+      
+      if (matchesSearch && matchesFilter) {
+        results.push(dayData);
+      }
+    }
+    
+    res.status(200).json({
+      query: searchQuery,
+      results,
+      total: results.length,
+      year: searchYear,
+      month: searchMonth
+    });
+  } catch (error) {
+    console.error('Search lunar calendar API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get Can Chi for a specific month (Tinh Can Chi thang)
+function getCanChiMonth(year: number, month: number): string {
+  // Lunar month Can Chi calculation
+  // First month starts from Can index based on year
+  const yearCan = (year - 4) % 10;
+  const monthCanIndex = (yearCan * 2 + month - 1) % 10;
+  const monthChiIndex = (month - 1) % 12;
+  
+  // Handle negative modulo
+  const adjustedCanIndex = monthCanIndex < 0 ? monthCanIndex + 10 : monthCanIndex;
+  const adjustedChiIndex = monthChiIndex < 0 ? monthChiIndex + 12 : monthChiIndex;
+  
+  return `${CAN[adjustedCanIndex]} ${CHI[adjustedChiIndex]}`;
+}
 
 export default router;
