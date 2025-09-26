@@ -122,7 +122,7 @@ export function ProductDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-60 flex items-end">
-      <div className="bg-white w-full rounded-t-3xl max-h-[95vh] overflow-hidden">
+      <div className="bg-white w-full rounded-t-3xl max-h-[95vh]">
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 p-4 border-b flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900">Chi tiết sản phẩm</h2>
