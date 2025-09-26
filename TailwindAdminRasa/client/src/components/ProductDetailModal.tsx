@@ -80,6 +80,14 @@ export function ProductDetailModal({
     setQuantity(1); // Reset quantity after adding to cart
   };
 
+  const handleThinhNhang = () => {
+    // Special premium purchase action - could be immediate checkout or special blessing option
+    onAddToCart(quantity);
+    setQuantity(1);
+    // TODO: Could trigger special checkout flow or blessing ceremony booking
+    console.log('Thỉnh Nhang (Premium Purchase) initiated');
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
@@ -352,43 +360,59 @@ export function ProductDetailModal({
           </div>
         </div>
 
-        {/* Sticky Bottom Actions */}
+        {/* Sticky Bottom Actions - Two Button Layout */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-10">
-          <div className="flex items-center gap-4">
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuantityChange(-1)}
-                disabled={quantity <= 1}
-                className="w-10 h-10 p-0"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="w-12 text-center font-semibold text-lg">
-                {quantity}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuantityChange(1)}
-                disabled={quantity >= product.stock}
-                className="w-10 h-10 p-0"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+          {/* Quantity Selector Row */}
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuantityChange(-1)}
+              disabled={quantity <= 1}
+              className="w-10 h-10 p-0"
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="w-16 text-center font-semibold text-lg">
+              {quantity}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleQuantityChange(1)}
+              disabled={quantity >= product.stock}
+              className="w-10 h-10 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
 
+          {/* Two Action Buttons */}
+          <div className="flex items-center gap-3">
             {/* Add to Cart Button */}
             <Button
               onClick={handleAddToCart}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all"
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
               disabled={product.stock === 0}
             >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              Thêm vào giỏ - {(product.price * quantity).toLocaleString('vi-VN')}₫
+              <ShoppingCart className="h-4 w-4 mr-1" />
+              <span className="text-sm">Thêm vào Giỏ hàng</span>
             </Button>
+            
+            {/* Thỉnh Nhang (Premium Purchase) Button */}
+            <Button
+              onClick={handleThinhNhang}
+              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
+              disabled={product.stock === 0}
+            >
+              <Heart className="h-4 w-4 mr-1" />
+              <span className="text-sm">Thỉnh Nhang</span>
+            </Button>
+          </div>
+          
+          {/* Price Display */}
+          <div className="text-center mt-2 text-gray-600 text-sm">
+            Tổng: <span className="font-semibold text-green-600">{(product.price * quantity).toLocaleString('vi-VN')}₫</span>
           </div>
         </div>
       </div>
