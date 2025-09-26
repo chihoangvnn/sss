@@ -160,7 +160,7 @@ export function ProductDetailModal({
       
       <div 
         ref={drawerRef}
-        className="bg-white w-full rounded-t-3xl h-[80vh] relative shadow-2xl transition-transform duration-300 pointer-events-auto"
+        className="bg-white w-full rounded-t-3xl h-[80vh] relative shadow-2xl transition-transform duration-300 pointer-events-auto flex flex-col"
         style={{
           transform: `translateY(${dragDistance}px)`,
           opacity: isDragging ? Math.max(1 - dragDistance / 300, 0.3) : 1
@@ -196,7 +196,10 @@ export function ProductDetailModal({
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto pb-32">
+        <div 
+          className="flex-1 overflow-y-auto overscroll-contain p-4 pb-8"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {/* Hero Image Carousel Section */}
           <div className="relative">
             {productImages.length > 0 ? (
