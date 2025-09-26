@@ -127,9 +127,6 @@ function App() {
                 </main>
               </div>
             </SidebarProvider>
-            
-            {/* Modern Mobile Bottom Navigation - only for admin routes */}
-            <MobileBottomNav />
           </Route>
         </Switch>
         
