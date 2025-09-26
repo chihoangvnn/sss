@@ -44,6 +44,7 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState(new Date()); // New state for day navigation
   const [lunarData, setLunarData] = useState<LunarMonthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,12 +157,29 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
   // Vietnamese day names
   const dayNames = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'];
 
-  // Get today's information
+  // Navigation for selected date
+  const navigateDay = useCallback((direction: 'prev' | 'next') => {
+    const newDate = new Date(selectedDate);
+    if (direction === 'prev') {
+      newDate.setDate(newDate.getDate() - 1);
+    } else {
+      newDate.setDate(newDate.getDate() + 1);
+    }
+    setSelectedDate(newDate);
+    
+    // If navigated to different month, update month view
+    if (newDate.getMonth() !== currentMonth || newDate.getFullYear() !== currentYear) {
+      setCurrentMonth(newDate.getMonth());
+      setCurrentYear(newDate.getFullYear());
+    }
+  }, [selectedDate, currentMonth, currentYear]);
+
+  // Get selected date information (instead of just today)
   const todayInfo = useMemo(() => {
     if (!lunarData) return null;
-    const todayDate = new Date().toISOString().split('T')[0];
-    return lunarData.days.find(day => day.solarDate === todayDate);
-  }, [lunarData]);
+    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    return lunarData.days.find(day => day.solarDate === selectedDateStr);
+  }, [lunarData, selectedDate]);
 
   // Generate calendar grid
   const calendarDays = useMemo(() => {
@@ -257,23 +275,45 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
       {todayInfo && (
         <div className="bg-white px-4 py-6 border-b">
           <div className="flex items-center justify-between">
-            {/* Dương lịch */}
-            <div className="text-center">
-              <div className="text-sm text-gray-600 mb-1">Dương lịch</div>
-              <div className="text-7xl font-bold text-green-600">{new Date().getDate()}</div>
-              <div className="text-sm text-gray-700 mt-1">
-                {monthNames[new Date().getMonth()]} năm {new Date().getFullYear()}
+            {/* Navigation Button Left */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigateDay('prev')}
+              className="text-gray-600 hover:bg-gray-100 p-2"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+
+            <div className="flex-1 flex items-center justify-between mx-4">
+              {/* Dương lịch */}
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Dương lịch</div>
+                <div className="text-7xl font-bold text-green-600">{selectedDate.getDate()}</div>
+                <div className="text-sm text-gray-700 mt-1">
+                  {monthNames[selectedDate.getMonth()]} năm {selectedDate.getFullYear()}
+                </div>
+              </div>
+
+              {/* Âm lịch */}
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Âm lịch</div>
+                <div className="text-7xl font-bold text-green-800">{todayInfo?.lunarDate || '-'}</div>
+                <div className="text-sm text-red-600 mt-1">
+                  {todayInfo?.holidayName || `Tháng ${todayInfo?.lunarMonth || '-'} Âm`}
+                </div>
               </div>
             </div>
 
-            {/* Âm lịch */}
-            <div className="text-center">
-              <div className="text-sm text-gray-600 mb-1">Âm lịch</div>
-              <div className="text-7xl font-bold text-green-800">{todayInfo.lunarDate}</div>
-              <div className="text-sm text-red-600 mt-1">
-                {todayInfo.holidayName || `Tháng ${todayInfo.lunarMonth} Âm`}
-              </div>
-            </div>
+            {/* Navigation Button Right */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigateDay('next')}
+              className="text-gray-600 hover:bg-gray-100 p-2"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </Button>
           </div>
 
           {/* Thông tin chi tiết */}
