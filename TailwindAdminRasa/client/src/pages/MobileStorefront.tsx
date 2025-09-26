@@ -22,6 +22,7 @@ interface Product {
   stock: number;
   short_description?: string;
   status: string;
+  benefits?: string | string[]; // Added benefits field for organic food business
 }
 
 interface Category {

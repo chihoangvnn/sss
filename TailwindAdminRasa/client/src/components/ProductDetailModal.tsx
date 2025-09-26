@@ -13,6 +13,7 @@ interface Product {
   short_description?: string;
   status: string;
   description?: string;
+  benefits?: string | string[]; // Added benefits field for organic food business
 }
 
 interface ProductDetailModalProps {
@@ -253,6 +254,49 @@ export function ProductDetailModal({
                   </div>
                 </div>
               )}
+
+              {/* Benefits Section - Organic Food Vietnamese Style */}
+              <div className="mb-6 bg-green-50 rounded-xl p-4">
+                <h3 className="font-semibold text-gray-900 mb-3 text-lg">🌿 Lợi ích chính</h3>
+                
+                {/* Smart benefits based on product data */}
+                <div className="space-y-3">
+                  {/* Dynamic benefits from product.benefits with proper fallback */}
+                  {(() => {
+                    // Get benefits from product data safely with proper typing
+                    const productBenefits = product.benefits;
+                    let benefitsList: string[] = [];
+                    
+                    // Convert benefits to array format
+                    if (typeof productBenefits === 'string' && productBenefits.trim()) {
+                      benefitsList = productBenefits.split(',').map(b => b.trim()).filter(b => b);
+                    } else if (Array.isArray(productBenefits) && productBenefits.length > 0) {
+                      benefitsList = productBenefits.filter(b => typeof b === 'string' && b.trim());
+                    }
+                    
+                    // If no valid dynamic benefits, use generic organic benefits
+                    if (benefitsList.length === 0) {
+                      benefitsList = [
+                        '100% tự nhiên, không hóa chất',
+                        'An toàn cho cả gia đình', 
+                        'Nguồn gốc rõ ràng, truy xuất được',
+                        'Giá trị dinh dưỡng cao'
+                      ];
+                    }
+                    
+                    return benefitsList.map((benefit: string, index: number) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className="mt-0.5 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <span className="text-gray-700 leading-relaxed">{benefit}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
 
               {/* Reviews Section */}
               <div className="mb-6">
