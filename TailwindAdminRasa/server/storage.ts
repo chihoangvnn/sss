@@ -7,6 +7,7 @@ import {
   facebookApps, facebookWebhookEvents, botSettings, apiConfigurations,
   accountGroups, groupAccounts, workers, workerJobs, workerHealthChecks,
   productFAQs, productPolicies, productPolicyAssociations,
+  abebooksAccounts, abebooksListings, abebooksSearchHistory,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -36,7 +37,10 @@ import {
   type BotSettings, type InsertBotSettings,
   type ApiConfiguration, type InsertApiConfiguration, type UpdateApiConfiguration,
   type AccountGroup, type InsertAccountGroup,
-  type Worker, type InsertWorker, type WorkerJob, type InsertWorkerJob
+  type Worker, type InsertWorker, type WorkerJob, type InsertWorkerJob,
+  type AbebooksAccount, type InsertAbebooksAccount,
+  type AbebooksListing, type InsertAbebooksListing,
+  type AbebooksSearchHistory, type InsertAbebooksSearchHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
@@ -316,6 +320,23 @@ export interface IStorage {
   updateWorker(id: string, worker: Partial<InsertWorker>): Promise<Worker | undefined>;
   deleteWorker(id: string): Promise<boolean>;
   updateWorkerStatus(workerId: string, isOnline: boolean, lastPingAt?: Date): Promise<Worker | undefined>;
+
+  // AbeBooks methods
+  getAbebooksAccounts(): Promise<AbebooksAccount[]>;
+  getAbebooksAccount(id: string): Promise<AbebooksAccount | undefined>;
+  getDefaultAbebooksAccount(): Promise<AbebooksAccount | undefined>;
+  createAbebooksAccount(account: InsertAbebooksAccount): Promise<AbebooksAccount>;
+  updateAbebooksAccount(id: string, account: Partial<InsertAbebooksAccount>): Promise<AbebooksAccount | undefined>;
+  trackAbebooksAccountUsage(accountId: string): Promise<AbebooksAccount | undefined>;
+  
+  getAbebooksListings(bookIsbn?: string, accountId?: string): Promise<AbebooksListing[]>;
+  getAbebooksListing(id: string): Promise<AbebooksListing | undefined>;
+  createAbebooksListing(listing: InsertAbebooksListing): Promise<AbebooksListing>;
+  updateAbebooksListing(id: string, listing: Partial<InsertAbebooksListing>): Promise<AbebooksListing | undefined>;
+  deleteAbebooksListing(id: string): Promise<boolean>;
+  
+  getAbebooksSearchHistory(accountId?: string, limit?: number): Promise<AbebooksSearchHistory[]>;
+  createAbebooksSearchHistory(history: InsertAbebooksSearchHistory): Promise<AbebooksSearchHistory>;
 }
 
 export class DatabaseStorage implements IStorage {
