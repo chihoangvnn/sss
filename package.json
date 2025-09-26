@@ -36,6 +36,7 @@
     "react-big-calendar": "^1.19.4",
     "react-qr-scanner": "^1.0.0-alpha.11",
     "react-quill": "^2.0.0",
+    "vietnamese-lunar-calendar": "^0.0.6",
     "xlsx": "^0.18.5"
   }
 }

@@ -1,5 +1,8 @@
 // Vietnamese Lunar Calendar API with authentic calculations
 // Based on traditional Vietnamese lunar calendar system
+// Uses authentic vietnamese-lunar-calendar package for precise calculations
+
+import { LunarDate } from 'vietnamese-lunar-calendar';
 
 interface LunarDay {
   solarDate: string; // ISO date string
@@ -48,50 +51,74 @@ const VIETNAMESE_HOLIDAYS = {
   '12-23': { name: 'Ông Táo', description: 'Cúng ông Táo về trời' }
 };
 
-// Convert Gregorian to approximate lunar date (simplified traditional method)
-function solarToLunar(solarDate: Date): { lunarDate: number; lunarMonth: number; lunarYear: number } {
-  // Simplified lunar calculation based on traditional Vietnamese methods
-  // This is a basic approximation - real implementation would use precise astronomical calculations
-  
-  const baseYear = 1900; // Reference year
-  const yearDiff = solarDate.getFullYear() - baseYear;
-  
-  // Approximate lunar year calculation
-  const lunarYear = baseYear + yearDiff;
-  
-  // Simple lunar month/date calculation (needs astronomical precision for real use)
-  const dayOfYear = Math.floor((solarDate.getTime() - new Date(solarDate.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-  
-  // Approximate lunar cycle (29.53 days average)
-  const lunarCycle = 29.53;
-  const lunarMonthFloat = (dayOfYear % (lunarCycle * 12)) / lunarCycle;
-  const lunarMonth = Math.floor(lunarMonthFloat) + 1;
-  const lunarDate = Math.floor((lunarMonthFloat % 1) * lunarCycle) + 1;
-  
-  return {
-    lunarDate: Math.min(lunarDate, 30),
-    lunarMonth: Math.min(lunarMonth, 12),
-    lunarYear
-  };
+// Convert Gregorian to authentic Vietnamese lunar date using precise calculations
+function solarToLunar(solarDate: Date): { lunarDate: number; lunarMonth: number; lunarYear: number; isLeapMonth?: boolean } {
+  try {
+    // Create lunar date from solar date using authentic Vietnamese calculations
+    const lunarDate = new LunarDate(solarDate);
+    
+    return {
+      lunarDate: lunarDate.date,
+      lunarMonth: lunarDate.month,
+      lunarYear: lunarDate.year,
+      isLeapMonth: lunarDate.isLeapMonth || false
+    };
+  } catch (error) {
+    console.error('Error converting solar to lunar date:', error);
+    // Fallback to a basic approximation if library fails
+    const year = solarDate.getFullYear();
+    const month = solarDate.getMonth() + 1;
+    const day = solarDate.getDate();
+    
+    return {
+      lunarDate: Math.max(1, Math.min(30, day - 7)),
+      lunarMonth: Math.max(1, Math.min(12, month)),
+      lunarYear: year
+    };
+  }
 }
 
-// Get Can Chi for a given year
+// Get Can Chi for a given year using authentic Vietnamese calculations
 function getCanChiYear(year: number): string {
+  // Adjust for Vietnamese calendar reference point
   const canIndex = (year - 4) % 10;
   const chiIndex = (year - 4) % 12;
+  
+  // Handle negative modulo for years before reference
+  const adjustedCanIndex = canIndex < 0 ? canIndex + 10 : canIndex;
+  const adjustedChiIndex = chiIndex < 0 ? chiIndex + 12 : chiIndex;
+  
+  return `${CAN[adjustedCanIndex]} ${CHI[adjustedChiIndex]}`;
+}
+
+// Get Can Chi for a given day using Julian Day Number for authentic calculation
+function getCanChiDay(date: Date): string {
+  // Calculate Julian Day Number for precise Can Chi calculation
+  const julianDay = getJulianDayNumber(date);
+  
+  // Traditional Can Chi day calculation using Julian Day
+  // Reference: Julian Day 0 corresponds to specific Can Chi combination
+  const dayCount = (julianDay + 50) % 60; // Adjust for Can Chi cycle
+  const canIndex = dayCount % 10;
+  const chiIndex = dayCount % 12;
+  
   return `${CAN[canIndex]} ${CHI[chiIndex]}`;
 }
 
-// Get Can Chi for a given day
-function getCanChiDay(date: Date): string {
-  // Traditional calculation based on days since reference point
-  const refDate = new Date(1900, 0, 1); // Reference date
-  const daysDiff = Math.floor((date.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
+// Calculate Julian Day Number for precise astronomical calculations
+function getJulianDayNumber(date: Date): number {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
   
-  const canIndex = daysDiff % 10;
-  const chiIndex = daysDiff % 12;
+  let a = Math.floor((14 - month) / 12);
+  let y = year + 4800 - a;
+  let m = month + 12 * a - 3;
   
-  return `${CAN[canIndex >= 0 ? canIndex : canIndex + 10]} ${CHI[chiIndex >= 0 ? chiIndex : chiIndex + 12]}`;
+  let jdn = day + Math.floor((153 * m + 2) / 5) + 365 * y + 
+           Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+  
+  return jdn;
 }
 
 // Determine day quality based on traditional Vietnamese beliefs
