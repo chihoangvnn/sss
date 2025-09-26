@@ -239,7 +239,7 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
-            <h1 className="text-lg font-bold">LỊCH VẠN NIÊN</h1>
+            <h1 className="text-base font-bold">LỊCH VẠN NIÊN</h1>
           </div>
           <Button
             variant="outline"
@@ -260,7 +260,7 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
             {/* Dương lịch */}
             <div className="text-center">
               <div className="text-sm text-gray-600 mb-1">Dương lịch</div>
-              <div className="text-5xl font-bold text-green-600">{new Date().getDate()}</div>
+              <div className="text-7xl font-bold text-green-600">{new Date().getDate()}</div>
               <div className="text-sm text-gray-700 mt-1">
                 {monthNames[new Date().getMonth()]} năm {new Date().getFullYear()}
               </div>
@@ -269,7 +269,7 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
             {/* Âm lịch */}
             <div className="text-center">
               <div className="text-sm text-gray-600 mb-1">Âm lịch</div>
-              <div className="text-5xl font-bold text-green-800">{todayInfo.lunarDate}</div>
+              <div className="text-7xl font-bold text-green-800">{todayInfo.lunarDate}</div>
               <div className="text-sm text-red-600 mt-1">
                 {todayInfo.holidayName || `Tháng ${todayInfo.lunarMonth} Âm`}
               </div>
