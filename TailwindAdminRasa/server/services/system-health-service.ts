@@ -47,6 +47,26 @@ export class SystemHealthService {
   private queueService: QueueService;
   private healthCheckInterval?: NodeJS.Timeout;
   private readonly HEALTH_CHECK_INTERVAL = 60000; // 1 minute
+  
+  // Cache for health check data to avoid repeated DB queries
+  private healthCheckCache: {
+    workers?: any[];
+    workerStats?: any;
+    lastFetch?: number;
+    cacheDuration: number;
+  } = {
+    cacheDuration: 30000, // 30 seconds cache (aligned better with 60s interval)
+  };
+
+  // Static cache shared across all entry points
+  private static sharedHealthCache: {
+    workers?: any[];
+    workerStats?: any;
+    lastFetch?: number;
+    cacheDuration: number;
+  } = {
+    cacheDuration: 30000,
+  };
 
   private constructor() {
     this.workerManager = WorkerManagementService.getInstance();
@@ -62,12 +82,15 @@ export class SystemHealthService {
   }
 
   /**
-   * 🔍 Generate comprehensive system health report
+   * 🔍 Generate comprehensive system health report with caching optimization
    */
   async generateHealthReport(): Promise<SystemHealthReport> {
     console.log('🏥 Generating system health report...');
     
     const startTime = Date.now();
+    
+    // Pre-fetch worker data once to avoid repeated queries
+    await this.refreshWorkerCache();
     
     // Run all health checks in parallel
     const [
@@ -95,7 +118,7 @@ export class SystemHealthService {
     // Calculate overall system health
     const overallStatus = this.calculateOverallHealth(components);
     
-    // Get system metrics
+    // Get system metrics (using cached data)
     const metrics = await this.getSystemMetrics();
     
     // Generate alerts
@@ -111,6 +134,68 @@ export class SystemHealthService {
 
     console.log(`✅ Health report generated in ${Date.now() - startTime}ms - Overall: ${overallStatus}`);
     return report;
+  }
+
+  /**
+   * 🔄 Refresh worker data cache to avoid repeated DB queries (shared across instances)
+   */
+  private async refreshWorkerCache(forceRefresh = false): Promise<void> {
+    const now = Date.now();
+    const cache = SystemHealthService.sharedHealthCache;
+    
+    // Check if cache is still valid unless forcing refresh
+    if (!forceRefresh && cache.lastFetch && 
+        (now - cache.lastFetch) < cache.cacheDuration) {
+      // Copy shared cache to instance cache
+      this.healthCheckCache = { ...cache };
+      return; // Cache is still valid
+    }
+
+    try {
+      // Fetch data once and cache it
+      const [workers, workerStats] = await Promise.all([
+        workerStorage.getWorkers({}),
+        workerStorage.getWorkerStats()
+      ]);
+
+      // Update both shared and instance cache
+      const newCacheData = {
+        workers,
+        workerStats,
+        lastFetch: now,
+        cacheDuration: cache.cacheDuration
+      };
+
+      SystemHealthService.sharedHealthCache = newCacheData;
+      this.healthCheckCache = { ...newCacheData };
+    } catch (error) {
+      console.error('Failed to refresh worker cache:', error);
+    }
+  }
+
+  /**
+   * 📊 Get cached worker data with fallback to shared cache
+   */
+  private getCachedWorkers(): any[] {
+    return this.healthCheckCache.workers || SystemHealthService.sharedHealthCache.workers || [];
+  }
+
+  /**
+   * 📊 Get cached worker stats with fallback to shared cache  
+   */
+  private getCachedWorkerStats(): any {
+    return this.healthCheckCache.workerStats || SystemHealthService.sharedHealthCache.workerStats || {
+      totalWorkers: 0,
+      activeWorkers: 0,
+      totalJobsInProgress: 0
+    };
+  }
+
+  /**
+   * 🔄 Invalidate worker cache (call when worker data changes)
+   */
+  public static invalidateWorkerCache(): void {
+    SystemHealthService.sharedHealthCache = { cacheDuration: 30000 };
   }
 
   /**
@@ -151,13 +236,13 @@ export class SystemHealthService {
   }
 
   /**
-   * 👥 Check worker health and availability
+   * 👥 Check worker health and availability (using cached data)
    */
   private async checkWorkerHealth(): Promise<SystemHealthCheck> {
     const startTime = Date.now();
     
     try {
-      const workers = await workerStorage.getWorkers({});
+      const workers = this.getCachedWorkers();
       const onlineWorkers = workers.filter(w => w.isOnline);
       const healthyWorkers = onlineWorkers.filter(w => w.status === 'active');
       
@@ -308,14 +393,14 @@ export class SystemHealthService {
   }
 
   /**
-   * 💾 Check storage system health
+   * 💾 Check storage system health (using cached data)
    */
   private async checkStorageHealth(): Promise<SystemHealthCheck> {
     const startTime = Date.now();
     
     try {
-      // Test storage operations
-      const stats = await workerStorage.getWorkerStats();
+      // Use cached storage stats
+      const stats = this.getCachedWorkerStats();
       const responseTime = Date.now() - startTime;
       
       let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
@@ -345,13 +430,13 @@ export class SystemHealthService {
   }
 
   /**
-   * 📊 Get comprehensive system metrics
+   * 📊 Get comprehensive system metrics (using cached data)
    */
   private async getSystemMetrics(): Promise<SystemHealthReport['metrics']> {
     try {
-      const workers = await workerStorage.getWorkers({});
+      const workers = this.getCachedWorkers();
       const onlineWorkers = workers.filter(w => w.isOnline);
-      const stats = await workerStorage.getWorkerStats();
+      const stats = this.getCachedWorkerStats();
       
       const avgResponseTime = workers.length > 0 
         ? workers.reduce((sum, w) => sum + (w.avgResponseTime || 0), 0) / workers.length

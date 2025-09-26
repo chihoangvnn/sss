@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useLunarData } from '@/hooks/useLunarData';
 
 interface LunarDay {
   solarDate: string; // ISO date string
@@ -31,97 +32,26 @@ interface FullScreenLunarCalendarProps {
   onBack?: () => void;
 }
 
-interface CalendarCache {
-  [key: string]: LunarMonthData;
-}
-
 interface SelectedDayDetail {
   day: LunarDay;
   solarDayNumber: number;
 }
 
-export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps) {
+export const FullScreenLunarCalendar = memo(({ onBack }: FullScreenLunarCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState(new Date()); // New state for day navigation
-  const [lunarData, setLunarData] = useState<LunarMonthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cache, setCache] = useState<CalendarCache>({});
+  
+  // Use optimized hook for lunar data
+  const { data: lunarData, loading, error, refetch } = useLunarData(currentYear, currentMonth, {
+    prefetchAdjacent: true,
+    cacheTime: 15 * 60 * 1000, // 15 minutes cache
+  });
+  
   const [selectedDay, setSelectedDay] = useState<SelectedDayDetail | null>(null);
   const [showQuickView, setShowQuickView] = useState(false);
 
-  // API fetch với caching
-  const fetchLunarData = useCallback(async (year: number, month: number, useCache = true, updateUI = true) => {
-    const cacheKey = `${year}-${month}`;
-    
-    if (useCache && cache[cacheKey]) {
-      if (updateUI) {
-        setLunarData(cache[cacheKey]);
-        setLoading(false);
-      }
-      return;
-    }
-    
-    try {
-      if (updateUI) {
-        setLoading(true);
-        setError(null);
-      }
-      
-      const response = await fetch(`/api/lunar-calendar/bulk?startYear=${year}&startMonth=${month + 1}&months=3`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch lunar calendar: ${response.statusText}`);
-      }
-      
-      const bulkData: { [key: string]: LunarMonthData } = await response.json();
-      
-      // Update cache
-      const newCache = { ...cache };
-      Object.entries(bulkData).forEach(([key, data]) => {
-        const [bulkYear, bulkMonth] = key.split('-').map(Number);
-        const bulkCacheKey = `${bulkYear}-${bulkMonth - 1}`;
-        newCache[bulkCacheKey] = data;
-      });
-      setCache(newCache);
-      
-      if (updateUI) {
-        const currentKey = `${year}-${month + 1}`;
-        if (bulkData[currentKey]) {
-          setLunarData(bulkData[currentKey]);
-        } else {
-          throw new Error('Current month data not found in bulk response');
-        }
-      }
-    } catch (err) {
-      if (updateUI) {
-        setError(err instanceof Error ? err.message : 'Failed to load lunar calendar');
-        console.error('Lunar calendar fetch error:', err);
-      }
-    } finally {
-      if (updateUI) {
-        setLoading(false);
-      }
-    }
-  }, [cache]);
-
-  // Fetch data khi month/year thay đổi
-  useEffect(() => {
-    fetchLunarData(currentYear, currentMonth, true, true);
-    
-    // Prefetch adjacent months
-    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    
-    setTimeout(() => {
-      fetchLunarData(nextYear, nextMonth, true, false);
-      fetchLunarData(prevYear, prevMonth, true, false);
-    }, 200);
-  }, [currentYear, currentMonth, fetchLunarData]);
 
   // Navigation
   const navigateMonth = useCallback((direction: 'prev' | 'next') => {
@@ -233,7 +163,7 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
       <div className="fixed inset-0 bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">Lỗi: {error}</p>
-          <Button onClick={() => fetchLunarData(currentYear, currentMonth, false, true)}>
+          <Button onClick={() => refetch()}>
             Thử lại
           </Button>
         </div>
@@ -525,4 +455,8 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
       )}
     </div>
   );
-}
+});
+
+FullScreenLunarCalendar.displayName = 'FullScreenLunarCalendar';
+
+export default FullScreenLunarCalendar;

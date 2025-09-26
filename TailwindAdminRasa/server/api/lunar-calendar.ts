@@ -61,7 +61,7 @@ function solarToLunar(solarDate: Date): { lunarDate: number; lunarMonth: number;
       lunarDate: lunarDate.date,
       lunarMonth: lunarDate.month,
       lunarYear: lunarDate.year,
-      isLeapMonth: lunarDate.leap || false // Use proper leap month detection from library
+      isLeapMonth: (lunarDate as any).leap || false // Type assertion for leap property
     };
   } catch (error) {
     console.error('Error converting solar to lunar date:', error);

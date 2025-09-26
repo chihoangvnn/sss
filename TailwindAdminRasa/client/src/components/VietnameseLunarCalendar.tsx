@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, Search, Filter, Star, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useLunarData } from '@/hooks/useLunarData';
+import { debounce } from '@/lib/cache';
 
 interface LunarDay {
   solarDate: string; // ISO date string
@@ -33,105 +35,49 @@ interface VietnameseLunarCalendarProps {
   className?: string;
 }
 
-interface CalendarCache {
-  [key: string]: LunarMonthData;
-}
-
 interface SelectedDayDetail {
   day: LunarDay;
   solarDayNumber: number;
 }
 
-export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalendarProps) {
+export const VietnameseLunarCalendar = memo(({ className = '' }: VietnameseLunarCalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [lunarData, setLunarData] = useState<LunarMonthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Use optimized hook for lunar data
+  const { data: lunarData, loading, error, refetch } = useLunarData(currentYear, currentMonth, {
+    prefetchAdjacent: true,
+    cacheTime: 15 * 60 * 1000, // 15 minutes cache
+  });
   
   // Enhanced state for new features
-  const [cache, setCache] = useState<CalendarCache>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [selectedDay, setSelectedDay] = useState<SelectedDayDetail | null>(null);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [filterQuality, setFilterQuality] = useState<'all' | 'good' | 'bad' | 'holiday'>('all');
 
-  // Enhanced API fetch with caching for performance
-  const fetchLunarData = useCallback(async (year: number, month: number, useCache = true, updateUI = true) => {
-    const cacheKey = `${year}-${month}`;
-    
-    // Check cache first for performance
-    if (useCache && cache[cacheKey]) {
-      if (updateUI) {
-        setLunarData(cache[cacheKey]);
-        setLoading(false);
-      }
-      return;
-    }
-    
-    try {
-      if (updateUI) {
-        setLoading(true);
-        setError(null);
-      }
+  // Optimized search with debouncing
+  const debouncedSearch = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim()) return;
       
-      const response = await fetch(`/api/lunar-calendar/bulk?startYear=${year}&startMonth=${month + 1}&months=3`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch lunar calendar: ${response.statusText}`);
-      }
-      
-      const bulkData: { [key: string]: LunarMonthData } = await response.json();
-      
-      // Update cache with all fetched months for better performance
-      const newCache = { ...cache };
-      Object.entries(bulkData).forEach(([key, data]) => {
-        const [bulkYear, bulkMonth] = key.split('-').map(Number);
-        const bulkCacheKey = `${bulkYear}-${bulkMonth - 1}`; // Convert back to 0-based month
-        newCache[bulkCacheKey] = data;
-      });
-      setCache(newCache);
-      
-      // Only update UI if this is the foreground fetch
-      if (updateUI) {
-        const currentKey = `${year}-${month + 1}`;
-        if (bulkData[currentKey]) {
-          setLunarData(bulkData[currentKey]);
-        } else {
-          throw new Error('Current month data not found in bulk response');
+      try {
+        const response = await fetch(
+          `/api/lunar-calendar/search?query=${encodeURIComponent(query)}&year=${currentYear}&month=${currentMonth + 1}&filter=${filterQuality}`
+        );
+        if (response.ok) {
+          const results = await response.json();
+          // Handle search results
+          console.log('Search results:', results);
         }
+      } catch (error) {
+        console.error('Search error:', error);
       }
-    } catch (err) {
-      if (updateUI) {
-        setError(err instanceof Error ? err.message : 'Failed to load lunar calendar');
-        console.error('Lunar calendar fetch error:', err);
-      }
-    } finally {
-      if (updateUI) {
-        setLoading(false);
-      }
-    }
-  }, [cache]);
-
-  // Fetch data when month/year changes with prefetching for performance
-  useEffect(() => {
-    // Foreground fetch - this updates the UI
-    fetchLunarData(currentYear, currentMonth, true, true);
-    
-    // Prefetch adjacent months for smooth navigation (cache-only, no UI updates)
-    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-    
-    // Prefetch with slight delay to not block current request - cache only
-    setTimeout(() => {
-      fetchLunarData(nextYear, nextMonth, true, false); // updateUI = false
-      fetchLunarData(prevYear, prevMonth, true, false); // updateUI = false
-    }, 200);
-  }, [currentYear, currentMonth, fetchLunarData]);
+    }, 300),
+    [currentYear, currentMonth, filterQuality]
+  );
 
   // Enhanced navigation with smooth transitions
   const navigateMonth = useCallback((direction: 'prev' | 'next') => {
@@ -367,7 +313,7 @@ export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalen
           <p className="font-medium">Không thể tải lịch âm dương</p>
           <p className="text-sm">{error}</p>
           <button 
-            onClick={() => fetchLunarData(currentYear, currentMonth)}
+            onClick={() => refetch()}
             className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
           >
             Thử lại
@@ -375,7 +321,18 @@ export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalen
         </div>
       )}
       
-      {/* Calendar days */}
+      {/* Calendar days with loading placeholders */}
+      {loading && (
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 35 }, (_, index) => (
+            <div key={index} className="flex flex-col items-center justify-center p-2 rounded-xl min-h-[70px] bg-gray-100 animate-pulse">
+              <div className="w-6 h-4 bg-gray-300 rounded mb-1"></div>
+              <div className="w-8 h-3 bg-gray-300 rounded"></div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {!loading && !error && lunarData && (
         <div className="grid grid-cols-7 gap-1">
           {calendarGrid.map((day, index) => (
@@ -453,6 +410,8 @@ export function VietnameseLunarCalendar({ className = '' }: VietnameseLunarCalen
       )}
     </div>
   );
-}
+});
+
+VietnameseLunarCalendar.displayName = 'VietnameseLunarCalendar';
 
 export default VietnameseLunarCalendar;
