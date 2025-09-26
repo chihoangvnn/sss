@@ -160,7 +160,7 @@ export function ProductDetailModal({
       
       <div 
         ref={drawerRef}
-        className="bg-white w-full rounded-t-3xl h-[80vh] relative shadow-2xl transition-transform duration-300 pointer-events-auto flex flex-col"
+        className="bg-white w-full h-full relative shadow-2xl transition-transform duration-300 pointer-events-auto flex flex-col"
         style={{
           transform: `translateY(${dragDistance}px)`,
           opacity: isDragging ? Math.max(1 - dragDistance / 300, 0.3) : 1
