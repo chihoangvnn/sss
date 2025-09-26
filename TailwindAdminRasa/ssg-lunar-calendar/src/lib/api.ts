@@ -29,6 +29,12 @@ export interface LunarMonthData {
  * Fetch lunar calendar data for a specific month
  */
 export async function fetchLunarMonth(year: number, month: number): Promise<LunarMonthData | null> {
+  // Use mock data in development/build mode
+  if (process.env.NODE_ENV === 'development' || !API_BASE_URL.startsWith('http')) {
+    const { mockApi } = await import('./mockData');
+    return mockApi.fetchLunarMonth(year, month);
+  }
+  
   try {
     const response = await fetch(`${API_BASE_URL}/api/lunar-calendar/bulk?startYear=${year}&startMonth=${month}&months=1`);
     
@@ -42,7 +48,9 @@ export async function fetchLunarMonth(year: number, month: number): Promise<Luna
     return data[monthKey] || null;
   } catch (error) {
     console.error(`Error fetching lunar data for ${year}-${month}:`, error);
-    return null;
+    // Fallback to mock data on API error
+    const { mockApi } = await import('./mockData');
+    return mockApi.fetchLunarMonth(year, month);
   }
 }
 
@@ -50,6 +58,12 @@ export async function fetchLunarMonth(year: number, month: number): Promise<Luna
  * Fetch lunar calendar data for a specific date
  */
 export async function fetchLunarDay(date: string): Promise<LunarDay | null> {
+  // Use mock data in development/build mode
+  if (process.env.NODE_ENV === 'development' || !API_BASE_URL.startsWith('http')) {
+    const { mockApi } = await import('./mockData');
+    return mockApi.fetchLunarDay(date);
+  }
+  
   try {
     const dateObj = new Date(date);
     const year = dateObj.getFullYear();
@@ -65,7 +79,9 @@ export async function fetchLunarDay(date: string): Promise<LunarDay | null> {
     return dayData || null;
   } catch (error) {
     console.error(`Error fetching lunar day for ${date}:`, error);
-    return null;
+    // Fallback to mock data on API error
+    const { mockApi } = await import('./mockData');
+    return mockApi.fetchLunarDay(date);
   }
 }
 
@@ -141,6 +157,8 @@ export function formatDateForUrl(date: Date | string): string {
  * Parse date from URL format (dd-mm-yyyy) to ISO
  */
 export function parseDateFromUrl(dateStr: string): string {
-  const [day, month, year] = dateStr.split('-');
+  // Remove "xem-ngay-" prefix if present (for dynamic route params)
+  const cleanDateStr = dateStr.replace(/^xem-ngay-/, '');
+  const [day, month, year] = cleanDateStr.split('-');
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }

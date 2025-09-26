@@ -1,7 +1,7 @@
 {
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
+  "/lich-van-nien/[slug]": "pages/lich-van-nien/[slug].js",
   "/": "pages/index.js",
-  "/lich-van-nien/[date]": "pages/lich-van-nien/[date].js",
   "/_document": "pages/_document.js"
 }

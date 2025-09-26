@@ -5,38 +5,38 @@
   "devFiles": [],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/_TwN3kNXMmPrQRVKvjQSO/_buildManifest.js",
-    "static/_TwN3kNXMmPrQRVKvjQSO/_ssgManifest.js"
+    "static/XGNK2fbCWLuyaHhjILltm/_buildManifest.js",
+    "static/XGNK2fbCWLuyaHhjILltm/_ssgManifest.js"
   ],
   "rootMainFiles": [],
   "pages": {
     "/": [
-      "static/chunks/webpack-ff27d404d7d06f57.js",
+      "static/chunks/webpack-cf774e7c0a294ac2.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
       "static/chunks/main-07b651c1f7c4300c.js",
       "static/chunks/525-cafe50b2f834af81.js",
       "static/chunks/pages/index-3f82def83ba91a80.js"
     ],
     "/_app": [
-      "static/chunks/webpack-ff27d404d7d06f57.js",
+      "static/chunks/webpack-cf774e7c0a294ac2.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
       "static/chunks/main-07b651c1f7c4300c.js",
       "static/css/6b3d3d3f0598618e.css",
       "static/chunks/pages/_app-a1b48e36055fe65b.js"
     ],
     "/_error": [
-      "static/chunks/webpack-ff27d404d7d06f57.js",
+      "static/chunks/webpack-cf774e7c0a294ac2.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
       "static/chunks/main-07b651c1f7c4300c.js",
       "static/chunks/pages/_error-7a92967bea80186d.js"
     ],
-    "/lich-van-nien/[date]": [
-      "static/chunks/webpack-ff27d404d7d06f57.js",
+    "/lich-van-nien/[slug]": [
+      "static/chunks/webpack-cf774e7c0a294ac2.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
       "static/chunks/main-07b651c1f7c4300c.js",
       "static/chunks/525-cafe50b2f834af81.js",
       "static/chunks/722-335c872706084793.js",
-      "static/chunks/pages/lich-van-nien/[date]-5363aefb153484d5.js"
+      "static/chunks/pages/lich-van-nien/[slug]-3d2919290ef02b63.js"
     ]
   },
   "ampFirstPages": []

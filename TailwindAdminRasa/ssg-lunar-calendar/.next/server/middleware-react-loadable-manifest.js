@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}";
+self.__REACT_LOADABLE_MANIFEST='{"lib/api.ts -> ./mockData":{"id":1327,"files":["static/chunks/327.eeae7e005bb7d9a9.js"]}}';
