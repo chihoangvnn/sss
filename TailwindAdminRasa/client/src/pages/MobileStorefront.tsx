@@ -632,25 +632,14 @@ function MobileStorefront() {
   const renderProductCard = (product: Product) => (
     <div 
       key={product.id}
-      className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:scale-[1.02]"
+      className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
       onClick={() => setSelectedProduct(product)}
     >
-      <div className="aspect-square bg-gray-50 relative overflow-hidden">
-        {product.image ? (
-          <img 
-            src={product.image} 
-            alt={product.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="text-center">
-              <div className="text-4xl mb-2">📦</div>
-              <div className="text-xs font-medium">No Image</div>
-            </div>
-          </div>
-        )}
+      {/* Placeholder Image Section with Dashed Border */}
+      <div className="aspect-square bg-white relative border-2 border-dashed border-gray-300 m-3 rounded-lg">
+        <div className="w-full h-full flex items-center justify-center text-gray-500">
+          <span className="text-sm font-medium">[ Hình ảnh / video ]</span>
+        </div>
         
         {/* Wishlist Button - Top Right */}
         <button
@@ -670,28 +659,51 @@ function MobileStorefront() {
         </button>
       </div>
       
-      <div className="p-3">
+      {/* Product Info */}
+      <div className="px-3 pb-3">
+        {/* Product Name */}
         <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 leading-5 min-h-[2.5rem]">
           {product.name}
         </h3>
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-green-600">
-              {product.price.toLocaleString('vi-VN')}₫
-            </span>
-            {product.stock > 0 ? (
-              <span className="text-xs text-gray-500">Còn {product.stock}</span>
-            ) : (
-              <span className="text-xs text-red-500 font-medium">Hết hàng</span>
-            )}
+        
+        {/* Star Rating */}
+        <div className="flex items-center gap-1 mb-2">
+          <div className="flex items-center">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <span key={star} className="text-yellow-400 text-sm">★</span>
+            ))}
           </div>
+          <span className="text-xs text-gray-500 ml-1">(45 đánh giá)</span>
+        </div>
+        
+        {/* Price */}
+        <div className="mb-3">
+          <span className="text-lg font-bold text-gray-900">
+            {product.price.toLocaleString('vi-VN')}₫
+          </span>
+        </div>
+        
+        {/* Buttons Row */}
+        <div className="flex items-center gap-2">
+          {/* Learn More Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedProduct(product);
+            }}
+            className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors duration-200"
+          >
+            Tìm hiểu Thêm
+          </button>
+          
+          {/* Add to Cart Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               addToCart(product);
             }}
             disabled={product.stock === 0}
-            className="w-9 h-9 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-110 active:scale-95"
+            className="w-10 h-10 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-md flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-105 active:scale-95"
           >
             <Plus className="h-5 w-5" />
           </button>
