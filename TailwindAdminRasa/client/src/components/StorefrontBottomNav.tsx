@@ -44,7 +44,7 @@ export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wis
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-green-700 border-t border-green-600 z-70 shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 bg-green-700 border-t border-green-600 z-[70] shadow-lg">
       <div className="flex items-center justify-around py-2 pb-safe-area">
         {tabs.map((tab) => {
           const IconComponent = tab.icon;
