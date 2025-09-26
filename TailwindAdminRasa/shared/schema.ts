@@ -3899,3 +3899,198 @@ export interface BookWithPrices extends Book {
   totalVendors?: number;
   conditionSummary?: Record<BookCondition, number>;
 }
+
+// ===========================================
+// LUNAR CALENDAR SYSTEM - Vietnamese Lunar Calendar
+// ===========================================
+
+// Main lunar calendar data table
+export const lunarCalendarDays = pgTable("lunar_calendar_days", {
+  // Primary key is the date string (YYYY-MM-DD format)
+  date: varchar("date").primaryKey(), // "2025-09-26"
+  
+  // Solar calendar info
+  solarDay: integer("solar_day").notNull(), // 26
+  solarMonth: integer("solar_month").notNull(), // 9
+  solarYear: integer("solar_year").notNull(), // 2025
+  
+  // Lunar calendar info
+  lunarDay: integer("lunar_day").notNull(), // 5
+  lunarMonth: integer("lunar_month").notNull(), // 8
+  lunarYear: varchar("lunar_year").notNull(), // "Ất Tỵ"
+  isLeapMonth: boolean("is_leap_month").default(false), // Tháng nhuận
+  
+  // Can Chi system
+  canChiDay: varchar("can_chi_day").notNull(), // "Mậu Tuất"
+  canChiMonth: varchar("can_chi_month").notNull(), // "Ất Đậu" 
+  canChiYear: varchar("can_chi_year").notNull(), // "Ất Tỵ"
+  
+  // Feng shui and fortune info
+  menhNgay: varchar("menh_ngay"), // "Bình địa mộc"
+  gioHoangDao: jsonb("gio_hoang_dao").$type<string[]>().default([]), // ["Dần (3h-5h)", "Thìn (7h-9h)"]
+  tuoiXung: jsonb("tuoi_xung").$type<string[]>().default([]), // ["Canh thìn", "Bình thìn"]
+  
+  // Day quality assessment
+  dayQuality: varchar("day_quality").notNull().default("normal"), // "good", "bad", "normal", "excellent"
+  dayColor: varchar("day_color").notNull().default("black"), // "red", "green", "black", "gray" for UI
+  
+  // Holiday and special day info
+  isHoliday: boolean("is_holiday").default(false),
+  holidayName: varchar("holiday_name"), // "Tết Trung Thu", "Rằm tháng 7"
+  isSpecialDay: boolean("is_special_day").default(false), // Ngày đặc biệt
+  specialDayType: varchar("special_day_type"), // "ram", "mung1", "tet", "vu_lan"
+  
+  // Activities and recommendations
+  goodActivities: jsonb("good_activities").$type<string[]>().default([]), // ["Cúng bái", "Khai trương"]
+  badActivities: jsonb("bad_activities").$type<string[]>().default([]), // ["Xuất hành", "Động thổ"]
+  recommendations: text("recommendations"), // Detailed recommendations
+  
+  // Marketing data
+  marketingMessage: text("marketing_message"), // Custom marketing content
+  urgencyLevel: integer("urgency_level").default(1), // 1-5 scale for sales urgency
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  solarDateIndex: index("lunar_calendar_solar_date_idx").on(table.solarYear, table.solarMonth, table.solarDay),
+  lunarDateIndex: index("lunar_calendar_lunar_date_idx").on(table.lunarYear, table.lunarMonth, table.lunarDay),
+  dayQualityIndex: index("lunar_calendar_quality_idx").on(table.dayQuality),
+  holidayIndex: index("lunar_calendar_holiday_idx").on(table.isHoliday),
+}));
+
+// Feature toggle system for calendar
+export const calendarFeatures = pgTable("calendar_features", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  featureName: varchar("feature_name").notNull().unique(), // "calendar_enabled", "product_suggestions_enabled"
+  isEnabled: boolean("is_enabled").default(true),
+  description: text("description"),
+  category: varchar("category").default("general"), // "general", "marketing", "analytics"
+  configData: jsonb("config_data").$type<Record<string, any>>().default({}),
+  
+  // Admin control
+  lastToggledBy: varchar("last_toggled_by"),
+  lastToggledAt: timestamp("last_toggled_at"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  categoryIndex: index("calendar_features_category_idx").on(table.category),
+}));
+
+// Product suggestions based on lunar calendar
+export const productCalendarSuggestions = pgTable("product_calendar_suggestions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Linking
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  
+  // Calendar targeting
+  activityType: varchar("activity_type").notNull(), // "ram", "mung1", "tet", "khai_truong", "tan_gia"
+  dayQuality: varchar("day_quality"), // "good", "excellent" - only show on good days
+  specialDayType: varchar("special_day_type"), // Match lunarCalendarDays.specialDayType
+  lunarMonth: integer("lunar_month"), // Show only in specific lunar months
+  
+  // Suggestion content
+  suggestionTitle: varchar("suggestion_title").notNull(), // "Nhang thảo mộc cho ngày Rằm"
+  suggestionReason: text("suggestion_reason"), // "Ngày Rằm cúng bái cầu an"
+  priority: integer("priority").default(5), // 1-10 priority
+  
+  // Marketing
+  discount: decimal("discount", { precision: 5, scale: 2 }), // Special discount for this day
+  promotionMessage: text("promotion_message"), // "Miễn phí giao hàng"
+  urgencyText: varchar("urgency_text"), // "Chỉ còn 2 ngày đến Trung Thu"
+  
+  // Analytics
+  clickCount: integer("click_count").default(0),
+  conversionCount: integer("conversion_count").default(0),
+  lastShown: timestamp("last_shown"),
+  
+  // Control
+  isActive: boolean("is_active").default(true),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  productIndex: index("product_calendar_product_idx").on(table.productId),
+  activityIndex: index("product_calendar_activity_idx").on(table.activityType),
+  priorityIndex: index("product_calendar_priority_idx").on(table.priority),
+  activeIndex: index("product_calendar_active_idx").on(table.isActive),
+}));
+
+// Calendar analytics tracking
+export const calendarAnalytics = pgTable("calendar_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Event tracking
+  eventType: varchar("event_type").notNull(), // "view", "click", "purchase"
+  calendarDate: varchar("calendar_date").notNull(), // Which calendar day was viewed
+  productId: varchar("product_id"), // If product-related
+  suggestionId: varchar("suggestion_id"), // If from suggestion
+  
+  // User context
+  sessionId: varchar("session_id"),
+  userAgent: text("user_agent"),
+  deviceType: varchar("device_type"), // "mobile", "tablet", "desktop"
+  
+  // Conversion tracking
+  conversionValue: decimal("conversion_value", { precision: 10, scale: 2 }),
+  conversionCurrency: varchar("conversion_currency").default("VND"),
+  
+  // Timestamps
+  eventAt: timestamp("event_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  eventTypeIndex: index("calendar_analytics_event_idx").on(table.eventType),
+  dateIndex: index("calendar_analytics_date_idx").on(table.calendarDate),
+  eventAtIndex: index("calendar_analytics_time_idx").on(table.eventAt),
+}));
+
+// Zod schemas for lunar calendar
+export const insertLunarCalendarDaySchema = createInsertSchema(lunarCalendarDays);
+export const insertCalendarFeatureSchema = createInsertSchema(calendarFeatures);
+export const insertProductCalendarSuggestionSchema = createInsertSchema(productCalendarSuggestions);
+export const insertCalendarAnalyticsSchema = createInsertSchema(calendarAnalytics);
+
+// TypeScript types for lunar calendar
+export type LunarCalendarDay = typeof lunarCalendarDays.$inferSelect;
+export type InsertLunarCalendarDay = typeof lunarCalendarDays.$inferInsert;
+export type CalendarFeature = typeof calendarFeatures.$inferSelect;
+export type InsertCalendarFeature = typeof calendarFeatures.$inferInsert;
+export type ProductCalendarSuggestion = typeof productCalendarSuggestions.$inferSelect;
+export type InsertProductCalendarSuggestion = typeof productCalendarSuggestions.$inferInsert;
+export type CalendarAnalytics = typeof calendarAnalytics.$inferSelect;
+export type InsertCalendarAnalytics = typeof calendarAnalytics.$inferInsert;
+
+// Enhanced interfaces for calendar
+export interface LunarCalendarDayWithSuggestions extends LunarCalendarDay {
+  productSuggestions: ProductCalendarSuggestion[];
+}
+
+export interface ProductWithCalendarSuggestions extends Product {
+  calendarSuggestions: ProductCalendarSuggestion[];
+}
+
+// Vietnamese lunar calendar constants
+export const LUNAR_MONTHS = [
+  "Tháng Giêng", "Tháng Hai", "Tháng Ba", "Tháng Tư", 
+  "Tháng Năm", "Tháng Sáu", "Tháng Bảy", "Tháng Tám",
+  "Tháng Chín", "Tháng Mười", "Tháng Mười Một", "Tháng Chạp"
+] as const;
+
+export const CAN = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"] as const;
+export const CHI = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"] as const;
+
+export const DAY_QUALITIES = {
+  excellent: { color: "red", label: "Rất tốt", priority: 5 },
+  good: { color: "green", label: "Tốt", priority: 4 },
+  normal: { color: "black", label: "Bình thường", priority: 3 },
+  bad: { color: "gray", label: "Xấu", priority: 2 },
+  terrible: { color: "red", label: "Rất xấu", priority: 1 }
+} as const;
+
+export type DayQuality = keyof typeof DAY_QUALITIES;

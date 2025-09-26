@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, Heart, ArrowLeft, Plus, Minus, MessageCircle, X, Filter, SortAsc, SortDesc } from 'lucide-react';
+import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, MessageCircle, X, Filter, SortAsc, SortDesc } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import ChatbotWidget from '@/components/ChatbotWidget';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
+import { VietnameseLunarCalendar } from '@/components/VietnameseLunarCalendar';
 import { 
   ProductListSkeleton, 
   CategorySkeleton, 
@@ -42,7 +43,7 @@ function MobileStorefront() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [wishlist, setWishlist] = useState<Product[]>([]);
+  // Wishlist functionality replaced with lunar calendar
   const [showCart, setShowCart] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -165,18 +166,11 @@ function MobileStorefront() {
     );
   };
 
-  const toggleWishlist = (product: Product) => {
-    setWishlist(prev => {
-      const isInWishlist = prev.find(item => item.id === product.id);
-      if (isInWishlist) {
-        return prev.filter(item => item.id !== product.id);
-      }
-      return [...prev, product];
-    });
-  };
+  // toggleWishlist function removed - replaced with lunar calendar functionality
 
   const isInWishlist = (productId: string) => {
-    return wishlist.some(item => item.id === productId);
+    // Calendar suggestion logic would go here
+    return false;
   };
 
   const getTotalPrice = () => {
@@ -391,21 +385,11 @@ function MobileStorefront() {
           </div>
         );
 
-      case 'wishlist':
+      case 'calendar':
         return (
           <div className="p-4 pt-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Sản phẩm yêu thích ({wishlist.length})</h2>
-            {wishlist.length === 0 ? (
-              <div className="text-center py-12">
-                <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">Chưa có sản phẩm yêu thích</p>
-                <p className="text-gray-400 text-sm">Nhấn vào ♡ để thêm sản phẩm</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {wishlist.map((product) => renderProductCard(product))}
-              </div>
-            )}
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Lịch Âm Dương Việt Nam</h2>
+            <VietnameseLunarCalendar className="w-full" />
           </div>
         );
 
@@ -428,8 +412,8 @@ function MobileStorefront() {
                   <div className="text-sm text-gray-600">Giỏ hàng</div>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{wishlist.length}</div>
-                  <div className="text-sm text-gray-600">Yêu thích</div>
+                  <div className="text-2xl font-bold text-blue-600">📅</div>
+                  <div className="text-sm text-gray-600">Lịch âm</div>
                 </div>
               </div>
             </div>
@@ -443,9 +427,9 @@ function MobileStorefront() {
                 <ShoppingCart className="h-5 w-5 mr-3" />
                 Lịch sử đơn hàng
               </Button>
-              <Button variant="outline" className="w-full justify-start text-left">
-                <Heart className="h-5 w-5 mr-3" />
-                Danh sách yêu thích
+              <Button variant="outline" className="w-full justify-start text-left" onClick={() => setActiveTab('calendar')}>
+                <MessageCircle className="h-5 w-5 mr-3" />
+                Lịch âm dương
               </Button>
             </div>
           </div>
@@ -652,22 +636,10 @@ function MobileStorefront() {
           <span className="text-sm font-medium">[ Hình ảnh / video ]</span>
         </div>
         
-        {/* Wishlist Button - Top Right */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleWishlist(product);
-          }}
-          className={`absolute top-3 right-3 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transition-all duration-200 ${
-            isInWishlist(product.id) 
-              ? 'text-red-500 scale-110' 
-              : 'text-gray-400 hover:text-red-500'
-          }`}
-        >
-          <Heart 
-            className={`h-3.5 w-3.5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} 
-          />
-        </button>
+        {/* Calendar Suggestion Indicator - Top Right */}
+        <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-green-500/90 backdrop-blur-sm shadow-md flex items-center justify-center">
+          <span className="text-white text-xs">📅</span>
+        </div>
       </div>
       
       {/* Compact Product Info */}
@@ -737,15 +709,11 @@ function MobileStorefront() {
             </h1>
             <div className="flex items-center gap-4">
               <button 
-                onClick={() => setActiveTab('wishlist')}
+                onClick={() => setActiveTab('calendar')}
                 className="relative text-white hover:text-green-100 transition-colors"
               >
-                <Heart className={`h-6 w-6 ${activeTab === 'wishlist' ? 'fill-current' : ''}`} />
-                {wishlist.length > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0">
-                    {wishlist.length}
-                  </Badge>
-                )}
+                <MessageCircle className={`h-6 w-6 ${activeTab === 'calendar' ? 'fill-current' : ''}`} />
+                <span className="absolute -top-1 -right-1 text-xs">📅</span>
               </button>
               <button 
                 onClick={() => setActiveTab('profile')}
@@ -878,7 +846,7 @@ function MobileStorefront() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         cartCount={getTotalItems()}
-        wishlistCount={wishlist.length}
+        wishlistCount={0}
       />
 
       {/* Product Detail Modal */}
@@ -892,7 +860,7 @@ function MobileStorefront() {
             }
             closeProductModal();
           }}
-          onToggleWishlist={() => toggleWishlist(selectedProduct)}
+          onToggleWishlist={() => setActiveTab('calendar')}
           isInWishlist={isInWishlist(selectedProduct.id)}
         />
       )}

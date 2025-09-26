@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Grid3X3, ShoppingCart, User, Heart } from 'lucide-react';
+import { Home, Grid3X3, ShoppingCart, User, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface StorefrontBottomNavProps {
@@ -24,10 +24,10 @@ export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wis
       badge: null
     },
     {
-      id: 'wishlist',
-      label: 'Yêu thích',
-      icon: Heart,
-      badge: wishlistCount > 0 ? wishlistCount : null
+      id: 'calendar',
+      label: 'Lịch Âm',
+      icon: Calendar,
+      badge: null
     },
     {
       id: 'cart',

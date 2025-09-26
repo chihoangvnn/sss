@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Plus, Minus, Heart, Star, Share2, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Plus, Minus, Star, Share2, ShoppingCart, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -209,10 +209,8 @@ export function ProductDetailModal({
           <h2 className="text-lg font-bold text-gray-900">Chi tiết sản phẩm</h2>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}>
-              <Heart 
-                className={`h-5 w-5 ${
-                  isInWishlist ? 'text-red-500 fill-current' : 'text-gray-400'
-                }`} 
+              <Calendar 
+                className="h-5 w-5 text-blue-500" 
               />
             </Button>
             <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
@@ -415,7 +413,7 @@ export function ProductDetailModal({
                     disabled={product.stock === 0}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-transparent"></div>
-                    <Heart className="h-5 w-5 mr-2 relative z-10" />
+                    <Calendar className="h-5 w-5 mr-2 relative z-10" />
                     <span className="text-sm tracking-wide relative z-10">Thỉnh Nhang</span>
                   </Button>
                 </div>
@@ -795,7 +793,7 @@ export function ProductDetailModal({
                   disabled={product.stock === 0}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-transparent"></div>
-                  <Heart className="h-5 w-5 mr-2 relative z-10" />
+                  <Calendar className="h-5 w-5 mr-2 relative z-10" />
                   <span className="text-sm tracking-wide relative z-10">Thỉnh Nhang</span>
                 </Button>
               </div>

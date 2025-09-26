@@ -45,6 +45,7 @@ import workersRouter from './api/workers';
 import regionAssignmentRouter from './api/region-assignment';
 import ngrokConfigRouter from './api/ngrok-config';
 import booksRouter from './api/books';
+import lunarCalendarHandler from './api/lunar-calendar';
 
 // Vietnamese slug utility function
 function generateSlug(input: string): string {
@@ -4139,6 +4140,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 📚 BOOKS MANAGEMENT ROUTES
   // ==========================================
   app.use("/api/books", booksRouter);
+
+  // ==========================================
+  // 🌙 VIETNAMESE LUNAR CALENDAR ROUTES
+  // ==========================================
+  app.use("/api/lunar-calendar", lunarCalendarHandler);
 
   // ==========================================
   // API CONFIGURATIONS MANAGEMENT ROUTES

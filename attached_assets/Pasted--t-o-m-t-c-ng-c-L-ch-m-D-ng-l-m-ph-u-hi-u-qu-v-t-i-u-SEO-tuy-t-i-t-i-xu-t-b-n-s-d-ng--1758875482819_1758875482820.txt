@@ -1,0 +1,120 @@
+Để tạo một công cụ Lịch Âm Dương làm phễu hiệu quả và tối ưu SEO tuyệt đối, tôi đề xuất bạn sử dụng bộ công cụ và chiến lược sau:
+
+Frontend: Next.js (với chế độ SSG) và Backend: Một thư viện tính toán lịch và lưu trữ dữ liệu trong database của bạn.
+
+Cách tiếp cận này sẽ biến công cụ của bạn thành một "cỗ máy" sản xuất hàng ngàn trang có nội dung độc nhất, giúp thu hút một lượng traffic khổng lồ từ các từ khóa ngách.
+
+## Phần 1: Tư vấn về Code & Công nghệ
+1. Frontend: Next.js là lựa chọn Vàng
+Lý do bạn nên tiếp tục dùng Next.js cho công cụ này là vì chế độ SSG (Static Site Generation).
+
+Cách hoạt động: Thay vì tính toán lịch mỗi khi có người dùng truy cập (sẽ chậm và tốn tài nguyên), bạn sẽ dùng Next.js để build sẵn 365 trang HTML tĩnh cho mỗi ngày trong năm (và cho nhiều năm tới).
+
+Lợi ích:
+
+Tốc độ tức thì: Trang được phục vụ ngay lập tức cho người dùng.
+
+SEO hoàn hảo: Googlebot đọc được file HTML đầy đủ nội dung một cách dễ dàng, giúp index nhanh và xếp hạng tốt hơn.
+
+Chi phí thấp: Phục vụ file tĩnh tốn rất ít tài nguyên server.
+
+2. Backend & Nguồn dữ liệu Lịch
+Bạn cần một nguồn dữ liệu Âm lịch đáng tin cậy.
+
+Tránh: Phụ thuộc vào các API miễn phí, không rõ nguồn gốc. Chúng có thể chết bất cứ lúc nào, làm hỏng tool của bạn.
+
+Giải pháp đề xuất:
+
+Sử dụng thư viện uy tín: Tích hợp một thư viện JavaScript/Node.js có khả năng tính toán lịch âm dương, can chi, ngày hoàng đạo... vào backend của bạn. Một thư viện tốt bạn có thể tham khảo là amlich.js.
+
+Tạo và Lưu trữ dữ liệu trước: Viết một đoạn script dùng thư viện trên để tính toán trước dữ liệu lịch cho 5-10 năm tới và lưu vào database của bạn.
+
+Cấu trúc bảng CalendarDays trong database có thể gồm:
+
+date (ngày dương, khóa chính)
+
+solar_day, solar_month, solar_year
+
+lunar_day, lunar_month, lunar_year
+
+can_chi_day, can_chi_month, can_chi_year
+
+good_hours (mảng giờ hoàng đạo)
+
+bad_hours (mảng giờ hắc đạo)
+
+should_do_events (những việc nên làm)
+
+should_not_do_events (những việc kiêng kỵ)
+
+Khi Next.js build trang, nó sẽ gọi API của bạn để lấy dữ liệu đã được tính sẵn này từ database, cực kỳ nhanh chóng.
+
+## Phần 2: Chiến lược Tối ưu SEO Toàn diện
+Đây là phần quan trọng nhất để biến tool của bạn thành một "nam châm" hút traffic.
+
+1. Cấu trúc URL "vĩnh cửu"
+Tạo ra một URL có cấu trúc, dễ đọc cho mỗi ngày. Đây là nền tảng để xếp hạng cho các từ khóa "xem ngày X".
+
+Mẫu URL: nhangsach.net/lich-van-nien/xem-ngay-dd-mm-yyyy
+
+Ví dụ: nhangsach.net/lich-van-nien/xem-ngay-24-09-2025
+
+Cách làm trong Next.js: Tạo file pages/lich-van-nien/xem-ngay-[date].js.
+
+2. Dùng getStaticPaths để tạo hàng loạt trang tĩnh
+Trong file [date].js, bạn sẽ dùng hàm getStaticPaths để báo cho Next.js biết nó cần tạo ra những trang nào. Bạn có thể viết code để tự động tạo ra danh sách ngày cho 10 năm tới.
+
+3. Tối ưu Thẻ Meta Động cho mỗi ngày
+Đây là "vũ khí" bí mật. Mỗi trang ngày phải có title và meta description độc nhất, được tạo tự động từ dữ liệu.
+
+Ví dụ code trong getStaticProps:
+
+JavaScript
+
+// pages/lich-van-nien/xem-ngay-[date].js
+export async function getStaticProps({ params }) {
+  // Gọi API backend để lấy thông tin chi tiết của ngày `params.date`
+  const dayData = await fetchApiForDate(params.date);
+
+  return {
+    props: {
+      dayData, // Trả data về cho component
+    },
+  };
+}
+Ví dụ trong component:
+
+JavaScript
+
+import Head from 'next/head';
+
+function ViewDayPage({ dayData }) {
+  const pageTitle = `Xem ngày ${dayData.solar_day}/${dayData.solar_month}/${dayData.solar_year} - Ngày ${dayData.can_chi_day} Tốt hay Xấu?`;
+  const pageDesc = `Xem chi tiết ngày ${dayData.date} (tức ${dayData.lunar_day}/${dayData.lunar_month} Âm lịch). Thông tin Can Chi, giờ hoàng đạo, việc nên làm, kiêng kỵ trong ngày.`;
+
+  return (
+    <>
+      <Head>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        {/* Thêm các thẻ Open Graph ở đây */}
+      </Head>
+      {/* Nội dung trang... */}
+    </>
+  );
+}
+4. Liên kết Nội bộ (Internal Linking) chặt chẽ
+Trên mỗi trang chi tiết ngày: Luôn có link điều hướng "« Ngày hôm trước" và "Ngày hôm sau »".
+
+Tạo trang Lịch tháng: Tạo một trang chính nhangsach.net/lich-van-nien hiển thị lịch của tháng hiện tại. Mỗi ô ngày trong lịch tháng này sẽ là một link trỏ đến trang chi tiết của ngày đó.
+
+5. Tích hợp Phễu Bán hàng thông minh
+Đây là mục đích cuối cùng của tool.
+
+Đặt CTA theo ngữ cảnh:
+
+Trên các trang ngày Rằm, Mùng 1: Hiển thị một banner nổi bật: "Sắm sửa lễ vật cho ngày Rằm? Khám phá ngay các sản phẩm nhang sạch thảo mộc an toàn cho gia đình."
+
+Trên các trang ngày tốt cho "Tân gia": Gợi ý các sản phẩm trầm hương xông nhà để "thanh lọc không gian, đón vượng khí".
+
+Bằng cách kết hợp sức mạnh của Next.js SSG để tạo hàng loạt trang tĩnh siêu nhanh và một chiến lược SEO tập trung vào việc cung cấp giá trị độc nhất cho mỗi ngày, công cụ Lịch Âm Dương của bạn sẽ không chỉ là một phễu, mà còn là một tài sản SEO khổng lồ, bền vững theo thời gian.
