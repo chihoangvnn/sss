@@ -243,8 +243,8 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
 
   return (
     <div className="fixed inset-0 bg-gray-50">
-      {/* Header xanh lá theo mẫu */}
-      <div className="bg-green-600 text-white px-4 py-3">
+      {/* Header xanh lá theo mẫu - Thu nhỏ để nổi bật phần ngày tháng */}
+      <div className="bg-green-600 text-white px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             {onBack && (
@@ -254,19 +254,19 @@ export function FullScreenLunarCalendar({ onBack }: FullScreenLunarCalendarProps
                 onClick={onBack}
                 className="text-white hover:bg-green-700 mr-2 p-1"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
               </Button>
             )}
-            <h1 className="text-base font-bold">LỊCH VẠN NIÊN</h1>
+            <h1 className="text-sm font-semibold">LỊCH VẠN NIÊN</h1>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowQuickView(true)}
-            className="text-green-600 border-white bg-white hover:bg-gray-100"
+            className="text-green-600 border-white bg-white hover:bg-gray-100 text-xs px-2 py-1"
           >
-            <Calendar className="w-4 h-4 mr-1" />
-            Xem nhanh theo ngày
+            <Calendar className="w-3 h-3 mr-1" />
+            Xem nhanh
           </Button>
         </div>
       </div>
