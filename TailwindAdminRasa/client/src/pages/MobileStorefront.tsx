@@ -276,7 +276,17 @@ function MobileStorefront() {
       }
     });
 
+  // Centralized modal close function
+  const closeProductModal = () => {
+    setSelectedProduct(null);
+  };
+
   const handleTabChange = (tab: string) => {
+    // CRITICAL: Auto-close modal before navigation for professional UX
+    if (selectedProduct) {
+      closeProductModal();
+    }
+    
     setActiveTab(tab);
     if (tab === 'cart') {
       setShowCart(true);
@@ -874,12 +884,12 @@ function MobileStorefront() {
       {selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
+          onClose={closeProductModal}
           onAddToCart={(quantity) => {
             for(let i = 0; i < quantity; i++) {
               addToCart(selectedProduct);
             }
-            setSelectedProduct(null);
+            closeProductModal();
           }}
           onToggleWishlist={() => toggleWishlist(selectedProduct)}
           isInWishlist={isInWishlist(selectedProduct.id)}
