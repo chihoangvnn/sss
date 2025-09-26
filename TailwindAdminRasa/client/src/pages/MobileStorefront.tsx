@@ -629,10 +629,6 @@ function MobileStorefront() {
           <span className="text-sm font-medium">[ Hình ảnh / video ]</span>
         </div>
         
-        {/* Calendar Suggestion Indicator - Top Right */}
-        <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-green-500/90 backdrop-blur-sm shadow-md flex items-center justify-center">
-          <span className="text-white text-xs">📅</span>
-        </div>
       </div>
       
       {/* Compact Product Info */}
