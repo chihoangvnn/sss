@@ -144,12 +144,12 @@ function getProductSuggestions(lunarDate: number, lunarMonth: number, dayQuality
   return [...baseProducts, ...suggestions.slice(0, 3)];
 }
 
-// Main API endpoint
-export default async function handler(req: any, res: any) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-  
+import { Router } from 'express';
+
+const router = Router();
+
+// Get lunar calendar data for a specific month
+router.get('/', async (req, res) => {
   try {
     const { year, month } = req.query;
     
@@ -157,8 +157,8 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Year and month parameters are required' });
     }
     
-    const targetYear = parseInt(year);
-    const targetMonth = parseInt(month);
+    const targetYear = parseInt(year as string);
+    const targetMonth = parseInt(month as string);
     
     if (isNaN(targetYear) || isNaN(targetMonth) || targetMonth < 1 || targetMonth > 12) {
       return res.status(400).json({ error: 'Invalid year or month' });
@@ -213,4 +213,42 @@ export default async function handler(req: any, res: any) {
     console.error('Lunar calendar API error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}
+});
+
+// Add a today endpoint for quick access
+router.get('/today', async (req, res) => {
+  try {
+    const today = new Date();
+    const lunar = solarToLunar(today);
+    const canChi = getCanChiDay(today);
+    
+    // Check for holidays
+    const holidayKey = `${lunar.lunarMonth}-${lunar.lunarDate}`;
+    const holiday = VIETNAMESE_HOLIDAYS[holidayKey as keyof typeof VIETNAMESE_HOLIDAYS];
+    const isHoliday = !!holiday;
+    
+    const dayQuality = getDayQuality(lunar.lunarDate, canChi);
+    const productSuggestions = getProductSuggestions(lunar.lunarDate, lunar.lunarMonth, dayQuality, isHoliday);
+    
+    const todayData: LunarDay = {
+      solarDate: today.toISOString().split('T')[0],
+      lunarDate: lunar.lunarDate,
+      lunarMonth: lunar.lunarMonth,
+      lunarYear: lunar.lunarYear,
+      canChi,
+      isGoodDay: dayQuality === 'good',
+      isHoliday,
+      holidayName: holiday?.name,
+      isToday: true,
+      dayQuality,
+      productSuggestions
+    };
+    
+    res.status(200).json(todayData);
+  } catch (error) {
+    console.error('Lunar calendar today API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
