@@ -100,6 +100,14 @@ const coreBusinessItems = [
     description: "ISBN-based books with price comparison"
   },
   {
+    title: "AbeBooks Management", 
+    url: "/books-abebooks",
+    icon: BookOpen,
+    badge: "NEW",
+    gradient: "gradient-indigo",
+    description: "Multi-account AbeBooks integration"
+  },
+  {
     title: "Danh mục",
     url: "/categories",
     icon: Tags,
