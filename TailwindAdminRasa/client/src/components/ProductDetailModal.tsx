@@ -654,8 +654,8 @@ export function ProductDetailModal({
           </div>
         </div>
 
-        {/* Sticky Bottom Actions - Two Button Layout */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white border-t p-4 z-10" onClick={(e) => e.stopPropagation()}>
+        {/* Fixed Bottom Actions - Two Button Layout */}
+        <div className="bg-white border-t p-4 mt-auto" onClick={(e) => e.stopPropagation()}>
           {/* Quantity Selector Row */}
           <div className="flex items-center justify-center gap-2 mb-3">
             <Button
