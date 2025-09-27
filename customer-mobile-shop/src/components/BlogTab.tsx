@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react';
-import { Search, Clock, User, Tag, ChevronRight } from 'lucide-react';
+import { Search, Clock, User, Tag, ChevronRight, Home, Bell, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface BlogPost {
@@ -25,6 +25,9 @@ interface BlogTabProps {
   selectedCategory?: string;
   onSearchChange?: (query: string) => void;
   onCategorySelect?: (category: string) => void;
+  cartCount?: number;
+  onCartClick?: () => void;
+  onHomeClick?: () => void;
 }
 
 // Mock data for nhang sạch, tâm linh, phong thủy blog posts
@@ -128,7 +131,10 @@ export function BlogTab({
   searchQuery: externalSearchQuery = '', 
   selectedCategory: externalSelectedCategory = 'all',
   onSearchChange,
-  onCategorySelect 
+  onCategorySelect,
+  cartCount = 0,
+  onCartClick,
+  onHomeClick 
 }: BlogTabProps) {
   // Use controlled props if provided, otherwise use internal state
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
@@ -169,37 +175,68 @@ export function BlogTab({
   return (
     <div className="w-full min-h-screen bg-white">
       {/* Sticky Top Bar */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-50 bg-green-600 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-4">
-            {/* Blog Title */}
-            <h1 className="text-xl font-bold text-gray-900 whitespace-nowrap">Blog</h1>
-            
-            {/* Search Bar */}
-            <div className="flex-1 relative max-w-lg">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center justify-between">
+            {/* Left side: Home + Title */}
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={onHomeClick}
+                className="p-2 hover:bg-green-700 rounded-lg transition-colors"
+              >
+                <Home className="h-5 w-5" />
+              </button>
+              <div>
+                <h1 className="text-lg font-bold whitespace-nowrap">BLOG - Nhang Sạch .Net</h1>
+                <p className="text-green-100 text-sm">Sản phẩm tự nhiên</p>
               </div>
-              <input
-                type="text"
-                placeholder="Tìm kiếm bài viết..."
-                value={searchQuery}
-                onChange={(e) => {
-                  const newQuery = e.target.value;
-                  if (onSearchChange) {
-                    onSearchChange(newQuery);
-                  } else {
-                    setInternalSearchQuery(newQuery);
-                  }
-                }}
-                className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400"
-              />
+            </div>
+            
+            {/* Right side: Notification + Cart */}
+            <div className="flex items-center gap-2">
+              <button className="p-2 hover:bg-green-700 rounded-lg transition-colors relative">
+                <Bell className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={onCartClick}
+                className="p-2 hover:bg-green-700 rounded-lg transition-colors relative"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-lg">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm kiếm bài viết..."
+              value={searchQuery}
+              onChange={(e) => {
+                const newQuery = e.target.value;
+                if (onSearchChange) {
+                  onSearchChange(newQuery);
+                } else {
+                  setInternalSearchQuery(newQuery);
+                }
+              }}
+              className="block w-full pl-9 pr-3 py-3 border border-gray-300 rounded-lg text-sm bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+            />
+          </div>
+        </div>
+
         {/* Category Filter Section */}
         <div className="mb-8">
           <div className="flex flex-wrap gap-2">
