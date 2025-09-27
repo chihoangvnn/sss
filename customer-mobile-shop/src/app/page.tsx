@@ -6,6 +6,7 @@ import { ShoppingCart, User, ArrowLeft, Plus, Minus, Store, Calendar, Star } fro
 import { Button } from '@/components/ui/button';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
+import { DesktopHeader } from '@/components/DesktopHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
@@ -203,6 +204,10 @@ export default function MobileStorefront() {
 
   const handleHeaderCartClick = () => {
     setActiveTab('cart');
+  };
+
+  const handleProfileClick = () => {
+    setActiveTab('profile');
   };
 
   const renderContent = () => {
@@ -557,8 +562,20 @@ export default function MobileStorefront() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      {layoutConfig.showBottomNav && (
+      {/* Desktop Header - Show on tablet and desktop */}
+      {!isMobile && (
+        <DesktopHeader
+          storeName="NhangSach.Net"
+          cartCount={getTotalItems()}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onCartClick={handleHeaderCartClick}
+          onProfileClick={handleProfileClick}
+        />
+      )}
+
+      {/* Mobile Header - Show on mobile only */}
+      {isMobile && (
         <MobileHeader
           onSearchClick={handleHeaderSearchClick}
           onCartClick={handleHeaderCartClick}
@@ -567,8 +584,8 @@ export default function MobileStorefront() {
         />
       )}
 
-      {/* Auto Hide Search Bar */}
-      {layoutConfig.showBottomNav && activeTab === 'home' && (
+      {/* Auto Hide Search Bar - Mobile only */}
+      {isMobile && activeTab === 'home' && (
         <AutoHideSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -576,12 +593,12 @@ export default function MobileStorefront() {
         />
       )}
 
-      <main className={layoutConfig.showBottomNav ? "pb-20 pt-8" : "pt-8"}>
+      <main className={isMobile ? "pb-20 pt-8" : "pt-6"}>
         {renderContent()}
       </main>
 
-      {/* Bottom Navigation */}
-      {layoutConfig.showBottomNav && (
+      {/* Bottom Navigation - Mobile only */}
+      {isMobile && (
         <StorefrontBottomNav
           activeTab={activeTab}
           onTabChange={handleTabChange}
