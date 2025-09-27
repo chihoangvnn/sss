@@ -12,6 +12,7 @@ import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
 import { useResponsive } from '@/hooks/use-mobile';
+import { formatVietnamPrice } from '@/utils/currency';
 
 // API base URL from environment or default
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
@@ -241,7 +242,7 @@ export default function MobileStorefront() {
               </h1>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-3xl font-bold text-green-600">
-                  {selectedProduct.price.toLocaleString('vi-VN')}₫
+                  {formatVietnamPrice(selectedProduct.price)}
                 </span>
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -373,7 +374,7 @@ export default function MobileStorefront() {
                       <div className="flex-1">
                         <h3 className="font-medium">{item.product.name}</h3>
                         <p className="text-green-600 font-bold">
-                          {item.product.price.toLocaleString('vi-VN')}₫
+                          {formatVietnamPrice(item.product.price)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -403,7 +404,7 @@ export default function MobileStorefront() {
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-lg font-semibold">Tổng cộng:</span>
                     <span className="text-2xl font-bold text-green-600">
-                      {getTotalPrice().toLocaleString('vi-VN')}₫
+                      {formatVietnamPrice(getTotalPrice())}
                     </span>
                   </div>
                   <Button className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold">
@@ -522,7 +523,7 @@ export default function MobileStorefront() {
                         </h3>
                         <div className="mb-3">
                           <span className="text-green-600 font-bold text-lg">
-                            {product.price.toLocaleString('vi-VN')}₫
+                            {formatVietnamPrice(product.price)}
                           </span>
                         </div>
                         <div className="flex gap-2">
