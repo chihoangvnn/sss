@@ -181,29 +181,8 @@ export function BlogTab({
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Search and Filter Section */}
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
-          {/* Search Bar */}
-          <div className="flex-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Tìm kiếm bài viết..."
-              value={searchQuery}
-              onChange={(e) => {
-                const newQuery = e.target.value;
-                if (onSearchChange) {
-                  onSearchChange(newQuery);
-                } else {
-                  setInternalSearchQuery(newQuery);
-                }
-              }}
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400"
-            />
-          </div>
-
           {/* Category Filter */}
-          <div className="flex flex-wrap gap-2 lg:min-w-fit">
+          <div className="flex flex-wrap gap-2 flex-1">
             {BLOG_CATEGORIES.map((category) => (
               <Button
                 key={category.id}
@@ -226,6 +205,27 @@ export function BlogTab({
                 {category.name} ({category.count})
               </Button>
             ))}
+          </div>
+
+          {/* Search Bar */}
+          <div className="lg:min-w-fit lg:w-80 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm kiếm bài viết..."
+              value={searchQuery}
+              onChange={(e) => {
+                const newQuery = e.target.value;
+                if (onSearchChange) {
+                  onSearchChange(newQuery);
+                } else {
+                  setInternalSearchQuery(newQuery);
+                }
+              }}
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+            />
           </div>
         </div>
 
