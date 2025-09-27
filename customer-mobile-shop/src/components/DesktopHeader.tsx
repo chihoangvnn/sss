@@ -39,8 +39,9 @@ export function DesktopHeader({
   showCategoryBar = true
 }: DesktopHeaderProps) {
   const { user, isAuthenticated, isLoading, login } = useAuth();
+  
   return (
-    <header className="bg-green-600 shadow-sm border-b border-green-700 sticky top-0 z-50">
+    <header className="bg-green-600 shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Store Logo/Name */}
@@ -131,16 +132,16 @@ export function DesktopHeader({
             )}
           </div>
         </div>
-        
-        {/* Horizontal Category Bar */}
-        {showCategoryBar && categories.length > 0 && selectedCategory && onCategorySelect && (
-          <HorizontalCategoryBar
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onCategorySelect={onCategorySelect}
-          />
-        )}
       </div>
+      
+      {/* Horizontal Category Bar */}
+      {showCategoryBar && categories.length > 0 && onCategorySelect && (
+        <HorizontalCategoryBar
+          categories={categories}
+          selectedCategory={selectedCategory || 'all'}
+          onCategorySelect={onCategorySelect}
+        />
+      )}
     </header>
   );
 }

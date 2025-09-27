@@ -12,7 +12,6 @@ import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
-import { ProductCatalog } from '@/components/ProductCatalog';
 import { ProfileTab } from '@/components/ProfileTab';
 import DesktopChatBot from '@/components/DesktopChatBot';
 import DesktopFooter from '@/components/DesktopFooter';
@@ -558,15 +557,7 @@ export default function MobileStorefront() {
               autoplayDelay={4000}
             />
             
-            {/* Product Catalog - Desktop & Tablet */}
-            {(isTablet || !isMobile) && (
-              <ProductCatalog
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onCategorySelect={setSelectedCategory}
-                isLoading={categoriesLoading}
-              />
-            )}
+            {/* ProductCatalog removed - categories now shown in DesktopHeader */}
             
             {/* Product Grid */}
             <div className={layoutConfig.contentPadding}>
