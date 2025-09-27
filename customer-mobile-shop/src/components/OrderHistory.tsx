@@ -396,7 +396,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
+                    className="text-sm px-4 py-3 min-h-[44px] border-green-200 text-green-700 hover:bg-green-50 touch-manipulation"
                     onClick={() => handleSchedulePurchase(order)}
                   >
                     Lên Lịch
@@ -404,7 +404,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
+                    className="text-sm px-4 py-3 min-h-[44px] border-green-200 text-green-700 hover:bg-green-50 touch-manipulation"
                     onClick={() => handleGiftPurchase(order)}
                   >
                     Mua Tặng
@@ -412,7 +412,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
+                    className="text-sm px-4 py-3 min-h-[44px] border-green-200 text-green-700 hover:bg-green-50 touch-manipulation"
                     onClick={() => handleBuyAgain(order)}
                   >
                     Mua Lại
