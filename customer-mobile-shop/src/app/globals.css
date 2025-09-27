@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 122 39% 49%;
-    --foreground: 0 0% 100%;
-    --card: 120 100% 95%;
-    --card-foreground: 122 84% 4.9%;
-    --popover: 120 100% 95%;
-    --popover-foreground: 122 84% 4.9%;
-    --primary: 122 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 120 40% 96%;
-    --secondary-foreground: 122 47.4% 11.2%;
-    --muted: 120 40% 96%;
-    --muted-foreground: 125 16.3% 46.9%;
-    --accent: 120 40% 96%;
-    --accent-foreground: 122 47.4% 11.2%;
+    --background: 122 39% 98%;
+    --foreground: 120 100% 8%;
+    --card: 122 39% 96%;
+    --card-foreground: 120 100% 8%;
+    --popover: 122 39% 98%;
+    --popover-foreground: 120 100% 8%;
+    --primary: 120 67% 16%;
+    --primary-foreground: 122 39% 98%;
+    --secondary: 122 39% 96%;
+    --secondary-foreground: 120 100% 8%;
+    --muted: 122 39% 96%;
+    --muted-foreground: 120 20% 50%;
+    --accent: 120 30% 48%;
+    --accent-foreground: 122 39% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 124 31.8% 91.4%;
-    --input: 124 31.8% 91.4%;
-    --ring: 122 84% 4.9%;
+    --border: 120 30% 48%;
+    --input: 122 39% 96%;
+    --ring: 120 67% 16%;
     --radius: 0.5rem;
   }
 
@@ -54,6 +54,55 @@
     @apply border-border;
   }
   body {
-    @apply bg-green-50 text-foreground;
+    @apply text-foreground;
+    background-color: #FFFEF7;
+  }
+}
+
+@layer components {
+  /* NhangSach.Net Brand Colors */
+  .bg-brand-forest {
+    background-color: #2D5016;
+  }
+  .bg-brand-green {
+    background-color: #4A7C3C;
+  }
+  .bg-brand-cream {
+    background-color: #F5F3E8;
+  }
+  .bg-brand-white {
+    background-color: #FFFEF7;
+  }
+  
+  .text-brand-forest {
+    color: #2D5016;
+  }
+  .text-brand-green {
+    color: #4A7C3C;
+  }
+  
+  .border-brand-green {
+    border-color: #4A7C3C;
+  }
+  .border-brand-cream {
+    border-color: #F5F3E8;
+  }
+  
+  .hover\:bg-brand-forest:hover {
+    background-color: #1F3610;
+  }
+  .hover\:bg-brand-green:hover {
+    background-color: #3E6632;
+  }
+  
+  /* Translucent brand colors */
+  .bg-brand-white\/80 {
+    background-color: rgba(255, 254, 247, 0.8);
+  }
+  .bg-brand-white\/90 {
+    background-color: rgba(255, 254, 247, 0.9);
+  }
+  .hover\:bg-brand-white\/90:hover {
+    background-color: rgba(255, 254, 247, 0.9);
   }
 }
