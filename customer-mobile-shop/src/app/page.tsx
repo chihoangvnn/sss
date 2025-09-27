@@ -6,8 +6,6 @@ import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, S
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import Autoplay from 'embla-carousel-autoplay';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
@@ -64,7 +62,6 @@ export default function MobileStorefront() {
   const layoutConfig = {
     gridCols: isMobile ? 'grid-cols-2' : isTablet ? 'grid-cols-3' : 'grid-cols-4 xl:grid-cols-5',
     containerClass: isMobile ? 'w-full' : 'max-w-7xl mx-auto',
-    heroHeight: isMobile ? 'h-44 sm:h-56' : 'h-64 lg:h-72 xl:h-80',
     contentPadding: isMobile ? 'p-4' : 'p-6 lg:p-8',
     gridGap: isMobile ? 'gap-3' : 'gap-4 lg:gap-6',
     showBottomNav: isMobile
@@ -78,45 +75,7 @@ export default function MobileStorefront() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
-  // Embla Carousel plugin for auto-play
-  const plugin = useRef(
-    Autoplay({ delay: 4000, stopOnInteraction: true })
-  );
   
-  // Hero slides data for Vietnamese incense business
-  const heroSlides = [
-    {
-      image: heroImage1,
-      title: "Nhang Sạch Tự Nhiên",
-      subtitle: "Thanh Tịnh Tâm Hồn",
-      description: "100% thành phần tự nhiên, không hóa chất độc hại",
-      cta: "Khám Phá Ngay",
-      bgGradient: "from-amber-900/80 to-orange-800/80"
-    },
-    {
-      image: heroImage2, 
-      title: "Nhang Sạch .Net Cao Cấp",
-      subtitle: "Hương Thơm Thiên Nhiên",
-      description: "Từ cây trầm hương quý hiếm, mang đến không gian linh thiêng",
-      cta: "Xem Sản Phẩm",
-      bgGradient: "from-emerald-900/80 to-teal-800/80"
-    },
-    {
-      image: heroImage3,
-      title: "Thắp Hương Cúng Phật",
-      subtitle: "Truyền Thống Việt Nam", 
-      description: "Gìn giữ nét đẹp tâm linh, thể hiện lòng thành kính của người Việt",
-      cta: "Tìm Hiểu Thêm",
-      bgGradient: "from-red-900/80 to-orange-800/80"
-    }
-  ];
-  
-  // Hero carousel navigation handlers
-  const handleSlideClick = (index: number) => {
-    if (index === 0) setSelectedCategory('all');
-    else if (index === 1) setSelectedCategory('premium');
-    else setSelectedCategory('traditional');
-  };
 
   // Infinite scroll setup - fetch products with pagination
   const { 
@@ -523,57 +482,6 @@ export default function MobileStorefront() {
       default: // 'home'
         return (
           <div className={layoutConfig.containerClass}>
-            {/* Hero Carousel for Vietnamese Incense Business */}
-            <div className="relative bg-gray-900 overflow-hidden">
-              <Carousel
-                opts={{ 
-                  align: "start", 
-                  loop: true 
-                }}
-                plugins={[plugin.current]}
-                className="w-full"
-              >
-                <CarouselContent className={layoutConfig.heroHeight}>
-                  {heroSlides.map((slide, index) => (
-                    <CarouselItem key={index} className="relative">
-                      {/* Background Image */}
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                        style={{ backgroundImage: `url(${slide.image})` }}
-                      />
-                      
-                      {/* Gradient Overlay */}
-                      <div className={`absolute inset-0 bg-gradient-to-r ${slide.bgGradient}`} />
-                      
-                      {/* Content */}
-                      <div className="relative z-10 h-full flex items-center justify-center px-6">
-                        <div className="text-center text-white max-w-md">
-                          <h2 className="text-2xl sm:text-3xl font-bold mb-2 drop-shadow-lg">
-                            {slide.title}
-                          </h2>
-                          <h3 className="text-lg sm:text-xl font-semibold mb-3 text-yellow-200 drop-shadow-md">
-                            {slide.subtitle}
-                          </h3>
-                          <p className="text-sm sm:text-base mb-4 opacity-90 drop-shadow-sm">
-                            {slide.description}
-                          </p>
-                          <button 
-                            onClick={() => handleSlideClick(index)}
-                            className="bg-white text-gray-900 px-6 py-3 rounded-full font-semibold hover:bg-yellow-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
-                          >
-                            {slide.cta}
-                          </button>
-                        </div>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white border-white/20 hover:bg-white/30 hover:text-white" />
-                <CarouselNext className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white border-white/20 hover:bg-white/30 hover:text-white" />
-              </Carousel>
-            </div>
-
-
             {/* Product Grid */}
             <div className={layoutConfig.contentPadding}>
               <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
@@ -685,7 +593,7 @@ export default function MobileStorefront() {
         />
       )}
 
-      <main className={layoutConfig.showBottomNav ? "pb-20 pt-14" : ""}>
+      <main className={layoutConfig.showBottomNav ? "pb-20 pt-8" : ""}>
         {renderContent()}
       </main>
 
