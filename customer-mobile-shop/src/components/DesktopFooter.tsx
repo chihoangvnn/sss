@@ -118,7 +118,7 @@ const DesktopFooter = () => {
     { name: 'Facebook', href: 'https://facebook.com/nhangsach.net', icon: Facebook },
     { name: 'Zalo', href: 'https://zalo.me/nhangsach', icon: MessageCircle },
     { name: 'Email', href: 'mailto:info@nhangsach.net', icon: Mail },
-    { name: 'Hotline', href: 'tel:+84xxxxxxxxx', icon: Phone }
+    { name: 'Hotline', href: 'tel:+84912345678', icon: Phone }
   ];
 
   return (
