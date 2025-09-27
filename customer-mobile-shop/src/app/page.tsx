@@ -331,9 +331,9 @@ export default function MobileStorefront() {
     // If a product is selected, show full page product view
     if (selectedProduct) {
       return (
-        <div className="bg-brand-white min-h-screen">
+        <div className="bg-white min-h-screen">
           {/* Product Image */}
-          <div className="aspect-square bg-brand-cream relative">
+          <div className="aspect-square bg-gray-100 relative">
             <MediaViewer
               src={selectedProduct.media || selectedProduct.image}
               alt={selectedProduct.name}
@@ -343,7 +343,7 @@ export default function MobileStorefront() {
             {/* Back Button */}
             <button 
               onClick={() => setSelectedProduct(null)}
-              className="absolute top-4 left-4 bg-brand-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-brand-white/90 transition-colors"
+              className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white/90 transition-colors"
             >
               <ArrowLeft className="h-5 w-5 text-gray-700" />
             </button>
@@ -366,7 +366,7 @@ export default function MobileStorefront() {
                 )}
               </div>
               <div className="flex items-center justify-between mb-4">
-                <span className="text-3xl font-bold text-brand-forest">
+                <span className="text-3xl font-bold text-green-600">
                   {formatVietnamPrice(selectedProduct.price)}
                 </span>
                 <div className="flex items-center gap-1">
@@ -400,7 +400,7 @@ export default function MobileStorefront() {
                     : selectedProduct.benefits
                   ).map((benefit, index) => (
                     <li key={index} className="flex items-start gap-2 text-gray-600">
-                      <span className="text-brand-green mt-1">•</span>
+                      <span className="text-green-500 mt-1">•</span>
                       <span>{benefit}</span>
                     </li>
                   ))}
@@ -412,7 +412,7 @@ export default function MobileStorefront() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Tình trạng:</span>
               {selectedProduct.stock > 0 ? (
-                <span className="text-sm text-brand-green font-medium">
+                <span className="text-sm text-green-600 font-medium">
                   Còn hàng ({selectedProduct.stock} sản phẩm)
                 </span>
               ) : (
@@ -422,8 +422,8 @@ export default function MobileStorefront() {
 
             {/* Quantity in Cart */}
             {cart.find(item => item.product.id === selectedProduct.id) && (
-              <div className="bg-brand-cream border border-brand-green rounded-lg p-3">
-                <div className="flex items-center gap-2 text-brand-forest">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-green-800">
                   <ShoppingCart className="h-4 w-4" />
                   <span className="text-sm font-medium">
                     Đã có {cart.find(item => item.product.id === selectedProduct.id)?.quantity} sản phẩm trong giỏ hàng
@@ -437,7 +437,7 @@ export default function MobileStorefront() {
               <Button
                 onClick={() => addToCart(selectedProduct)}
                 disabled={selectedProduct.stock === 0}
-                className="w-full bg-brand-forest hover:bg-brand-forest text-white py-3 text-lg font-semibold"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 Thêm vào giỏ hàng
@@ -462,7 +462,7 @@ export default function MobileStorefront() {
                       setSelectedCategory(category.id);
                       setActiveTab('home');
                     }}
-                    className="bg-brand-cream p-6 rounded-xl shadow-sm border border-brand-green hover:shadow-md transition-shadow"
+                    className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
                   >
                     <div className="text-center">
                       <div className="text-3xl mb-2">{category.icon}</div>
@@ -489,7 +489,7 @@ export default function MobileStorefront() {
               <div>
                 <div className="space-y-4 mb-6">
                   {cart.map((item) => (
-                    <div key={item.product.id} className="flex items-center gap-3 p-3 bg-brand-cream border border-brand-green rounded-lg">
+                    <div key={item.product.id} className="flex items-center gap-3 p-3 bg-white border rounded-lg">
                       <MediaViewer
                         src={item.product.media || item.product.image}
                         alt={item.product.name}
@@ -498,7 +498,7 @@ export default function MobileStorefront() {
                       />
                       <div className="flex-1">
                         <h3 className="font-medium">{item.product.name}</h3>
-                        <p className="text-brand-forest font-bold">
+                        <p className="text-green-600 font-bold">
                           {formatVietnamPrice(item.product.price)}
                         </p>
                       </div>
@@ -525,14 +525,14 @@ export default function MobileStorefront() {
                   ))}
                 </div>
                 
-                <div className="bg-brand-cream p-4 rounded-xl border border-brand-green">
+                <div className="bg-white p-4 rounded-xl border border-gray-200">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-lg font-semibold">Tổng cộng:</span>
-                    <span className="text-2xl font-bold text-brand-forest">
+                    <span className="text-2xl font-bold text-green-600">
                       {formatVietnamPrice(getTotalPrice())}
                     </span>
                   </div>
-                  <Button className="w-full bg-brand-green hover:bg-brand-green text-white py-3 rounded-full font-semibold">
+                  <Button className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold">
                     Đặt hàng ngay
                   </Button>
                 </div>
@@ -574,8 +574,8 @@ export default function MobileStorefront() {
                 {productsLoading && !productsError ? (
                   // Loading skeleton
                   Array.from({ length: 8 }).map((_, index) => (
-                    <div key={index} className="bg-brand-cream rounded-xl shadow-sm border border-brand-green overflow-hidden">
-                      <div className="aspect-square bg-brand-cream animate-pulse" />
+                    <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                      <div className="aspect-square bg-gray-200 animate-pulse" />
                       <div className="p-4">
                         <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
                         <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
@@ -597,7 +597,7 @@ export default function MobileStorefront() {
                   </div>
                 ) : (
                   finalProducts.map((product) => (
-                    <div key={product.id} className="bg-brand-cream rounded-xl shadow-sm border border-brand-green overflow-hidden hover:shadow-md transition-shadow">
+                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                       <div 
                         className="aspect-square bg-gray-100 cursor-pointer relative"
                         onClick={() => setSelectedProduct(product)}
@@ -620,7 +620,7 @@ export default function MobileStorefront() {
                           {product.name}
                         </h3>
                         <div className="mb-3">
-                          <span className="text-brand-forest font-bold text-lg">
+                          <span className="text-green-600 font-bold text-lg">
                             {formatVietnamPrice(product.price)}
                           </span>
                         </div>
@@ -636,7 +636,7 @@ export default function MobileStorefront() {
                           <Button 
                             size="sm"
                             onClick={() => addToCart(product)}
-                            className="bg-brand-green hover:bg-brand-green w-10 h-8 p-0"
+                            className="bg-green-500 hover:bg-green-600 w-10 h-8 p-0"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -650,7 +650,7 @@ export default function MobileStorefront() {
               {/* Infinite Loading Indicator */}
               {isFetchingNextPage && (
                 <div className="text-center py-4">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-brand-green"></div>
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
                 </div>
               )}
             </div>
@@ -660,7 +660,7 @@ export default function MobileStorefront() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Desktop Header - Show on tablet and desktop */}
       {!isMobile && (
         <DesktopHeader

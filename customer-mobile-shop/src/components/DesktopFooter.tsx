@@ -122,7 +122,7 @@ const DesktopFooter = () => {
   ];
 
   return (
-    <footer className="bg-gradient-to-b from-brand-white to-brand-cream border-t border-brand-green mt-16">
+    <footer className="bg-gradient-to-b from-gray-50 to-gray-100 border-t border-gray-200 mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 py-12">
@@ -159,7 +159,7 @@ const DesktopFooter = () => {
             </div>
 
             {/* Rating & Reviews */}
-            <div className="mt-4 p-3 bg-brand-cream rounded-lg border border-brand-green">
+            <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
               <div className="flex items-center space-x-2 mb-1">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
@@ -257,7 +257,7 @@ const DesktopFooter = () => {
             </div>
 
             {/* Newsletter Signup */}
-            <div className="bg-brand-cream p-4 rounded-lg border border-brand-green">
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
               <h5 className="text-sm font-semibold text-gray-900 mb-2">📧 Nhận tin khuyến mãi</h5>
               <div className="flex space-x-2">
                 <input
@@ -278,7 +278,7 @@ const DesktopFooter = () => {
             <div className="mt-4 space-y-2">
               <h5 className="text-sm font-semibold text-gray-900">📱 Tải App</h5>
               <div className="flex space-x-2">
-                <button className="flex-1 bg-brand-forest text-white text-xs px-3 py-2 rounded-md hover:bg-brand-forest transition-colors">
+                <button className="flex-1 bg-black text-white text-xs px-3 py-2 rounded-md hover:bg-gray-800 transition-colors">
                   App Store
                 </button>
                 <button className="flex-1 bg-green-600 text-white text-xs px-3 py-2 rounded-md hover:bg-green-700 transition-colors">

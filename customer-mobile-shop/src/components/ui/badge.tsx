@@ -9,7 +9,7 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-brand-forest text-white",
+          "border-transparent bg-green-600 text-white",
         secondary: 
           "border-transparent bg-gray-100 text-gray-900",
         destructive:
@@ -18,13 +18,13 @@ const badgeVariants = cva(
           "border-gray-300 text-gray-900",
         // Product badge variants
         new:
-          "border-transparent bg-brand-green text-white",
+          "border-transparent bg-green-500 text-white",
         topseller:
-          "border-transparent bg-amber-600 text-white",
+          "border-transparent bg-orange-500 text-white",
         freeshipping:
-          "border-transparent bg-brand-green text-white",
+          "border-transparent bg-blue-500 text-white",
         bestseller:
-          "border-transparent bg-brand-forest text-white",
+          "border-transparent bg-purple-500 text-white",
       },
     },
     defaultVariants: {
