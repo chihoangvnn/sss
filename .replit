@@ -17,15 +17,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Full-Stack App"
+args = "Customer Mobile Shop"
 
 [[workflows.workflow]]
-name = "Full-Stack App"
+name = "Customer Mobile Shop"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd TailwindAdminRasa && npm run dev"
+args = "cd customer-mobile-shop && npm run dev -- --port 5000"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -38,10 +38,6 @@ externalPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 32807
-externalPort = 3003
 
 [[ports]]
 localPort = 33427
@@ -62,6 +58,10 @@ externalPort = 5173
 [[ports]]
 localPort = 41675
 externalPort = 3000
+
+[[ports]]
+localPort = 43033
+externalPort = 3003
 
 [deployment]
 deploymentTarget = "vm"
