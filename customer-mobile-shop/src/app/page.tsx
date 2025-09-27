@@ -8,6 +8,7 @@ import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
+import { MediaViewer } from '@/components/MediaViewer';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
@@ -19,6 +20,7 @@ interface Product {
   name: string;
   price: number;
   image?: string;
+  media?: string; // Support both image and video URLs
   category_id: string;
   stock: number;
   short_description?: string;
@@ -202,17 +204,12 @@ export default function MobileStorefront() {
         <div className="bg-white min-h-screen">
           {/* Product Image */}
           <div className="aspect-square bg-gray-100 relative">
-            {selectedProduct.image ? (
-              <img 
-                src={selectedProduct.image}
-                alt={selectedProduct.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <Store className="h-20 w-20" />
-              </div>
-            )}
+            <MediaViewer
+              src={selectedProduct.media || selectedProduct.image}
+              alt={selectedProduct.name}
+              className="w-full h-full object-cover"
+              isHomepage={false} // Product detail view is not homepage
+            />
             {/* Back Button */}
             <button 
               onClick={() => setSelectedProduct(null)}
@@ -354,13 +351,12 @@ export default function MobileStorefront() {
                 <div className="space-y-4 mb-6">
                   {cart.map((item) => (
                     <div key={item.product.id} className="flex items-center gap-3 p-3 bg-white border rounded-lg">
-                      {item.product.image && (
-                        <img 
-                          src={item.product.image}
-                          alt={item.product.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                      )}
+                      <MediaViewer
+                        src={item.product.media || item.product.image}
+                        alt={item.product.name}
+                        className="w-16 h-16 object-cover rounded-lg"
+                        isHomepage={false} // Cart view is not homepage
+                      />
                       <div className="flex-1">
                         <h3 className="font-medium">{item.product.name}</h3>
                         <p className="text-green-600 font-bold">
@@ -492,17 +488,12 @@ export default function MobileStorefront() {
                         className="aspect-square bg-gray-100 cursor-pointer"
                         onClick={() => setSelectedProduct(product)}
                       >
-                        {product.image ? (
-                          <img 
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <Store className="h-12 w-12" />
-                          </div>
-                        )}
+                        <MediaViewer
+                          src={product.media || product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          isHomepage={activeTab === 'home'} // Use dynamic homepage detection
+                        />
                       </div>
                       <div className="p-4">
                         <h3 className="font-semibold text-gray-900 mb-2 truncate">

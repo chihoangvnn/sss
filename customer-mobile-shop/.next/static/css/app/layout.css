@@ -695,6 +695,12 @@ video {
 .top-4 {
   top: 1rem;
 }
+.right-2 {
+  right: 0.5rem;
+}
+.top-2 {
+  top: 0.5rem;
+}
 .z-10 {
   z-index: 10;
 }
@@ -1224,6 +1230,15 @@ video {
 .bg-opacity-50 {
   --tw-bg-opacity: 0.5;
 }
+.bg-opacity-20 {
+  --tw-bg-opacity: 0.2;
+}
+.bg-opacity-60 {
+  --tw-bg-opacity: 0.6;
+}
+.bg-opacity-80 {
+  --tw-bg-opacity: 0.8;
+}
 .bg-gradient-to-r {
   background-image: linear-gradient(to right, var(--tw-gradient-stops));
 }
@@ -1733,6 +1748,10 @@ video {
 
 .hover\:bg-white\/90:hover {
   background-color: rgb(255 255 255 / 0.9);
+}
+
+.hover\:bg-opacity-100:hover {
+  --tw-bg-opacity: 1;
 }
 
 .hover\:text-green-600:hover {
