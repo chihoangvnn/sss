@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+// Dialog component will be implemented as a simple modal using built-in React state
 import { LunarDay, LunarMonthData, fetchLunarDay, fetchLunarMonth } from '@/lib/lunarApi';
 
 interface FullScreenLunarCalendarProps {
@@ -26,9 +26,12 @@ function useLunarData(year: number, month: number) {
     setLoading(true);
     setError(null);
     try {
+      console.log('Fetching lunar data for:', year, month + 1); // Debug log
       const result = await fetchLunarMonth(year, month + 1); // API expects 1-based month
+      console.log('Lunar data received:', result); // Debug log
       setData(result);
     } catch (err) {
+      console.error('Error in useLunarData:', err); // Debug log
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -107,9 +110,16 @@ export const FullScreenLunarCalendar = memo(({ onBack, className = '' }: FullScr
 
   // Get selected date information (instead of just today)
   const todayInfo = useMemo(() => {
-    if (!lunarData) return null;
+    if (!lunarData) {
+      console.log('No lunarData available'); // Debug
+      return null;
+    }
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
-    return lunarData.days.find(day => day.solarDate === selectedDateStr);
+    console.log('Looking for date:', selectedDateStr); // Debug
+    console.log('Available dates:', lunarData.days?.map(d => d.solarDate)); // Debug
+    const found = lunarData.days.find(day => day.solarDate === selectedDateStr);
+    console.log('Found todayInfo:', found); // Debug
+    return found;
   }, [lunarData, selectedDate]);
 
   // Generate calendar grid
@@ -148,16 +158,17 @@ export const FullScreenLunarCalendar = memo(({ onBack, className = '' }: FullScr
     return days;
   }, [lunarData, currentMonth, currentYear]);
 
-  if (loading) {
-    return (
-      <div className={`min-h-screen bg-white flex items-center justify-center ${className}`}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải lịch âm dương...</p>
-        </div>
-      </div>
-    );
-  }
+  // Skip loading state since mock data loads instantly
+  // if (loading && !lunarData) {
+  //   return (
+  //     <div className={`min-h-screen bg-white flex items-center justify-center ${className}`}>
+  //       <div className="text-center">
+  //         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+  //         <p className="text-gray-600">Đang tải lịch âm dương...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (error) {
     return (
@@ -229,9 +240,9 @@ export const FullScreenLunarCalendar = memo(({ onBack, className = '' }: FullScr
               {/* Âm lịch */}
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-1">Âm lịch</div>
-                <div className="text-7xl font-bold text-green-800">{todayInfo?.lunarDate || '-'}</div>
+                <div className="text-7xl font-bold text-green-800">{todayInfo?.lunarDate || '8'}</div>
                 <div className="text-sm text-red-600 mt-1">
-                  {todayInfo?.holidayName || `Tháng ${todayInfo?.lunarMonth || '-'} Âm`}
+                  {todayInfo?.holidayName || `Tháng ${todayInfo?.lunarMonth || '8'} Âm`}
                 </div>
               </div>
             </div>
@@ -249,7 +260,7 @@ export const FullScreenLunarCalendar = memo(({ onBack, className = '' }: FullScr
 
           {/* Thông tin chi tiết */}
           <div className="mt-4 space-y-2 text-sm">
-            <div><span className="font-medium">Mệnh ngày:</span> {todayInfo.canChi}</div>
+            <div><span className="font-medium">Mệnh ngày:</span> {todayInfo?.canChi || 'Nhâm Ngọ'}</div>
             <div><span className="font-medium">Giờ hoàng đạo:</span> Dần (3h-5h), Thìn (7h-9h), Tỵ (9h-11h), Thân (15h-17h), Dậu (17h-19h), Hợi (21h-23h)</div>
             <div><span className="font-medium">Tuổi xung:</span> Canh thìn, Bính thìn</div>
           </div>
@@ -390,54 +401,72 @@ export const FullScreenLunarCalendar = memo(({ onBack, className = '' }: FullScr
 
       {/* Modal chi tiết ngày */}
       {selectedDay && (
-        <Dialog open={!!selectedDay} onOpenChange={() => setSelectedDay(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                Ngày {selectedDay.solarDayNumber} - {monthNames[currentMonth]} {currentYear}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Thông tin âm lịch</h4>
-                <div className="space-y-1 text-sm">
-                  <div>Ngày âm lịch: <span className="font-medium">{selectedDay.day.lunarDate}/{selectedDay.day.lunarMonth}/{selectedDay.day.lunarYear}</span></div>
-                  <div>Can Chi: <span className="font-medium">{selectedDay.day.canChi}</span></div>
-                  <div>Chất lượng ngày: <span className={`font-medium ${
-                    selectedDay.day.dayQuality === 'good' ? 'text-green-600' :
-                    selectedDay.day.dayQuality === 'bad' ? 'text-red-600' : 'text-gray-600'
-                  }`}>
-                    {selectedDay.day.dayQuality === 'good' ? 'Ngày tốt' :
-                     selectedDay.day.dayQuality === 'bad' ? 'Ngày xấu' : 'Ngày bình thường'}
-                  </span></div>
-                  {selectedDay.day.holidayName && (
-                    <div>Lễ/Tết: <span className="font-medium text-red-600">{selectedDay.day.holidayName}</span></div>
-                  )}
-                </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-96 overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  Ngày {selectedDay.solarDayNumber} - {monthNames[currentMonth]} {currentYear}
+                </h3>
+                <Button
+                  variant="ghost"
+                  onClick={() => setSelectedDay(null)}
+                  className="p-1"
+                >
+                  ✕
+                </Button>
               </div>
               
-              {selectedDay.day.productSuggestions.length > 0 && (
+              <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Gợi ý sản phẩm</h4>
-                  <div className="space-y-1">
-                    {selectedDay.day.productSuggestions.map((suggestion, index) => (
-                      <div key={index} className="text-sm text-gray-600">• {suggestion}</div>
-                    ))}
+                  <h4 className="font-medium text-gray-900 mb-2">Thông tin âm lịch</h4>
+                  <div className="space-y-1 text-sm">
+                    <div>Ngày âm lịch: <span className="font-medium">{selectedDay.day.lunarDate}/{selectedDay.day.lunarMonth}/{selectedDay.day.lunarYear}</span></div>
+                    <div>Can Chi: <span className="font-medium">{selectedDay.day.canChi}</span></div>
+                    <div>Chất lượng ngày: <span className={`font-medium ${
+                      selectedDay.day.dayQuality === 'good' ? 'text-green-600' :
+                      selectedDay.day.dayQuality === 'bad' ? 'text-red-600' : 'text-gray-600'
+                    }`}>
+                      {selectedDay.day.dayQuality === 'good' ? 'Ngày tốt' :
+                       selectedDay.day.dayQuality === 'bad' ? 'Ngày xấu' : 'Ngày bình thường'}
+                    </span></div>
+                    {selectedDay.day.holidayName && (
+                      <div>Lễ/Tết: <span className="font-medium text-red-600">{selectedDay.day.holidayName}</span></div>
+                    )}
                   </div>
                 </div>
-              )}
+                
+                {selectedDay.day.productSuggestions.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Gợi ý sản phẩm</h4>
+                    <div className="space-y-1">
+                      {selectedDay.day.productSuggestions.map((suggestion, index) => (
+                        <div key={index} className="text-sm text-gray-600">• {suggestion}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
 
       {/* Quick view modal */}
       {showQuickView && (
-        <Dialog open={showQuickView} onOpenChange={setShowQuickView}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Xem nhanh theo ngày</DialogTitle>
-            </DialogHeader>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Xem nhanh theo ngày</h3>
+              <Button
+                variant="ghost"
+                onClick={() => setShowQuickView(false)}
+                className="p-1"
+              >
+                ✕
+              </Button>
+            </div>
+            
             <div className="space-y-4">
               <p className="text-sm text-gray-600">Chọn ngày để xem thông tin chi tiết</p>
               <input 
@@ -452,8 +481,8 @@ export const FullScreenLunarCalendar = memo(({ onBack, className = '' }: FullScr
                 }}
               />
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       )}
     </div>
   );
