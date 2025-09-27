@@ -258,11 +258,32 @@ export const FullScreenLunarCalendar = memo(({ onBack, className = '' }: FullScr
             </Button>
           </div>
 
-          {/* Thông tin chi tiết */}
-          <div className="mt-4 space-y-2 text-sm">
-            <div><span className="font-medium">Mệnh ngày:</span> {todayInfo?.canChi || 'Nhâm Ngọ'}</div>
-            <div><span className="font-medium">Giờ hoàng đạo:</span> Dần (3h-5h), Thìn (7h-9h), Tỵ (9h-11h), Thân (15h-17h), Dậu (17h-19h), Hợi (21h-23h)</div>
-            <div><span className="font-medium">Tuổi xung:</span> Canh thìn, Bính thìn</div>
+          {/* Thông tin chi tiết - Tối ưu layout */}
+          <div className="mt-3 space-y-3 text-sm">
+            {/* Mệnh ngày và Tuổi xung - 2 cột */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="font-medium text-green-700">Mệnh ngày:</span>
+                <div className="text-red-600 font-semibold">{todayInfo?.canChi || 'Nhâm Ngọ'}</div>
+              </div>
+              <div>
+                <span className="font-medium text-green-700">Tuổi xung:</span>
+                <div className="text-red-600 font-semibold">Canh thìn, Bính thìn</div>
+              </div>
+            </div>
+            
+            {/* Giờ hoàng đạo - Tags compact */}
+            <div>
+              <div className="font-medium text-green-700 mb-2">Giờ hoàng đạo:</div>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Dần (3h-5h)</span>
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Thìn (7h-9h)</span>
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Tỵ (9h-11h)</span>
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Thân (15h-17h)</span>
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Dậu (17h-19h)</span>
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Hợi (21h-23h)</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
