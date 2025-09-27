@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Package, Clock, Truck, CheckCircle, Calendar, Eye, Filter } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle, Calendar, Eye, Filter, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatVietnamPrice } from '@/utils/currency';
+import { useQuery } from '@tanstack/react-query';
+import { fetchOrders } from '@/lib/orderApi';
 
 export interface Order {
   id: string;
@@ -23,8 +25,8 @@ export interface Order {
   estimatedDelivery?: string;
 }
 
-// Mock data for demo
-const MOCK_ORDERS: Order[] = [
+// Demo fallback data (used when API is unavailable)
+const FALLBACK_ORDERS: Order[] = [
   {
     id: '1',
     orderNumber: 'DH240927001',
@@ -71,19 +73,6 @@ const MOCK_ORDERS: Order[] = [
       { id: '5', name: 'Cung Ram tháng 7', quantity: 1, price: 320000 }
     ],
     shippingAddress: 'Quận 2, TP.HCM'
-  },
-  {
-    id: '5',
-    orderNumber: 'DH240926010',
-    status: 'shipped',
-    date: '2024-09-24',
-    total: 680000,
-    items: [
-      { id: '6', name: 'Lư đồng hương cao cấp', quantity: 1, price: 450000 },
-      { id: '7', name: 'Nhang trầm Huế', quantity: 1, price: 230000 }
-    ],
-    shippingAddress: 'Quận 10, TP.HCM',
-    estimatedDelivery: '2024-09-26'
   }
 ];
 
@@ -112,9 +101,33 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
+  // Fetch orders from API
+  const { 
+    data: orders = [], 
+    isLoading, 
+    error,
+    isError 
+  } = useQuery<Order[]>({
+    queryKey: ['orders'],
+    queryFn: fetchOrders,
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  // Use API data if available, otherwise fallback data
+  const availableOrders: Order[] = isError ? FALLBACK_ORDERS : orders;
+
+  // Log error for debugging if API fails
+  React.useEffect(() => {
+    if (error) {
+      console.warn('Failed to fetch orders, using fallback data:', error);
+    }
+  }, [error]);
+
   const filteredOrders = selectedFilter === 'all' 
-    ? MOCK_ORDERS 
-    : MOCK_ORDERS.filter(order => order.status === selectedFilter);
+    ? availableOrders 
+    : availableOrders.filter((order: Order) => order.status === selectedFilter);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -181,10 +194,39 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
         ))}
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center max-w-sm mx-auto">
+            <Loader2 className="h-8 w-8 animate-spin text-green-500 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Đang tải đơn hàng</h3>
+            <p className="text-sm text-gray-500 text-center">
+              Vui lòng đợi trong giây lát...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {isError && (
+        <div className="flex flex-col items-center justify-center py-8 px-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl shadow-sm p-6 flex flex-col items-center max-w-sm mx-auto">
+            <AlertCircle className="h-8 w-8 text-amber-500 mb-3" />
+            <h3 className="text-lg font-semibold text-amber-800 mb-2">Kết nối thất bại</h3>
+            <p className="text-sm text-amber-700 text-center mb-4">
+              Không thể tải dữ liệu từ server. Hiển thị dữ liệu demo.
+            </p>
+            <div className="text-xs text-amber-600 bg-amber-100 px-3 py-1 rounded-full">
+              Sử dụng dữ liệu fallback
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Orders List */}
       <div className="space-y-4">
-        {filteredOrders.length > 0 ? (
-          filteredOrders.map((order, index) => (
+        {!isLoading && filteredOrders.length > 0 ? (
+          filteredOrders.map((order: Order, index: number) => (
             <div 
               key={order.id} 
               className={`bg-white rounded-2xl border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden ${
@@ -267,7 +309,7 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
                     <h4 className="font-bold text-gray-900">Sản phẩm đã đặt</h4>
                   </div>
                   <div className="space-y-4">
-                    {order.items.map((item, itemIndex) => (
+                    {order.items.map((item: Order['items'][0], itemIndex: number) => (
                       <div 
                         key={item.id} 
                         className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex justify-between items-center"
@@ -313,7 +355,7 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
               )}
             </div>
           ))
-        ) : (
+        ) : !isLoading ? (
           <div className="text-center py-16 bg-gradient-to-b from-white to-gray-50 rounded-2xl border border-gray-100 shadow-lg">
             <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
               <Package className="h-10 w-10 text-gray-400" />
@@ -325,11 +367,14 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
                 : `Không có đơn hàng nào ở trạng thái "${ORDER_STATUS_CONFIG[selectedFilter as keyof typeof ORDER_STATUS_CONFIG]?.label}".`
               }
             </p>
-            <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 transform hover:scale-105">
+            <Button 
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 transform hover:scale-105"
+              onClick={() => window.location.href = '/'}
+            >
               Mua sắm ngay
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
