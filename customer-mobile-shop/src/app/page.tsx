@@ -601,6 +601,9 @@ export default function MobileStorefront() {
             selectedCategory={blogSelectedCategory}
             onSearchChange={setBlogSearchQuery}
             onCategorySelect={setBlogSelectedCategory}
+            cartCount={getTotalItems()}
+            onCartClick={() => setActiveTab('cart')}
+            onHomeClick={() => setActiveTab('home')}
           />
         );
 
