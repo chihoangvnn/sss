@@ -1,6 +1,6 @@
 import * as React from "react"
 
-// Enhanced breakpoint system for better responsive design
+// Enhanced breakpoint system for better responsive design  
 const MOBILE_BREAKPOINT = 640   // sm: phones
 const TABLET_BREAKPOINT = 768   // md: tablets  
 const LAPTOP_BREAKPOINT = 1024  // lg: laptops
@@ -37,57 +37,25 @@ export function useIsMobile(): boolean {
 }
 
 export function useResponsive(): ResponsiveHookReturn {
-  const [state, setState] = React.useState<ResponsiveHookReturn>(() => {
-    if (typeof window === 'undefined') {
-      return {
-        isMobile: false,
-        isTablet: false,
-        isLaptop: false,
-        isDesktop: true,
-        deviceType: 'desktop',
-        breakpoint: 'xl',
-        isTouch: false,
-        screenSize: { width: 1920, height: 1080 }
-      }
-    }
-    
-    const width = window.innerWidth
-    const height = window.innerHeight
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-    
-    let deviceType: DeviceType
-    let breakpoint: Breakpoint
-    
-    if (width < MOBILE_BREAKPOINT) {
-      deviceType = 'mobile'
-      breakpoint = 'xs'
-    } else if (width < TABLET_BREAKPOINT) {
-      deviceType = 'tablet'
-      breakpoint = 'sm'
-    } else if (width < LAPTOP_BREAKPOINT) {
-      deviceType = 'laptop'
-      breakpoint = 'md'
-    } else if (width < DESKTOP_BREAKPOINT) {
-      deviceType = 'desktop'
-      breakpoint = 'lg'
-    } else {
-      deviceType = 'desktop'
-      breakpoint = 'xl'
-    }
-    
-    return {
-      isMobile: width < MOBILE_BREAKPOINT,
-      isTablet: width >= MOBILE_BREAKPOINT && width < LAPTOP_BREAKPOINT,
-      isLaptop: width >= LAPTOP_BREAKPOINT && width < DESKTOP_BREAKPOINT,
-      isDesktop: width >= DESKTOP_BREAKPOINT,
-      deviceType,
-      breakpoint,
-      isTouch,
-      screenSize: { width, height }
-    }
-  })
+  const [mounted, setMounted] = React.useState(false)
+  
+  // Default state for SSR consistency
+  const defaultState: ResponsiveHookReturn = {
+    isMobile: false,
+    isTablet: false,
+    isLaptop: false,
+    isDesktop: true,
+    deviceType: 'desktop',
+    breakpoint: 'xl',
+    isTouch: false,
+    screenSize: { width: 1920, height: 1080 }
+  }
+  
+  const [state, setState] = React.useState<ResponsiveHookReturn>(defaultState)
 
   React.useEffect(() => {
+    setMounted(true)
+    
     const updateState = () => {
       const width = window.innerWidth
       const height = window.innerHeight
@@ -145,6 +113,11 @@ export function useResponsive(): ResponsiveHookReturn {
     }
   }, [])
 
+  // Return default state during SSR and initial render to prevent hydration mismatch
+  if (!mounted) {
+    return defaultState
+  }
+  
   return state
 }
 
