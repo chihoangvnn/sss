@@ -39,6 +39,11 @@ interface Product {
   short_description?: string;
   status: string;
   benefits?: string | string[];
+  // Badge properties
+  isNew?: boolean;
+  isTopseller?: boolean;
+  isFreeshipping?: boolean;
+  isBestseller?: boolean;
 }
 
 interface Category {
