@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -79,15 +79,16 @@ export function PostCalendarView({
     });
   }, [posts, accounts]);
 
-  const getPlatformIcon = (platform: string) => {
+  // Memoize icon functions for performance
+  const getPlatformIcon = useCallback((platform: string) => {
     switch (platform) {
       case 'facebook': return <Facebook className="w-3 h-3 text-blue-600" />;
       case 'instagram': return <Instagram className="w-3 h-3 text-pink-500" />;
       default: return null;
     }
-  };
+  }, []);
 
-  const getStatusIcon = (status: ScheduledPost['status']) => {
+  const getStatusIcon = useCallback((status: ScheduledPost['status']) => {
     switch (status) {
       case 'scheduled': return <Clock className="w-3 h-3 text-blue-500" />;
       case 'posting': return <Loader2 className="w-3 h-3 text-orange-500 animate-spin" />;
@@ -95,7 +96,7 @@ export function PostCalendarView({
       case 'failed': return <XCircle className="w-3 h-3 text-red-500" />;
       default: return <Edit className="w-3 h-3 text-gray-500" />;
     }
-  };
+  }, []);
 
   const getStatusColor = (status: ScheduledPost['status']) => {
     switch (status) {

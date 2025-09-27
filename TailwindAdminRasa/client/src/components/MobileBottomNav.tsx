@@ -13,70 +13,69 @@ import {
   ShoppingBag
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-
-// Mobile nav items with activity manager styling
-const mobileNavItems = [
-  {
-    title: "Trang chủ",
-    url: "/",
-    icon: Home,
-    color: "text-[hsl(var(--activity-teal))]",
-    activeColor: "text-[hsl(var(--activity-teal))]",
-    bgColor: "bg-[hsl(var(--activity-teal))]/10 dark:bg-[hsl(var(--activity-teal))]/20"
-  },
-  {
-    title: "Đơn hàng",
-    url: "/orders", 
-    icon: ShoppingCart,
-    badge: "12",
-    color: "text-[hsl(var(--activity-pink))]",
-    activeColor: "text-[hsl(var(--activity-pink))]",
-    bgColor: "bg-[hsl(var(--activity-pink))]/10 dark:bg-[hsl(var(--activity-pink))]/20"
-  },
-  {
-    title: "Shopee",
-    url: "/shopee",
-    icon: ShoppingBag,
-    color: "text-orange-600", 
-    activeColor: "text-orange-600",
-    bgColor: "bg-orange-50 dark:bg-orange-950/20"
-  },
-  {
-    title: "TikTok Shop",
-    url: "/tiktok-shop",
-    icon: ShoppingBag,
-    color: "text-pink-600", 
-    activeColor: "text-pink-600",
-    bgColor: "bg-pink-50 dark:bg-pink-950/20"
-  },
-];
-
-// Floating action menu items
-const quickActions = [
-  {
-    title: "Thêm sản phẩm",
-    url: "/products",
-    icon: Store,
-    color: "text-[hsl(var(--activity-teal))]"
-  },
-  {
-    title: "Chat Bot",
-    url: "/chatbot",
-    icon: MessageSquare,
-    color: "text-[hsl(var(--activity-pink))]"
-  },
-  {
-    title: "Content",
-    url: "/content-library", 
-    icon: Activity,
-    color: "text-[hsl(var(--activity-purple))]"
-  },
-];
+import { useState, useMemo } from "react";
 
 export function MobileBottomNav() {
   const [location] = useLocation();
   const [showQuickActions, setShowQuickActions] = useState(false);
+
+  // Memoize navigation arrays for performance optimization
+  const mobileNavItems = useMemo(() => [
+    {
+      title: "Trang chủ",
+      url: "/",
+      icon: Home,
+      color: "text-[hsl(var(--activity-teal))]",
+      activeColor: "text-[hsl(var(--activity-teal))]",
+      bgColor: "bg-[hsl(var(--activity-teal))]/10 dark:bg-[hsl(var(--activity-teal))]/20"
+    },
+    {
+      title: "Đơn hàng",
+      url: "/orders", 
+      icon: ShoppingCart,
+      badge: "12",
+      color: "text-[hsl(var(--activity-pink))]",
+      activeColor: "text-[hsl(var(--activity-pink))]",
+      bgColor: "bg-[hsl(var(--activity-pink))]/10 dark:bg-[hsl(var(--activity-pink))]/20"
+    },
+    {
+      title: "Shopee",
+      url: "/shopee",
+      icon: ShoppingBag,
+      color: "text-orange-600", 
+      activeColor: "text-orange-600",
+      bgColor: "bg-orange-50 dark:bg-orange-950/20"
+    },
+    {
+      title: "TikTok Shop",
+      url: "/tiktok-shop",
+      icon: ShoppingBag,
+      color: "text-pink-600", 
+      activeColor: "text-pink-600",
+      bgColor: "bg-pink-50 dark:bg-pink-950/20"
+    },
+  ], []);
+
+  const quickActions = useMemo(() => [
+    {
+      title: "Thêm sản phẩm",
+      url: "/products",
+      icon: Store,
+      color: "text-[hsl(var(--activity-teal))]"
+    },
+    {
+      title: "Chat Bot",
+      url: "/chatbot",
+      icon: MessageSquare,
+      color: "text-[hsl(var(--activity-pink))]"
+    },
+    {
+      title: "Content",
+      url: "/content-library", 
+      icon: Activity,
+      color: "text-[hsl(var(--activity-purple))]"
+    },
+  ], []);
 
   return (
     <>

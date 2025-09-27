@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { 
   Plus, 
@@ -714,16 +714,19 @@ export function FacebookAppsManagerPanel() {
   };
 
   // Filter apps based on search and filters
-  const filteredApps = apps.filter(app => {
-    const matchesSearch = app.appName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         app.appId.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesEnvironment = environmentFilter === "all" || app.environment === environmentFilter;
-    const matchesStatus = statusFilter === "all" || 
-                         (statusFilter === "active" && app.isActive) ||
-                         (statusFilter === "inactive" && !app.isActive);
-    
-    return matchesSearch && matchesEnvironment && matchesStatus;
-  });
+  // Memoize filteredApps calculation for performance optimization
+  const filteredApps = useMemo(() => {
+    return apps.filter(app => {
+      const matchesSearch = app.appName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           app.appId.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesEnvironment = environmentFilter === "all" || app.environment === environmentFilter;
+      const matchesStatus = statusFilter === "all" || 
+                           (statusFilter === "active" && app.isActive) ||
+                           (statusFilter === "inactive" && !app.isActive);
+      
+      return matchesSearch && matchesEnvironment && matchesStatus;
+    });
+  }, [apps, searchQuery, environmentFilter, statusFilter]);
 
   const getEnvironmentBadgeVariant = (env: string) => {
     switch (env) {
