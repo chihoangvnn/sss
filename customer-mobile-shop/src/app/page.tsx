@@ -14,6 +14,7 @@ import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
 import { ProductCatalog } from '@/components/ProductCatalog';
 import { ProfileTab } from '@/components/ProfileTab';
+import DesktopChatBot from '@/components/DesktopChatBot';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { formatVietnamPrice } from '@/utils/currency';
@@ -703,6 +704,9 @@ export default function MobileStorefront() {
           cartCount={getTotalItems()}
         />
       )}
+
+      {/* Desktop ChatBot - Show on desktop only */}
+      {!isMobile && <DesktopChatBot />}
 
     </div>
   );
