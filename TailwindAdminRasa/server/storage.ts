@@ -92,6 +92,15 @@ export interface IStorage {
   getCustomer(id: string): Promise<(Customer & { totalDebt: string; creditLimit: string }) | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  updateCustomerMembership(params: {
+    customerId: string;
+    totalSpent: string;
+    pointsBalance: number;
+    pointsEarned: number;
+    membershipTier: string;
+    lastTierUpdate?: Date | null;
+    membershipData?: any;
+  }): Promise<Customer | undefined>;
   deleteCustomer(id: string): Promise<boolean>;
   getCustomerRecentAddress(customerId: string): Promise<string | null>;
   
@@ -819,6 +828,39 @@ export class DatabaseStorage implements IStorage {
       .update(customers)
       .set(customer)
       .where(eq(customers.id, id))
+      .returning();
+    return updatedCustomer || undefined;
+  }
+
+  async updateCustomerMembership(params: {
+    customerId: string;
+    totalSpent: string;
+    pointsBalance: number;
+    pointsEarned: number;
+    membershipTier: string;
+    lastTierUpdate?: Date | null;
+    membershipData?: any;
+  }): Promise<Customer | undefined> {
+    const updateData: any = {
+      totalSpent: params.totalSpent,
+      pointsBalance: params.pointsBalance,
+      pointsEarned: params.pointsEarned,
+      membershipTier: params.membershipTier,
+    };
+
+    if (params.lastTierUpdate) {
+      updateData.lastTierUpdate = params.lastTierUpdate;
+    }
+
+    // CRITICAL: Persist membershipData for idempotency tracking
+    if (params.membershipData) {
+      updateData.membershipData = params.membershipData;
+    }
+
+    const [updatedCustomer] = await db
+      .update(customers)
+      .set(updateData)
+      .where(eq(customers.id, params.customerId))
       .returning();
     return updatedCustomer || undefined;
   }

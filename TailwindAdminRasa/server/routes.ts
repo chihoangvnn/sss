@@ -48,6 +48,8 @@ import regionAssignmentRouter from './api/region-assignment';
 import ngrokConfigRouter from './api/ngrok-config';
 import booksRouter from './api/books';
 import lunarCalendarHandler from './api/lunar-calendar';
+import membershipRouter from './api/membership';
+import { processMembershipForOrder, ensureCustomerForOrder } from './services/membership-service';
 
 // Vietnamese slug utility function
 function generateSlug(input: string): string {
@@ -1274,6 +1276,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the order
       const order = await storage.createOrder(validatedData);
       console.log("🎯 Created order:", order.id);
+      
+      // 💎 Process membership points and tier for completed orders (AFTER all order data is committed)
+      if (order.status === 'completed' && order.customerId) {
+        try {
+          const membershipResult = await processMembershipForOrder({
+            customerId: order.customerId,
+            orderTotal: parseFloat(order.total),
+            orderId: order.id
+          });
+          
+          if (membershipResult.success) {
+            console.log("💎 Membership processed successfully:", {
+              tier: membershipResult.newTier,
+              points: membershipResult.pointsEarned,
+              upgrade: membershipResult.tierUpgrade
+            });
+          } else {
+            console.error("💎 Membership processing failed:", membershipResult.error);
+          }
+        } catch (membershipError) {
+          console.error("💎 Membership processing error:", membershipError);
+          // Don't fail the order if membership processing fails
+        }
+      }
       
       // If we have order items from POS, create them
       if (orderItems.length > 0) {
@@ -3511,6 +3537,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const order = await storage.createOrder(orderData);
       
+      // 💎 Process membership for landing page order (AFTER order is committed)
+      if (order.customerId) {
+        try {
+          const membershipResult = await processMembershipForOrder({
+            customerId: order.customerId,
+            orderTotal: parseFloat(order.total),
+            orderId: order.id
+          });
+          
+          if (membershipResult.success) {
+            console.log("💎 Landing page membership processed:", {
+              tier: membershipResult.newTier,
+              points: membershipResult.pointsEarned,
+              upgrade: membershipResult.tierUpgrade
+            });
+          } else {
+            console.error("💎 Landing page membership failed:", membershipResult.error);
+          }
+        } catch (membershipError) {
+          console.error("💎 Landing page membership error:", membershipError);
+        }
+      }
+      
       // Increment order count for landing page
       if (landingPageId) {
         await storage.incrementLandingPageOrder(landingPageId);
@@ -3784,6 +3833,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const order = await storage.createStorefrontOrder(secureOrderData);
+      
+      // 💎 Ensure customer exists and process membership (AFTER order is committed)
+      const finalCustomerId = await ensureCustomerForOrder({
+        existingCustomerId: order.customerId || undefined,
+        customerName: order.customerName || undefined,
+        customerPhone: order.customerPhone || undefined,
+        customerEmail: order.customerEmail || undefined
+      });
+      
+      if (finalCustomerId) {
+        try {
+          const membershipResult = await processMembershipForOrder({
+            customerId: finalCustomerId,
+            orderTotal: parseFloat(order.total),
+            orderId: order.id
+          });
+          
+          if (membershipResult.success) {
+            console.log("💎 Storefront membership processed:", {
+              customer: finalCustomerId,
+              tier: membershipResult.newTier,
+              points: membershipResult.pointsEarned,
+              upgrade: membershipResult.tierUpgrade
+            });
+          } else {
+            console.error("💎 Storefront membership failed:", membershipResult.error);
+          }
+        } catch (membershipError) {
+          console.error("💎 Storefront membership error:", membershipError);
+        }
+      } else {
+        console.log("💎 No customer available for storefront membership processing");
+      }
       
       // Auto-create customer if they don't exist (new customer flow)
       let customerCreated = false;
@@ -4164,6 +4246,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // 🧩 Template Repository Management API
   // ==========================================
   app.use("/api/templates", templatesRouter);
+  
+  // ==========================================
+  // 💎 MEMBERSHIP SYSTEM API ROUTES
+  // ==========================================
+  app.use("/api/membership", membershipRouter);
   
   // ==========================================
   // PRODUCT FAQs MANAGEMENT API ROUTES
