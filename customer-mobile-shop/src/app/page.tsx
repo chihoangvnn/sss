@@ -118,7 +118,7 @@ export default function MobileStorefront() {
   } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/categories`);
+      const response = await fetch(`${API_BASE_URL}/categories/filter?frontendId=frontend-a`);
       if (!response.ok) throw new Error('Failed to fetch categories');
       return response.json();
     }
