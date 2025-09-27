@@ -52,6 +52,7 @@ import MobileStorefront from "@/pages/MobileStorefront";
 import BooksManagement from "@/pages/BooksManagement";
 import ExistingBooksManagement from "@/components/BooksManagement";
 import FullLunarCalendarPage from "@/pages/FullLunarCalendarPage";
+import MemberProfile from "@/pages/MemberProfile";
 
 // Admin Routes (inside sidebar layout)
 function AdminRouter() {
@@ -96,6 +97,7 @@ function AdminRouter() {
       <Route path="/books" component={ExistingBooksManagement} />
       <Route path="/books-abebooks" component={BooksManagement} />
       <Route path="/mobile" component={MobileStorefront} />
+      <Route path="/member-profile" component={MemberProfile} />
       <Route path="/template-builder" component={() => <TemplateBuilder className="h-screen" />} />
       <Route component={NotFound} />
     </Switch>
