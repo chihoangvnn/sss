@@ -1,8 +1,9 @@
 'use client'
 
 import React from 'react';
-import { ShoppingCart, Search, User } from 'lucide-react';
+import { ShoppingCart, Search, User, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DesktopHeaderProps {
   storeName: string;
@@ -21,6 +22,7 @@ export function DesktopHeader({
   onCartClick,
   onProfileClick
 }: DesktopHeaderProps) {
+  const { user, isAuthenticated, isLoading, login } = useAuth();
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -66,16 +68,51 @@ export function DesktopHeader({
               <span className="ml-2 hidden lg:inline">Giỏ hàng</span>
             </Button>
 
-            {/* Profile Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onProfileClick}
-              className="hidden lg:flex"
-            >
-              <User className="h-5 w-5" />
-              <span className="ml-2">Tài khoản</span>
-            </Button>
+            {/* Profile/Login Button */}
+            {isLoading ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="hidden lg:flex"
+              >
+                <User className="h-5 w-5 animate-pulse" />
+                <span className="ml-2">...</span>
+              </Button>
+            ) : isAuthenticated ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onProfileClick}
+                className="hidden lg:flex"
+              >
+                {user?.profileImageUrl ? (
+                  <img 
+                    src={user.profileImageUrl} 
+                    alt="Profile" 
+                    className="h-5 w-5 rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
+                <span className="ml-2">
+                  {user?.firstName || user?.lastName 
+                    ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+                    : 'Tài khoản'
+                  }
+                </span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={login}
+                className="hidden lg:flex text-green-600 border-green-200 hover:bg-green-50"
+              >
+                <LogIn className="h-5 w-5" />
+                <span className="ml-2">Đăng nhập</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

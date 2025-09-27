@@ -1,13 +1,15 @@
 'use client'
 
 import React from 'react';
-import { Home, Search, ShoppingCart, Bell } from 'lucide-react';
+import { Home, Search, ShoppingCart, Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MobileHeaderProps {
   onSearchClick?: () => void;
   onCartClick?: () => void;
+  onProfileClick?: () => void;
   cartCount?: number;
   storeName?: string;
 }
@@ -15,9 +17,11 @@ interface MobileHeaderProps {
 export function MobileHeader({ 
   onSearchClick, 
   onCartClick, 
+  onProfileClick,
   cartCount = 0, 
   storeName = "Nhang Sạch .Net" 
 }: MobileHeaderProps) {
+  const { user, isAuthenticated } = useAuth();
   return (
     <div className="sticky top-0 z-50 bg-gradient-to-r from-green-600 to-green-700 shadow-lg">
       <div className="flex items-center justify-between p-4 text-white">
@@ -37,7 +41,26 @@ export function MobileHeader({
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* User Profile Indicator */}
+          {isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onProfileClick}
+              className="text-white hover:bg-white/20 p-2"
+            >
+              {user?.profileImageUrl ? (
+                <img 
+                  src={user.profileImageUrl} 
+                  alt="Profile" 
+                  className="w-5 h-5 rounded-full object-cover border border-white/30"
+                />
+              ) : (
+                <User size={18} />
+              )}
+            </Button>
+          )}
 
           {/* Notifications */}
           <Button

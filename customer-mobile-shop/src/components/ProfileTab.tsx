@@ -1,0 +1,163 @@
+'use client'
+
+import React from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { User, LogIn, LogOut, Mail, Shield } from 'lucide-react';
+
+export function ProfileTab() {
+  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="p-4 pt-6">
+        <div className="bg-white rounded-xl p-6 mb-4 animate-pulse">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
+            <div className="flex-1">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="p-4 pt-6">
+        <div className="bg-white rounded-xl p-6 mb-4 text-center">
+          <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <User className="w-10 h-10 text-gray-400" />
+          </div>
+          
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Chào mừng bạn!
+          </h2>
+          
+          <p className="text-gray-600 mb-6">
+            Đăng nhập để trải nghiệm mua sắm tốt nhất và theo dõi đơn hàng của bạn.
+          </p>
+          
+          <Button 
+            onClick={login}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
+          >
+            <LogIn className="w-5 h-5 mr-2" />
+            Đăng nhập với Replit
+          </Button>
+          
+          <div className="mt-4 text-sm text-gray-500">
+            <p className="flex items-center justify-center">
+              <Shield className="w-4 h-4 mr-1" />
+              Đăng nhập an toàn với Google, GitHub, hoặc email
+            </p>
+          </div>
+        </div>
+
+        {/* Guest Features */}
+        <div className="bg-white rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            Tính năng khi đăng nhập
+          </h3>
+          <ul className="space-y-2 text-gray-600">
+            <li className="flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+              Lưu giỏ hàng và sản phẩm yêu thích
+            </li>
+            <li className="flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+              Theo dõi lịch sử đơn hàng
+            </li>
+            <li className="flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+              Thanh toán nhanh với thông tin đã lưu
+            </li>
+            <li className="flex items-center">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+              Nhận thông báo về ưu đãi đặc biệt
+            </li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  // Authenticated user view
+  if (!user) return null; // Type guard
+
+  return (
+    <div className="p-4 pt-6">
+      {/* User Profile Card */}
+      <div className="bg-white rounded-xl p-6 mb-4">
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+            {user.profileImageUrl ? (
+              <img 
+                src={user.profileImageUrl} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-8 h-8 text-gray-400" />
+            )}
+          </div>
+          
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {user.firstName || user.lastName 
+                ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+                : 'Người dùng'
+              }
+            </h2>
+            {user.email && (
+              <p className="text-gray-600 flex items-center mt-1">
+                <Mail className="w-4 h-4 mr-1" />
+                {user.email}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        <Button 
+          onClick={logout}
+          variant="outline"
+          className="w-full text-red-600 border-red-200 hover:bg-red-50"
+        >
+          <LogOut className="w-5 h-5 mr-2" />
+          Đăng xuất
+        </Button>
+      </div>
+
+      {/* Account Features */}
+      <div className="bg-white rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Tài khoản của tôi
+        </h3>
+        
+        <div className="space-y-3">
+          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="font-medium text-gray-900">Lịch sử đơn hàng</div>
+            <div className="text-sm text-gray-500">Xem các đơn hàng đã mua</div>
+          </button>
+          
+          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="font-medium text-gray-900">Sản phẩm yêu thích</div>
+            <div className="text-sm text-gray-500">Quản lý danh sách yêu thích</div>
+          </button>
+          
+          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="font-medium text-gray-900">Thông tin giao hàng</div>
+            <div className="text-sm text-gray-500">Địa chỉ và thông tin liên lạc</div>
+          </button>
+          
+          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+            <div className="font-medium text-gray-900">Cài đặt thông báo</div>
+            <div className="text-sm text-gray-500">Quản lý thông báo qua email/SMS</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

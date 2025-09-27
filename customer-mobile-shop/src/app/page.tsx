@@ -12,7 +12,9 @@ import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
 import { ProductCatalog } from '@/components/ProductCatalog';
+import { ProfileTab } from '@/components/ProfileTab';
 import { useResponsive } from '@/hooks/use-mobile';
+import { useAuth } from '@/hooks/useAuth';
 import { formatVietnamPrice } from '@/utils/currency';
 
 // API base URL from environment or default
@@ -52,6 +54,9 @@ interface CartItem {
 export default function MobileStorefront() {
   // Responsive hooks
   const { isMobile, isTablet } = useResponsive();
+  
+  // Authentication
+  const { user, isAuthenticated } = useAuth();
   
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
@@ -421,50 +426,7 @@ export default function MobileStorefront() {
         return <FullScreenLunarCalendar />;
 
       case 'profile':
-        return (
-          <div className="p-4 pt-6">
-            <div className="bg-white rounded-xl p-6 mb-4">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center">
-                  <User className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Khách hàng</h3>
-                  <p className="text-gray-600">Thành viên từ hôm nay</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{cart.length}</div>
-                  <div className="text-sm text-gray-600">Giỏ hàng</div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">📅</div>
-                  <div className="text-sm text-gray-600">Lịch âm</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start text-left">
-                <User className="h-5 w-5 mr-3" />
-                Thông tin cá nhân
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-left">
-                <ShoppingCart className="h-5 w-5 mr-3" />
-                Lịch sử đơn hàng
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-left"
-                onClick={() => setActiveTab('calendar')}
-              >
-                <Calendar className="h-5 w-5 mr-3" />
-                Lịch vạn niên
-              </Button>
-            </div>
-          </div>
-        );
+        return <ProfileTab />;
 
       default: // 'home'
         return (
@@ -591,6 +553,7 @@ export default function MobileStorefront() {
         <MobileHeader
           onSearchClick={handleHeaderSearchClick}
           onCartClick={handleHeaderCartClick}
+          onProfileClick={handleProfileClick}
           cartCount={getTotalItems()}
           storeName="Nhang Sạch .Net"
         />
