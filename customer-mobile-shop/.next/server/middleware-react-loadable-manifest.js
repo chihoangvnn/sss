@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"lib/lunarApi.ts -> ./lunarMockData\":{\"id\":\"lib/lunarApi.ts -> ./lunarMockData\",\"files\":[\"static/chunks/_app-pages-browser_src_lib_lunarMockData_ts.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{}"
