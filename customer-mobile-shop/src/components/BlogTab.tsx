@@ -168,21 +168,41 @@ export function BlogTab({
 
   return (
     <div className="w-full min-h-screen bg-white">
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">Blog NhangSach.Net</h1>
-          <p className="text-green-100 text-sm md:text-base">
-            Chia sẻ kiến thức về nhang sạch, tâm linh và phong thủy
-          </p>
+      {/* Sticky Top Bar */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-4">
+            {/* Blog Title */}
+            <h1 className="text-xl font-bold text-gray-900 whitespace-nowrap">Blog</h1>
+            
+            {/* Search Bar */}
+            <div className="flex-1 relative max-w-lg">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Tìm kiếm bài viết..."
+                value={searchQuery}
+                onChange={(e) => {
+                  const newQuery = e.target.value;
+                  if (onSearchChange) {
+                    onSearchChange(newQuery);
+                  } else {
+                    setInternalSearchQuery(newQuery);
+                  }
+                }}
+                className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Search and Filter Section */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-2 flex-1">
+        {/* Category Filter Section */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-2">
             {BLOG_CATEGORIES.map((category) => (
               <Button
                 key={category.id}
@@ -205,27 +225,6 @@ export function BlogTab({
                 {category.name} ({category.count})
               </Button>
             ))}
-          </div>
-
-          {/* Search Bar */}
-          <div className="lg:min-w-fit lg:w-80 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Tìm kiếm bài viết..."
-              value={searchQuery}
-              onChange={(e) => {
-                const newQuery = e.target.value;
-                if (onSearchChange) {
-                  onSearchChange(newQuery);
-                } else {
-                  setInternalSearchQuery(newQuery);
-                }
-              }}
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400"
-            />
           </div>
         </div>
 
