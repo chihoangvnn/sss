@@ -768,7 +768,6 @@ export default function MobileStorefront() {
         <StorefrontBottomNav
           activeTab={activeTab}
           onTabChange={handleTabChange}
-          cartCount={getTotalItems()}
         />
       )}
 

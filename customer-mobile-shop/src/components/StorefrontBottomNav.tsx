@@ -1,17 +1,16 @@
 'use client'
 
 import React from 'react';
-import { Home, Grid3X3, ShoppingCart, User, Calendar, BookOpen } from 'lucide-react';
+import { Home, Grid3X3, User, Calendar, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface StorefrontBottomNavProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  cartCount?: number;
   wishlistCount?: number;
 }
 
-export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wishlistCount = 0 }: StorefrontBottomNavProps) {
+export function StorefrontBottomNav({ activeTab, onTabChange, wishlistCount = 0 }: StorefrontBottomNavProps) {
   const tabs = [
     {
       id: 'home',
@@ -36,12 +35,6 @@ export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wis
       label: 'Blog',
       icon: BookOpen,
       badge: null
-    },
-    {
-      id: 'cart',
-      label: 'Giỏ hàng',
-      icon: ShoppingCart,
-      badge: cartCount > 0 ? cartCount : null
     },
     {
       id: 'profile',
