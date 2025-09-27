@@ -1377,8 +1377,8 @@ export default function POS({}: POSProps) {
           </div>
         </div>
 
-        {/* Right Side - Cart & Checkout */}
-        <div className="w-80 bg-white border-l flex flex-col">
+        {/* Right Side - Cart & Checkout - Responsive */}
+        <div className="w-full md:w-80 lg:w-96 bg-white border-l flex flex-col">
           {/* Customer Selection */}
           <div className="p-4 border-b">
             <div className="space-y-2">

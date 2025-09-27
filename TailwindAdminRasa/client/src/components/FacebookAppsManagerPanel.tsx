@@ -1447,16 +1447,16 @@ export function FacebookAppsManagerPanel() {
               <CardTitle className="text-sm">Facebook Apps ({filteredApps.length})</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {/* Table Header */}
+              {/* Table Header - Responsive */}
               <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
                 <div className="flex items-center text-xs font-medium text-gray-600 gap-2">
-                  <div className="w-[160px]">Tên App</div>
-                  <div className="w-[120px]">App ID</div>
-                  <div className="w-[80px]">Status</div>
-                  <div className="w-[120px]">Group</div>
-                  <div className="w-[140px]">Stats (T/W/M)</div>
-                  <div className="w-[140px]">Tags</div>
-                  <div className="flex-1">Actions</div>
+                  <div className="flex-1 min-w-[120px] md:min-w-[160px]">Tên App</div>
+                  <div className="flex-1 min-w-[80px] md:min-w-[120px]">App ID</div>
+                  <div className="w-16 md:w-20">Status</div>
+                  <div className="hidden lg:block flex-1 min-w-[100px]">Group</div>
+                  <div className="hidden xl:block flex-1 min-w-[120px]">Stats (T/W/M)</div>
+                  <div className="hidden xl:block flex-1 min-w-[120px]">Tags</div>
+                  <div className="w-20 md:w-24">Actions</div>
                 </div>
               </div>
               
@@ -1464,8 +1464,8 @@ export function FacebookAppsManagerPanel() {
               <div className="divide-y divide-gray-100">
                 {filteredApps.map((app) => (
                   <div key={app.id} className="flex items-center gap-2 h-9 text-xs px-4 hover:bg-gray-50 transition-colors">
-                    {/* Name Column */}
-                    <div className="w-[160px] flex items-center gap-2 min-w-0">
+                    {/* Name Column - Responsive */}
+                    <div className="flex-1 min-w-[120px] md:min-w-[160px] flex items-center gap-2">
                       <span className="font-medium truncate" title={app.appName}>{app.appName}</span>
                       <span className={`shrink-0 w-4 h-4 rounded text-[9px] leading-4 text-center font-bold ${
                         app.environment === 'production' 
@@ -1479,8 +1479,8 @@ export function FacebookAppsManagerPanel() {
                       </span>
                     </div>
                     
-                    {/* App ID Column */}
-                    <div className="w-[120px] shrink-0">
+                    {/* App ID Column - Responsive */}
+                    <div className="flex-1 min-w-[80px] md:min-w-[120px] shrink-0">
                       <button
                         onClick={() => copyToClipboard(app.appId, app.id)}
                         className="font-mono text-[10px] bg-slate-50 hover:bg-slate-100 rounded px-2 py-0.5 truncate max-w-full cursor-pointer transition-colors"
@@ -1491,8 +1491,8 @@ export function FacebookAppsManagerPanel() {
                       </button>
                     </div>
                     
-                    {/* Status Column */}
-                    <div className="w-[80px] shrink-0 flex items-center gap-1">
+                    {/* Status Column - Responsive */}
+                    <div className="w-16 md:w-20 shrink-0 flex items-center gap-1">
                       <div className={`w-2 h-2 rounded-full ${
                         app.isActive ? 'bg-green-500' : 'bg-red-400'
                       }`} title={app.isActive ? 'Active' : 'Inactive'}></div>
@@ -1513,8 +1513,8 @@ export function FacebookAppsManagerPanel() {
                       )}
                     </div>
                     
-                    {/* 🎯 NEW: Group Selector */}
-                    <div className="w-[120px] shrink-0">
+                    {/* Group Selector - Responsive */}
+                    <div className="hidden lg:block flex-1 min-w-[100px] shrink-0">
                       <Select 
                         value={app.groupInfo?.groupId || "none"} 
                         onValueChange={(groupId) => updateAppGroupMutation.mutate({ appId: app.id, groupId: groupId === 'none' ? undefined : groupId })}
@@ -1540,8 +1540,8 @@ export function FacebookAppsManagerPanel() {
                       </Select>
                     </div>
                     
-                    {/* 🎯 NEW: Posting Stats Column */}
-                    <div className="w-[140px] shrink-0">
+                    {/* Posting Stats Column - Responsive */}
+                    <div className="hidden xl:block flex-1 min-w-[120px] shrink-0">
                       {app.postingStats ? (
                         <div className="flex items-center gap-1">
                           <span className="font-mono text-[9px]" title="Today/Week/Month posts">
@@ -1564,8 +1564,8 @@ export function FacebookAppsManagerPanel() {
                       )}
                     </div>
                     
-                    {/* Tags Column - Từ phải sang trái */}
-                    <div className="w-[120px] shrink-0 flex items-center justify-end gap-1 overflow-hidden">
+                    {/* Tags Column - Responsive */}
+                    <div className="hidden xl:block flex-1 min-w-[120px] shrink-0 flex items-center justify-end gap-1 overflow-hidden">
                       {app.tagIds && app.tagIds.length > 0 ? (
                         <div className="flex items-center gap-1 flex-wrap-reverse justify-end">
                           {app.tagIds.slice(0, 2).reverse().map((tagId) => {
