@@ -16,7 +16,7 @@ export function MobileHeader({
   onSearchClick, 
   onCartClick, 
   cartCount = 0, 
-  storeName = "Nhang Trầm Hương" 
+  storeName = "Nhang Sạch .Net" 
 }: MobileHeaderProps) {
   return (
     <div className="sticky top-0 z-50 bg-gradient-to-r from-green-600 to-green-700 shadow-lg">
@@ -38,15 +38,6 @@ export function MobileHeader({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          {/* Search button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSearchClick}
-            className="text-white hover:bg-white/20 p-2"
-          >
-            <Search size={20} />
-          </Button>
 
           {/* Notifications */}
           <Button
@@ -74,20 +65,6 @@ export function MobileHeader({
         </div>
       </div>
 
-      {/* Search section */}
-      <div className="px-4 pb-3">
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm sản phẩm..."
-              className="w-full pl-9 pr-3 py-2 bg-white/90 border border-white/20 rounded-lg text-gray-900 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white"
-              onClick={onSearchClick}
-            />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

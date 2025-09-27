@@ -95,7 +95,7 @@ export default function MobileStorefront() {
     },
     {
       image: heroImage2, 
-      title: "Nhang Trầm Hương Cao Cấp",
+      title: "Nhang Sạch .Net Cao Cấp",
       subtitle: "Hương Thơm Thiên Nhiên",
       description: "Từ cây trầm hương quý hiếm, mang đến không gian linh thiêng",
       cta: "Xem Sản Phẩm",
@@ -568,19 +568,10 @@ export default function MobileStorefront() {
           onSearchClick={handleHeaderSearchClick}
           onCartClick={handleHeaderCartClick}
           cartCount={getTotalItems()}
-          storeName="Nhang Trầm Hương"
+          storeName="Nhang Sạch .Net"
         />
       )}
 
-      {/* Auto-hide Search Bar */}
-      {layoutConfig.showBottomNav && (
-        <AutoHideSearchBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onFilterClick={() => setShowFilters(!showFilters)}
-          placeholder="Tìm kiếm sản phẩm..."
-        />
-      )}
 
       <main className={layoutConfig.showBottomNav ? "pb-20" : ""}>
         {renderContent()}
