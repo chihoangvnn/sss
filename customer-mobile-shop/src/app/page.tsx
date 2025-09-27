@@ -12,6 +12,7 @@ import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
+import { ProductModal } from '@/components/ProductModal';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
@@ -462,6 +463,7 @@ export default function MobileStorefront() {
 
             {/* Categories Section */}
             <div className={`${layoutConfig.contentPadding} pb-4 pt-4`}>
+              
 
               {/* Category Pills */}
               <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
@@ -585,6 +587,15 @@ export default function MobileStorefront() {
           cartCount={getTotalItems()}
         />
       )}
+
+      {/* Product Modal */}
+      <ProductModal
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onAddToCart={addToCart}
+        cart={cart}
+      />
     </div>
   );
 }
