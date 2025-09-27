@@ -10,6 +10,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from 'embla-carousel-autoplay';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
+import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
@@ -451,24 +452,8 @@ export default function MobileStorefront() {
               </Carousel>
             </div>
 
-            {/* Search and Filter Section */}
-            <div className={`${layoutConfig.contentPadding} pb-4`}>
-              <div className="flex gap-3 mb-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <Input
-                    placeholder="Tìm kiếm sản phẩm..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                    onFocus={() => setIsSearchFocused(true)}
-                    onBlur={() => setIsSearchFocused(false)}
-                  />
-                </div>
-                <Button variant="outline" size="icon">
-                  <Filter className="h-4 w-4" />
-                </Button>
-              </div>
+            {/* Categories Section */}
+            <div className={`${layoutConfig.contentPadding} pb-4 pt-4`}>
 
               {/* Category Pills */}
               <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
@@ -576,6 +561,16 @@ export default function MobileStorefront() {
           onCartClick={handleHeaderCartClick}
           cartCount={getTotalItems()}
           storeName="Nhang Trầm Hương"
+        />
+      )}
+
+      {/* Auto-hide Search Bar */}
+      {layoutConfig.showBottomNav && (
+        <AutoHideSearchBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onFilterClick={() => setShowFilters(!showFilters)}
+          placeholder="Tìm kiếm sản phẩm..."
         />
       )}
 

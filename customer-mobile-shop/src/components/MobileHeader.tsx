@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { Home, Search, ShoppingCart, Menu, Bell } from 'lucide-react';
+import { Home, Search, ShoppingCart, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -28,7 +28,7 @@ export function MobileHeader({
             size="sm" 
             className="text-white hover:bg-white/20 p-2"
           >
-            <Home className="h-5 w-5" />
+            <Home size={20} />
           </Button>
           <div>
             <h1 className="font-bold text-lg">{storeName}</h1>
@@ -45,7 +45,7 @@ export function MobileHeader({
             onClick={onSearchClick}
             className="text-white hover:bg-white/20 p-2"
           >
-            <Search className="h-5 w-5" />
+            <Search size={20} />
           </Button>
 
           {/* Notifications */}
@@ -54,7 +54,7 @@ export function MobileHeader({
             size="sm"
             className="text-white hover:bg-white/20 p-2"
           >
-            <Bell className="h-5 w-5" />
+            <Bell size={20} />
           </Button>
 
           {/* Cart with count */}
@@ -64,7 +64,7 @@ export function MobileHeader({
             onClick={onCartClick}
             className="text-white hover:bg-white/20 p-2 relative"
           >
-            <ShoppingCart className="h-5 w-5" />
+            <ShoppingCart size={20} />
             {cartCount > 0 && (
               <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0 min-w-0">
                 {cartCount > 99 ? '99+' : cartCount}
@@ -77,7 +77,7 @@ export function MobileHeader({
       {/* Breadcrumb or quick navigation */}
       <div className="px-4 pb-2">
         <div className="flex items-center gap-2 text-sm text-green-100">
-          <Home className="h-4 w-4" />
+          <Home size={16} />
           <span>/</span>
           <span>Trang chủ</span>
         </div>
