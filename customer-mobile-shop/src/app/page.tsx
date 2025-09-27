@@ -461,9 +461,18 @@ export default function MobileStorefront() {
               </Carousel>
             </div>
 
-            {/* Categories Section */}
+            {/* Search Section */}
             <div className={`${layoutConfig.contentPadding} pb-4 pt-4`}>
-              
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Input
+                  type="text"
+                  placeholder="Tìm kiếm sản phẩm..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 bg-white"
+                />
+              </div>
 
               {/* Category Pills */}
               <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
@@ -529,17 +538,27 @@ export default function MobileStorefront() {
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
+                        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
                           {product.name}
                         </h3>
-                        <div className="flex items-center justify-between">
-                          <span className="text-green-600 font-bold">
+                        <div className="mb-3">
+                          <span className="text-green-600 font-bold text-lg">
                             {product.price.toLocaleString('vi-VN')}₫
                           </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedProduct(product)}
+                            className="flex-1 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
+                          >
+                            Tìm hiểu Thêm
+                          </Button>
                           <Button 
                             size="sm"
                             onClick={() => addToCart(product)}
-                            className="bg-green-500 hover:bg-green-600"
+                            className="bg-green-500 hover:bg-green-600 w-10 h-8 p-0"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>

@@ -20,12 +20,6 @@ export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wis
       badge: null
     },
     {
-      id: 'categories',
-      label: 'Danh mục',
-      icon: Grid3X3,
-      badge: null
-    },
-    {
       id: 'calendar',
       label: 'Lịch Âm',
       icon: Calendar,
