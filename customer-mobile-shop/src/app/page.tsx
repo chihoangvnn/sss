@@ -17,8 +17,8 @@ import { useResponsive } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { formatVietnamPrice } from '@/utils/currency';
 
-// API base URL from environment or default
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
+// API base URL from environment or default  
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ed0058b6-a4d2-420f-a190-db815028cada-00-emsu2szvz22c.pike.replit.dev/api';
 
 // Banner images for slider
 const BANNER_IMAGES = [
