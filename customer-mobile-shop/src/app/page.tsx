@@ -509,7 +509,7 @@ export default function MobileStorefront() {
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                        <h3 className="font-semibold text-gray-900 mb-2 truncate">
                           {product.name}
                         </h3>
                         <div className="mb-3">
