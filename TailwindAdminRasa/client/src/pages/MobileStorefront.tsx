@@ -603,35 +603,6 @@ function MobileStorefront() {
               </div>
             </div>
             
-            {/* Quick Category Filter Below Hero */}
-            <div className="bg-white px-4 py-3 border-b border-gray-100">
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-                {categoriesLoading ? (
-                  <CategorySkeleton />
-                ) : categoriesError ? (
-                  <div className="text-red-500 text-sm px-4 py-2">
-                    Lỗi tải danh mục
-                  </div>
-                ) : (
-                  categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`
-                      flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-xs font-semibold transition-all duration-200 flex-shrink-0 border
-                      ${selectedCategory === category.id 
-                        ? 'bg-amber-500 text-white border-amber-500 shadow-md' 
-                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-amber-50 hover:text-amber-700'
-                      }
-                    `}
-                  >
-                    <span className="text-sm">{category.icon}</span>
-                    <span>{category.name}</span>
-                  </button>
-                  ))
-                )}
-              </div>
-            </div>
             
             {/* Sort Options - Moved to smaller, cleaner design */}
             <div className="bg-white border-b px-4 py-2">
