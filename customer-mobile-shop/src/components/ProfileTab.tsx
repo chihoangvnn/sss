@@ -7,6 +7,8 @@ import { User, LogIn, LogOut, Mail, Shield, ArrowLeft, Package, Heart, MapPin, B
 import { OrderHistory } from '@/components/OrderHistory';
 import { VipTierCard } from '@/components/VipTierCard';
 import { calculateVipStatus } from '@/utils/vipCalculator';
+import { useQuery } from '@tanstack/react-query';
+import { fetchOrders } from '@/lib/orderApi';
 
 interface Product {
   id: string;
@@ -28,6 +30,23 @@ interface ProfileTabProps {
 export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const [activeView, setActiveView] = useState<'profile' | 'orders' | 'wishlist' | 'shipping' | 'notifications'>('profile');
+
+  // Fetch real order history to calculate total spent - MUST be called before any conditional returns
+  const { data: orders = [], isLoading: isLoadingOrders, error: ordersError } = useQuery({
+    queryKey: ['orders'],
+    queryFn: fetchOrders,
+    enabled: isAuthenticated, // Only fetch when user is authenticated
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1, // Only retry once on failure
+  });
+
+  // Calculate real total spent from delivered orders
+  const totalSpent = orders
+    .filter(order => order.status === 'delivered') // Only count delivered orders
+    .reduce((sum, order) => sum + order.total, 0);
+
+  // Calculate VIP status based on real purchase history
+  const vipProgress = calculateVipStatus(totalSpent);
 
   if (isLoading) {
     return (
@@ -129,11 +148,6 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
     );
   }
 
-  // Calculate VIP status based on mock total spent
-  // In a real app, this would come from user's purchase history
-  const mockTotalSpent = 2500000; // 2.5M VND - demo user at Silver tier progressing to Gold
-  const vipProgress = calculateVipStatus(mockTotalSpent);
-
   // Profile overview (default view)
   return (
     <div className="p-4 pt-6">
@@ -179,7 +193,23 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
       </div>
 
       {/* VIP Tier System */}
-      <VipTierCard vipProgress={vipProgress} />
+      {isLoadingOrders ? (
+        <div className="bg-white rounded-xl p-6 mb-4 animate-pulse">
+          <div className="h-32 bg-gray-200 rounded-lg mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      ) : ordersError ? (
+        <div className="bg-white rounded-xl p-6 mb-4">
+          <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <p className="text-yellow-700 text-sm">
+              Không thể tải thông tin cấp độ. Hãy thử lại sau.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <VipTierCard vipProgress={vipProgress} />
+      )}
 
       {/* Account Features */}
       <div className="bg-white rounded-xl p-6">
