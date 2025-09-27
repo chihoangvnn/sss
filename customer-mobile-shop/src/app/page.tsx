@@ -9,6 +9,7 @@ import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { DesktopHeader } from '@/components/DesktopHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
+import { HiddenSearchBar } from '@/components/HiddenSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
@@ -743,6 +744,15 @@ export default function MobileStorefront() {
       {/* Auto Hide Search Bar - Mobile only */}
       {isMobile && activeTab === 'home' && (
         <AutoHideSearchBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          placeholder="Tìm kiếm sản phẩm..."
+        />
+      )}
+
+      {/* Hidden Search Bar - Desktop only */}
+      {!isMobile && (
+        <HiddenSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           placeholder="Tìm kiếm sản phẩm..."
