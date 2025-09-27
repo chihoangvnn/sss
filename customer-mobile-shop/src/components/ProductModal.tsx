@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Plus, Minus, Star, ShoppingCart, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatVietnamPrice } from '@/utils/currency';
 
 interface Product {
   id: string;
@@ -98,7 +99,7 @@ export function ProductModal({ product, isOpen, onClose, onAddToCart, cart }: Pr
                 </h1>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-bold text-green-600">
-                    {product.price.toLocaleString('vi-VN')}₫
+                    {formatVietnamPrice(product.price)}
                   </span>
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />

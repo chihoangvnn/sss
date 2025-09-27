@@ -4,8 +4,9 @@
  * @returns Formatted price string with ₫ symbol
  */
 export function formatVietnamPrice(price: number): string {
-  // Use en-US locale for comma separators, then add Vietnamese currency symbol
-  return price.toLocaleString('en-US') + '₫';
+  // Ensure we're working with integer, remove decimals and format with commas
+  const integerPrice = Math.round(price);
+  return integerPrice.toLocaleString('en-US') + '₫';
 }
 
 /**
