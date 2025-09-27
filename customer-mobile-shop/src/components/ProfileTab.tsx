@@ -6,7 +6,24 @@ import { Button } from '@/components/ui/button';
 import { User, LogIn, LogOut, Mail, Shield, ArrowLeft, Package, Heart, MapPin, Bell } from 'lucide-react';
 import { OrderHistory } from '@/components/OrderHistory';
 
-export function ProfileTab() {
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image?: string;
+  media?: string;
+  category_id: string;
+  stock: number;
+  short_description?: string;
+  status: string;
+}
+
+interface ProfileTabProps {
+  addToCart?: (product: Product) => void;
+  setActiveTab?: (tab: string) => void;
+}
+
+export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
   const [activeView, setActiveView] = useState<'profile' | 'orders' | 'wishlist' | 'shipping' | 'notifications'>('profile');
 
@@ -105,7 +122,7 @@ export function ProfileTab() {
           <h1 className="text-xl font-semibold text-gray-900">Lịch sử đơn hàng</h1>
         </div>
         
-        <OrderHistory />
+        <OrderHistory addToCart={addToCart} setActiveTab={setActiveTab} />
       </div>
     );
   }

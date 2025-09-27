@@ -93,11 +93,25 @@ const ORDER_STATUS_CONFIG = {
   }
 };
 
-interface OrderHistoryProps {
-  className?: string;
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image?: string;
+  media?: string;
+  category_id: string;
+  stock: number;
+  short_description?: string;
+  status: string;
 }
 
-export function OrderHistory({ className = '' }: OrderHistoryProps) {
+interface OrderHistoryProps {
+  className?: string;
+  addToCart?: (product: Product) => void;
+  setActiveTab?: (tab: string) => void;
+}
+
+export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderHistoryProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
@@ -153,6 +167,40 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
 
   const toggleOrderDetails = (orderId: string) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
+  };
+
+  // Handle "Mua Lại" functionality
+  const handleBuyAgain = (order: Order) => {
+    if (!addToCart || !setActiveTab) {
+      console.warn('addToCart or setActiveTab functions not available');
+      return;
+    }
+
+    // Convert order items to Product objects and add to cart
+    order.items.forEach((item: Order['items'][0]) => {
+      const product: Product = {
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        media: item.image, // Use image as media fallback
+        category_id: 'general', // Default category
+        stock: 999, // Assume in stock
+        short_description: `Sản phẩm từ đơn hàng #${order.orderNumber}`,
+        status: 'active'
+      };
+
+      // Add each item to cart with original quantity
+      for (let i = 0; i < item.quantity; i++) {
+        addToCart(product);
+      }
+    });
+
+    // Switch to cart tab to show added items
+    setActiveTab('cart');
+    
+    // Optional: Show success message (could be enhanced later)
+    console.log(`Đã thêm ${order.items.length} sản phẩm từ đơn #${order.orderNumber} vào giỏ hàng`);
   };
 
   return (
@@ -280,7 +328,7 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
                     variant="outline"
                     size="sm"
                     className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
-                    onClick={() => console.log('Buy again', order.id)}
+                    onClick={() => handleBuyAgain(order)}
                   >
                     Mua Lại
                   </Button>

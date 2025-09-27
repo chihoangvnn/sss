@@ -569,7 +569,7 @@ export default function MobileStorefront() {
         return <FullScreenLunarCalendar />;
 
       case 'profile':
-        return <ProfileTab />;
+        return <ProfileTab addToCart={addToCart} setActiveTab={setActiveTab} />;
 
 
       default: // 'home'
