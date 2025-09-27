@@ -43,11 +43,11 @@ export function VipTierCard({ vipProgress }: VipTierCardProps) {
             </div>
           </div>
           
-          <div className="text-right">
-            <div className={`text-lg font-bold ${currentTier.textColor} text-center`}>
+          <div className="text-right max-w-32">
+            <div className={`text-sm font-bold ${currentTier.textColor} text-center leading-tight mb-1`}>
               {currentTier.motivationalTitle}
             </div>
-            <div className={`text-xs ${currentTier.textColor} opacity-90 text-center`}>
+            <div className={`text-xs ${currentTier.textColor} opacity-90 text-center leading-tight`}>
               {currentTier.motivationalSubtitle}
             </div>
           </div>
