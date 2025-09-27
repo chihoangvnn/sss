@@ -42,10 +42,8 @@ import type { Customer, Order } from "@shared/schema";
 // Extended Customer type matching the CustomerList interface
 interface CustomerWithStats extends Customer {
   totalOrders: number;
-  totalSpent: number;
+  totalSpent: string; // Matches schema decimal type
   lastOrderDate: string;
-  totalDebt: string;
-  creditLimit: string;
 }
 
 // Order type with customer info for table display
@@ -168,10 +166,11 @@ export default function CustomerDetails() {
   };
 
   // Calculate additional stats from orders
+  const calculatedTotalSpent = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
   const stats = {
     totalOrders: orders.length,
-    totalSpent: orders.reduce((sum, order) => sum + parseFloat(order.total), 0),
-    averageOrderValue: orders.length > 0 ? orders.reduce((sum, order) => sum + parseFloat(order.total), 0) / orders.length : 0,
+    totalSpent: calculatedTotalSpent,
+    averageOrderValue: orders.length > 0 ? calculatedTotalSpent / orders.length : 0,
     lastOrderDate: orders.length > 0 ? orders.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())[0].createdAt : null,
   };
 
@@ -225,224 +224,193 @@ export default function CustomerDetails() {
   }
 
   return (
-    <div className="p-6" data-testid="page-customer-details">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => setLocation('/customers')}
-            data-testid="button-back-to-customers"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Quay lại danh sách
-          </Button>
-          
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">Chi tiết khách hàng</h1>
-            <p className="text-muted-foreground">
-              Tham gia ngày {formatDate(customer.joinDate)}
-            </p>
+    <div className="p-4" data-testid="page-customer-details">
+      {/* Compact Header */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setLocation('/customers')}
+              data-testid="button-back-to-customers"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Quay lại
+            </Button>
+            <h1 className="text-xl font-bold">Chi tiết khách hàng</h1>
+            {getStatusBadge(customer.status)}
           </div>
 
           <div className="flex gap-2">
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => setIsEditFormOpen(true)}
               data-testid="button-edit-customer"
             >
-              <Edit className="h-4 w-4 mr-2" />
-              Chỉnh sửa
+              <Edit className="h-3 w-3 mr-1" />
+              Sửa
             </Button>
             <Button 
               variant="destructive" 
+              size="sm"
               onClick={() => setIsDeleteDialogOpen(true)}
               data-testid="button-delete-customer"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-3 w-3 mr-1" />
               Xóa
             </Button>
           </div>
         </div>
-
-        <div className="flex items-center gap-4">
-          {getStatusBadge(customer.status)}
-        </div>
       </div>
 
-      {/* Customer Information Card */}
-      <Card className="mb-6" data-testid="card-customer-info">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
+      {/* Compact Customer Information */}
+      <Card className="mb-4" data-testid="card-customer-info">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="h-4 w-4" />
             Thông tin khách hàng
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-start gap-6">
-            <Avatar className="h-20 w-20">
+        <CardContent className="pt-2">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-12 w-12">
               <AvatarImage src={customer.avatar || ""} />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className="text-sm">
                 {getInitials(customer.name)}
               </AvatarFallback>
             </Avatar>
             
-            <div className="flex-1 space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold">{customer.name}</h2>
-                <div className="flex items-center gap-4 mt-2 text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    {customer.email}
-                  </div>
-                  {customer.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      {customer.phone}
-                    </div>
-                  )}
+            <div className="flex-1">
+              <h2 className="text-lg font-bold">{customer.name}</h2>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  {customer.email}
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4" />
-                <span>Tham gia: {formatDate(customer.joinDate)}</span>
+                {customer.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {customer.phone}
+                  </div>
+                )}
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {formatShortDate(customer.joinDate)}
+                </div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Statistics Cards */}
-      <div className="grid gap-6 md:grid-cols-3 mb-6">
+      {/* Compact Statistics Grid */}
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-5 mb-4">
         <Card data-testid="card-total-orders">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Tổng đơn hàng
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              Đơn hàng đã đặt
-            </p>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <ShoppingCart className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Đơn hàng</span>
+            </div>
+            <div className="text-lg font-bold">{stats.totalOrders}</div>
           </CardContent>
         </Card>
         
         <Card data-testid="card-total-spent">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Tổng chi tiêu
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(stats.totalSpent)}</div>
-            <p className="text-xs text-muted-foreground">
-              Giá trị đơn hàng
-            </p>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Chi tiêu</span>
+            </div>
+            <div className="text-lg font-bold">{formatPrice(stats.totalSpent)}</div>
           </CardContent>
         </Card>
         
         <Card data-testid="card-average-order">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Giá trị TB/đơn
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(stats.averageOrderValue)}</div>
-            <p className="text-xs text-muted-foreground">
-              Trung bình mỗi đơn hàng
-            </p>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">TB/đơn</span>
+            </div>
+            <div className="text-lg font-bold">{formatPrice(stats.averageOrderValue)}</div>
           </CardContent>
         </Card>
 
         <Card data-testid="card-total-debt">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Công nợ hiện tại
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${parseFloat(customer.totalDebt || '0') > 0 ? 'text-red-600' : 'text-green-600'}`}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Receipt className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Công nợ</span>
+            </div>
+            <div className={`text-lg font-bold ${parseFloat(customer.totalDebt || '0') > 0 ? 'text-red-600' : 'text-green-600'}`}>
               {formatPrice(parseFloat(customer.totalDebt || '0'))}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Tổng số tiền nợ
-            </p>
           </CardContent>
         </Card>
 
         <Card data-testid="card-credit-limit">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Hạn mức tín dụng
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <CreditCard className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Hạn mức</span>
+            </div>
+            <div className="text-lg font-bold text-blue-600">
               {formatPrice(parseFloat(customer.creditLimit || '0'))}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Giới hạn trả sau
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Order History */}
+      {/* Compact Order History */}
       <Card data-testid="card-order-history">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Package className="h-4 w-4" />
             Lịch sử đơn hàng ({orders.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {ordersLoading ? (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-8 w-full" />
               ))}
             </div>
           ) : orders.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Đơn hàng</TableHead>
-                    <TableHead>Ngày đặt</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Số lượng</TableHead>
-                    <TableHead className="text-right">Tổng tiền</TableHead>
-                    <TableHead className="text-center">Hành động</TableHead>
+                  <TableRow className="border-b">
+                    <TableHead className="h-8 px-2 text-xs">Đơn hàng</TableHead>
+                    <TableHead className="h-8 px-2 text-xs">Ngày</TableHead>
+                    <TableHead className="h-8 px-2 text-xs">Trạng thái</TableHead>
+                    <TableHead className="h-8 px-2 text-xs">SP</TableHead>
+                    <TableHead className="h-8 px-2 text-xs text-right">Tổng tiền</TableHead>
+                    <TableHead className="h-8 px-2 text-xs text-center">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {orders.map((order) => (
-                    <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
-                      <TableCell className="font-medium">
-                        #{order.id.slice(-8)}
+                    <TableRow key={order.id} data-testid={`order-row-${order.id}`} className="border-b">
+                      <TableCell className="px-2 py-2 text-sm font-medium">
+                        #{order.id.slice(-6)}
                       </TableCell>
-                      <TableCell>{formatShortDate(order.createdAt)}</TableCell>
-                      <TableCell>{getOrderStatusBadge(order.status)}</TableCell>
-                      <TableCell>{order.items} sản phẩm</TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="px-2 py-2 text-sm">{formatShortDate(order.createdAt)}</TableCell>
+                      <TableCell className="px-2 py-2">{getOrderStatusBadge(order.status)}</TableCell>
+                      <TableCell className="px-2 py-2 text-sm">{order.items}</TableCell>
+                      <TableCell className="px-2 py-2 text-sm text-right font-medium">
                         {formatPrice(order.total)}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="px-2 py-2 text-center">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleViewOrder(order.id)}
                           data-testid={`button-view-order-${order.id}`}
+                          className="h-6 w-6 p-0"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3 w-3" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -451,9 +419,9 @@ export default function CustomerDetails() {
               </Table>
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Khách hàng chưa có đơn hàng nào</p>
+            <div className="text-center py-4 text-muted-foreground">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Chưa có đơn hàng</p>
             </div>
           )}
         </CardContent>
