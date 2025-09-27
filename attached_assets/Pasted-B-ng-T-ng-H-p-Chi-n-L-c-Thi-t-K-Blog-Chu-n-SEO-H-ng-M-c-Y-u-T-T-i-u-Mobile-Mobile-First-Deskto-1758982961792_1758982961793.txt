@@ -1,0 +1,25 @@
+Bảng Tổng Hợp Chiến Lược Thiết Kế Blog Chuẩn SEO
+Hạng Mục	Yếu Tố Tối Ưu	Mobile (Mobile-First)	Desktop
+I. SEO Kỹ Thuật (Technical)	Tốc độ Tải trang (Core Web Vitals)	Ưu tiên hàng đầu. Nén ảnh, Lazy Load, Minify CSS/JS, loại bỏ Render-Blocking Resources.	Đánh giá và tối ưu song song với Mobile. Sử dụng CDN và Cache hiệu quả.
+Responsive Design	Đảm bảo bố cục hiển thị hoàn hảo (vì đã có sẵn giao diện).	Giới hạn chiều rộng nội dung (≈ 700-800px) để dễ đọc.
+Cấu trúc URL	Ngắn, chứa từ khóa chính, không dấu.	Áp dụng chung, là nền tảng SEO.
+Schema Markup	Triển khai Schema Article, FAQPage, và đặc biệt là CodeSample để hiển thị Rich Snippet.	Áp dụng chung.
+II. Cấu Trúc On-Page	Thẻ Heading (H1, H2, H3)	Duy nhất H1 (Tiêu đề bài viết). Phân cấp H2,H3 logic, chứa từ khóa phụ (LSI Keywords).	Áp dụng chung, đảm bảo tính ngữ nghĩa (Semantic HTML).
+Meta Tags	Tối ưu Title (≤65 ký tự) và Description (≤160 ký tự) để tăng CTR.	Áp dụng chung.
+Internal Link	Xây dựng hệ thống liên kết nội bộ chặt chẽ (Hub & Spoke), sử dụng Anchor Text tự nhiên.	Áp dụng chung, dùng Anchor Text mô tả nội dung đích.
+Breadcrumbs	Bắt buộc có, nằm ngay dưới Header để tiết kiệm không gian và hỗ trợ lập chỉ mục.	Hiển thị rõ ràng trên đầu trang.
+III. Trải Nghiệm Người Dùng (UX/UI)	Menu/Navigation	Menu Hamburger (☰), dễ dàng thao tác.	Menu ngang, có thể sử dụng Mega Menu để phân loại các Framework/Chủ đề.
+Sidebar	Có thể ẩn hoặc đẩy xuống cuối nội dung chính.	Hiển thị vĩnh viễn (Sticky Sidebar), chứa Mục lục bài viết (Table of Contents) và các Internal Link quan trọng.
+Code Block	Thiết kế dễ nhìn, có thanh cuộn ngang nếu cần.	Tối ưu hiển thị rộng, thêm nút Copy Code nổi bật, Syntax Highlighting chất lượng cao.
+Khả năng Đọc	Font ≥16px, độ tương phản cao.	Tăng Font size (≥18px), Line Height tối ưu (1.5-1.6 lần) để giảm mỏi mắt khi đọc nội dung dài.
+
+Xuất sang Trang tính
+Tóm lại:
+
+Vì bạn đã có giao diện Mobile, hãy tập trung vào:
+
+Technical SEO (Tốc độ): Đẩy điểm Google PageSpeed Insights lên tối đa (cả Mobile và Desktop).
+
+Cấu trúc Nội dung (On-Page): Đảm bảo H1,H2,H3 và Schema Markup được triển khai hoàn hảo.
+
+UX Desktop: Tận dụng không gian rộng để hiển thị Mục lục (ToC) cố định và tối ưu Code Block để phục vụ tốt nhất đối tượng lập trình viên.
