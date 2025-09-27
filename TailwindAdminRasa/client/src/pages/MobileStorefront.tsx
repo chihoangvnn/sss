@@ -69,6 +69,10 @@ function MobileStorefront() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const autoSlideRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Touch/swipe state for mobile gestures
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  
   // Hero slides data for Vietnamese incense business
   const heroSlides = [
     {
@@ -109,6 +113,32 @@ function MobileStorefront() {
     setCurrentSlide(index);
     startAutoSlide(); // Reset auto-slide timer
   }, [startAutoSlide]);
+  
+  // Touch handlers for swipe gestures
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null); // otherwise the swipe is fired even with usual touch events
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      // Swipe left - next slide
+      goToSlide((currentSlide + 1) % heroSlides.length);
+    } else if (isRightSwipe) {
+      // Swipe right - previous slide  
+      goToSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length);
+    }
+  };
   
   // Start auto-slide on component mount and cleanup on unmount
   useEffect(() => {
@@ -492,7 +522,12 @@ function MobileStorefront() {
             {/* Hero Carousel for Vietnamese Incense Business */}
             <div className="relative bg-gray-900 overflow-hidden">
               {/* Carousel Container */}
-              <div className="relative h-64 sm:h-80">
+              <div 
+                className="relative h-44 sm:h-56"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
                 <div 
                   className="flex transition-transform duration-500 ease-out h-full"
                   style={{ transform: `translateX(-${currentSlide * 100}%)` }}
