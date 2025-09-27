@@ -33,6 +33,7 @@ import express from 'express';
 import { postScheduler } from './services/post-scheduler';
 import bulkUploadRoutes from './routes/bulk-upload';
 import facebookAppsRouter from './api/facebook-apps';
+import { requireAuth as requireReplitAuth, getCurrentUser, logout, replitAuth, upsertAuthUser } from './replitAuth';
 import productsRouter from './api/products';
 import productFAQsRouter from './api/product-faqs';
 import aiContentRouter from './api/ai-content';
@@ -471,6 +472,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "unhealthy",
         error: error instanceof Error ? error.message : String(error)
       });
+    }
+  });
+
+  // 🔐 REPLIT AUTH ROUTES - Social Login & Membership System
+  app.get("/api/auth/user", getCurrentUser);
+  app.post("/api/auth/logout", logout);
+
+  // 🚀 REPLIT OAUTH FLOW - Initiation & Callback Routes
+  app.get("/auth/replit", async (req, res) => {
+    try {
+      // Generate CSRF state parameter
+      const state = replitAuth.generateState();
+      const redirectUrl = req.query.redirect as string;
+      
+      // Store state for verification
+      oauthStates.set(state, { 
+        timestamp: Date.now(),
+        redirectUrl: redirectUrl || '/admin',
+        platform: 'replit'
+      });
+      
+      // Generate authorization URL
+      const authUrl = replitAuth.getAuthorizationUrl(state);
+      
+      console.log('🔐 Replit OAuth initiation:', { authUrl, state: state.substring(0, 8) + '...' });
+      
+      // Redirect to Replit OAuth
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error("Error initiating Replit OAuth:", error);
+      res.status(500).json({ 
+        error: "Failed to initiate Replit authentication",
+        message: "Please try again later"
+      });
+    }
+  });
+
+  app.get("/auth/replit/callback", async (req, res) => {
+    try {
+      const { code, state, error, error_description } = req.query;
+
+      // Handle OAuth error from Replit
+      if (error) {
+        console.error("Replit OAuth error:", error, error_description);
+        const errorMessage = error === 'access_denied' ? 'Access was denied' : 'Authentication failed';
+        return res.redirect(`/admin?error=${encodeURIComponent(errorMessage)}`);
+      }
+
+      // Validate state parameter for CSRF protection
+      if (!state || !oauthStates.has(state as string)) {
+        console.error("Invalid or missing OAuth state parameter");
+        return res.redirect('/admin?error=security_error');
+      }
+
+      const stateData = oauthStates.get(state as string)!;
+      oauthStates.delete(state as string); // Use state only once
+
+      if (!code) {
+        console.error("Authorization code missing from Replit response");
+        return res.redirect('/admin?error=auth_failed');
+      }
+
+      // Exchange code for access token
+      const tokenData = await replitAuth.exchangeCodeForToken(code as string);
+      
+      // Get user profile from Replit
+      const userProfile = await replitAuth.getUserProfile(tokenData.access_token);
+      
+      console.log('🎉 Replit OAuth success:', { 
+        userId: userProfile.id, 
+        email: userProfile.email,
+        username: userProfile.username 
+      });
+
+      // Sync user with database and link to customer record
+      const { authUser, customer } = await upsertAuthUser({
+        id: userProfile.id,
+        email: userProfile.email,
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        profileImageUrl: userProfile.profileImageUrl,
+      });
+
+      // Set user in session for future requests
+      (req.session as any).authUserId = authUser.id;
+      req.user = {
+        id: authUser.id,
+        email: authUser.email,
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
+        profileImageUrl: authUser.profileImageUrl,
+      };
+
+      console.log('✅ User authenticated and synced:', {
+        authUserId: authUser.id,
+        customerId: customer?.id,
+        membershipTier: customer?.membershipTier
+      });
+
+      // Redirect to intended destination or default
+      const redirectUrl = stateData.redirectUrl || '/admin';
+      res.redirect(`${redirectUrl}?auth=success`);
+      
+    } catch (error) {
+      console.error("Replit OAuth callback error:", error);
+      res.redirect('/admin?error=auth_failed');
     }
   });
 

@@ -92,6 +92,40 @@ app.use(session({
   name: 'admin.session' // Custom session name
 }));
 
+// 🔐 SESSION RESTORATION MIDDLEWARE - Restore authenticated user from session
+app.use(async (req: any, res: any, next: any) => {
+  if (req.session?.authUserId && !req.user) {
+    try {
+      const { db } = await import('./db');
+      const { authUsers, customers } = await import('../shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Get auth user from session
+      const authUserData = await db
+        .select()
+        .from(authUsers)
+        .where(eq(authUsers.id, req.session.authUserId))
+        .limit(1);
+
+      if (authUserData.length > 0) {
+        const authUser = authUserData[0];
+        req.user = {
+          id: authUser.id,
+          email: authUser.email,
+          firstName: authUser.firstName,
+          lastName: authUser.lastName,
+          profileImageUrl: authUser.profileImageUrl,
+        };
+      }
+    } catch (error) {
+      console.error('Session restoration error:', error);
+      // Clear invalid session
+      delete req.session.authUserId;
+    }
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

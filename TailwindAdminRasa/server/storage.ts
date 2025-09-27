@@ -8,6 +8,7 @@ import {
   accountGroups, groupAccounts, workers, workerJobs, workerHealthChecks,
   productFAQs, productPolicies, productPolicyAssociations,
   abebooksAccounts, abebooksListings, abebooksSearchHistory,
+  sessions, authUsers,
   type User, type InsertUser, type Product, type InsertProduct, 
   type Customer, type InsertCustomer, type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem, type SocialAccount, type InsertSocialAccount,
@@ -40,7 +41,8 @@ import {
   type Worker, type InsertWorker, type WorkerJob, type InsertWorkerJob,
   type AbebooksAccount, type InsertAbebooksAccount,
   type AbebooksListing, type InsertAbebooksListing,
-  type AbebooksSearchHistory, type InsertAbebooksSearchHistory
+  type AbebooksSearchHistory, type InsertAbebooksSearchHistory,
+  type AuthUser, type UpsertAuthUser
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sum, sql, ilike, or, gte, lte, isNull, inArray } from "drizzle-orm";
@@ -50,6 +52,15 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  // 🔐 Auth methods (Replit Auth integration)
+  getAuthUser(id: string): Promise<AuthUser | undefined>;
+  getAuthUserByEmail(email: string): Promise<AuthUser | undefined>;
+  createAuthUser(user: UpsertAuthUser): Promise<AuthUser>;
+  updateAuthUser(id: string, user: Partial<UpsertAuthUser>): Promise<AuthUser | undefined>;
+  deleteAuthUser(id: string): Promise<boolean>;
+  linkCustomerToAuthUser(customerId: string, authUserId: string): Promise<Customer | undefined>;
+  getCustomerByAuthUser(authUserId: string): Promise<Customer | undefined>;
 
   // Industry methods
   getIndustries(): Promise<Industry[]>;
@@ -354,6 +365,51 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  // 🔐 Auth methods implementation (Replit Auth integration)
+  async getAuthUser(id: string): Promise<AuthUser | undefined> {
+    const [authUser] = await db.select().from(authUsers).where(eq(authUsers.id, id));
+    return authUser || undefined;
+  }
+
+  async getAuthUserByEmail(email: string): Promise<AuthUser | undefined> {
+    if (!email) return undefined;
+    const [authUser] = await db.select().from(authUsers).where(eq(authUsers.email, email));
+    return authUser || undefined;
+  }
+
+  async createAuthUser(user: UpsertAuthUser): Promise<AuthUser> {
+    const [authUser] = await db.insert(authUsers).values(user).returning();
+    return authUser;
+  }
+
+  async updateAuthUser(id: string, user: Partial<UpsertAuthUser>): Promise<AuthUser | undefined> {
+    const [updatedUser] = await db
+      .update(authUsers)
+      .set({ ...user, updatedAt: new Date() })
+      .where(eq(authUsers.id, id))
+      .returning();
+    return updatedUser || undefined;
+  }
+
+  async deleteAuthUser(id: string): Promise<boolean> {
+    const result = await db.delete(authUsers).where(eq(authUsers.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async linkCustomerToAuthUser(customerId: string, authUserId: string): Promise<Customer | undefined> {
+    const [updatedCustomer] = await db
+      .update(customers)
+      .set({ authUserId: authUserId })
+      .where(eq(customers.id, customerId))
+      .returning();
+    return updatedCustomer || undefined;
+  }
+
+  async getCustomerByAuthUser(authUserId: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(eq(customers.authUserId, authUserId));
+    return customer || undefined;
   }
 
   // Industry methods
