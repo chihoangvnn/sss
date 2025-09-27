@@ -9,7 +9,7 @@ import { formatVietnamPrice } from '@/utils/currency';
 export interface Order {
   id: string;
   orderNumber: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered';
+  status: 'shipped' | 'delivered';
   date: string;
   total: number;
   items: Array<{
@@ -53,7 +53,7 @@ const MOCK_ORDERS: Order[] = [
   {
     id: '3',
     orderNumber: 'DH240927002',
-    status: 'processing',
+    status: 'shipped',
     date: '2024-09-27',
     total: 450000,
     items: [
@@ -64,33 +64,32 @@ const MOCK_ORDERS: Order[] = [
   {
     id: '4',
     orderNumber: 'DH240927003',
-    status: 'pending',
+    status: 'delivered',
     date: '2024-09-27',
     total: 320000,
     items: [
       { id: '5', name: 'Cung Ram tháng 7', quantity: 1, price: 320000 }
     ],
     shippingAddress: 'Quận 2, TP.HCM'
+  },
+  {
+    id: '5',
+    orderNumber: 'DH240926010',
+    status: 'shipped',
+    date: '2024-09-24',
+    total: 680000,
+    items: [
+      { id: '6', name: 'Lư đồng hương cao cấp', quantity: 1, price: 450000 },
+      { id: '7', name: 'Nhang trầm Huế', quantity: 1, price: 230000 }
+    ],
+    shippingAddress: 'Quận 10, TP.HCM',
+    estimatedDelivery: '2024-09-26'
   }
 ];
 
 const ORDER_STATUS_CONFIG = {
-  pending: {
-    label: 'Chờ xử lý',
-    color: 'bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-700 border-yellow-200/50',
-    icon: Clock,
-    iconColor: 'text-yellow-600',
-    dotColor: 'bg-yellow-400'
-  },
-  processing: {
-    label: 'Đang xử lý',
-    color: 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200/50',
-    icon: Package,
-    iconColor: 'text-blue-600',
-    dotColor: 'bg-blue-400'
-  },
   shipped: {
-    label: 'Đã gửi',
+    label: 'Đã gởi',
     color: 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200/50',
     icon: Truck,
     iconColor: 'text-orange-600',
