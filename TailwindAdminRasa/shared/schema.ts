@@ -243,6 +243,46 @@ export interface ProductConsultationData {
   // "bảo quản": "Nơi khô ráo, thoáng mát"
 }
 
+// 🎯 APPROACH 2: DYNAMIC PRODUCT FIELDS - Custom Descriptions System
+export type FieldType = "text" | "textarea" | "list" | "rich_text";
+export type FieldCategory = "main" | "technical" | "cultural" | "sales" | "spiritual";
+
+export interface CustomDescriptionField {
+  label: string;                        // "Xuất xứ đặc biệt"
+  value: string | string[];             // Content
+  type: FieldType;                      // Type of field
+  displayOrder: number;                 // Display order
+  category: FieldCategory;              // Grouping category
+  icon?: string;                        // Optional icon ("🙏", "🔥", "🌿")
+  required?: boolean;                   // Whether field is required
+  // System-wide metadata for cross-platform integration
+  contexts?: ("storefront" | "chatbot" | "social" | "seo")[];
+  priority?: "high" | "medium" | "low"; // Priority for different contexts
+}
+
+export interface CustomDescriptionData {
+  version: number;                      // Versioning for compatibility
+  fields: {
+    [fieldKey: string]: CustomDescriptionField;
+  };
+}
+
+// Template system for categories
+export interface CustomDescriptionTemplate {
+  templateName: string;                 // "Nhang Thờ Cúng Standard"
+  fieldTemplate: {
+    [fieldKey: string]: {
+      label: string;
+      type: FieldType;
+      category: FieldCategory;
+      required: boolean;
+      placeholder?: string;
+      defaultValue?: string;
+      icon?: string;
+    };
+  };
+}
+
 // 🚀 ADVANCED SALES TECHNIQUES INTERFACES
 
 // 1. Urgency - Tạo cảm giác khẩn cấp
@@ -786,11 +826,29 @@ export const products = pgTable("products", {
     "improvement_areas": [],
     "optimization_suggestions": []
   }'::jsonb`),
+
+  // 🎯 APPROACH 2: DYNAMIC CUSTOM DESCRIPTIONS - System-wide Integration
+  customDescriptions: jsonb("custom_descriptions").$type<CustomDescriptionData>().default(sql`'{
+    "version": 1,
+    "fields": {}
+  }'::jsonb`),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Custom Description Templates table - For category-based templates
+export const customDescriptionTemplates = pgTable("custom_description_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").references(() => categories.id),
+  templateName: text("template_name").notNull(), // "Nhang Thờ Cúng Standard"
+  description: text("description"), // Template description
+  fieldTemplate: jsonb("field_template").$type<CustomDescriptionTemplate["fieldTemplate"]>().default(sql`'{}'::jsonb`),
+  isActive: boolean("is_active").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false), // Default template for category
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Customers table
 export const customers = pgTable("customers", {

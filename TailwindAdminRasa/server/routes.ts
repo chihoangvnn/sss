@@ -4038,6 +4038,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/products", productsRouter);
   
   // ==========================================
+  // 🎯 CUSTOM DESCRIPTIONS API ROUTES (Approach 2: Dynamic Product Fields)
+  // ==========================================
+  // Dynamic custom description system for Vietnamese incense business
+  // Serves Admin Panel, Storefront, RASA Chatbot, Social Media, SEO
+  const customDescriptionsRouter = (await import("./api/custom-descriptions")).default;
+  app.use("/api", customDescriptionsRouter);
+  
+  // ==========================================
   // 🎨 Theme Repository Management API
   // ==========================================
   app.use("/api/themes", themesRouter);

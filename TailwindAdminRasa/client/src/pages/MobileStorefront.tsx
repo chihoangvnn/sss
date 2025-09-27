@@ -600,7 +600,7 @@ function MobileStorefront() {
             
             {/* Sort Options - Moved to smaller, cleaner design */}
             <div className="bg-white border-b px-4 py-2">
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                   <button
                     onClick={() => setShowFilters(!showFilters)}
                     className="flex items-center gap-2 px-3 py-2 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors text-sm"
@@ -752,7 +752,6 @@ function MobileStorefront() {
             </div>
           </div>
         );
-    }
   };
 
   const renderProductCard = (product: Product) => (
