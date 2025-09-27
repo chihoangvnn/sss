@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
+import { MobileHeader } from '@/components/MobileHeader';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
@@ -242,6 +243,22 @@ export default function MobileStorefront() {
   const handleCloseCart = () => {
     setShowCart(false);
     setActiveTab('home');
+  };
+
+  const handleHeaderSearchClick = () => {
+    setActiveTab('home');
+    // Focus search input if it exists
+    setTimeout(() => {
+      const searchInput = document.querySelector('input[placeholder*="Tìm kiếm"]') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
+
+  const handleHeaderCartClick = () => {
+    setActiveTab('cart');
   };
 
   const renderContent = () => {
@@ -552,7 +569,17 @@ export default function MobileStorefront() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="pb-20">
+      {/* Mobile Header */}
+      {layoutConfig.showBottomNav && (
+        <MobileHeader
+          onSearchClick={handleHeaderSearchClick}
+          onCartClick={handleHeaderCartClick}
+          cartCount={getTotalItems()}
+          storeName="Nhang Trầm Hương"
+        />
+      )}
+
+      <main className={layoutConfig.showBottomNav ? "pb-20" : ""}>
         {renderContent()}
       </main>
 
