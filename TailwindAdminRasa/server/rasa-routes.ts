@@ -3,6 +3,7 @@ import { storage } from './storage';
 import { firebaseStorage } from './firebase-storage';
 import { RasaDescriptions, ConsultationType } from '../shared/schema';
 import { z } from 'zod';
+import { ProductDescriptionService } from './services/product-description-service';
 
 // Authentication middleware for RASA endpoints
 const requireSessionAuth = (req: any, res: any, next: any) => {
@@ -614,14 +615,17 @@ export function setupRasaRoutes(app: Express) {
   // === PRODUCT DESCRIPTION MANAGEMENT APIs ===
 
   /**
+   * 🤖 ENHANCED RASA Product Description API with Custom Fields Support
    * GET /api/rasa/products/:productId/description
-   * Lấy mô tả sản phẩm cho RASA - random hoặc theo context
-   * Query params: context (safety|convenience|quality|health)
+   * Query params: 
+   * - context (spiritual|cultural|main|technical|sales) - Vietnamese incense categories
+   * - category (for filtering specific custom fields)
+   * - format (simple|detailed|rich) - Response format
    */
   app.get("/api/rasa/products/:productId/description", async (req, res) => {
     try {
       const { productId } = req.params;
-      const { context } = req.query;
+      const { context, category, format = 'simple' } = req.query;
       
       const product = await storage.getProduct(productId);
       if (!product) {
@@ -631,48 +635,113 @@ export function setupRasaRoutes(app: Express) {
         });
       }
 
-      // Parse descriptions from database with robust typing
-      const descriptions = (product.descriptions ?? {}) as Partial<RasaDescriptions>;
-      const rasaVariations = descriptions.rasa_variations || {};
-      const contexts = descriptions.contexts || {};
+      // 🎯 NEW: Get custom descriptions from new system
+      const descriptionService = new ProductDescriptionService();
+      let customDescriptions = null;
+      let selectedCustomField = null;
+      
+      try {
+        // Get all custom descriptions for this product using consultation method
+        const consultationOptions = {
+          intent: context as string || 'general',
+          category: category as any
+          // Remove priority filter to include all Vietnamese incense content (high, medium, low)
+        };
+        const allCustomFields = await descriptionService.getConsultationDescriptions(productId, consultationOptions);
+        
+        if (allCustomFields && allCustomFields.length > 0) {
+          customDescriptions = allCustomFields;
+          
+          // Vietnamese incense context mapping
+          if (context) {
+            const contextMapping = {
+              'spiritual': 'spiritual',     // 🙏 Tâm linh
+              'cultural': 'cultural',       // 🏛️ Văn hóa  
+              'main': 'main',              // 📋 Chính
+              'technical': 'technical',     // ⚙️ Kỹ thuật
+              'sales': 'sales',            // 💎 Bán hàng
+              // Legacy RASA contexts mapped to new system
+              'safety': 'technical',
+              'convenience': 'main', 
+              'quality': 'technical',
+              'health': 'spiritual'
+            };
+            
+            const targetCategory = contextMapping[context as string] || 'main';
+            
+            // Find custom field matching context/category
+            selectedCustomField = allCustomFields.find(field => 
+              field.category === targetCategory && 
+              field.value && 
+              field.value.trim().length > 0
+            );
+            
+            // If no exact match, try any field with content
+            if (!selectedCustomField) {
+              selectedCustomField = allCustomFields.find(field => 
+                field.value && field.value.trim().length > 0
+              );
+            }
+          } else {
+            // No specific context - pick the first available field
+            selectedCustomField = allCustomFields.find(field => 
+              field.value && field.value.trim().length > 0
+            );
+          }
+        }
+      } catch (customError) {
+        console.warn('Custom descriptions not available, falling back to legacy:', customError);
+      }
 
+      // 🔄 LEGACY FALLBACK: Use old description system if custom fields unavailable
       let selectedDescription: string;
       let selectedIndex: string;
       let selectionType: string;
+      let descriptionSource: string;
 
-      if (context && contexts[context as string]) {
-        // Context-based selection with fallback verification
-        selectedIndex = contexts[context as string];
-        selectedDescription = rasaVariations[selectedIndex];
-        
-        // If context points to missing variation, fall back to random
-        if (!selectedDescription && Object.keys(rasaVariations).length > 0) {
+      if (selectedCustomField) {
+        // 🎯 NEW: Use custom description field
+        selectedDescription = selectedCustomField.value;
+        selectedIndex = selectedCustomField.key;
+        selectionType = "custom_field";
+        descriptionSource = "custom_descriptions_v2";
+      } else {
+        // 🔄 LEGACY: Fall back to old description system
+        const descriptions = (product.descriptions ?? {}) as Partial<RasaDescriptions>;
+        const rasaVariations = descriptions.rasa_variations || {};
+        const contexts = descriptions.contexts || {};
+
+        if (context && contexts[context as string]) {
+          selectedIndex = contexts[context as string];
+          selectedDescription = rasaVariations[selectedIndex];
+          
+          if (!selectedDescription && Object.keys(rasaVariations).length > 0) {
+            const availableKeys = Object.keys(rasaVariations);
+            selectedIndex = availableKeys[Math.floor(Math.random() * availableKeys.length)];
+            selectedDescription = rasaVariations[selectedIndex];
+            selectionType = "legacy_context_fallback_random";
+          } else if (selectedDescription) {
+            selectionType = "legacy_context";
+          } else {
+            selectedDescription = product.description || product.name;
+            selectedIndex = "primary";
+            selectionType = "legacy_context_fallback_primary";
+          }
+        } else if (Object.keys(rasaVariations).length > 0) {
           const availableKeys = Object.keys(rasaVariations);
           selectedIndex = availableKeys[Math.floor(Math.random() * availableKeys.length)];
           selectedDescription = rasaVariations[selectedIndex];
-          selectionType = "context_fallback_random";
-        } else if (selectedDescription) {
-          selectionType = "context";
+          selectionType = "legacy_random";
         } else {
-          // No variations available, use primary
           selectedDescription = product.description || product.name;
           selectedIndex = "primary";
-          selectionType = "context_fallback_primary";
+          selectionType = "legacy_fallback";
         }
-      } else if (Object.keys(rasaVariations).length > 0) {
-        // Random selection from available variations
-        const availableKeys = Object.keys(rasaVariations);
-        selectedIndex = availableKeys[Math.floor(Math.random() * availableKeys.length)];
-        selectedDescription = rasaVariations[selectedIndex];
-        selectionType = "random";
-      } else {
-        // Fallback to primary description
-        selectedDescription = product.description || product.name;
-        selectedIndex = "primary";
-        selectionType = "fallback";
+        descriptionSource = "legacy_descriptions_v1";
       }
 
-      res.json({
+      // 📊 Response format options
+      const baseResponse = {
         status: "success",
         data: {
           productId: product.id,
@@ -680,18 +749,186 @@ export function setupRasaRoutes(app: Express) {
           description: selectedDescription,
           descriptionIndex: selectedIndex,
           selectionType,
+          descriptionSource,
           context: context || null,
-          price: parseFloat(product.price),
-          stock: product.stock,
-          image: product.image,
-          sku: product.id
+          // 🇻🇳 Vietnamese incense specific metadata
+          vietnameseIncenseData: selectedCustomField ? {
+            category: selectedCustomField.category,
+            fieldName: selectedCustomField.name,
+            fieldType: selectedCustomField.type,
+            categoryIcon: {
+              'spiritual': '🙏',
+              'cultural': '🏛️', 
+              'main': '📋',
+              'technical': '⚙️',
+              'sales': '💎'
+            }[selectedCustomField.category] || '📋'
+          } : null,
+          // Product details for context
+          product: {
+            id: product.id,
+            name: product.name,
+            basePrice: parseFloat(product.price),
+            price: parseFloat(product.price),
+            stock: product.stock,
+            image: product.image,
+            sku: product.id
+          }
         }
-      });
+      };
+
+      // 🎨 Format-specific enhancements
+      if (format === 'detailed' && customDescriptions) {
+        // Detailed format includes all available custom fields
+        baseResponse.data = {
+          ...baseResponse.data,
+          allCustomDescriptions: customDescriptions.map(field => ({
+            key: field.key,
+            name: field.name,
+            category: field.category,
+            type: field.type,
+            value: field.value,
+            hasContent: field.value && field.value.trim().length > 0
+          })),
+          availableContexts: [...new Set(customDescriptions.map(f => f.category))],
+          totalCustomFields: customDescriptions.length,
+          fieldsWithContent: customDescriptions.filter(f => f.value && f.value.trim().length > 0).length
+        };
+      } else if (format === 'rich') {
+        // Rich format includes Vietnamese cultural context
+        baseResponse.data = {
+          ...baseResponse.data,
+          vietnameseCultural: {
+            isIncenseProduct: true,
+            consultationContext: context || 'general',
+            culturalSignificance: selectedCustomField?.category === 'spiritual' ? 'high' : 'medium',
+            recommendedUse: selectedCustomField?.category === 'spiritual' ? 'tâm linh' : 'sinh hoạt',
+            businessContext: 'vietnamese_incense_retail'
+          }
+        };
+      }
+
+      res.json(baseResponse);
     } catch (error) {
-      console.error("RASA API Error - Get Product Description:", error);
+      console.error("RASA API Error - Get Product Description (Enhanced):", error);
       res.status(500).json({
         status: "error", 
-        message: "Không thể lấy mô tả sản phẩm"
+        message: "Không thể lấy mô tả sản phẩm từ hệ thống mới"
+      });
+    }
+  });
+
+  /**
+   * 🔮 Vietnamese Incense Consultation API
+   * GET /api/rasa/incense/:productId/consultation
+   * Specialized endpoint for Vietnamese incense spiritual consultation
+   * Query params: intent (spiritual_guidance|cultural_practice|daily_use|healing)
+   */
+  app.get("/api/rasa/incense/:productId/consultation", async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const { intent = 'spiritual_guidance' } = req.query;
+      
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({
+          status: "error",
+          message: "Không tìm thấy sản phẩm nhang"
+        });
+      }
+
+      // 🎯 Get custom descriptions for Vietnamese incense consultation
+      const descriptionService = new ProductDescriptionService();
+      const consultationOptions = {
+        intent: intent as string,
+        category: undefined // Will filter later based on intent mapping
+        // Remove priority filter to include ALL Vietnamese incense content
+      };
+      const customFields = await descriptionService.getConsultationDescriptions(productId, consultationOptions);
+      
+      // 🇻🇳 Vietnamese incense intent mapping
+      const intentToContextMapping = {
+        'spiritual_guidance': 'spiritual',    // Hướng dẫn tâm linh
+        'cultural_practice': 'cultural',      // Thực hành văn hóa
+        'daily_use': 'main',                 // Sử dụng hàng ngày
+        'healing': 'spiritual',              // Chữa lành
+        'ceremony': 'cultural',              // Lễ nghi
+        'meditation': 'spiritual',           // Thiền định
+        'ancestor_worship': 'cultural'       // Thờ cúng tổ tiên
+      };
+
+      const targetCategory = intentToContextMapping[intent as string] || 'spiritual';
+      
+      // Find relevant custom fields for consultation
+      const spiritualFields = customFields.filter(f => f.category === 'spiritual' && f.value?.trim());
+      const culturalFields = customFields.filter(f => f.category === 'cultural' && f.value?.trim());
+      const mainFields = customFields.filter(f => f.category === 'main' && f.value?.trim());
+      
+      // Select primary consultation field based on intent
+      const primaryField = customFields.find(f => 
+        f.category === targetCategory && f.value?.trim()
+      ) || customFields.find(f => f.value?.trim());
+
+      // 🎭 Consultation response
+      const consultationResponse = {
+        status: "success",
+        data: {
+          productId: product.id,
+          productName: product.name,
+          consultationIntent: intent,
+          targetCategory,
+          
+          // Primary consultation content
+          primaryGuidance: primaryField?.value || product.description || "Sản phẩm nhang chất lượng cao",
+          primaryContext: primaryField?.category || 'main',
+          
+          // Structured consultation fields
+          spiritualGuidance: spiritualFields.map(f => ({
+            fieldName: f.name,
+            content: f.value,
+            icon: '🙏'
+          })),
+          
+          culturalContext: culturalFields.map(f => ({
+            fieldName: f.name, 
+            content: f.value,
+            icon: '🏛️'
+          })),
+          
+          practicalUse: mainFields.map(f => ({
+            fieldName: f.name,
+            content: f.value,
+            icon: '📋'
+          })),
+          
+          // Vietnamese incense business metadata
+          vietnameseIncenseMetadata: {
+            isAuthentic: true,
+            businessContext: 'vietnamese_incense_retail',
+            consultationLanguage: 'vi',
+            culturalSignificance: spiritualFields.length > 0 ? 'high' : 'medium',
+            recommendedFor: targetCategory === 'spiritual' ? 'tâm linh' : 'sinh hoạt',
+            supportedIntents: Object.keys(intentToContextMapping)
+          },
+          
+          // Product details for ordering
+          product: {
+            id: product.id,
+            name: product.name,
+            price: parseFloat(product.price),
+            stock: product.stock,
+            image: product.image,
+            available: product.stock > 0
+          }
+        }
+      };
+      
+      res.json(consultationResponse);
+    } catch (error) {
+      console.error("Vietnamese Incense Consultation Error:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Không thể tư vấn sản phẩm nhang"
       });
     }
   });

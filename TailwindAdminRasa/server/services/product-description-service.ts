@@ -115,8 +115,9 @@ export class ProductDescriptionService {
           // Filter by category for intent-based recommendations
           if (options.category && field.category !== options.category) return false;
           
-          // Filter by priority if specified
-          if (options.priority && field.priority !== options.priority) return false;
+          // 🎯 FIXED: Only filter by priority if explicitly specified
+          // For Vietnamese incense, include ALL priorities (high, medium, low) by default
+          if (options.priority !== undefined && field.priority !== options.priority) return false;
           
           return !this.isEmpty(field.value);
         })
