@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { storage } from '../storage';
+import { cacheMiddleware, invalidateCacheMiddleware, CacheKeys } from '../middleware/cache';
 
 const router = Router();
 
@@ -21,7 +22,13 @@ const requireAuth = (req: any, res: any, next: any) => {
 };
 
 // GET /api/products - List all products with search and sort support
-router.get('/', async (req, res) => {
+router.get('/', 
+  cacheMiddleware(180, (req) => CacheKeys.products(
+    req.query.categoryId as string,
+    req.query.search as string, 
+    req.query.sortBy as string
+  )),
+  async (req, res) => {
   try {
     const { limit, categoryId, search, offset, sortBy, sortOrder } = req.query;
     const limitNum = limit ? parseInt(limit as string) : 50;
@@ -52,7 +59,9 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/products/slug/:slug - Get product by slug (for public ProductPage)
-router.get('/slug/:slug', async (req, res) => {
+router.get('/slug/:slug', 
+  cacheMiddleware(300, (req) => CacheKeys.productSlug(req.params.slug)),
+  async (req, res) => {
   try {
     const { slug } = req.params;
     console.log('📊 API: Getting product with slug:', slug);
@@ -113,7 +122,9 @@ router.get('/:id/policies', async (req, res) => {
 
 // GET /api/products/by-barcode - Get product by barcode (optimized for barcode scanning)
 // IMPORTANT: This route must come BEFORE /:id to avoid conflicts
-router.get('/by-barcode', async (req, res) => {
+router.get('/by-barcode', 
+  cacheMiddleware(120), // Shorter cache for barcode lookup
+  async (req, res) => {
   try {
     const { code } = req.query;
     
@@ -185,7 +196,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/products - Create new product
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, invalidateCacheMiddleware('products'), async (req, res) => {
   try {
     console.log('📊 API: Creating new product');
     const product = await storage.createProduct(req.body);
