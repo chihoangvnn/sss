@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight, Settings, Store, Calendar } from 'lucide-react';
+import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight, Settings, Store, Calendar, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,6 @@ import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
-import { ProductModal } from '@/components/ProductModal';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
@@ -233,10 +232,7 @@ export default function MobileStorefront() {
   };
 
   const handleTabChange = (tab: string) => {
-    if (selectedProduct) {
-      setSelectedProduct(null);
-    }
-    
+    setSelectedProduct(null); // Always clear product view when changing tabs
     setActiveTab(tab);
     if (tab === 'cart') {
       setShowCart(true);
@@ -265,6 +261,122 @@ export default function MobileStorefront() {
   };
 
   const renderContent = () => {
+    // If a product is selected, show full page product view
+    if (selectedProduct) {
+      return (
+        <div className="bg-white min-h-screen">
+          {/* Product Image */}
+          <div className="aspect-square bg-gray-100 relative">
+            {selectedProduct.image ? (
+              <img 
+                src={selectedProduct.image}
+                alt={selectedProduct.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <Store className="h-20 w-20" />
+              </div>
+            )}
+            {/* Back Button */}
+            <button 
+              onClick={() => setSelectedProduct(null)}
+              className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white/90 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-700" />
+            </button>
+          </div>
+
+          {/* Product Info */}
+          <div className="p-6 space-y-4">
+            {/* Name & Price */}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-3">
+                {selectedProduct.name}
+              </h1>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-3xl font-bold text-green-600">
+                  {selectedProduct.price.toLocaleString('vi-VN')}₫
+                </span>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <Star className="h-4 w-4 fill-gray-200 text-gray-200" />
+                  <span className="text-sm text-gray-600 ml-1">(4.0)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            {selectedProduct.short_description && (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">Mô tả</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {selectedProduct.short_description}
+                </p>
+              </div>
+            )}
+
+            {/* Benefits */}
+            {selectedProduct.benefits && (
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">Công dụng</h3>
+                <ul className="space-y-1">
+                  {(typeof selectedProduct.benefits === 'string' 
+                    ? selectedProduct.benefits.split(',').map(b => b.trim()).filter(b => b.length > 0)
+                    : selectedProduct.benefits
+                  ).map((benefit, index) => (
+                    <li key={index} className="flex items-start gap-2 text-gray-600">
+                      <span className="text-green-500 mt-1">•</span>
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Stock Status */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Tình trạng:</span>
+              {selectedProduct.stock > 0 ? (
+                <span className="text-sm text-green-600 font-medium">
+                  Còn hàng ({selectedProduct.stock} sản phẩm)
+                </span>
+              ) : (
+                <span className="text-sm text-red-600 font-medium">Hết hàng</span>
+              )}
+            </div>
+
+            {/* Quantity in Cart */}
+            {cart.find(item => item.product.id === selectedProduct.id) && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-green-800">
+                  <ShoppingCart className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    Đã có {cart.find(item => item.product.id === selectedProduct.id)?.quantity} sản phẩm trong giỏ hàng
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Add to Cart Button */}
+            <div className="pt-4">
+              <Button
+                onClick={() => addToCart(selectedProduct)}
+                disabled={selectedProduct.stock === 0}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Thêm vào giỏ hàng
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'categories':
         return (
@@ -586,14 +698,6 @@ export default function MobileStorefront() {
         />
       )}
 
-      {/* Product Modal */}
-      <ProductModal
-        product={selectedProduct}
-        isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        onAddToCart={addToCart}
-        cart={cart}
-      />
     </div>
   );
 }
