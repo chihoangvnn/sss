@@ -233,70 +233,70 @@ export function OrderHistory({ className = '' }: OrderHistoryProps) {
                 expandedOrder === order.id ? 'ring-2 ring-green-100' : ''
               }`}
             >
-              {/* Order Header */}
-              <div className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-green-500 rounded-full"></div>
-                    <h3 className="font-bold text-lg text-gray-900 tracking-tight">
-                      #{order.orderNumber}
-                    </h3>
-                  </div>
+              {/* New Compact Layout */}
+              <div className="p-4">
+                {/* Compact Header: #DH240927001 [Đã giao] */}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-base text-gray-900">
+                    #{order.orderNumber}
+                  </h3>
                   <StatusBadge status={order.status} />
                 </div>
 
-                <div className="bg-gray-50/50 rounded-xl p-4 mb-4">
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center bg-white px-3 py-1.5 rounded-lg">
-                        <Calendar className="h-4 w-4 mr-2 text-green-500" />
-                        <span className="font-medium">{formatDate(order.date)}</span>
-                      </div>
-                      {order.shippingAddress && (
-                        <div className="flex items-center bg-white px-3 py-1.5 rounded-lg">
-                          <Truck className="h-4 w-4 mr-2 text-blue-500" />
-                          <span className="font-medium">{order.shippingAddress}</span>
-                        </div>
-                      )}
-                    </div>
+                {/* Address + Price same line */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm text-gray-600 flex-1 mr-4">
+                    {order.shippingAddress || 'Địa chỉ giao hàng'}
                   </div>
-                  <div className="flex justify-end">
-                    <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg shadow-sm">
-                      <span className="text-lg font-bold">{formatVietnamPrice(order.total)}</span>
-                    </div>
+                  <div className="font-bold text-green-600 text-base">
+                    {formatVietnamPrice(order.total)}
                   </div>
                 </div>
 
-                {/* Order Items Summary */}
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-700 mb-1">
-                      {order.items.length} sản phẩm
-                    </div>
-                    {order.items.length > 0 && (
-                      <div className="text-sm text-gray-500">
-                        {order.items[0].name}
-                        {order.items.length > 1 && (
-                          <span className="ml-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                            +{order.items.length - 1}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
+                {/* Date separate line */}
+                <div className="text-sm text-gray-500 mb-4">
+                  {formatDate(order.date)}
+                </div>
+
+                {/* Action Buttons Row */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
+                    onClick={() => console.log('Schedule purchase', order.id)}
+                  >
+                    Lên Lịch
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
+                    onClick={() => console.log('Gift purchase', order.id)}
+                  >
+                    Mua Tặng
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
+                    onClick={() => console.log('Buy again', order.id)}
+                  >
+                    Mua Lại
+                  </Button>
+                  <div className="flex-1"></div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => toggleOrderDetails(order.id)}
-                    className={`text-sm font-medium border-2 transition-all duration-200 ${
+                    className={`text-xs px-3 py-2 transition-all duration-200 ${
                       expandedOrder === order.id
                         ? 'border-green-200 bg-green-50 text-green-700'
                         : 'border-gray-200 hover:border-green-200 hover:bg-green-50'
                     }`}
                   >
-                    <Eye className="h-4 w-4 mr-2" />
-                    {expandedOrder === order.id ? 'Thu gọn' : 'Chi tiết'}
+                    <Eye className="h-3 w-3 mr-1" />
+                    Chi Tiết
                   </Button>
                 </div>
               </div>
