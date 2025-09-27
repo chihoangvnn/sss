@@ -722,7 +722,6 @@ export default function MobileStorefront() {
           onSearchChange={setSearchQuery}
           onCartClick={handleHeaderCartClick}
           onProfileClick={handleProfileClick}
-          onBlogClick={() => setActiveTab('blog')}
           categories={categories}
           selectedCategory={selectedCategory}
           onCategorySelect={setSelectedCategory}
