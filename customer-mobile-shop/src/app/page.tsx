@@ -571,42 +571,6 @@ export default function MobileStorefront() {
       case 'profile':
         return <ProfileTab />;
 
-      case 'blog':
-        // If a blog post is selected, show blog post detail
-        if (selectedBlogPost) {
-          return (
-            <BlogPost
-              post={selectedBlogPost}
-              onBack={() => setSelectedBlogPost(null)}
-              onTagClick={(tag) => {
-                // Filter blog posts by tag (use search for tags)
-                setBlogSearchQuery(tag);
-                setSelectedBlogPost(null);
-                setActiveTab('blog');
-              }}
-              onCategoryClick={(category) => {
-                // Filter blog posts by category
-                setBlogSelectedCategory(category);
-                setBlogSearchQuery(''); // Clear search when filtering by category
-                setSelectedBlogPost(null);
-                setActiveTab('blog');
-              }}
-            />
-          );
-        }
-        // Otherwise show blog list
-        return (
-          <BlogTab
-            onPostClick={(post) => setSelectedBlogPost(post)}
-            searchQuery={blogSearchQuery}
-            selectedCategory={blogSelectedCategory}
-            onSearchChange={setBlogSearchQuery}
-            onCategorySelect={setBlogSelectedCategory}
-            cartCount={getTotalItems()}
-            onCartClick={() => setActiveTab('cart')}
-            onHomeClick={() => setActiveTab('home')}
-          />
-        );
 
       default: // 'home'
         return (
