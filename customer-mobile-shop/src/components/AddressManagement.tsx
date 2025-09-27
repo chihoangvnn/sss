@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Plus, Edit, Trash2, Star, Phone, User, MapIcon, ArrowLeft } from 'lucide-react';
 import { Address, AddAddressData } from '@/types/address';
 import { AddressStorage } from '@/utils/addressStorage';
-import { VIETNAM_CITIES } from '@/data/vietnamCities';
 
 interface AddressManagementProps {
   onBack?: () => void;
@@ -19,7 +18,6 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
     name: '',
     phone: '',
     address: '',
-    city: '',
     isDefault: false,
   });
 
@@ -33,7 +31,6 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
       name: '',
       phone: '',
       address: '',
-      city: '',
       isDefault: false,
     });
     setEditingAddress(null);
@@ -41,7 +38,7 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
   };
 
   const handleAddAddress = () => {
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim() || !formData.city.trim()) {
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim()) {
       alert('Vui lòng điền đầy đủ thông tin!');
       return;
     }
@@ -70,11 +67,10 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
   const handleEditAddress = (address: Address) => {
     setEditingAddress(address);
     setFormData({
-      name: address.name,
-      phone: address.phone,
-      address: address.address,
-      city: address.city,
-      isDefault: address.isDefault,
+      name: address.name || '',
+      phone: address.phone || '',
+      address: address.address || '',
+      isDefault: address.isDefault || false,
     });
     setShowAddForm(true);
   };
@@ -148,27 +144,9 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
               value={formData.address}
               onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
+              placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
               rows={3}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tỉnh/Thành phố *
-            </label>
-            <select
-              value={formData.city}
-              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
-            >
-              <option value="">Chọn tỉnh/thành phố</option>
-              {VIETNAM_CITIES.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="flex items-center">
@@ -288,9 +266,6 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
                 <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
                 <div className="text-gray-700">
                   <div>{address.address}</div>
-                  <div className="text-sm text-gray-500">
-                    {address.city}
-                  </div>
                 </div>
               </div>
 

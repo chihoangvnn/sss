@@ -32,28 +32,45 @@ export class AddressStorage {
       
       // Migrate legacy addresses to new format
       const migratedAddresses: Address[] = addresses.map(addr => {
-        // If it's already new format, return as is
-        if (!('ward' in addr || 'district' in addr)) {
-          return addr as Address;
+        // Case 1: Very old format with ward/district/city separate
+        if ('ward' in addr || 'district' in addr) {
+          const legacy = addr as LegacyAddress;
+          const fullAddress = [
+            legacy.address,
+            legacy.ward,
+            legacy.district
+          ].filter(Boolean).join(', ');
+          
+          return {
+            id: legacy.id,
+            name: legacy.name,
+            phone: legacy.phone,
+            address: `${fullAddress}, ${legacy.city}`,
+            isDefault: legacy.isDefault,
+            createdAt: legacy.createdAt,
+            updatedAt: new Date().toISOString(), // Update timestamp for migration
+          };
         }
         
-        // Convert legacy format to new format
-        const legacy = addr as LegacyAddress;
-        const fullAddress = [
-          legacy.address,
-          legacy.ward,
-          legacy.district
-        ].filter(Boolean).join(', ');
+        // Case 2: Previous format with separate fullAddress + city
+        if ('city' in addr && !('address' in addr)) {
+          const prevFormat = addr as any;
+          return {
+            id: prevFormat.id,
+            name: prevFormat.name,
+            phone: prevFormat.phone,
+            address: prevFormat.fullAddress ? `${prevFormat.fullAddress}, ${prevFormat.city}` : prevFormat.city,
+            isDefault: prevFormat.isDefault,
+            createdAt: prevFormat.createdAt,
+            updatedAt: new Date().toISOString(),
+          };
+        }
         
+        // Case 3: Already new format, but ensure address field exists
+        const current = addr as Address;
         return {
-          id: legacy.id,
-          name: legacy.name,
-          phone: legacy.phone,
-          address: fullAddress,
-          city: legacy.city,
-          isDefault: legacy.isDefault,
-          createdAt: legacy.createdAt,
-          updatedAt: new Date().toISOString(), // Update timestamp for migration
+          ...current,
+          address: current.address || '', // Safeguard against missing address
         };
       });
       
