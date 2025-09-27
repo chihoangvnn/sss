@@ -628,7 +628,6 @@ function MobileStorefront() {
                     </button>
                   </div>
                 </div>
-              </div>
               
               {/* Expandable Filter Options */}
               {showFilters && (
@@ -752,6 +751,7 @@ function MobileStorefront() {
             </div>
           </div>
         );
+    }
   };
 
   const renderProductCard = (product: Product) => (
