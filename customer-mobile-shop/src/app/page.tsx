@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight, Settings, Store, Calendar, Star } from 'lucide-react';
+import { ShoppingCart, User, ArrowLeft, Plus, Minus, Store, Calendar, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -63,13 +63,6 @@ export default function MobileStorefront() {
     showBottomNav: isMobile
   };
   
-  // Auto-hide search bar state with focus protection
-  const [showSearchBar, setShowSearchBar] = useState(true);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const lastScrollY = useRef(0);
-  const scrollThreshold = 10;
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
   
 
@@ -589,7 +582,7 @@ export default function MobileStorefront() {
         />
       )}
 
-      <main className={layoutConfig.showBottomNav ? "pb-20 pt-8" : ""}>
+      <main className={layoutConfig.showBottomNav ? "pb-20 pt-8" : "pt-8"}>
         {renderContent()}
       </main>
 
