@@ -761,7 +761,6 @@ function MobileStorefront() {
                 className="relative text-white hover:text-green-100 transition-colors"
               >
                 <Heart className={`h-6 w-6 ${activeTab === 'calendar' ? 'fill-current' : ''}`} />
-                <span className="absolute -top-1 -right-1 text-xs">📅</span>
               </button>
               <button 
                 onClick={() => setActiveTab('profile')}
