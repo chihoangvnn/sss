@@ -78,14 +78,15 @@ export function generateMockLunarDay(solarDate: string): LunarDay {
   const dateStr = format(date, 'dd-MM');
   const holiday = VIETNAMESE_HOLIDAYS.find(h => h.date === dateStr);
   
-  // Select product suggestions based on day quality
+  // Select product suggestions based on day quality (deterministic)
+  const dateHash = date.getTime() / (1000 * 60 * 60 * 24); // Days since epoch
   const suggestions = PRODUCT_SUGGESTIONS
     .filter((_, index) => {
       if (dayQuality === 'good') return index < 6;
       if (dayQuality === 'bad') return index >= 10;
       return index >= 6 && index < 10;
     })
-    .slice(0, Math.floor(Math.random() * 3) + 1);
+    .slice(0, (Math.floor(dateHash) % 3) + 1); // Deterministic slice based on date
   
   return {
     solarDate: solarDate.split('T')[0], // Ensure just date part
@@ -141,14 +142,21 @@ function getSeason(month: number): string {
  */
 export const mockApi = {
   async fetchLunarMonth(year: number, month: number): Promise<LunarMonthData | null> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200));
+    // Simulate deterministic API delay in development only
+    if (process.env.NODE_ENV === 'development') {
+      const delay = 300 + ((year + month) % 200); // Deterministic delay
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
     return generateMockLunarMonth(year, month);
   },
   
   async fetchLunarDay(date: string): Promise<LunarDay | null> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 300 + 100));
+    // Simulate deterministic API delay in development only
+    if (process.env.NODE_ENV === 'development') {
+      const dateObj = new Date(date);
+      const delay = 200 + (dateObj.getTime() % 200); // Deterministic delay
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
     return generateMockLunarDay(date);
   }
 };

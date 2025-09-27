@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight, Settings, Store } from 'lucide-react';
+import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight, Settings, Store, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
