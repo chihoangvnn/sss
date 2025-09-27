@@ -1,0 +1,90 @@
+Dựa vào code base hiện tại, tôi có thể cung cấp cho bạn đầy đủ thông tin về API hiển thị status đơn hàng:
+
+📋 Order Status Values
+Trong hệ thống có 5 trạng thái đơn hàng:
+
+status: "pending" | "processing" | "shipped" | "delivered" | "cancelled"
+🔌 API Endpoints Chính
+1. Lấy danh sách đơn hàng
+GET /api/orders
+Response mẫu:
+
+[
+  {
+    "id": "7c3902f2-35d7-4d0e-8872-e316deb0905d",
+    "customerId": "feefc007-c238-4758-bdbd-9b49ed89c11c", 
+    "total": "150000",
+    "status": "processing",
+    "items": [...],
+    "createdAt": "2025-09-27T10:30:00Z",
+    "customer": {
+      "name": "Nguyễn Văn A",
+      "email": "user@example.com"
+    }
+  }
+]
+2. Lấy chi tiết 1 đơn hàng
+GET /api/orders/:id
+Response:
+
+{
+  "id": "7c3902f2-35d7-4d0e-8872-e316deb0905d",
+  "status": "shipped", 
+  "customerId": "...",
+  "total": "150000",
+  "items": [...],
+  "createdAt": "2025-09-27T10:30:00Z",
+  "updatedAt": "2025-09-27T14:15:00Z"
+}
+3. Cập nhật status đơn hàng
+PUT /api/orders/:id/status
+Request body:
+
+{
+  "status": "shipped"  // pending | processing | shipped | delivered | cancelled
+}
+🏦 Payment Status API
+4. Cập nhật trạng thái thanh toán
+PUT /api/orders/:id/payment/status
+Request body:
+
+{
+  "status": "success",  // success | failed | pending
+  "transactionId": "TX123456789"
+}
+📊 API Thống kê đơn hàng
+5. Thống kê sync status
+GET /api/orders/sync/stats
+Response:
+
+{
+  "total": 150,
+  "manual": 50,
+  "synced": 80, 
+  "pending": 15,
+  "failed": 5
+}
+💡 Tích hợp Frontend
+Ví dụ status display component:
+
+const OrderStatusBadge = ({ status }) => {
+  const statusConfig = {
+    pending: { color: 'yellow', text: 'Chờ xử lý' },
+    processing: { color: 'blue', text: 'Đang xử lý' },
+    shipped: { color: 'purple', text: 'Đã gửi hàng' },
+    delivered: { color: 'green', text: 'Đã giao' },
+    cancelled: { color: 'red', text: 'Đã hủy' }
+  };
+  
+  return (
+    <Badge className={`bg-${statusConfig[status].color}-100`}>
+      {statusConfig[status].text}
+    </Badge>
+  );
+};
+🔄 Auto Notifications
+Hệ thống tự động gửi thông báo khi:
+
+Status chuyển sang "shipped" → gửi template "order_status_shipped"
+Status chuyển sang "delivered" → gửi template "order_status_delivered"
+Status "delivered" → xử lý tích điểm membership
