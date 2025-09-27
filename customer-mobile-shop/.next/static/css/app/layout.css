@@ -689,6 +689,9 @@ video {
 .top-\[120px\] {
   top: 120px;
 }
+.top-16 {
+  top: 4rem;
+}
 .z-10 {
   z-index: 10;
 }
@@ -1378,6 +1381,9 @@ video {
 }
 .pt-6 {
   padding-top: 1.5rem;
+}
+.pt-14 {
+  padding-top: 3.5rem;
 }
 .text-left {
   text-align: left;

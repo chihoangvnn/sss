@@ -574,7 +574,7 @@ export default function MobileStorefront() {
         />
       )}
 
-      <main className={layoutConfig.showBottomNav ? "pb-20" : ""}>
+      <main className={layoutConfig.showBottomNav ? "pb-20 pt-14" : ""}>
         {renderContent()}
       </main>
 

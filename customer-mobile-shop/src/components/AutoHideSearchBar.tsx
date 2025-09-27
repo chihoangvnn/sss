@@ -67,7 +67,7 @@ export function AutoHideSearchBar({
   return (
     <div 
       className={`
-        sticky top-[120px] z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200 
+        sticky top-16 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200 
         transition-all duration-300 ease-in-out
         ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
       `}
