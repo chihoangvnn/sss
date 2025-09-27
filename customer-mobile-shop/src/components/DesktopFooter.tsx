@@ -11,10 +11,10 @@ const DesktopFooter = () => {
     "name": "NhangSach.Net",
     "description": "Nhà cung cấp nhang sạch, sản phẩm tâm linh và phong thủy hàng đầu Việt Nam",
     "url": "https://nhangsach.net",
-    "telephone": "+84-XXX-XXX-XXX",
+    "telephone": "+84-912-345-678",
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "[Địa chỉ cửa hàng]",
+      "streetAddress": "123 Nguyễn Huệ, Quận 1",
       "addressLocality": "Hồ Chí Minh",
       "addressRegion": "TP.HCM",
       "postalCode": "700000",
@@ -72,7 +72,7 @@ const DesktopFooter = () => {
     ],
     "contactPoint": {
       "@type": "ContactPoint",
-      "telephone": "+84-XXX-XXX-XXX",
+      "telephone": "+84-912-345-678",
       "contactType": "customer service",
       "availableLanguage": "Vietnamese"
     }
@@ -144,12 +144,12 @@ const DesktopFooter = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <MapPin size={16} className="text-green-500" />
-                <span>123 Đường ABC, Quận 1, TP.HCM</span>
+                <span>123 Nguyễn Huệ, Quận 1, TP.HCM</span>
               </div>
               
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Phone size={16} className="text-green-500" />
-                <span>Hotline: 0123.456.789</span>
+                <span>Hotline: 0912.345.678</span>
               </div>
               
               <div className="flex items-center space-x-2 text-sm text-gray-600">

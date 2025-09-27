@@ -15,6 +15,7 @@ import { ImageSlider } from '@/components/ImageSlider';
 import { ProductCatalog } from '@/components/ProductCatalog';
 import { ProfileTab } from '@/components/ProfileTab';
 import DesktopChatBot from '@/components/DesktopChatBot';
+import DesktopFooter from '@/components/DesktopFooter';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { formatVietnamPrice } from '@/utils/currency';
@@ -707,6 +708,9 @@ export default function MobileStorefront() {
 
       {/* Desktop ChatBot - Show on desktop only */}
       {!isMobile && <DesktopChatBot />}
+
+      {/* Desktop Footer - Show on desktop only */}
+      {!isMobile && <DesktopFooter />}
 
     </div>
   );
