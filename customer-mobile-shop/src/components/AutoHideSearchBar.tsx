@@ -73,31 +73,19 @@ export function AutoHideSearchBar({
       `}
     >
       <div className="px-4 py-3">
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <Input
-              placeholder={placeholder}
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => {
-                // Delay hiding to allow for smooth interaction
-                setTimeout(() => setIsSearchFocused(false), 200);
-              }}
-            />
-          </div>
-          {onFilterClick && (
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={onFilterClick}
-              className="border-gray-300 hover:border-green-500 hover:text-green-600"
-            >
-              <Filter className="h-4 w-4" />
-            </Button>
-          )}
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Input
+            placeholder={placeholder}
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10 w-full bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => {
+              // Delay hiding to allow for smooth interaction
+              setTimeout(() => setIsSearchFocused(false), 200);
+            }}
+          />
         </div>
       </div>
     </div>

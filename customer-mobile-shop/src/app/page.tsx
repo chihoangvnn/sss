@@ -569,7 +569,6 @@ export default function MobileStorefront() {
         <AutoHideSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          onFilterClick={() => setShowFilters(true)}
           placeholder="Tìm kiếm sản phẩm..."
         />
       )}
