@@ -1,12 +1,14 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, LogOut, Mail, Shield } from 'lucide-react';
+import { User, LogIn, LogOut, Mail, Shield, ArrowLeft, Package, Heart, MapPin, Bell } from 'lucide-react';
+import { OrderHistory } from '@/components/OrderHistory';
 
 export function ProfileTab() {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const [activeView, setActiveView] = useState<'profile' | 'orders' | 'wishlist' | 'shipping' | 'notifications'>('profile');
 
   if (isLoading) {
     return (
@@ -87,6 +89,28 @@ export function ProfileTab() {
   // Authenticated user view
   if (!user) return null; // Type guard
 
+  // Render different views based on activeView
+  if (activeView === 'orders') {
+    return (
+      <div className="p-4 pt-6">
+        {/* Back Button */}
+        <div className="flex items-center mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => setActiveView('profile')}
+            className="p-2 mr-2"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-semibold text-gray-900">Lịch sử đơn hàng</h1>
+        </div>
+        
+        <OrderHistory />
+      </div>
+    );
+  }
+
+  // Profile overview (default view)
   return (
     <div className="p-4 pt-6">
       {/* User Profile Card */}
@@ -137,24 +161,48 @@ export function ProfileTab() {
         </h3>
         
         <div className="space-y-3">
-          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-            <div className="font-medium text-gray-900">Lịch sử đơn hàng</div>
-            <div className="text-sm text-gray-500">Xem các đơn hàng đã mua</div>
+          <button 
+            onClick={() => setActiveView('orders')}
+            className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center"
+          >
+            <Package className="h-5 w-5 text-green-600 mr-3" />
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">Lịch sử đơn hàng</div>
+              <div className="text-sm text-gray-500">Xem các đơn hàng đã mua</div>
+            </div>
           </button>
           
-          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-            <div className="font-medium text-gray-900">Sản phẩm yêu thích</div>
-            <div className="text-sm text-gray-500">Quản lý danh sách yêu thích</div>
+          <button 
+            onClick={() => setActiveView('wishlist')}
+            className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center"
+          >
+            <Heart className="h-5 w-5 text-red-500 mr-3" />
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">Sản phẩm yêu thích</div>
+              <div className="text-sm text-gray-500">Quản lý danh sách yêu thích</div>
+            </div>
           </button>
           
-          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-            <div className="font-medium text-gray-900">Thông tin giao hàng</div>
-            <div className="text-sm text-gray-500">Địa chỉ và thông tin liên lạc</div>
+          <button 
+            onClick={() => setActiveView('shipping')}
+            className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center"
+          >
+            <MapPin className="h-5 w-5 text-blue-600 mr-3" />
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">Thông tin giao hàng</div>
+              <div className="text-sm text-gray-500">Địa chỉ và thông tin liên lạc</div>
+            </div>
           </button>
           
-          <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-            <div className="font-medium text-gray-900">Cài đặt thông báo</div>
-            <div className="text-sm text-gray-500">Quản lý thông báo qua email/SMS</div>
+          <button 
+            onClick={() => setActiveView('notifications')}
+            className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center"
+          >
+            <Bell className="h-5 w-5 text-orange-600 mr-3" />
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">Cài đặt thông báo</div>
+              <div className="text-sm text-gray-500">Quản lý thông báo qua email/SMS</div>
+            </div>
           </button>
         </div>
       </div>
