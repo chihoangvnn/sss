@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Plus, Edit, Trash2, Star, Phone, User, MapIcon, ArrowLeft } from 'lucide-react';
 import { Address, AddAddressData } from '@/types/address';
 import { AddressStorage } from '@/utils/addressStorage';
+import { VIETNAM_CITIES } from '@/data/vietnamCities';
 
 interface AddressManagementProps {
   onBack?: () => void;
@@ -18,8 +19,6 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
     name: '',
     phone: '',
     address: '',
-    ward: '',
-    district: '',
     city: '',
     isDefault: false,
   });
@@ -34,8 +33,6 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
       name: '',
       phone: '',
       address: '',
-      ward: '',
-      district: '',
       city: '',
       isDefault: false,
     });
@@ -45,7 +42,7 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
 
   const handleAddAddress = () => {
     if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim() || !formData.city.trim()) {
-      alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
+      alert('Vui lòng điền đầy đủ thông tin!');
       return;
     }
 
@@ -76,8 +73,6 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
       name: address.name,
       phone: address.phone,
       address: address.address,
-      ward: address.ward,
-      district: address.district,
       city: address.city,
       isDefault: address.isDefault,
     });
@@ -147,56 +142,33 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Địa chỉ chi tiết *
+              Địa chỉ đầy đủ *
             </label>
-            <input
-              type="text"
+            <textarea
               value={formData.address}
               onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Số nhà, tên đường, khu vực..."
+              placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
+              rows={3}
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phường/Xã
-              </label>
-              <input
-                type="text"
-                value={formData.ward}
-                onChange={(e) => setFormData(prev => ({ ...prev, ward: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="Phường/Xã"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quận/Huyện
-              </label>
-              <input
-                type="text"
-                value={formData.district}
-                onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="Quận/Huyện"
-              />
-            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tỉnh/Thành phố *
             </label>
-            <input
-              type="text"
+            <select
               value={formData.city}
               onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Tỉnh/Thành phố"
-            />
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+            >
+              <option value="">Chọn tỉnh/thành phố</option>
+              {VIETNAM_CITIES.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex items-center">
@@ -317,7 +289,7 @@ export function AddressManagement({ onBack }: AddressManagementProps) {
                 <div className="text-gray-700">
                   <div>{address.address}</div>
                   <div className="text-sm text-gray-500">
-                    {[address.ward, address.district, address.city].filter(Boolean).join(', ')}
+                    {address.city}
                   </div>
                 </div>
               </div>

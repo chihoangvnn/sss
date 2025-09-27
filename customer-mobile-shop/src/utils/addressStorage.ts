@@ -2,6 +2,20 @@ import { Address, AddAddressData } from '@/types/address';
 
 const ADDRESSES_KEY = 'user_addresses';
 
+// Legacy address format for migration
+interface LegacyAddress {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  ward?: string;
+  district?: string;
+  city: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class AddressStorage {
   private static generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -12,7 +26,43 @@ export class AddressStorage {
     
     try {
       const stored = localStorage.getItem(ADDRESSES_KEY);
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      
+      const addresses: (Address | LegacyAddress)[] = JSON.parse(stored);
+      
+      // Migrate legacy addresses to new format
+      const migratedAddresses: Address[] = addresses.map(addr => {
+        // If it's already new format, return as is
+        if (!('ward' in addr || 'district' in addr)) {
+          return addr as Address;
+        }
+        
+        // Convert legacy format to new format
+        const legacy = addr as LegacyAddress;
+        const fullAddress = [
+          legacy.address,
+          legacy.ward,
+          legacy.district
+        ].filter(Boolean).join(', ');
+        
+        return {
+          id: legacy.id,
+          name: legacy.name,
+          phone: legacy.phone,
+          address: fullAddress,
+          city: legacy.city,
+          isDefault: legacy.isDefault,
+          createdAt: legacy.createdAt,
+          updatedAt: new Date().toISOString(), // Update timestamp for migration
+        };
+      });
+      
+      // Save migrated addresses
+      if (migratedAddresses.length > 0) {
+        this.saveAddresses(migratedAddresses);
+      }
+      
+      return migratedAddresses;
     } catch (error) {
       console.error('Failed to get addresses:', error);
       return [];
