@@ -4,6 +4,8 @@ import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, S
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import Autoplay from 'embla-carousel-autoplay';
 import ChatbotWidget from '@/components/ChatbotWidget';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
@@ -65,13 +67,10 @@ function MobileStorefront() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   
-  // Hero carousel state for incense business
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const autoSlideRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Touch/swipe state for mobile gestures
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  // Embla Carousel plugin for auto-play
+  const plugin = useRef(
+    Autoplay({ delay: 4000, stopOnInteraction: true })
+  );
   
   // Hero slides data for Vietnamese incense business
   const heroSlides = [
@@ -101,52 +100,13 @@ function MobileStorefront() {
     }
   ];
   
-  // Auto-slide functionality for hero carousel
-  const startAutoSlide = useCallback(() => {
-    if (autoSlideRef.current) clearTimeout(autoSlideRef.current);
-    autoSlideRef.current = setTimeout(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 4000); // 4 seconds per slide
-  }, [heroSlides.length]);
-  
-  const goToSlide = useCallback((index: number) => {
-    setCurrentSlide(index);
-    startAutoSlide(); // Reset auto-slide timer
-  }, [startAutoSlide]);
-  
-  // Touch handlers for swipe gestures
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null); // otherwise the swipe is fired even with usual touch events
-    setTouchStart(e.targetTouches[0].clientX);
+  // Hero carousel navigation handlers
+  const handleSlideClick = (index: number) => {
+    // Navigate based on slide content
+    if (index === 0) setSelectedCategory('all');
+    else if (index === 1) setSelectedCategory('premium');
+    else setSelectedCategory('traditional');
   };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe) {
-      // Swipe left - next slide
-      goToSlide((currentSlide + 1) % heroSlides.length);
-    } else if (isRightSwipe) {
-      // Swipe right - previous slide  
-      goToSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length);
-    }
-  };
-  
-  // Start auto-slide on component mount and cleanup on unmount
-  useEffect(() => {
-    startAutoSlide();
-    return () => {
-      if (autoSlideRef.current) clearTimeout(autoSlideRef.current);
-    };
-  }, [startAutoSlide]);
 
   // Infinite scroll setup - fetch products with pagination
   const { 
@@ -521,19 +481,17 @@ function MobileStorefront() {
           <div>
             {/* Hero Carousel for Vietnamese Incense Business */}
             <div className="relative bg-gray-900 overflow-hidden">
-              {/* Carousel Container */}
-              <div 
-                className="relative h-44 sm:h-56"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
+              <Carousel
+                opts={{ 
+                  align: "start", 
+                  loop: true 
+                }}
+                plugins={[plugin.current]}
+                className="w-full"
               >
-                <div 
-                  className="flex transition-transform duration-500 ease-out h-full"
-                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                >
+                <CarouselContent className="h-44 sm:h-56">
                   {heroSlides.map((slide, index) => (
-                    <div key={index} className="w-full h-full flex-shrink-0 relative">
+                    <CarouselItem key={index} className="relative">
                       {/* Background Image */}
                       <div 
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -556,51 +514,19 @@ function MobileStorefront() {
                             {slide.description}
                           </p>
                           <button 
-                            onClick={() => {
-                              // Navigate based on slide content
-                              if (index === 0) setSelectedCategory('all');
-                              else if (index === 1) setSelectedCategory('premium');
-                              else setSelectedCategory('traditional');
-                            }}
+                            onClick={() => handleSlideClick(index)}
                             className="bg-white text-gray-900 px-6 py-3 rounded-full font-semibold hover:bg-yellow-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
                           >
                             {slide.cta}
                           </button>
                         </div>
                       </div>
-                    </div>
+                    </CarouselItem>
                   ))}
-                </div>
-                
-                {/* Navigation Arrows */}
-                <button
-                  onClick={() => goToSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length)}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-all duration-200"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <button
-                  onClick={() => goToSlide((currentSlide + 1) % heroSlides.length)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-all duration-200"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-                
-                {/* Dots Indicator */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                  {heroSlides.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToSlide(index)}
-                      className={`transition-all duration-200 ${
-                        currentSlide === index 
-                          ? 'w-8 h-3 bg-white rounded-full' 
-                          : 'w-3 h-3 bg-white/60 rounded-full hover:bg-white/80'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
+                </CarouselContent>
+                <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white border-white/20 hover:bg-white/30 hover:text-white" />
+                <CarouselNext className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white border-white/20 hover:bg-white/30 hover:text-white" />
+              </Carousel>
             </div>
             
             
