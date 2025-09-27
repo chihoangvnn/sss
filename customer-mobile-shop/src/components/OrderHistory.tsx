@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatVietnamPrice } from '@/utils/currency';
 import { useQuery } from '@tanstack/react-query';
 import { fetchOrders } from '@/lib/orderApi';
+import { GiftPurchaseModal } from '@/components/GiftPurchaseModal';
 
 export interface Order {
   id: string;
@@ -114,6 +115,8 @@ interface OrderHistoryProps {
 export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderHistoryProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [giftModalOpen, setGiftModalOpen] = useState<boolean>(false);
+  const [selectedGiftOrder, setSelectedGiftOrder] = useState<Order | null>(null);
 
   // Fetch orders from API
   const { 
@@ -201,6 +204,52 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
     
     // Optional: Show success message (could be enhanced later)
     console.log(`Đã thêm ${order.items.length} sản phẩm từ đơn #${order.orderNumber} vào giỏ hàng`);
+  };
+
+  // Handle "Mua Tặng" functionality
+  const handleGiftPurchase = (order: Order) => {
+    setSelectedGiftOrder(order);
+    setGiftModalOpen(true);
+  };
+
+  const handleGiftPurchaseConfirm = async (order: Order, recipientInfo: any) => {
+    try {
+      // In a real app, this would call an API to create a gift order
+      console.log('Gift purchase confirmed:', { order, recipientInfo });
+      
+      // For now, just add to cart like a regular purchase
+      if (addToCart && setActiveTab) {
+        order.items.forEach((item: Order['items'][0]) => {
+          const product: Product = {
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            image: item.image,
+            media: item.image,
+            category_id: 'general',
+            stock: 999,
+            short_description: `Quà tặng - ${item.name}`,
+            status: 'active'
+          };
+
+          for (let i = 0; i < item.quantity; i++) {
+            addToCart(product);
+          }
+        });
+
+        setActiveTab('cart');
+      }
+      
+      alert(`Đã tạo đơn quà tặng cho ${recipientInfo.name}!`);
+    } catch (error) {
+      console.error('Gift purchase failed:', error);
+      throw error;
+    }
+  };
+
+  const handleCloseGiftModal = () => {
+    setGiftModalOpen(false);
+    setSelectedGiftOrder(null);
   };
 
   return (
@@ -320,7 +369,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                     variant="outline"
                     size="sm"
                     className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
-                    onClick={() => console.log('Gift purchase', order.id)}
+                    onClick={() => handleGiftPurchase(order)}
                   >
                     Mua Tặng
                   </Button>
@@ -424,6 +473,14 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
           </div>
         ) : null}
       </div>
+
+      {/* Gift Purchase Modal */}
+      <GiftPurchaseModal
+        order={selectedGiftOrder}
+        isOpen={giftModalOpen}
+        onClose={handleCloseGiftModal}
+        onGiftPurchase={handleGiftPurchaseConfirm}
+      />
     </div>
   );
 }
