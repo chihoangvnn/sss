@@ -50,7 +50,7 @@ class InMemoryCache {
     }
 
     // Invalidate keys matching pattern
-    for (const key of this.cache.keys()) {
+    for (const key of Array.from(this.cache.keys())) {
       if (key.includes(pattern)) {
         this.cache.delete(key);
       }
@@ -59,7 +59,7 @@ class InMemoryCache {
 
   private cleanExpiredEntries(): void {
     const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [key, entry] of Array.from(this.cache.entries())) {
       if (now - entry.timestamp > entry.ttl) {
         this.cache.delete(key);
       }
