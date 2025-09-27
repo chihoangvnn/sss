@@ -21,6 +21,8 @@ import DesktopFooter from '@/components/DesktopFooter';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { formatVietnamPrice } from '@/utils/currency';
+import { VipTierCard } from '@/components/VipTierCard';
+import { calculateVipStatus } from '@/utils/vipCalculator';
 
 // API base URL from environment or default  
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
@@ -582,6 +584,48 @@ export default function MobileStorefront() {
               autoplay={true}
               autoplayDelay={4000}
             />
+
+            {/* VIP Tier Demo Section */}
+            <div className={`${layoutConfig.contentPadding} pb-0`}>
+              <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-6 mb-6">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    🏆 Hệ Thống VIP Thành Viên
+                  </h2>
+                  <p className="text-gray-600">
+                    Mua sắm nhiều hơn, nhận ưu đãi tốt hơn!
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Thành viên - 0đ */}
+                  <div className="transform hover:scale-105 transition-transform duration-300">
+                    <VipTierCard vipProgress={calculateVipStatus(0)} />
+                  </div>
+                  
+                  {/* Bạc - 1M */}
+                  <div className="transform hover:scale-105 transition-transform duration-300">
+                    <VipTierCard vipProgress={calculateVipStatus(1500000)} />
+                  </div>
+                  
+                  {/* Vàng - 3M */}
+                  <div className="transform hover:scale-105 transition-transform duration-300">
+                    <VipTierCard vipProgress={calculateVipStatus(4200000)} />
+                  </div>
+                  
+                  {/* Kim Cương - 10M */}
+                  <div className="transform hover:scale-105 transition-transform duration-300">
+                    <VipTierCard vipProgress={calculateVipStatus(12000000)} />
+                  </div>
+                </div>
+                
+                <div className="text-center mt-6">
+                  <p className="text-sm text-gray-500">
+                    💡 <strong>Demo:</strong> Đăng nhập để xem cấp độ thực tế của bạn!
+                  </p>
+                </div>
+              </div>
+            </div>
             
             {/* ProductCatalog removed - categories now shown in DesktopHeader */}
             
