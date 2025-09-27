@@ -4,6 +4,13 @@ import React from 'react';
 import { ShoppingCart, Search, User, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { HorizontalCategoryBar } from './HorizontalCategoryBar';
+
+interface Category {
+  id: string;
+  name: string;
+  icon?: string;
+}
 
 interface DesktopHeaderProps {
   storeName: string;
@@ -12,6 +19,11 @@ interface DesktopHeaderProps {
   onSearchChange: (query: string) => void;
   onCartClick: () => void;
   onProfileClick?: () => void;
+  // Category bar props
+  categories?: Category[];
+  selectedCategory?: string;
+  onCategorySelect?: (categoryId: string) => void;
+  showCategoryBar?: boolean;
 }
 
 export function DesktopHeader({
@@ -20,7 +32,11 @@ export function DesktopHeader({
   searchQuery,
   onSearchChange,
   onCartClick,
-  onProfileClick
+  onProfileClick,
+  categories = [],
+  selectedCategory,
+  onCategorySelect,
+  showCategoryBar = true
 }: DesktopHeaderProps) {
   const { user, isAuthenticated, isLoading, login } = useAuth();
   return (
@@ -116,10 +132,14 @@ export function DesktopHeader({
           </div>
         </div>
         
-        {/* Category Bar Placeholder - Ready for future category navigation */}
-        <div className="border-t border-green-700/30">
-          {/* This space is prepared for horizontal category bar */}
-        </div>
+        {/* Horizontal Category Bar */}
+        {showCategoryBar && categories.length > 0 && selectedCategory && onCategorySelect && (
+          <HorizontalCategoryBar
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onCategorySelect={onCategorySelect}
+          />
+        )}
       </div>
     </header>
   );

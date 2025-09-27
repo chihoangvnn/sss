@@ -670,6 +670,10 @@ export default function MobileStorefront() {
           onSearchChange={setSearchQuery}
           onCartClick={handleHeaderCartClick}
           onProfileClick={handleProfileClick}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={setSelectedCategory}
+          showCategoryBar={true}
         />
       )}
 
