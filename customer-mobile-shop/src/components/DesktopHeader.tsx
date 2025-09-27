@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { ShoppingCart, Search, User, LogIn } from 'lucide-react';
+import { ShoppingCart, Search, User, LogIn, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { HorizontalCategoryBar } from './HorizontalCategoryBar';
@@ -19,6 +19,7 @@ interface DesktopHeaderProps {
   onSearchChange: (query: string) => void;
   onCartClick: () => void;
   onProfileClick?: () => void;
+  onBlogClick?: () => void;
   // Category bar props
   categories?: Category[];
   selectedCategory?: string;
@@ -33,6 +34,7 @@ export function DesktopHeader({
   onSearchChange,
   onCartClick,
   onProfileClick,
+  onBlogClick,
   categories = [],
   selectedCategory,
   onCategorySelect,
@@ -45,10 +47,21 @@ export function DesktopHeader({
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Store Logo/Name */}
-          <div className="flex items-center">
+          <div className="flex items-center space-x-6">
             <h1 className="text-xl lg:text-2xl font-bold text-white">
               {storeName}
             </h1>
+            
+            {/* Blog Navigation */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBlogClick}
+              className="hidden lg:flex text-white hover:bg-white/10 hover:text-white"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              Blog
+            </Button>
           </div>
 
           {/* Desktop Search Bar - More Compact */}
