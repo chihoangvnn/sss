@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ShoppingCart, User, ArrowLeft, Plus, Minus, Heart, X, Filter, SortAsc, SortDesc, ChevronLeft, ChevronRight, Settings, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from 'embla-carousel-autoplay';
 import ChatbotWidget from '@/components/ChatbotWidget';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
+import { MobileAdminNav } from '@/components/MobileAdminNav';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
 import { VietnameseLunarCalendar } from '@/components/VietnameseLunarCalendar';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -62,6 +63,10 @@ function MobileStorefront() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [minRating, setMinRating] = useState(0);
+  
+  // Admin mode toggle
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [adminActiveTab, setAdminActiveTab] = useState('dashboard');
   
   // Responsive layout configurations
   const layoutConfig = {
@@ -703,7 +708,20 @@ function MobileStorefront() {
             >
               NHANGSACH.NET
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* Admin Mode Toggle - Only show on mobile */}
+              {isMobile && (
+                <button 
+                  onClick={() => setIsAdminMode(!isAdminMode)}
+                  className={`text-white hover:text-green-100 transition-all duration-200 p-1 rounded ${
+                    isAdminMode ? 'bg-blue-600' : 'bg-green-700'
+                  }`}
+                  title={isAdminMode ? 'Chuyển về Cửa hàng' : 'Chế độ Quản trị'}
+                >
+                  {isAdminMode ? <Store className="h-5 w-5" /> : <Settings className="h-5 w-5" />}
+                </button>
+              )}
+              
               <button 
                 onClick={() => setActiveTab('calendar')}
                 className="relative text-white hover:text-green-100 transition-colors"
@@ -838,12 +856,23 @@ function MobileStorefront() {
 
       {/* Bottom Navigation - Only show on mobile */}
       {layoutConfig.showBottomNav && (
-        <StorefrontBottomNav
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          cartCount={getTotalItems()}
-          wishlistCount={0}
-        />
+        <>
+          {isAdminMode ? (
+            <MobileAdminNav
+              activeTab={adminActiveTab}
+              onTabChange={(tab) => setAdminActiveTab(tab)}
+              onBackToStorefront={() => setIsAdminMode(false)}
+              unreadNotifications={0}
+            />
+          ) : (
+            <StorefrontBottomNav
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              cartCount={getTotalItems()}
+              wishlistCount={0}
+            />
+          )}
+        </>
       )}
 
       {/* Product Detail Modal */}
