@@ -8,6 +8,7 @@ import { formatVietnamPrice } from '@/utils/currency';
 import { useQuery } from '@tanstack/react-query';
 import { fetchOrders } from '@/lib/orderApi';
 import { GiftPurchaseModal } from '@/components/GiftPurchaseModal';
+import { SchedulePurchaseModal } from '@/components/SchedulePurchaseModal';
 
 export interface Order {
   id: string;
@@ -117,6 +118,10 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [giftModalOpen, setGiftModalOpen] = useState<boolean>(false);
   const [selectedGiftOrder, setSelectedGiftOrder] = useState<Order | null>(null);
+  
+  // Schedule purchase modal state
+  const [scheduleModalOpen, setScheduleModalOpen] = useState<boolean>(false);
+  const [selectedScheduleOrder, setSelectedScheduleOrder] = useState<Order | null>(null);
 
   // Fetch orders from API
   const { 
@@ -252,6 +257,37 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
     setSelectedGiftOrder(null);
   };
 
+  // Handle "Lên Lịch" functionality  
+  const handleSchedulePurchase = (order: Order) => {
+    setSelectedScheduleOrder(order);
+    setScheduleModalOpen(true);
+  };
+
+  const handleSchedulePurchaseConfirm = async (order: Order, scheduleInfo: any) => {
+    try {
+      // In a real app, this would call an API to create a scheduled order
+      console.log('Schedule purchase confirmed:', { order, scheduleInfo });
+      
+      // For demo purposes, just show success message
+      const frequencyText = {
+        weekly: 'hàng tuần',
+        biweekly: 'hai tuần một lần', 
+        monthly: 'hàng tháng',
+        quarterly: 'hàng quý'
+      };
+      
+      alert(`Đã lên lịch đặt hàng ${frequencyText[scheduleInfo.frequency]} bắt đầu từ ${scheduleInfo.startDate}!`);
+    } catch (error) {
+      console.error('Schedule purchase failed:', error);
+      throw error;
+    }
+  };
+
+  const handleCloseScheduleModal = () => {
+    setScheduleModalOpen(false);
+    setSelectedScheduleOrder(null);
+  };
+
   return (
     <div className={`space-y-5 ${className}`}>
       {/* Header */}
@@ -361,7 +397,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                     variant="outline"
                     size="sm"
                     className="text-xs px-3 py-2 border-green-200 text-green-700 hover:bg-green-50"
-                    onClick={() => console.log('Schedule purchase', order.id)}
+                    onClick={() => handleSchedulePurchase(order)}
                   >
                     Lên Lịch
                   </Button>
@@ -480,6 +516,14 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
         isOpen={giftModalOpen}
         onClose={handleCloseGiftModal}
         onGiftPurchase={handleGiftPurchaseConfirm}
+      />
+
+      {/* Schedule Purchase Modal */}
+      <SchedulePurchaseModal
+        order={selectedScheduleOrder}
+        isOpen={scheduleModalOpen}
+        onClose={handleCloseScheduleModal}
+        onSchedulePurchase={handleSchedulePurchaseConfirm}
       />
     </div>
   );
