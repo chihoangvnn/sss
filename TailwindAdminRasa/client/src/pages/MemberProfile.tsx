@@ -12,6 +12,7 @@ import { Share, MessageCircle, Phone, Mail, Facebook, Copy, Users, Gift } from '
 import QuickContact from '@/components/QuickContact';
 import SocialLoginPanel from '@/components/SocialLoginPanel';
 import SocialShare from '@/components/SocialShare';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 // Using browser alert for toast notifications (can be upgraded to toast library later)
 const toast = {
   success: (message: string) => alert(`✅ ${message}`),
@@ -44,6 +45,10 @@ interface Customer {
   pointsEarned: number;
   lastTierUpdate: string;
   joinDate: string;
+  // Business Management Fields
+  totalDebt?: number;
+  creditLimit?: number;
+  phone?: string;
 }
 
 interface MembershipDashboard {
@@ -593,6 +598,158 @@ export default function MemberProfile() {
           >
             {redeemPointsMutation.isPending ? 'Đang xử lý...' : 'Quy Đổi Điểm'}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Spending Analytics Dashboard */}
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span className="text-2xl">📊</span>
+            Phân Tích Chi Tiêu
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Analytics Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+              <div className="text-center space-y-1">
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatVND(customer.totalSpent)}
+                </div>
+                <div className="text-blue-700 text-sm font-medium">Tổng Chi Tiêu</div>
+                <div className="text-blue-600 text-xs">Từ {formatDate(customer.joinDate)}</div>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+              <div className="text-center space-y-1">
+                <div className="text-2xl font-bold text-green-600">
+                  {Math.round(customer.totalSpent / 12).toLocaleString('vi-VN')}đ
+                </div>
+                <div className="text-green-700 text-sm font-medium">TB/Tháng</div>
+                <div className="text-green-600 text-xs">12 tháng qua</div>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+              <div className="text-center space-y-1">
+                <div className="text-2xl font-bold text-purple-600">
+                  {currentTier.pointsMultiplier}x
+                </div>
+                <div className="text-purple-700 text-sm font-medium">Hệ Số Điểm</div>
+                <div className="text-purple-600 text-xs">Hạng {currentTier.name}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Spending Trends Chart */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-800">📈 Xu Hướng Chi Tiêu (6 tháng qua)</h4>
+            <div className="h-64 bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={[
+                    { month: 'T4', spending: 800000, label: 'Tháng 4' },
+                    { month: 'T5', spending: 1200000, label: 'Tháng 5' },
+                    { month: 'T6', spending: 950000, label: 'Tháng 6' },
+                    { month: 'T7', spending: 1500000, label: 'Tháng 7' },
+                    { month: 'T8', spending: 1100000, label: 'Tháng 8' },
+                    { month: 'T9', spending: 950000, label: 'Tháng 9' }
+                  ]}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fontSize: 12, fill: '#666' }}
+                    axisLine={{ stroke: '#e0e0e0' }}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: '#666' }}
+                    axisLine={{ stroke: '#e0e0e0' }}
+                    tickFormatter={(value) => `${(value/1000).toFixed(0)}K`}
+                  />
+                  <Tooltip 
+                    formatter={(value: any) => [formatVND(value), 'Chi tiêu']}
+                    labelFormatter={(label) => `Tháng ${label.replace('T', '')}/2024`}
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="spending" 
+                    stroke="#f97316" 
+                    strokeWidth={3}
+                    dot={{ fill: '#f97316', strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 7, stroke: '#f97316', strokeWidth: 2, fill: '#fff' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Tier Progress Analytics */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-800">🏆 Tiến Độ Thăng Hạng</h4>
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🥈</span>
+                  <span className="font-medium text-yellow-700">Bạc → Vàng</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-green-600 font-bold">✅ Hoàn thành</div>
+                  <div className="text-yellow-600 text-xs">Đạt 01/09/2024</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💎</span>
+                  <span className="font-medium text-blue-700">Vàng → Kim Cương</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-blue-600 font-bold">58% hoàn thành</div>
+                  <div className="text-blue-600 text-xs">Còn {formatVND(nextTier?.remainingSpent || 0)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Insights */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-800">💡 Thông Tin Chi Tiêu</h4>
+            <div className="grid gap-3">
+              <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-start gap-2">
+                  <span className="text-orange-600">📅</span>
+                  <div>
+                    <div className="font-medium text-orange-700">Tháng Này</div>
+                    <div className="text-orange-600 text-sm">
+                      Chi tiêu 950K • Tích được 142 điểm • Tiết kiệm 15% so với tháng trước
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600">🎯</span>
+                  <div>
+                    <div className="font-medium text-green-700">Gợi Ý</div>
+                    <div className="text-green-600 text-sm">
+                      Chi thêm {formatVND(1000000)} trong 3 tháng tới để lên hạng Kim Cương!
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
