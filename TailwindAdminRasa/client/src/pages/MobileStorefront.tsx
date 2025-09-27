@@ -10,6 +10,7 @@ import ChatbotWidget from '@/components/ChatbotWidget';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { ProductDetailModal } from '@/components/ProductDetailModal';
 import { VietnameseLunarCalendar } from '@/components/VietnameseLunarCalendar';
+import { useResponsive } from '@/hooks/use-mobile';
 import { 
   ProductListSkeleton, 
   CategorySkeleton, 
@@ -46,6 +47,9 @@ interface CartItem {
 // We'll use real categories from API and limit to top 2-3
 
 function MobileStorefront() {
+  // Responsive hooks
+  const { isMobile, isTablet, isDesktop, deviceType } = useResponsive();
+  
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -58,6 +62,22 @@ function MobileStorefront() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
   const [minRating, setMinRating] = useState(0);
+  
+  // Responsive layout configurations
+  const layoutConfig = {
+    // Grid columns: mobile(2) -> tablet(3) -> desktop(4-5)
+    gridCols: isMobile ? 'grid-cols-2' : isTablet ? 'grid-cols-3' : 'grid-cols-4 xl:grid-cols-5',
+    // Container width: mobile(full) -> desktop(max-width)
+    containerClass: isMobile ? 'w-full' : 'max-w-7xl mx-auto',
+    // Hero height: mobile(small) -> desktop(large)
+    heroHeight: isMobile ? 'h-44 sm:h-56' : 'h-64 lg:h-72 xl:h-80',
+    // Padding: mobile(small) -> desktop(larger)
+    contentPadding: isMobile ? 'p-4' : 'p-6 lg:p-8',
+    // Gap between products: mobile(small) -> desktop(larger)
+    gridGap: isMobile ? 'gap-3' : 'gap-4 lg:gap-6',
+    // Show bottom nav only on mobile
+    showBottomNav: isMobile
+  };
   
   // Auto-hide search bar state with focus protection
   const [showSearchBar, setShowSearchBar] = useState(true);
@@ -344,24 +364,26 @@ function MobileStorefront() {
     switch (activeTab) {
       case 'categories':
         return (
-          <div className="p-4 pt-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Danh mục sản phẩm</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    setSelectedCategory(category.id);
-                    setActiveTab('home');
-                  }}
-                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-                >
-                  <div className="text-center">
-                    <div className="text-3xl mb-2">{category.icon}</div>
-                    <h3 className="font-semibold text-gray-900">{category.name}</h3>
-                  </div>
-                </button>
-              ))}
+          <div className={`${layoutConfig.containerClass}`}>
+            <div className={`${layoutConfig.contentPadding} pt-6`}>
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Danh mục sản phẩm</h2>
+              <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      setActiveTab('home');
+                    }}
+                    className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                  >
+                    <div className="text-center">
+                      <div className="text-3xl mb-2">{category.icon}</div>
+                      <h3 className="font-semibold text-gray-900">{category.name}</h3>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -478,7 +500,7 @@ function MobileStorefront() {
 
       default: // 'home'
         return (
-          <div>
+          <div className={layoutConfig.containerClass}>
             {/* Hero Carousel for Vietnamese Incense Business */}
             <div className="relative bg-gray-900 overflow-hidden">
               <Carousel
@@ -489,7 +511,7 @@ function MobileStorefront() {
                 plugins={[plugin.current]}
                 className="w-full"
               >
-                <CarouselContent className="h-44 sm:h-56">
+                <CarouselContent className={layoutConfig.heroHeight}>
                   {heroSlides.map((slide, index) => (
                     <CarouselItem key={index} className="relative">
                       {/* Background Image */}
@@ -532,8 +554,8 @@ function MobileStorefront() {
             
 
             {/* Product Grid */}
-            <div className="p-4">
-              <div className="grid grid-cols-2 gap-3">
+            <div className={layoutConfig.contentPadding}>
+              <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
                 {productsLoading || productsRefetching ? (
                   <ProductListSkeleton count={8} />
                 ) : productsError ? (
@@ -814,13 +836,15 @@ function MobileStorefront() {
         </div>
       )}
 
-      {/* Bottom Navigation */}
-      <StorefrontBottomNav
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        cartCount={getTotalItems()}
-        wishlistCount={0}
-      />
+      {/* Bottom Navigation - Only show on mobile */}
+      {layoutConfig.showBottomNav && (
+        <StorefrontBottomNav
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          cartCount={getTotalItems()}
+          wishlistCount={0}
+        />
+      )}
 
       {/* Product Detail Modal */}
       {selectedProduct && (
@@ -838,8 +862,8 @@ function MobileStorefront() {
         />
       )}
 
-      {/* Optimized Chat Widget - positioned above green bottom nav */}
-      <div className="fixed bottom-24 right-4 z-30">
+      {/* Optimized Chat Widget - responsive positioning */}
+      <div className={`fixed ${isMobile ? 'bottom-24' : 'bottom-6'} right-4 z-30`}>
         <ChatbotWidget 
           pageType="storefront"
           pageContext={{

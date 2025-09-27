@@ -346,13 +346,15 @@ export default function ChatbotWidget({
   // Smart positioning calculations
   const getSmartPositioning = useCallback(() => {
     const isLandingPage = pageType === "landing_page";
+    const isStorefront = pageType === "storefront";
     const isMobile = window.innerWidth < 768;
     
-    // Landing pages have sticky bottom CTAs that need 80px clearance on mobile
-    const mobileBottomOffset = isLandingPage && isMobile ? "6rem" : "1rem"; // 96px vs 16px
+    // Both landing pages and storefronts need bottom clearance on mobile for navigation
+    // Landing pages: 6rem for sticky CTAs, Storefronts: 6rem for bottom navigation bar
+    const mobileBottomOffset = (isLandingPage || isStorefront) && isMobile ? "6rem" : "1rem"; // 96px vs 16px
     const desktopBottomOffset = "5rem"; // 80px for desktop popup
     
-    // Ensure chatbot is above landing page sticky bars (z-50 + 1)
+    // Ensure chatbot is above navigation bars (z-50 + 1)
     const zIndexValue = 9999;
     
     return {
