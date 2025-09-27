@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { User, LogIn, LogOut, Mail, Shield, ArrowLeft, Package, Heart, MapPin, Bell } from 'lucide-react';
 import { OrderHistory } from '@/components/OrderHistory';
+import { VipTierCard } from '@/components/VipTierCard';
+import { calculateVipStatus } from '@/utils/vipCalculator';
 
 interface Product {
   id: string;
@@ -127,6 +129,11 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
     );
   }
 
+  // Calculate VIP status based on mock total spent
+  // In a real app, this would come from user's purchase history
+  const mockTotalSpent = 2500000; // 2.5M VND - demo user at Silver tier progressing to Gold
+  const vipProgress = calculateVipStatus(mockTotalSpent);
+
   // Profile overview (default view)
   return (
     <div className="p-4 pt-6">
@@ -170,6 +177,9 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           Đăng xuất
         </Button>
       </div>
+
+      {/* VIP Tier System */}
+      <VipTierCard vipProgress={vipProgress} />
 
       {/* Account Features */}
       <div className="bg-white rounded-xl p-6">
