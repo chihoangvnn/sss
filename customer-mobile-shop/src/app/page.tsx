@@ -9,10 +9,18 @@ import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
+import { ImageSlider } from '@/components/ImageSlider';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
+
+// Banner images for slider
+const BANNER_IMAGES = [
+  '/images/modern_e-commerce_ba_70f9ff6e.jpg',
+  '/images/modern_e-commerce_ba_a5ed4b23.jpg',
+  '/images/modern_e-commerce_ba_9f23a27c.jpg'
+];
 
 
 interface Product {
@@ -454,6 +462,14 @@ export default function MobileStorefront() {
       default: // 'home'
         return (
           <div className={layoutConfig.containerClass}>
+            {/* Banner Slider */}
+            <ImageSlider 
+              images={BANNER_IMAGES}
+              className="mb-6"
+              autoplay={true}
+              autoplayDelay={4000}
+            />
+            
             {/* Product Grid */}
             <div className={layoutConfig.contentPadding}>
               <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
