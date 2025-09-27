@@ -11,6 +11,7 @@ import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
 import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
+import { ProductCatalog } from '@/components/ProductCatalog';
 import { useResponsive } from '@/hooks/use-mobile';
 import { formatVietnamPrice } from '@/utils/currency';
 
@@ -126,7 +127,7 @@ export default function MobileStorefront() {
   // Create simplified category list with real IDs
   const categories = categoriesLoading ? [] : [
     { id: 'all', name: 'Tất cả', icon: '🛍️' },
-    ...allCategories.slice(0, 2).map(cat => ({
+    ...allCategories.map(cat => ({
       id: cat.id,
       name: cat.name,
       icon: getCategoryIcon(cat.name)
@@ -475,6 +476,16 @@ export default function MobileStorefront() {
               autoplay={true}
               autoplayDelay={4000}
             />
+            
+            {/* Product Catalog - Desktop & Tablet */}
+            {(isTablet || !isMobile) && (
+              <ProductCatalog
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onCategorySelect={setSelectedCategory}
+                isLoading={categoriesLoading}
+              />
+            )}
             
             {/* Product Grid */}
             <div className={layoutConfig.contentPadding}>
