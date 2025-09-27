@@ -55,14 +55,7 @@ export function StorefrontBottomNav({ activeTab, onTabChange, cartCount = 0, wis
           return (
             <button
               key={tab.id}
-              onClick={() => {
-                if (tab.id === 'calendar') {
-                  // For now, just show a placeholder or use the profile tab
-                  onTabChange('profile');
-                } else {
-                  onTabChange(tab.id);
-                }
-              }}
+              onClick={() => onTabChange(tab.id)}
               className={`
                 flex flex-col items-center justify-center py-2 px-3 min-w-0 flex-1 relative
                 transition-all duration-200 ease-in-out

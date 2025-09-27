@@ -11,6 +11,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
+import { LunarCalendar } from '@/components/LunarCalendar';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
@@ -357,6 +358,9 @@ export default function MobileStorefront() {
           </div>
         );
 
+      case 'calendar':
+        return <LunarCalendar />;
+
       case 'profile':
         return (
           <div className="p-4 pt-6">
@@ -391,9 +395,13 @@ export default function MobileStorefront() {
                 <ShoppingCart className="h-5 w-5 mr-3" />
                 Lịch sử đơn hàng
               </Button>
-              <Button variant="outline" className="w-full justify-start text-left">
-                <Heart className="h-5 w-5 mr-3" />
-                Lịch âm dương
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-left"
+                onClick={() => setActiveTab('calendar')}
+              >
+                <Calendar className="h-5 w-5 mr-3" />
+                Lịch vạn niên
               </Button>
             </div>
           </div>
