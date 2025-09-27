@@ -461,35 +461,6 @@ export default function MobileStorefront() {
               </Carousel>
             </div>
 
-            {/* Search Section */}
-            <div className={`${layoutConfig.contentPadding} pb-4 pt-4`}>
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <Input
-                  type="text"
-                  placeholder="Tìm kiếm sản phẩm..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 bg-white"
-                />
-              </div>
-
-              {/* Category Pills */}
-              <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-                {categories.map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={selectedCategory === category.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedCategory(category.id)}
-                    className="whitespace-nowrap"
-                  >
-                    <span className="mr-1">{category.icon}</span>
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
 
             {/* Product Grid */}
             <div className={layoutConfig.contentPadding}>
@@ -593,6 +564,15 @@ export default function MobileStorefront() {
         />
       )}
 
+      {/* Auto Hide Search Bar */}
+      {layoutConfig.showBottomNav && activeTab === 'home' && (
+        <AutoHideSearchBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onFilterClick={() => setShowFilters(true)}
+          placeholder="Tìm kiếm sản phẩm..."
+        />
+      )}
 
       <main className={layoutConfig.showBottomNav ? "pb-20" : ""}>
         {renderContent()}
