@@ -13,6 +13,8 @@ import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
 import { ProfileTab } from '@/components/ProfileTab';
+import { BlogTab } from '@/components/BlogTab';
+import { BlogPost } from '@/components/BlogPost';
 import DesktopChatBot from '@/components/DesktopChatBot';
 import DesktopFooter from '@/components/DesktopFooter';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -58,6 +60,25 @@ interface CartItem {
   quantity: number;
 }
 
+interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  author: string;
+  publishedAt: string;
+  category: string;
+  tags: string[];
+  imageUrl?: string;
+  readingTime: number;
+  isNew?: boolean;
+  isFeatured?: boolean;
+  views?: number;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+}
+
 export default function MobileStorefront() {
   // Responsive hooks
   const { isMobile, isTablet } = useResponsive();
@@ -70,6 +91,9 @@ export default function MobileStorefront() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedBlogPost, setSelectedBlogPost] = useState<BlogPost | null>(null);
+  const [blogSearchQuery, setBlogSearchQuery] = useState('');
+  const [blogSelectedCategory, setBlogSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'newest'>('newest');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
@@ -546,6 +570,40 @@ export default function MobileStorefront() {
       case 'profile':
         return <ProfileTab />;
 
+      case 'blog':
+        // If a blog post is selected, show blog post detail
+        if (selectedBlogPost) {
+          return (
+            <BlogPost
+              post={selectedBlogPost}
+              onBack={() => setSelectedBlogPost(null)}
+              onTagClick={(tag) => {
+                // Filter blog posts by tag (use search for tags)
+                setBlogSearchQuery(tag);
+                setSelectedBlogPost(null);
+                setActiveTab('blog');
+              }}
+              onCategoryClick={(category) => {
+                // Filter blog posts by category
+                setBlogSelectedCategory(category);
+                setBlogSearchQuery(''); // Clear search when filtering by category
+                setSelectedBlogPost(null);
+                setActiveTab('blog');
+              }}
+            />
+          );
+        }
+        // Otherwise show blog list
+        return (
+          <BlogTab
+            onPostClick={(post) => setSelectedBlogPost(post)}
+            searchQuery={blogSearchQuery}
+            selectedCategory={blogSelectedCategory}
+            onSearchChange={setBlogSearchQuery}
+            onCategorySelect={setBlogSelectedCategory}
+          />
+        );
+
       default: // 'home'
         return (
           <div className={layoutConfig.containerClass}>
@@ -661,6 +719,7 @@ export default function MobileStorefront() {
           onSearchChange={setSearchQuery}
           onCartClick={handleHeaderCartClick}
           onProfileClick={handleProfileClick}
+          onBlogClick={() => setActiveTab('blog')}
           categories={categories}
           selectedCategory={selectedCategory}
           onCategorySelect={setSelectedCategory}

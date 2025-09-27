@@ -21,6 +21,10 @@ interface BlogPost {
 
 interface BlogTabProps {
   onPostClick: (post: BlogPost) => void;
+  searchQuery?: string;
+  selectedCategory?: string;
+  onSearchChange?: (query: string) => void;
+  onCategorySelect?: (category: string) => void;
 }
 
 // Mock data for nhang sạch, tâm linh, phong thủy blog posts
@@ -119,9 +123,19 @@ const BLOG_CATEGORIES = [
   { id: 'Tâm Linh', name: 'Tâm Linh', count: MOCK_BLOG_POSTS.filter(p => p.category === 'Tâm Linh').length }
 ];
 
-export function BlogTab({ onPostClick }: BlogTabProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+export function BlogTab({ 
+  onPostClick, 
+  searchQuery: externalSearchQuery = '', 
+  selectedCategory: externalSelectedCategory = 'all',
+  onSearchChange,
+  onCategorySelect 
+}: BlogTabProps) {
+  // Use controlled props if provided, otherwise use internal state
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const [internalSelectedCategory, setInternalSelectedCategory] = useState('all');
+  
+  const searchQuery = onSearchChange ? externalSearchQuery : internalSearchQuery;
+  const selectedCategory = onCategorySelect ? externalSelectedCategory : internalSelectedCategory;
 
   // Filter posts based on search and category
   const filteredPosts = useMemo(() => {
@@ -176,7 +190,14 @@ export function BlogTab({ onPostClick }: BlogTabProps) {
               type="text"
               placeholder="Tìm kiếm bài viết..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const newQuery = e.target.value;
+                if (onSearchChange) {
+                  onSearchChange(newQuery);
+                } else {
+                  setInternalSearchQuery(newQuery);
+                }
+              }}
               className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400"
             />
           </div>
@@ -188,7 +209,13 @@ export function BlogTab({ onPostClick }: BlogTabProps) {
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => {
+                  if (onCategorySelect) {
+                    onCategorySelect(category.id);
+                  } else {
+                    setInternalSelectedCategory(category.id);
+                  }
+                }}
                 className={`
                   ${selectedCategory === category.id 
                     ? 'bg-green-600 hover:bg-green-700 text-white' 
