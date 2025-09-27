@@ -44,11 +44,11 @@ export function VipTierCard({ vipProgress }: VipTierCardProps) {
           </div>
           
           <div className="text-right">
-            <div className={`text-2xl font-bold ${currentTier.textColor}`}>
-              {currentTier.discount}%
+            <div className={`text-lg font-bold ${currentTier.textColor} text-center`}>
+              {currentTier.motivationalTitle}
             </div>
-            <div className={`text-xs ${currentTier.textColor} opacity-90`}>
-              GIẢM GIÁ
+            <div className={`text-xs ${currentTier.textColor} opacity-90 text-center`}>
+              {currentTier.motivationalSubtitle}
             </div>
           </div>
         </div>

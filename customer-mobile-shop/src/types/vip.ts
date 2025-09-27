@@ -9,6 +9,8 @@ export interface VipTier {
   borderGradient: string;
   textColor: string;
   animationClass: string;
+  motivationalTitle: string;  // Thông điệp kích thích chính
+  motivationalSubtitle: string; // Thông điệp phụ
 }
 
 export interface VipProgress {
@@ -34,7 +36,9 @@ export const VIP_TIERS: VipTier[] = [
     bgGradient: 'from-blue-400 to-sky-500',
     borderGradient: 'from-blue-300 to-sky-400',
     textColor: 'text-white',
-    animationClass: 'animate-pulse'
+    animationClass: 'animate-pulse',
+    motivationalTitle: 'BẮT ĐẦU HÀNH TRÌNH VIP!',
+    motivationalSubtitle: 'Mua sắm ngay để thăng hạng!'
   },
   {
     id: 'silver',
@@ -42,16 +46,18 @@ export const VIP_TIERS: VipTier[] = [
     emoji: '🥈',
     threshold: 1000000,
     benefits: [
-      'Giảm giá 5% tất cả sản phẩm',
-      'Miễn phí ship đơn >500K',
       'Ưu tiên xử lý đơn hàng',
+      'Tư vấn miễn phí 24/7',
+      'Miễn phí ship đơn >500K',
       'Tích điểm x1.5'
     ],
     discount: 5,
     bgGradient: 'from-gray-400 to-slate-500',
     borderGradient: 'from-gray-300 to-slate-400',
     textColor: 'text-white',
-    animationClass: 'animate-shimmer'
+    animationClass: 'animate-shimmer',
+    motivationalTitle: 'BẠN ĐÃ LÀ KHÁCH VIP!',
+    motivationalSubtitle: 'Ưu tiên xử lý đơn hàng!'
   },
   {
     id: 'gold',
@@ -59,17 +65,19 @@ export const VIP_TIERS: VipTier[] = [
     emoji: '🥇',
     threshold: 3000000,
     benefits: [
-      'Giảm giá 10% tất cả sản phẩm',
-      'Miễn phí ship toàn quốc',
+      'Freeship toàn quốc',
+      'Sản phẩm độc quyền',
+      'Quà tặng sinh nhật',
       'Tư vấn chuyên gia 1-1',
-      'Tích điểm x2',
       'Early access sản phẩm mới'
     ],
     discount: 10,
     bgGradient: 'from-yellow-400 to-orange-500',
     borderGradient: 'from-yellow-300 to-orange-400',
     textColor: 'text-white',
-    animationClass: 'animate-glow'
+    animationClass: 'animate-glow',
+    motivationalTitle: 'KHÁCH HÀNG ĐẲNG CẤP!',
+    motivationalSubtitle: 'Freeship toàn quốc!'
   },
   {
     id: 'diamond',
@@ -77,9 +85,9 @@ export const VIP_TIERS: VipTier[] = [
     emoji: '💎',
     threshold: 10000000,
     benefits: [
-      'Giảm giá 20% tất cả sản phẩm',
-      'Miễn phí ship express',
-      'Hotline VIP riêng',
+      'Hotline riêng CEO',
+      'Xem hàng trước khi mua',
+      'Ưu đãi độc quyền 365 ngày',
       'Tích điểm x3',
       'Quà tặng sinh nhật đặc biệt',
       'Trải nghiệm độc quyền'
@@ -88,6 +96,8 @@ export const VIP_TIERS: VipTier[] = [
     bgGradient: 'from-purple-500 to-blue-600',
     borderGradient: 'from-purple-400 to-blue-500',
     textColor: 'text-white',
-    animationClass: 'animate-diamond-shimmer'
+    animationClass: 'animate-diamond-shimmer',
+    motivationalTitle: 'SIÊU VIP - ĐẲNG CẤP TỐI THƯỢNG!',
+    motivationalSubtitle: 'Hotline riêng CEO!'
   }
 ];
