@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { User, LogIn, LogOut, Mail, Shield, ArrowLeft, Package, Heart, MapPin, Bell } from 'lucide-react';
 import { OrderHistory } from '@/components/OrderHistory';
 import { VipTierCard } from '@/components/VipTierCard';
+import { AddressManagement } from '@/components/AddressManagement';
 import { calculateVipStatus } from '@/utils/vipCalculator';
 import { useQuery } from '@tanstack/react-query';
 import { fetchOrders } from '@/lib/orderApi';
@@ -145,6 +146,12 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
         
         <OrderHistory addToCart={addToCart} setActiveTab={setActiveTab} />
       </div>
+    );
+  }
+
+  if (activeView === 'shipping') {
+    return (
+      <AddressManagement onBack={() => setActiveView('profile')} />
     );
   }
 
