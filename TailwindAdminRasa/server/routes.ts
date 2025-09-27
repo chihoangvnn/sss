@@ -38,6 +38,7 @@ import productFAQsRouter from './api/product-faqs';
 import aiContentRouter from './api/ai-content';
 import analyticsRouter from './api/analytics';
 import limitManagementRouter from './api/limit-management';
+import { cacheMiddleware, CacheKeys } from './middleware/cache';
 import automationRouter from './api/automation';
 import satellitesRouter from './api/satellites';
 import postsRouter from './api/posts';
@@ -927,7 +928,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Categories API
-  app.get("/api/categories", async (req, res) => {
+  app.get("/api/categories", 
+    cacheMiddleware(300, () => CacheKeys.categories()),
+    async (req, res) => {
     try {
       const { industryId } = req.query;
       const industryIdParam = typeof industryId === 'string' ? industryId : undefined;

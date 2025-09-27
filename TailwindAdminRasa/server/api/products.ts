@@ -195,8 +195,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/products - Create new product
-router.post('/', requireAuth, invalidateCacheMiddleware('products'), async (req, res) => {
+// POST /api/products - Create new product  
+router.post('/', requireAuth, invalidateCacheMiddleware('product'), async (req, res) => {
   try {
     console.log('📊 API: Creating new product');
     const product = await storage.createProduct(req.body);
@@ -211,7 +211,7 @@ router.post('/', requireAuth, invalidateCacheMiddleware('products'), async (req,
 });
 
 // PUT /api/products/:id - Update existing product
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', requireAuth, invalidateCacheMiddleware('product'), async (req, res) => {
   try {
     const { id } = req.params;
     console.log('📊 API: Updating product with ID:', id);
@@ -232,7 +232,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // DELETE /api/products/:id - Delete product  
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, invalidateCacheMiddleware('product'), async (req, res) => {
   try {
     const { id } = req.params;
     console.log('🗑️ API: Deleting product with ID:', id);
@@ -304,7 +304,7 @@ router.get('/:id/sales-techniques', async (req, res) => {
 });
 
 // PUT /api/products/:id/sales-techniques - Update specific sales technique data
-router.put('/:id/sales-techniques', requireAuth, async (req, res) => {
+router.put('/:id/sales-techniques', requireAuth, invalidateCacheMiddleware('product'), async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -358,7 +358,7 @@ router.put('/:id/sales-techniques', requireAuth, async (req, res) => {
 });
 
 // PUT /api/products/:id/sales-techniques/:technique - Update individual sales technique
-router.put('/:id/sales-techniques/:technique', requireAuth, async (req, res) => {
+router.put('/:id/sales-techniques/:technique', requireAuth, invalidateCacheMiddleware('product'), async (req, res) => {
   try {
     const { id, technique } = req.params;
     const techniqueData = req.body;
