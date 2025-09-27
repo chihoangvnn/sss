@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Plus, Minus, Star, Share2, ShoppingCart, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ComprehensiveDisplay } from './storefront/EnhancedProductDisplay';
 
 interface Product {
   id: string;
@@ -52,7 +53,8 @@ export function ProductDetailModal({
     description: false,
     ingredients: false,
     usage: false,
-    faq: false
+    faq: false,
+    customDescriptions: false  // Vietnamese incense custom descriptions
   });
 
   // Use only real product images - no fabricated ones
@@ -612,6 +614,28 @@ export function ProductDetailModal({
                           <p>A: Có, sản phẩm đạt chứng nhận VietGAP và các tiêu chuẩn chất lượng quốc tế.</p>
                         </div>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 🎯 VIETNAMESE INCENSE CUSTOM DESCRIPTIONS ACCORDION */}
+                <div className="border-b border-gray-200">
+                  <button
+                    onClick={() => toggleAccordion('customDescriptions')}
+                    className="w-full flex items-center justify-between py-4 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                      🙏 Thông tin tâm linh & văn hóa
+                    </h3>
+                    {openAccordions.customDescriptions ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </button>
+                  {openAccordions.customDescriptions && (
+                    <div className="pb-4 px-4 bg-gradient-to-br from-purple-50 to-blue-50">
+                      <ComprehensiveDisplay product={product as any} />
                     </div>
                   )}
                 </div>
