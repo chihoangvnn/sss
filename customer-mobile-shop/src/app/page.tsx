@@ -1,11 +1,9 @@
 'use client'
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { ShoppingCart, User, ArrowLeft, Plus, Minus, Store, Calendar, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
@@ -40,19 +38,15 @@ interface CartItem {
 
 export default function MobileStorefront() {
   // Responsive hooks
-  const { isMobile, isTablet, isDesktop, deviceType } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
   
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [showCart, setShowCart] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'newest'>('newest');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
-  const [minRating, setMinRating] = useState(0);
   
   // Responsive layout configurations
   const layoutConfig = {
@@ -182,15 +176,8 @@ export default function MobileStorefront() {
   const handleTabChange = (tab: string) => {
     setSelectedProduct(null); // Always clear product view when changing tabs
     setActiveTab(tab);
-    if (tab === 'cart') {
-      setShowCart(true);
-    }
   };
 
-  const handleCloseCart = () => {
-    setShowCart(false);
-    setActiveTab('home');
-  };
 
   const handleHeaderSearchClick = () => {
     setActiveTab('home');
