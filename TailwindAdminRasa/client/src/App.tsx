@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useResponsive } from "@/hooks/use-mobile";
 
 // Pages
 import Dashboard from "@/pages/Dashboard";
@@ -105,6 +106,8 @@ function AdminRouter() {
 }
 
 function App() {
+  const { isMobile } = useResponsive();
+  
   // Custom sidebar width for e-commerce admin
   const style = {
     "--sidebar-width": "20rem",       // 320px for better navigation
@@ -114,7 +117,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {/* Public Routes (outside admin layout) */}
+        {/* Public Routes (outside admin layout) - Always available for both mobile and desktop */}
         <Switch>
           <Route path="/shop" component={ShopeeHomePage} />
           <Route path="/calendar" component={FullLunarCalendarPage} />
@@ -122,15 +125,35 @@ function App() {
           <Route path="/sf/:name" component={PublicStorefront} />
           <Route path="/product/:slug" component={ProductPage} />
           <Route>
-            {/* Admin Routes (inside sidebar layout) */}
-            <SidebarProvider style={style as React.CSSProperties}>
-              <div className="flex h-screen w-full">
-                <AppSidebar />
-                <main className="flex-1 overflow-auto bg-background mobile-content-padding">
-                  <AdminRouter />
-                </main>
-              </div>
-            </SidebarProvider>
+            {/* Conditional Layout Based on Device Type */}
+            {isMobile ? (
+              /* Mobile Layout - Show mobile storefront for /mobile route, admin for all others */
+              <Switch>
+                <Route path="/mobile" component={() => (
+                  <div className="h-screen w-full bg-background">
+                    <MobileStorefront />
+                  </div>
+                )} />
+                <Route>
+                  {/* Mobile Admin Layout - no sidebar, mobile-optimized */}
+                  <div className="h-screen w-full bg-background">
+                    <main className="h-full overflow-auto bg-background p-4">
+                      <AdminRouter />
+                    </main>
+                  </div>
+                </Route>
+              </Switch>
+            ) : (
+              /* Desktop/Tablet Layout - Full Admin with sidebar */
+              <SidebarProvider style={style as React.CSSProperties}>
+                <div className="flex h-screen w-full">
+                  <AppSidebar />
+                  <main className="flex-1 overflow-auto bg-background mobile-content-padding">
+                    <AdminRouter />
+                  </main>
+                </div>
+              </SidebarProvider>
+            )}
           </Route>
         </Switch>
         
