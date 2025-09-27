@@ -30,26 +30,24 @@ export function VipTierCard({ vipProgress }: VipTierCardProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-yellow-300/20 via-transparent to-yellow-300/20 animate-pulse"></div>
         )}
 
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <span className="text-3xl animate-bounce">{currentTier.emoji}</span>
-            <div>
-              <h3 className={`text-lg font-bold ${currentTier.textColor}`}>
-                KHÁCH HÀNG {currentTier.name.toUpperCase()}
-              </h3>
-              <p className={`text-sm ${currentTier.textColor} opacity-90`}>
-                Tổng chi tiêu: {formatCurrency(totalSpent)}
-              </p>
+        <div className="relative flex items-start justify-between">
+          <div className="flex-1">
+            <h3 className={`text-lg font-bold ${currentTier.textColor}`}>
+              KHÁCH HÀNG {currentTier.name.toUpperCase()}
+            </h3>
+            <p className={`text-sm ${currentTier.textColor} opacity-90 mb-3`}>
+              Tổng chi tiêu: {formatCurrency(totalSpent)}
+            </p>
+            <div className={`text-sm font-bold ${currentTier.textColor} leading-tight mb-1`}>
+              {currentTier.motivationalTitle}
+            </div>
+            <div className={`text-xs ${currentTier.textColor} opacity-90 leading-tight`}>
+              {currentTier.motivationalSubtitle}
             </div>
           </div>
           
-          <div className="text-right max-w-32">
-            <div className={`text-sm font-bold ${currentTier.textColor} text-center leading-tight mb-1`}>
-              {currentTier.motivationalTitle}
-            </div>
-            <div className={`text-xs ${currentTier.textColor} opacity-90 text-center leading-tight`}>
-              {currentTier.motivationalSubtitle}
-            </div>
+          <div className="flex-shrink-0 ml-4">
+            <span className="text-4xl animate-bounce">{currentTier.emoji}</span>
           </div>
         </div>
       </div>
