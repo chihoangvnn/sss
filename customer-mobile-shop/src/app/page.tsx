@@ -15,10 +15,6 @@ import { useResponsive } from '@/hooks/use-mobile';
 // API base URL from environment or default
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
 
-// Hero images for incense business
-const heroImage1 = '/incense-hero-1.png';
-const heroImage2 = '/incense-hero-2.png';
-const heroImage3 = '/incense-hero-3.png';
 
 interface Product {
   id: string;
