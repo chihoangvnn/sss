@@ -74,12 +74,18 @@ export function MobileHeader({
         </div>
       </div>
 
-      {/* Breadcrumb or quick navigation */}
-      <div className="px-4 pb-2">
-        <div className="flex items-center gap-2 text-sm text-green-100">
-          <Home size={16} />
-          <span>/</span>
-          <span>Trang chủ</span>
+      {/* Search section */}
+      <div className="px-4 pb-3">
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm sản phẩm..."
+              className="w-full pl-9 pr-3 py-2 bg-white/90 border border-white/20 rounded-lg text-gray-900 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-white/50 focus:bg-white"
+              onClick={onSearchClick}
+            />
+          </div>
         </div>
       </div>
     </div>
