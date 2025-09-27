@@ -1,7 +1,7 @@
 modules = ["nodejs-20", "postgresql-16", "python-3.11"]
 [agent]
 expertMode = true
-integrations = ["javascript_gemini:1.0.0", "twilio_send_message:1.0.0", "javascript_sendgrid:1.0.0", "replitmail:1.0.0"]
+integrations = ["javascript_gemini:1.0.0", "twilio_send_message:1.0.0", "javascript_sendgrid:1.0.0", "replitmail:1.0.0", "javascript_log_in_with_replit:1.0.0"]
 
 [nix]
 channel = "stable-25_05"

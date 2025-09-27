@@ -104,6 +104,33 @@ export const CloudinaryVideoZ = CloudinaryBaseZ.extend({
   thumbnail_url: z.string().url().optional(),
 });
 
+// Session storage table for Replit Auth
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// Auth users table for Replit Auth (separate from admin users)
+// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+export const authUsers = pgTable("auth_users", {
+  id: varchar("id").primaryKey(),  // This comes from Replit (sub claim)
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type UpsertAuthUser = typeof authUsers.$inferInsert;
+export type AuthUser = typeof authUsers.$inferSelect;
+
 // Users table for admin authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -850,7 +877,7 @@ export const customDescriptionTemplates = pgTable("custom_description_templates"
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Customers table
+// Customers table with membership system
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -861,6 +888,29 @@ export const customers = pgTable("customers", {
   totalDebt: decimal("total_debt", { precision: 15, scale: 2 }).notNull().default("0"),
   creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }).notNull().default("0"),
   joinDate: timestamp("join_date").defaultNow(),
+
+  // 💎 MEMBERSHIP SYSTEM - 4 Tiers: Thành viên → Bạc → Vàng → Kim Cương
+  membershipTier: text("membership_tier", { 
+    enum: ["member", "silver", "gold", "diamond"] 
+  }).notNull().default("member"),
+  totalSpent: decimal("total_spent", { precision: 15, scale: 2 }).notNull().default("0"), // Accumulated spending
+  pointsBalance: integer("points_balance").notNull().default(0), // Current available points
+  pointsEarned: integer("points_earned").notNull().default(0), // Lifetime points earned
+  lastTierUpdate: timestamp("last_tier_update").defaultNow(), // When tier was last changed
+  
+  // 🔗 AUTH INTEGRATION - Link to Replit Auth user (optional for existing customers)
+  authUserId: varchar("auth_user_id").references(() => authUsers.id), // Optional link to auth user
+  
+  // 🎯 MEMBERSHIP METADATA
+  membershipData: jsonb("membership_data").$type<{
+    tierProgressPercent?: number; // 0-100% progress to next tier
+    nextTierThreshold?: number; // Amount needed for next tier
+    specialOffers?: string[]; // Applied special offers/discounts
+    birthdayMonth?: number; // 1-12 for birthday benefits
+    preferredDiscountType?: "percentage" | "fixed"; // User preference
+    vipInviteCode?: string; // For Diamond tier invitations
+    tierHistory?: Array<{ tier: string; date: string; reason: string }>; // Tier change history
+  }>().default(sql`'{}'::jsonb`),
 });
 
 // Enhanced Orders table with unified source tracking
