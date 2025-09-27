@@ -11,7 +11,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
 import { MobileHeader } from '@/components/MobileHeader';
 import { AutoHideSearchBar } from '@/components/AutoHideSearchBar';
-import { LunarCalendar } from '@/components/LunarCalendar';
+import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { useResponsive } from '@/hooks/use-mobile';
 
 // API base URL from environment or default
@@ -359,7 +359,7 @@ export default function MobileStorefront() {
         );
 
       case 'calendar':
-        return <LunarCalendar />;
+        return <FullScreenLunarCalendar />;
 
       case 'profile':
         return (
