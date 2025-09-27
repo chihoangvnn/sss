@@ -8,6 +8,10 @@ import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Share, MessageCircle, Phone, Mail, Facebook, Copy, Users, Gift } from 'lucide-react';
+import QuickContact from '@/components/QuickContact';
+import SocialLoginPanel from '@/components/SocialLoginPanel';
+import SocialShare from '@/components/SocialShare';
 // Using browser alert for toast notifications (can be upgraded to toast library later)
 const toast = {
   success: (message: string) => alert(`✅ ${message}`),
@@ -151,12 +155,44 @@ export default function MemberProfile() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 bg-gradient-to-br from-orange-50 via-red-50 to-amber-50 min-h-screen">
-      {/* Header */}
-      <div className="text-center space-y-2">
+      {/* Header with Social Integration */}
+      <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
           Thông Tin Thành Viên
         </h1>
         <p className="text-gray-600">Quản lý thông tin và quyền lợi thành viên nhang sạch</p>
+        
+        {/* Social Achievement Banner */}
+        <div className="bg-gradient-to-r from-orange-100 to-red-100 rounded-xl p-4 border border-orange-200">
+          <div className="flex items-center justify-center gap-2 text-orange-700">
+            <span className="text-2xl">{currentTier.icon}</span>
+            <div className="text-center">
+              <div className="font-bold">🎉 Thành tích đáng tự hào!</div>
+              <div className="text-sm">Bạn đã đạt hạng {currentTier.name} với {formatVND(customer.totalSpent)} chi tiêu</div>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-white/80 hover:bg-white border-orange-300"
+              onClick={() => {
+                const achievementText = `🔥 Tôi vừa đạt hạng ${currentTier.name} tại nhang sạch với ${formatVND(customer.totalSpent)} chi tiêu! ${formatNumber(points.balance)} điểm thưởng đang chờ sử dụng! 🌟 #nhangxanh #thanhvien${currentTier.nameEn}`;
+                if (navigator.share) {
+                  navigator.share({ 
+                    text: achievementText, 
+                    url: window.location.href,
+                    title: 'Thành tích thành viên nhang sạch'
+                  });
+                } else {
+                  navigator.clipboard.writeText(achievementText);
+                  toast.success('Đã copy thành tích để chia sẻ!');
+                }
+              }}
+            >
+              <Share className="w-4 h-4 mr-1" />
+              Khoe thành tích
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Current Status Overview */}
@@ -191,15 +227,87 @@ export default function MemberProfile() {
                 <span className="font-bold text-green-600">{formatVND(customer.totalSpent)}</span>
               </div>
             </div>
+            
+            {/* Social Actions */}
+            <div className="pt-4 border-t">
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2 text-xs"
+                  onClick={() => {
+                    const text = `🎉 Tôi là thành viên ${currentTier.name} tại nhang sạch! Tổng chi tiêu ${formatVND(customer.totalSpent)} với ${formatNumber(points.balance)} điểm thưởng! 🔥`;
+                    if (navigator.share) {
+                      navigator.share({ text, url: window.location.href });
+                    } else {
+                      navigator.clipboard.writeText(text);
+                      toast.success('Đã copy thành tích!');
+                    }
+                  }}
+                >
+                  <Share className="w-3 h-3" />
+                  Chia sẻ
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2 text-xs"
+                  onClick={() => {
+                    const referralCode = `REF${customer.id.slice(-6).toUpperCase()}`;
+                    const text = `Mã giới thiệu: ${referralCode}`;
+                    navigator.clipboard.writeText(text);
+                    toast.success('Đã copy mã giới thiệu!');
+                  }}
+                >
+                  <Users className="w-3 h-3" />
+                  Giới thiệu
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Points Balance */}
+        {/* Points Balance với Social Features */}
         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">🎁</span>
-              Điểm Thưởng
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🎁</span>
+                Điểm Thưởng
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-blue-600 hover:text-blue-700 p-1"
+                  onClick={() => {
+                    const referralCode = `REF${customer.id.slice(-6).toUpperCase()}`;
+                    const referralText = `🎁 Tham gia nhang sạch với mã giới thiệu ${referralCode} để nhận 500 điểm thưởng miễn phí! Link: ${window.location.origin}/member-profile?ref=${referralCode}`;
+                    navigator.clipboard.writeText(referralText);
+                    toast.success('Đã copy link giới thiệu bạn bè!');
+                  }}
+                  title="Giới thiệu bạn bè"
+                >
+                  <Users className="w-4 h-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-green-600 hover:text-green-700 p-1"
+                  onClick={() => {
+                    const pointsText = `💰 Tôi có ${formatNumber(points.balance)} điểm thưởng (${formatVND(points.valueVND)}) tại nhang sạch! Đủ mua nhiều sản phẩm tuyệt vời! 🛒`;
+                    if (navigator.share) {
+                      navigator.share({ text: pointsText });
+                    } else {
+                      navigator.clipboard.writeText(pointsText);
+                      toast.success('Đã copy thông tin điểm!');
+                    }
+                  }}
+                  title="Chia sẻ điểm thưởng"
+                >
+                  <Gift className="w-4 h-4" />
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -223,6 +331,9 @@ export default function MemberProfile() {
                   {currentTier.name}
                 </Badge>
               </div>
+              <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                💡 <strong>Mẹo:</strong> Giới thiệu bạn bè và cả hai đều nhận 500 điểm thưởng!
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -237,7 +348,7 @@ export default function MemberProfile() {
               Tiến Độ Thăng Hạng
             </CardTitle>
             <CardDescription>
-              Còn {formatVND(nextTier.remainingSpent)} để thăng hạng {nextTier.name}
+              Còn {formatVND(nextTier.remainingSpent || 0)} để thăng hạng {nextTier.name}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -288,7 +399,7 @@ export default function MemberProfile() {
                 value={pointsToRedeem}
                 onChange={(e) => setPointsToRedeem(Number(e.target.value))}
                 placeholder="Nhập số điểm muốn quy đổi"
-                max={Math.min(points.balance, Math.floor(orderTotal * 0.5 / 100))}
+                max={Math.min(points.balance, Math.floor((orderTotal || 0) * 0.5 / 100))}
               />
             </div>
           </div>
@@ -319,6 +430,52 @@ export default function MemberProfile() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Social Integration Section */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <SocialLoginPanel compact={true} showTitle={true} />
+        
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🎯</span>
+                Chia sẻ thành tích
+              </div>
+              <SocialShare 
+                title={`Thành viên ${currentTier.name} - Nhang Sạch`}
+                text={`🎉 Tôi đã đạt hạng ${currentTier.name} với ${formatVND(customer.totalSpent)} chi tiêu và ${formatNumber(points.balance)} điểm thưởng tại nhang sạch!`}
+                hashtags={['nhangxanh', `thanhvien${currentTier.nameEn}`, 'loyalty']}
+              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-gray-600">
+              Khoe thành tích thành viên của bạn với bạn bè!
+            </div>
+            <div className="grid gap-2">
+              <div className="flex justify-between items-center p-2 bg-orange-50 rounded">
+                <span className="text-sm">🏆 Hạng hiện tại:</span>
+                <Badge style={{ backgroundColor: currentTier.color }}>
+                  {currentTier.name}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-green-50 rounded">
+                <span className="text-sm">💰 Tổng chi tiêu:</span>
+                <span className="font-bold text-green-600">
+                  {formatVND(customer.totalSpent)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+                <span className="text-sm">⭐ Điểm thưởng:</span>
+                <span className="font-bold text-blue-600">
+                  {formatNumber(points.balance)} điểm
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Membership Tiers */}
       <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -377,6 +534,9 @@ export default function MemberProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Quick Contact Floating Component */}
+      <QuickContact />
     </div>
   );
 }
