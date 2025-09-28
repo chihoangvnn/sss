@@ -31,6 +31,19 @@ interface Book {
   isBestseller?: boolean;
   isRecommended?: boolean;
   isFeatured?: boolean;
+  // SEO metadata fields
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  // International support
+  priceRegions?: {
+    USD: number;
+    EUR: number;
+    GBP: number;
+    AUD: number;
+    CAD: number;
+  };
+  targetMarkets?: string[]; // ['US', 'UK', 'AU', 'CA', 'EU']
 }
 
 interface ProfileTabProps {

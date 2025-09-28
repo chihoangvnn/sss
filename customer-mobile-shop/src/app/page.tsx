@@ -72,6 +72,19 @@ interface Book {
   isBestseller?: boolean;
   isRecommended?: boolean;
   isFeatured?: boolean;
+  // SEO metadata fields
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  // International support
+  priceRegions?: {
+    USD: number;
+    EUR: number;
+    GBP: number;
+    AUD: number;
+    CAD: number;
+  };
+  targetMarkets?: string[]; // ['US', 'UK', 'AU', 'CA', 'EU']
 }
 
 interface BookGenre {
@@ -183,7 +196,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
       genre_id: 'business',
       stock: 45,
-      description: 'A groundbreaking methodology for entrepreneurs and startup founders worldwide. Eric Ries revolutionizes business strategy with the Build-Measure-Learn feedback loop, helping companies minimize waste and maximize growth. Essential reading for business leaders, product managers, and innovators looking to launch successful products in today\'s competitive market. Features real-world case studies from Silicon Valley startups and Fortune 500 companies. Perfect for MBA students, venture capitalists, and anyone interested in modern entrepreneurship and business innovation.',
+      description: 'Transform your startup approach with validated learning and iterative product development. Eric Ries introduces the Build-Measure-Learn methodology that reduces market risk through scientific experimentation. Discover how to create sustainable businesses by testing hypotheses, pivoting when necessary, and avoiding common entrepreneurial pitfalls.',
       rating: 4.7,
       publisher: 'Crown Business',
       publication_year: 2021,
@@ -192,7 +205,18 @@ export default function MobileStorefront() {
       isbn: '978-0-307-88789-4',
       status: 'active',
       isNew: true,
-      isBestseller: true
+      isBestseller: true,
+      seoTitle: 'Lean Startup Methodology Book | Build-Measure-Learn Framework | Eric Ries',
+      seoDescription: 'Master lean startup principles with Eric Ries\' validated learning approach. Learn Build-Measure-Learn cycles, minimum viable products, and startup pivot strategies for successful entrepreneurship.',
+      seoKeywords: ['lean startup', 'validated learning', 'minimum viable product', 'MVP', 'build measure learn', 'startup methodology', 'entrepreneurship', 'product development', 'business model canvas', 'customer development', 'agile startup', 'startup pivot'],
+      priceRegions: {
+        USD: 28.99,
+        EUR: 26.50,
+        GBP: 23.99,
+        AUD: 42.95,
+        CAD: 38.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-2',
@@ -202,7 +226,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop',
       genre_id: 'science',
       stock: 60,
-      description: 'Master the art of computational thinking and algorithmic problem-solving with this comprehensive guide for programmers and computer science students. Learn systematic approaches to breaking down complex problems, developing debugging strategies, and writing efficient code. Includes hands-on exercises in C++ with solutions applicable to any programming language. Ideal for software developers, computer science students, coding bootcamp participants, and self-taught programmers seeking to improve their analytical thinking skills and programming methodology.',
+      description: 'Develop systematic problem-solving skills through structured programming exercises and real-world challenges. V. Anton Spraul guides you through computational thinking patterns using C++ examples that apply to any programming language. Build debugging techniques and logical reasoning abilities through progressive difficulty levels.',
       rating: 4.5,
       publisher: 'No Starch Press',
       publication_year: 2020,
@@ -211,7 +235,18 @@ export default function MobileStorefront() {
       isbn: '978-1-59327-424-5',
       status: 'active',
       isRecommended: true,
-      isFeatured: true
+      isFeatured: true,
+      seoTitle: 'Programming Problem Solving Book | Computational Thinking | Debugging Techniques',
+      seoDescription: 'Learn systematic programming problem-solving with C++ exercises. Master computational thinking, debugging strategies, and algorithmic reasoning for software development success.',
+      seoKeywords: ['computational thinking', 'programming problem solving', 'debugging techniques', 'algorithmic thinking', 'coding logic', 'software development skills', 'programming fundamentals', 'problem decomposition', 'coding bootcamp prep', 'programming methodology'],
+      priceRegions: {
+        USD: 32.95,
+        EUR: 30.25,
+        GBP: 26.99,
+        AUD: 48.95,
+        CAD: 44.50
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-3',
@@ -221,7 +256,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop',
       genre_id: 'science',
       stock: 35,
-      description: 'The definitive guide to writing professional, maintainable software by legendary programmer Robert "Uncle Bob" Martin. Learn industry best practices for code quality, refactoring techniques, and software craftsmanship principles used by top technology companies worldwide. Covers naming conventions, function design, error handling, unit testing, and system architecture. Essential reading for software engineers, senior developers, team leads, and anyone serious about professional software development. Includes real-world examples and case studies from enterprise software projects.',
+      description: 'Transform your coding practices with Robert "Uncle Bob" Martin\'s software craftsmanship principles. Learn refactoring patterns, naming conventions, and function design that separate professional developers from amateurs. Apply agile development techniques that improve code readability, maintainability, and team collaboration.',
       rating: 4.8,
       publisher: 'Prentice Hall',
       publication_year: 2019,
@@ -230,7 +265,18 @@ export default function MobileStorefront() {
       isbn: '978-0-13-235088-4',
       status: 'active',
       isBestseller: true,
-      isFeatured: true
+      isFeatured: true,
+      seoTitle: 'Clean Code Book | Software Craftsmanship | Uncle Bob Martin | Refactoring Guide',
+      seoDescription: 'Master clean code principles and software craftsmanship with Robert Martin\'s definitive guide. Learn refactoring, naming conventions, and professional development practices.',
+      seoKeywords: ['clean code', 'software craftsmanship', 'refactoring', 'code quality', 'uncle bob martin', 'agile development', 'software engineering best practices', 'code readability', 'maintainable code', 'programming principles', 'software design patterns'],
+      priceRegions: {
+        USD: 45.99,
+        EUR: 42.25,
+        GBP: 37.99,
+        AUD: 68.95,
+        CAD: 62.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-4',
@@ -296,7 +342,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop',
       genre_id: 'science',
       stock: 15,
-      description: 'The definitive textbook on artificial intelligence used by top universities worldwide including Stanford, MIT, Berkeley, and Carnegie Mellon. Written by leading AI researchers Stuart Russell (UC Berkeley) and Peter Norvig (Google). Covers machine learning, neural networks, natural language processing, computer vision, robotics, and ethical AI development. Features cutting-edge algorithms, Python code examples, and real-world applications from autonomous vehicles to medical diagnosis. Essential for computer science students, AI researchers, data scientists, and software engineers entering the AI field.',
+      description: 'Comprehensive AI education covering machine learning, neural networks, and intelligent agents. Stuart Russell and Peter Norvig present algorithmic foundations, search strategies, knowledge representation, and probabilistic reasoning. Explore computer vision, natural language processing, and robotics applications with mathematical rigor and practical implementations.',
       rating: 4.7,
       publisher: 'Pearson',
       publication_year: 2021,
@@ -305,7 +351,18 @@ export default function MobileStorefront() {
       isbn: '978-0-13-461099-3',
       status: 'active',
       isNew: true,
-      isFeatured: true
+      isFeatured: true,
+      seoTitle: 'Artificial Intelligence Textbook | Machine Learning | Neural Networks | Russell Norvig',
+      seoDescription: 'Master AI fundamentals with the definitive textbook by Russell and Norvig. Covers machine learning, neural networks, computer vision, NLP, and robotics with practical examples.',
+      seoKeywords: ['artificial intelligence', 'machine learning', 'neural networks', 'computer vision', 'natural language processing', 'robotics', 'AI algorithms', 'intelligent agents', 'deep learning', 'data science', 'AI textbook', 'AIMA'],
+      priceRegions: {
+        USD: 78.99,
+        EUR: 72.50,
+        GBP: 63.99,
+        AUD: 118.95,
+        CAD: 108.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-8',
@@ -315,7 +372,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300&h=400&fit=crop',
       genre_id: 'psychology',
       stock: 65,
-      description: 'Discover why financial success has more to do with behavior than intelligence in this international bestseller translated into 30+ languages. Morgan Housel, award-winning financial journalist, reveals how emotions, ego, and psychological biases drive financial decisions. Learn why smart people make poor money choices and how to develop healthy financial habits. Features compelling stories from history, behavioral economics research, and practical wisdom for investors, entrepreneurs, and anyone seeking financial independence. Perfect for financial advisors, wealth managers, and individuals planning for retirement worldwide.',
+      description: 'Uncover the behavioral factors that determine financial success beyond mathematical knowledge. Morgan Housel examines psychological biases, risk perception, and decision-making patterns that influence wealth accumulation. Historical case studies reveal how emotions, timing, and luck shape financial outcomes more than intelligence.',
       rating: 4.6,
       publisher: 'Harriman House',
       publication_year: 2020,
@@ -324,7 +381,18 @@ export default function MobileStorefront() {
       isbn: '978-0-85719-757-2',
       status: 'active',
       isBestseller: true,
-      isNew: true
+      isNew: true,
+      seoTitle: 'Psychology of Money Book | Behavioral Finance | Wealth Building Psychology | Morgan Housel',
+      seoDescription: 'Understand financial behavior and wealth psychology with Morgan Housel\'s insights. Learn how emotions and biases affect money decisions, investing, and long-term financial success.',
+      seoKeywords: ['psychology of money', 'behavioral finance', 'wealth psychology', 'financial behavior', 'investment psychology', 'money mindset', 'financial decision making', 'behavioral economics', 'wealth building', 'financial habits', 'morgan housel'],
+      priceRegions: {
+        USD: 26.95,
+        EUR: 24.75,
+        GBP: 21.99,
+        AUD: 39.95,
+        CAD: 36.50
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-9',
