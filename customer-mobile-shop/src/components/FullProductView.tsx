@@ -399,12 +399,12 @@ export function FullProductView({ book, isOpen, onClose, onAddToCart, cart, isMo
             </div>
           </div>
         ) : (
-          // Desktop Layout - Two Columns
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-            <div className="grid lg:grid-cols-2 gap-12">
-              {/* Left Column - Book Cover */}
-              <div className="flex justify-center">
-                <div className="aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden max-w-md w-full shadow-xl">
+          // Desktop/Tablet Layout - Horizontal Layout 
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+            <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
+              {/* Book Cover - Left Side */}
+              <div className="flex-shrink-0 md:w-64 lg:w-80">
+                <div className="aspect-[3/4] bg-gray-100 rounded-xl overflow-hidden shadow-xl max-w-sm mx-auto md:mx-0">
                   {book.cover_image ? (
                     <img 
                       src={book.cover_image}
@@ -414,16 +414,16 @@ export function FullProductView({ book, isOpen, onClose, onAddToCart, cart, isMo
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
                       <div className="text-center">
-                        <Book className="h-24 w-24 mx-auto mb-4" />
-                        <p>No cover image</p>
+                        <Book className="h-16 md:h-20 lg:h-24 w-16 md:w-20 lg:w-24 mx-auto mb-4" />
+                        <p className="text-sm md:text-base lg:text-lg">No cover image</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Right Column - Book Info */}
-              <div className="space-y-8">
+              {/* Book Info - Right Side */}
+              <div className="flex-1 min-w-0 space-y-6">
                 {/* Badges */}
                 {renderBookBadges().length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -433,172 +433,165 @@ export function FullProductView({ book, isOpen, onClose, onAddToCart, cart, isMo
 
                 {/* Title & Author */}
                 <div>
-                  <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 md:mb-3 leading-tight">
                     {book.title}
                   </h1>
-                  <p className="text-xl text-gray-600 mb-6">
+                  <p className="text-lg md:text-xl text-gray-600 mb-3 md:mb-4">
                     by <span className="font-medium text-gray-900">{book.author}</span>
                   </p>
-                  
-                  <div className="flex items-center gap-6">
-                    <span className="text-4xl font-bold text-green-600">
-                      {formatUSDPrice(displayPrice)}
-                    </span>
-                    {book.rating && (
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            className={`h-5 w-5 ${
-                              i < Math.floor(book.rating!) 
-                                ? 'fill-yellow-400 text-yellow-400' 
-                                : 'fill-gray-200 text-gray-200'
-                            }`} 
-                          />
-                        ))}
-                        <span className="text-lg text-gray-600 ml-2">({book.rating})</span>
-                      </div>
+                </div>
+
+                {/* Price & Rating */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 mb-4 md:mb-6">
+                  <span className="text-3xl md:text-4xl font-bold text-green-600">
+                    {formatUSDPrice(displayPrice)}
+                  </span>
+                  {book.rating && (
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`h-4 md:h-5 w-4 md:w-5 ${
+                            i < Math.floor(book.rating!) 
+                              ? 'fill-yellow-400 text-yellow-400' 
+                              : 'fill-gray-200 text-gray-200'
+                          }`} 
+                        />
+                      ))}
+                      <span className="text-base md:text-lg text-gray-600 ml-2">({book.rating})</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ISBN & Key Info */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+                  {book.isbn && (
+                    <div className="md:col-span-2 lg:col-span-1">
+                      <span className="text-xs md:text-sm text-gray-500 uppercase tracking-wide">ISBN</span>
+                      <p className="text-sm md:text-base font-medium text-gray-900 font-mono break-all">{book.isbn}</p>
+                    </div>
+                  )}
+                  {book.publisher && (
+                    <div>
+                      <span className="text-xs md:text-sm text-gray-500 uppercase tracking-wide">Publisher</span>
+                      <p className="text-sm md:text-base font-medium text-gray-900 truncate">{book.publisher}</p>
+                    </div>
+                  )}
+                  {book.publication_year && (
+                    <div>
+                      <span className="text-xs md:text-sm text-gray-500 uppercase tracking-wide">Year</span>
+                      <p className="text-sm md:text-base font-medium text-gray-900">{book.publication_year}</p>
+                    </div>
+                  )}
+                  {book.pages && (
+                    <div>
+                      <span className="text-xs md:text-sm text-gray-500 uppercase tracking-wide">Pages</span>
+                      <p className="text-sm md:text-base font-medium text-gray-900">{book.pages}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Stock Status */}
+                <div className="flex items-center gap-3 bg-green-50 rounded-lg p-4 mb-6">
+                  <Package className="h-6 w-6 text-green-600" />
+                  <div>
+                    <span className="text-lg font-medium text-green-800">Availability:</span>
+                    {book.stock > 0 ? (
+                      <span className="text-lg text-green-600 ml-2">
+                        In Stock ({book.stock} copies available)
+                      </span>
+                    ) : (
+                      <span className="text-lg text-red-600 ml-2">Out of Stock</span>
                     )}
+                  </div>
+                </div>
+
+                {/* Quantity in Cart */}
+                {quantityInCart > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center gap-3 text-blue-800">
+                      <ShoppingCart className="h-5 w-5" />
+                      <span className="text-lg font-medium">
+                        {quantityInCart} {quantityInCart === 1 ? 'copy' : 'copies'} in your cart
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add to Cart Controls - Desktop/Tablet */}
+                <div className="space-y-3 md:space-y-4">
+                  {/* Quantity Selector */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <span className="text-sm md:text-base font-medium text-gray-700">Quantity:</span>
+                    <div className="flex items-center border border-gray-300 rounded-lg w-fit">
+                      <button
+                        onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
+                        disabled={selectedQuantity <= 1}
+                        className="p-2 hover:bg-gray-100 disabled:opacity-50 rounded-l-lg"
+                      >
+                        <Minus className="h-3 md:h-4 w-3 md:w-4" />
+                      </button>
+                      <span className="px-4 md:px-6 py-2 text-center min-w-[3rem] md:min-w-[4rem] font-medium border-x border-gray-300 text-sm md:text-base">
+                        {selectedQuantity}
+                      </span>
+                      <button
+                        onClick={() => setSelectedQuantity(Math.min(book.stock, selectedQuantity + 1))}
+                        disabled={selectedQuantity >= book.stock}
+                        className="p-2 hover:bg-gray-100 disabled:opacity-50 rounded-r-lg"
+                      >
+                        <Plus className="h-3 md:h-4 w-3 md:w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                    <Button
+                      onClick={handleAddToCart}
+                      disabled={book.stock === 0}
+                      className="bg-green-600 hover:bg-green-700 text-white h-10 md:h-12 px-6 md:px-8 text-sm md:text-base lg:text-lg flex-1 sm:flex-none"
+                    >
+                      <ShoppingCart className="h-4 md:h-5 w-4 md:w-5 mr-2" />
+                      Add {selectedQuantity > 1 ? `${selectedQuantity} ` : ''}to Cart
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={handleWishlistToggle}
+                      className={`h-10 md:h-12 px-4 md:px-6 text-sm md:text-base ${isInWishlistState ? 'border-red-200 text-red-600 hover:bg-red-50' : ''}`}
+                    >
+                      <Heart className={`h-4 md:h-5 w-4 md:w-5 mr-1 md:mr-2 ${isInWishlistState ? 'fill-current' : ''}`} />
+                      <span className="hidden sm:inline">{isInWishlistState ? 'Remove from' : 'Add to'} Wishlist</span>
+                      <span className="sm:hidden">Wishlist</span>
+                    </Button>
                   </div>
                 </div>
 
                 {/* Description */}
                 {book.description && (
-                  <div>
+                  <div className="pt-6 border-t border-gray-200">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">About This Book</h3>
-                    <p className="text-gray-600 leading-relaxed text-lg">
-                      {book.description}
-                    </p>
-                  </div>
-                )}
-
-                {/* Book Details */}
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Book Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    {book.publisher && (
-                      <div>
-                        <span className="text-sm text-gray-500 uppercase tracking-wide">Publisher</span>
-                        <p className="text-lg font-medium text-gray-900">{book.publisher}</p>
-                      </div>
-                    )}
-                    {book.publication_year && (
-                      <div>
-                        <span className="text-sm text-gray-500 uppercase tracking-wide">Publication Year</span>
-                        <p className="text-lg font-medium text-gray-900">{book.publication_year}</p>
-                      </div>
-                    )}
-                    {book.pages && (
-                      <div>
-                        <span className="text-sm text-gray-500 uppercase tracking-wide">Pages</span>
-                        <p className="text-lg font-medium text-gray-900">{book.pages}</p>
-                      </div>
-                    )}
-                    {book.language && (
-                      <div>
-                        <span className="text-sm text-gray-500 uppercase tracking-wide">Language</span>
-                        <p className="text-lg font-medium text-gray-900">{book.language}</p>
-                      </div>
-                    )}
-                  </div>
-                  {book.isbn && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <span className="text-sm text-gray-500 uppercase tracking-wide">ISBN</span>
-                      <p className="text-lg font-medium text-gray-900 font-mono">{book.isbn}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Stock & Cart Status */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 bg-green-50 rounded-lg p-4">
-                    <Package className="h-6 w-6 text-green-600" />
-                    <div>
-                      <span className="text-lg font-medium text-green-800">Availability:</span>
-                      {book.stock > 0 ? (
-                        <span className="text-lg text-green-600 ml-2">
-                          In Stock ({book.stock} copies available)
-                        </span>
-                      ) : (
-                        <span className="text-lg text-red-600 ml-2">Out of Stock</span>
+                    <div className="text-gray-600 leading-relaxed">
+                      <p className={showFullDescription ? '' : 'line-clamp-4'}>
+                        {book.description}
+                      </p>
+                      {book.description.length > 200 && (
+                        <button
+                          onClick={() => setShowFullDescription(!showFullDescription)}
+                          className="mt-2 text-green-600 underline hover:text-green-700 transition-colors"
+                        >
+                          {showFullDescription ? 'Show Less' : 'Read More'}
+                        </button>
                       )}
                     </div>
                   </div>
-
-                  {quantityInCart > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center gap-3 text-blue-800">
-                        <ShoppingCart className="h-5 w-5" />
-                        <span className="text-lg font-medium">
-                          {quantityInCart} {quantityInCart === 1 ? 'copy' : 'copies'} in your cart
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Bottom Fixed Actions - Desktop Only */}
-      {!isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-10">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-4">
-              {/* Quantity Selector */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700">Quantity:</span>
-                <div className="flex items-center border border-gray-300 rounded-lg">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
-                    disabled={selectedQuantity <= 1}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="px-4 py-1 text-center min-w-[3rem] font-medium">
-                    {selectedQuantity}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedQuantity(Math.min(book.stock, selectedQuantity + 1))}
-                    disabled={selectedQuantity >= book.stock}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 flex-1">
-                <Button
-                  onClick={handleAddToCart}
-                  disabled={book.stock === 0}
-                  className="bg-green-600 hover:bg-green-700 text-white h-10"
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add {selectedQuantity > 1 ? `${selectedQuantity} ` : ''}to Cart
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={handleWishlistToggle}
-                  className={`h-10 ${isInWishlistState ? 'border-red-200 text-red-600 hover:bg-red-50' : ''}`}
-                >
-                  <Heart className={`h-4 w-4 mr-2 ${isInWishlistState ? 'fill-current' : ''}`} />
-                  {isInWishlistState ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
