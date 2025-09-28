@@ -125,7 +125,7 @@ export default function MobileStorefront() {
   const { isMobile, isTablet, deviceType } = useResponsive();
   
   // Authentication
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
   
   // Client-side only state to prevent hydration mismatch
   const [isMounted, setIsMounted] = useState(false);
@@ -732,13 +732,11 @@ export default function MobileStorefront() {
   };
 
   const renderContent = () => {
-    // Show Landing Page for unauthenticated users (temporary force for testing)
-    if (!isAuthenticated) {
-      return <LandingPage />;
-    }
-
+    // Always show Landing Page as home page - authentication not required for browsing
+    // Users can search and browse products freely, login only required for cart/wishlist actions
+    
     // If a book is selected, we'll show the FullProductView separately, not here
-    // Continue with normal content rendering for authenticated users
+    // Continue with content rendering for all users
 
     switch (activeTab) {
       case 'categories':
@@ -767,7 +765,39 @@ export default function MobileStorefront() {
           </div>
         );
 
+
+      case 'wishlist':
+        // Require authentication for wishlist
+        if (!isAuthenticated) {
+          return (
+            <div className="p-4 pt-6 text-center">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Wishlist</h2>
+              <p className="text-gray-600 mb-4">Please login to view your wishlist</p>
+              <Button onClick={login} className="bg-green-600 hover:bg-green-700 text-white">
+                Login Now
+              </Button>
+            </div>
+          );
+        }
+        return <WishlistTab addToCart={addToCart} onBookClick={setSelectedBook} />;
+
+      case 'profile':
+        // Require authentication for profile
+        if (!isAuthenticated) {
+          return (
+            <div className="p-4 pt-6 text-center">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Profile</h2>
+              <p className="text-gray-600 mb-4">Please login to view your profile</p>
+              <Button onClick={login} className="bg-green-600 hover:bg-green-700 text-white">
+                Login Now
+              </Button>
+            </div>
+          );
+        }
+        return <ProfileTab addToCart={addToCart} setActiveTab={setActiveTab} />;
+
       case 'cart':
+        // Allow viewing cart but require login for checkout
         return (
           <div className="p-4 pt-6">
             <h2 className="text-xl font-bold mb-4 text-gray-900">Shopping Cart ({getTotalItems()} items)</h2>
@@ -830,8 +860,19 @@ export default function MobileStorefront() {
                       {formatVietnamPrice(getTotalPrice())}
                     </span>
                   </div>
-                  <Button className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold">
-                    Checkout Now
+                  <Button 
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        alert('Please login to checkout');
+                        login();
+                        return;
+                      }
+                      // TODO: Proceed with checkout
+                      alert('Checkout functionality coming soon!');
+                    }}
+                    className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold"
+                  >
+                    {isAuthenticated ? 'Checkout Now' : 'Login to Checkout'}
                   </Button>
                 </div>
               </div>
@@ -839,136 +880,8 @@ export default function MobileStorefront() {
           </div>
         );
 
-      case 'wishlist':
-        return <WishlistTab addToCart={addToCart} onBookClick={setSelectedBook} />;
-
-      case 'profile':
-        return <ProfileTab addToCart={addToCart} setActiveTab={setActiveTab} />;
-
-
-      default: // 'home'
-        return (
-          <div className={layoutConfig.containerClass}>
-            {/* Banner Slider */}
-            <ImageSlider 
-              images={BANNER_IMAGES}
-              className="mb-6"
-              autoplay={true}
-              autoplayDelay={4000}
-            />
-
-            
-            {/* ProductCatalog removed - categories now shown in DesktopHeader */}
-            
-            {/* Product Grid */}
-            <div className={layoutConfig.contentPadding}>
-              <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
-                {booksLoading && !booksError ? (
-                  // Loading skeleton
-                  Array.from({ length: 8 }).map((_, index) => (
-                    <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                      <div className="aspect-square bg-gray-200 animate-pulse" />
-                      <div className="p-4">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
-                        <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
-                      </div>
-                    </div>
-                  ))
-                ) : false ? (
-                  <div className="text-center py-8 col-span-full">
-                    <span className="text-4xl mb-4 block">⚠️</span>
-                    <p className="text-gray-600 mb-4">Unable to load books - showing demo</p>
-                    <Button onClick={() => window.location.reload()}>
-                      Try Again
-                    </Button>
-                  </div>
-                ) : finalBooks.length === 0 ? (
-                  <div className="text-center py-8 col-span-full">
-                    <span className="text-4xl mb-4 block">🔍</span>
-                    <p className="text-gray-600">No books found</p>
-                  </div>
-                ) : (
-                  finalBooks.map((book) => (
-                    <div key={book.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-                      <div 
-                        className="aspect-[3/4] bg-gray-100 cursor-pointer relative"
-                        onClick={() => setSelectedBook(book)}
-                      >
-                        {book.cover_image ? (
-                          <img 
-                            src={book.cover_image}
-                            alt={book.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <Store className="h-16 w-16" />
-                          </div>
-                        )}
-                        {/* Book Badges - positioned at top of image */}
-                        {renderBookBadges(book).length > 0 && (
-                          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
-                            {renderBookBadges(book)}
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-1 truncate text-sm">
-                          {book.title}
-                        </h3>
-                        <p className="text-xs text-gray-600 mb-2 truncate">{book.author}</p>
-                        <div className="mb-3">
-                          <span className="text-blue-600 font-bold text-lg">
-                            {formatVietnamPrice(book.price)}
-                          </span>
-                          {book.rating && (
-                            <div className="flex items-center gap-1 mt-1">
-                              {[...Array(5)].map((_, i) => (
-                                <Star 
-                                  key={i} 
-                                  className={`h-3 w-3 ${
-                                    i < Math.floor(book.rating!) 
-                                      ? 'fill-yellow-400 text-yellow-400' 
-                                      : 'fill-gray-200 text-gray-200'
-                                  }`} 
-                                />
-                              ))}
-                              <span className="text-xs text-gray-600 ml-1">({book.rating})</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedBook(book)}
-                            className="flex-1 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
-                          >
-                            Details
-                          </Button>
-                          <Button 
-                            size="sm"
-                            onClick={() => addToCart(book)}
-                            className="bg-blue-500 hover:bg-blue-600 w-10 h-8 p-0"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Infinite Loading Indicator */}
-              {isFetchingNextPage && (
-                <div className="text-center py-4">
-                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
+      default: // 'home' - Always show Landing Page as home
+        return <LandingPage />;
     }
   };
 
