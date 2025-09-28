@@ -74,11 +74,18 @@ export function WishlistTab({ addToCart, onBookClick }: WishlistTabProps) {
   }, [wishlistBooks, isLoading]);
 
   const removeFromWishlist = (bookId: string) => {
-    setWishlistBooks(prev => prev.filter(book => book.id !== bookId));
+    const updatedBooks = wishlistBooks.filter(book => book.id !== bookId);
+    setWishlistBooks(updatedBooks);
+    // Immediately update localStorage and dispatch event to keep count in sync
+    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(updatedBooks));
+    window.dispatchEvent(new Event('wishlistUpdated'));
   };
 
   const clearWishlist = () => {
     setWishlistBooks([]);
+    // Immediately update localStorage and dispatch event to keep count in sync
+    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify([]));
+    window.dispatchEvent(new Event('wishlistUpdated'));
   };
 
   const shareWishlist = () => {
@@ -329,6 +336,8 @@ export const addToWishlist = (book: Book) => {
   if (!wishlist.find(item => item.id === book.id)) {
     wishlist.push(book);
     localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(wishlist));
+    // Dispatch custom event to update wishlist count across components
+    window.dispatchEvent(new Event('wishlistUpdated'));
     return true; // Added successfully
   }
   
@@ -343,6 +352,8 @@ export const removeFromWishlist = (bookId: string) => {
       const wishlist = JSON.parse(savedWishlist);
       const updatedWishlist = wishlist.filter((book: Book) => book.id !== bookId);
       localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(updatedWishlist));
+      // Dispatch custom event to update wishlist count across components
+      window.dispatchEvent(new Event('wishlistUpdated'));
       return true;
     } catch (error) {
       console.error('Error removing from wishlist:', error);
