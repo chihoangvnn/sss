@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 0.0.0.0",
     "dev:server": "tsx watch server/index.ts",
     "build": "next build",
     "start": "next start",
