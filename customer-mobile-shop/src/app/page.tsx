@@ -120,12 +120,14 @@ interface BlogPost {
 }
 
 export default function MobileStorefront() {
-  // Responsive hooks
-  const { isMobile, isTablet } = useResponsive();
+  // Responsive hooks with SSR safety
+  const { isMobile, isTablet, deviceType } = useResponsive();
   
   // Authentication
   const { user, isAuthenticated } = useAuth();
   
+  // Client-side only state to prevent hydration mismatch
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('all');
@@ -137,6 +139,11 @@ export default function MobileStorefront() {
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'newest'>('newest');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [wishlistCount, setWishlistCount] = useState(0);
+
+  // Ensure component is mounted for hydration safety
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Update wishlist count on component mount and when switching to wishlist tab
   useEffect(() => {
@@ -166,13 +173,30 @@ export default function MobileStorefront() {
     };
   }, []);
   
-  // Responsive layout configurations
+  // Unified responsive layout configurations for consistent book display
   const layoutConfig = {
-    gridCols: isMobile ? 'grid-cols-2' : isTablet ? 'grid-cols-3' : 'grid-cols-4 xl:grid-cols-5',
-    containerClass: isMobile ? 'w-full' : 'max-w-7xl mx-auto',
-    contentPadding: isMobile ? 'p-4' : 'p-6 lg:p-8',
-    gridGap: isMobile ? 'gap-3' : 'gap-4 lg:gap-6',
-    showBottomNav: isMobile
+    // Book grid responsive columns
+    gridCols: isMounted ? (
+      isMobile ? 'grid-cols-2' : 
+      isTablet ? 'grid-cols-3' : 
+      'grid-cols-4 xl:grid-cols-5'
+    ) : 'grid-cols-4 xl:grid-cols-5', // Default for SSR
+    
+    // Container classes
+    containerClass: 'max-w-7xl mx-auto',
+    contentPadding: isMounted ? (isMobile ? 'p-4' : 'p-6 lg:p-8') : 'p-6 lg:p-8',
+    gridGap: isMounted ? (isMobile ? 'gap-3' : 'gap-4 lg:gap-6') : 'gap-4 lg:gap-6',
+    
+    // Navigation
+    showBottomNav: isMounted ? isMobile : false,
+    showDesktopHeader: isMounted ? !isMobile : true,
+    
+    // Book card sizing for professional bookstore
+    bookCardClass: isMounted ? (
+      isMobile ? 'aspect-[3/4] p-3' : 
+      isTablet ? 'aspect-[3/4] p-4' : 
+      'aspect-[3/4] p-4 lg:p-5'
+    ) : 'aspect-[3/4] p-4 lg:p-5'
   };
   
   
@@ -942,10 +966,39 @@ export default function MobileStorefront() {
     }
   };
 
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Static server-side render */}
+        <DesktopHeader
+          storeName="BookStore.Net"
+          cartCount={0}
+          searchQuery=""
+          onSearchChange={() => {}}
+          onCartClick={() => {}}
+          onProfileClick={() => {}}
+          categories={genres}
+          selectedCategory="all"
+          onCategorySelect={() => {}}
+          showCategoryBar={true}
+        />
+        <main className="pt-6">
+          <div className="max-w-7xl mx-auto p-6 lg:p-8">
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+              <p className="mt-2 text-gray-600">Loading BookStore...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Desktop Header - Show on tablet and desktop */}
-      {!isMobile && (
+      {/* Unified Header - Responsive to device type */}
+      {layoutConfig.showDesktopHeader && (
         <DesktopHeader
           storeName="BookStore.Net"
           cartCount={getTotalItems()}
@@ -960,8 +1013,8 @@ export default function MobileStorefront() {
         />
       )}
 
-      {/* Mobile Header - Show on mobile only */}
-      {isMobile && (
+      {/* Mobile Header */}
+      {layoutConfig.showBottomNav && (
         <MobileHeader
           onSearchClick={handleHeaderSearchClick}
           onCartClick={handleHeaderCartClick}
@@ -971,8 +1024,8 @@ export default function MobileStorefront() {
         />
       )}
 
-      {/* Auto Hide Search Bar - Mobile only */}
-      {isMobile && activeTab === 'home' && (
+      {/* Responsive Search Bars */}
+      {layoutConfig.showBottomNav && activeTab === 'home' && (
         <AutoHideSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -980,8 +1033,7 @@ export default function MobileStorefront() {
         />
       )}
 
-      {/* Hidden Search Bar - Desktop only */}
-      {!isMobile && (
+      {layoutConfig.showDesktopHeader && (
         <HiddenSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -989,12 +1041,12 @@ export default function MobileStorefront() {
         />
       )}
 
-      <main className={isMobile ? "pb-20 pt-8" : "pt-6"}>
+      <main className={layoutConfig.showBottomNav ? "pb-20 pt-8" : "pt-6"}>
         {renderContent()}
       </main>
 
-      {/* Bottom Navigation - Mobile only */}
-      {isMobile && (
+      {/* Mobile Navigation */}
+      {layoutConfig.showBottomNav && (
         <StorefrontBottomNav
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -1002,22 +1054,23 @@ export default function MobileStorefront() {
         />
       )}
 
-      {/* Desktop ChatBot - Show on desktop only */}
-      {!isMobile && <DesktopChatBot />}
+      {/* Desktop Components */}
+      {layoutConfig.showDesktopHeader && (
+        <>
+          <DesktopChatBot />
+          <DesktopFooter />
+        </>
+      )}
 
-      {/* Desktop Footer - Show on desktop only */}
-      {!isMobile && <DesktopFooter />}
-
-      {/* Full Product View */}
+      {/* Full Product View - Universal */}
       <FullProductView
         book={selectedBook}
         isOpen={!!selectedBook}
         onClose={() => setSelectedBook(null)}
         onAddToCart={addToCart}
         cart={cart}
-        isMobile={isMobile}
+        isMobile={layoutConfig.showBottomNav}
       />
-
     </div>
   );
 }
