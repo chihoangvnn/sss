@@ -87,6 +87,15 @@ interface Book {
     CAD: number;
   };
   targetMarkets?: string[]; // ['US', 'UK', 'AU', 'CA', 'EU']
+  // Multi-seller support
+  sellers?: {
+    id: string;
+    name: string;
+    price: number;
+    rating: number;
+    stock: number;
+    deliveryTime?: string;
+  }[];
 }
 
 interface BookGenre {
@@ -272,7 +281,65 @@ export default function MobileStorefront() {
         AUD: 42.95,
         CAD: 38.99
       },
-      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU'],
+      sellers: [
+        {
+          id: 'seller-1',
+          name: 'BookWorld',
+          price: 24.99,
+          rating: 4.8,
+          stock: 25,
+          deliveryTime: '2-3 days'
+        },
+        {
+          id: 'seller-2',
+          name: 'Academic Books',
+          price: 27.50,
+          rating: 4.6,
+          stock: 18,
+          deliveryTime: '1-2 days'
+        },
+        {
+          id: 'seller-3',
+          name: 'Business Library',
+          price: 28.99,
+          rating: 4.9,
+          stock: 32,
+          deliveryTime: '3-4 days'
+        },
+        {
+          id: 'seller-4',
+          name: 'ReadMore Store',
+          price: 31.50,
+          rating: 4.5,
+          stock: 12,
+          deliveryTime: '2-3 days'
+        },
+        {
+          id: 'seller-5',
+          name: 'Premium Books',
+          price: 32.99,
+          rating: 4.7,
+          stock: 8,
+          deliveryTime: '1-2 days'
+        },
+        {
+          id: 'seller-6',
+          name: 'Quick Reads',
+          price: 35.99,
+          rating: 4.4,
+          stock: 15,
+          deliveryTime: '4-5 days'
+        },
+        {
+          id: 'seller-7',
+          name: 'Study Central',
+          price: 36.50,
+          rating: 4.3,
+          stock: 6,
+          deliveryTime: '3-4 days'
+        }
+      ]
     },
     {
       id: 'demo-2',
