@@ -4,7 +4,14 @@ import React, { useState } from 'react';
 import { Package, Clock, Truck, CheckCircle, Calendar, Eye, Filter, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { formatVietnamPrice } from '@/utils/currency';
+
+// Format USD price for US bookstore
+const formatUSDPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(price);
+};
 import { useQuery } from '@tanstack/react-query';
 import { fetchOrders } from '@/lib/orderApi';
 import { GiftPurchaseModal } from '@/components/GiftPurchaseModal';
@@ -31,63 +38,63 @@ export interface Order {
 const FALLBACK_ORDERS: Order[] = [
   {
     id: '1',
-    orderNumber: 'DH240927001',
+    orderNumber: 'ORD240927001',
     status: 'delivered',
     date: '2024-09-20',
-    total: 850000,
+    total: 75,
     items: [
-      { id: '1', name: 'Nhang trầm hương cao cấp', quantity: 2, price: 300000 },
-      { id: '2', name: 'Tinh dầu sả chanh', quantity: 1, price: 250000 }
+      { id: '1', name: 'The Psychology of Success', quantity: 1, price: 29.99 },
+      { id: '2', name: 'Business Strategy Fundamentals', quantity: 2, price: 22.50 }
     ],
-    shippingAddress: 'Quận 1, TP.HCM',
+    shippingAddress: '123 Main St, New York, NY 10001',
     estimatedDelivery: '2024-09-22'
   },
   {
     id: '2',
-    orderNumber: 'DH240926015',
+    orderNumber: 'ORD240926015',
     status: 'shipped',
     date: '2024-09-25',
-    total: 1200000,
+    total: 89.99,
     items: [
-      { id: '3', name: 'Bộ bàn thờ phong thủy', quantity: 1, price: 1200000 }
+      { id: '3', name: 'Advanced Data Science and Machine Learning', quantity: 1, price: 89.99 }
     ],
-    shippingAddress: 'Quận 3, TP.HCM',
+    shippingAddress: '456 Oak Avenue, Los Angeles, CA 90210',
     estimatedDelivery: '2024-09-28'
   },
   {
     id: '3',
-    orderNumber: 'DH240927002',
+    orderNumber: 'ORD240927002',
     status: 'shipped',
     date: '2024-09-27',
-    total: 450000,
+    total: 67.47,
     items: [
-      { id: '4', name: 'Đá phong thủy may mắn', quantity: 3, price: 150000 }
+      { id: '4', name: 'Children\'s Science Adventures', quantity: 3, price: 22.49 }
     ],
-    shippingAddress: 'Quận 7, TP.HCM'
+    shippingAddress: '789 Pine Street, Chicago, IL 60601'
   },
   {
     id: '4',
-    orderNumber: 'DH240927003',
+    orderNumber: 'ORD240927003',
     status: 'delivered',
     date: '2024-09-27',
-    total: 320000,
+    total: 34.99,
     items: [
-      { id: '5', name: 'Cung Ram tháng 7', quantity: 1, price: 320000 }
+      { id: '5', name: 'Modern Cooking Techniques', quantity: 1, price: 34.99 }
     ],
-    shippingAddress: 'Quận 2, TP.HCM'
+    shippingAddress: '321 Cedar Lane, Seattle, WA 98101'
   }
 ];
 
 const ORDER_STATUS_CONFIG = {
   shipped: {
-    label: 'Đã gởi',
+    label: 'Shipped',
     color: 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200/50',
     icon: Truck,
     iconColor: 'text-orange-600',
     dotColor: 'bg-orange-400'
   },
   delivered: {
-    label: 'Đã giao',
+    label: 'Delivered',
     color: 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200/50',
     icon: CheckCircle,
     iconColor: 'text-green-600',
@@ -153,9 +160,9 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric'
     });
   };
@@ -194,7 +201,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
         media: item.image, // Use image as media fallback
         category_id: 'general', // Default category
         stock: 999, // Assume in stock
-        short_description: `Sản phẩm từ đơn hàng #${order.orderNumber}`,
+        short_description: `Product from order #${order.orderNumber}`,
         status: 'active'
       };
 
@@ -208,7 +215,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
     setActiveTab('cart');
     
     // Optional: Show success message (could be enhanced later)
-    console.log(`Đã thêm ${order.items.length} sản phẩm từ đơn #${order.orderNumber} vào giỏ hàng`);
+    console.log(`Added ${order.items.length} items from order #${order.orderNumber} to cart`);
   };
 
   // Handle "Mua Tặng" functionality
@@ -233,7 +240,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
             media: item.image,
             category_id: 'general',
             stock: 999,
-            short_description: `Quà tặng - ${item.name}`,
+            short_description: `Gift - ${item.name}`,
             status: 'active'
           };
 
@@ -245,7 +252,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
         setActiveTab('cart');
       }
       
-      alert(`Đã tạo đơn quà tặng cho ${recipientInfo.name}!`);
+      alert(`Gift order created for ${recipientInfo.name}!`);
     } catch (error) {
       console.error('Gift purchase failed:', error);
       throw error;
@@ -270,13 +277,13 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
       
       // For demo purposes, just show success message
       const frequencyText = {
-        weekly: 'hàng tuần',
-        biweekly: 'hai tuần một lần', 
-        monthly: 'hàng tháng',
-        quarterly: 'hàng quý'
+        weekly: 'weekly',
+        biweekly: 'every two weeks', 
+        monthly: 'monthly',
+        quarterly: 'quarterly'
       };
       
-      alert(`Đã lên lịch đặt hàng ${frequencyText[scheduleInfo.frequency]} bắt đầu từ ${scheduleInfo.startDate}!`);
+      alert(`Scheduled ${frequencyText[scheduleInfo.frequency as keyof typeof frequencyText]} delivery starting from ${scheduleInfo.startDate}!`);
     } catch (error) {
       console.error('Schedule purchase failed:', error);
       throw error;
@@ -292,10 +299,10 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
     <div className={`space-y-5 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Lịch sử đơn hàng</h2>
+        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Order History</h2>
         <div className="bg-green-50 px-3 py-1 rounded-full">
           <span className="text-sm font-medium text-green-700">
-            {filteredOrders.length} đơn hàng
+            {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
@@ -310,7 +317,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
               : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
           }`}
         >
-          Tất cả
+          All Orders
         </button>
         {Object.entries(ORDER_STATUS_CONFIG).map(([status, config]) => (
           <button
@@ -332,9 +339,9 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
         <div className="flex flex-col items-center justify-center py-12 px-4">
           <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center max-w-sm mx-auto">
             <Loader2 className="h-8 w-8 animate-spin text-green-500 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Đang tải đơn hàng</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Orders</h3>
             <p className="text-sm text-gray-500 text-center">
-              Vui lòng đợi trong giây lát...
+              Please wait a moment...
             </p>
           </div>
         </div>
@@ -345,12 +352,12 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
         <div className="flex flex-col items-center justify-center py-8 px-4">
           <div className="bg-amber-50 border border-amber-200 rounded-2xl shadow-sm p-6 flex flex-col items-center max-w-sm mx-auto">
             <AlertCircle className="h-8 w-8 text-amber-500 mb-3" />
-            <h3 className="text-lg font-semibold text-amber-800 mb-2">Kết nối thất bại</h3>
+            <h3 className="text-lg font-semibold text-amber-800 mb-2">Connection Failed</h3>
             <p className="text-sm text-amber-700 text-center mb-4">
-              Không thể tải dữ liệu từ server. Hiển thị dữ liệu demo.
+              Unable to load data from server. Showing demo data.
             </p>
             <div className="text-xs text-amber-600 bg-amber-100 px-3 py-1 rounded-full">
-              Sử dụng dữ liệu fallback
+              Using fallback data
             </div>
           </div>
         </div>
@@ -379,10 +386,10 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                 {/* Address + Price same line */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-sm text-gray-600 flex-1 mr-4">
-                    {order.shippingAddress || 'Địa chỉ giao hàng'}
+                    {order.shippingAddress || 'Shipping Address'}
                   </div>
                   <div className="font-bold text-green-600 text-base">
-                    {formatVietnamPrice(order.total)}
+                    {formatUSDPrice(order.total)}
                   </div>
                 </div>
 
@@ -399,7 +406,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                     className="text-sm px-4 py-3 min-h-[44px] border-green-200 text-green-700 hover:bg-green-50 touch-manipulation"
                     onClick={() => handleSchedulePurchase(order)}
                   >
-                    Lên Lịch
+                    Schedule
                   </Button>
                   <Button
                     variant="outline"
@@ -407,7 +414,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                     className="text-sm px-4 py-3 min-h-[44px] border-green-200 text-green-700 hover:bg-green-50 touch-manipulation"
                     onClick={() => handleGiftPurchase(order)}
                   >
-                    Mua Tặng
+                    Buy as Gift
                   </Button>
                   <Button
                     variant="outline"
@@ -415,7 +422,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                     className="text-sm px-4 py-3 min-h-[44px] border-green-200 text-green-700 hover:bg-green-50 touch-manipulation"
                     onClick={() => handleBuyAgain(order)}
                   >
-                    Mua Lại
+                    Buy Again
                   </Button>
                   <div className="flex-1"></div>
                   <Button
@@ -429,7 +436,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                     }`}
                   >
                     <Eye className="h-3 w-3 mr-1" />
-                    Chi Tiết
+                    Details
                   </Button>
                 </div>
               </div>
@@ -439,7 +446,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                 <div className="border-t border-gray-100 p-5 bg-gradient-to-b from-gray-50 to-white">
                   <div className="flex items-center mb-4">
                     <Package className="h-5 w-5 text-green-500 mr-2" />
-                    <h4 className="font-bold text-gray-900">Sản phẩm đã đặt</h4>
+                    <h4 className="font-bold text-gray-900">Ordered Items</h4>
                   </div>
                   <div className="space-y-4">
                     {order.items.map((item: Order['items'][0], itemIndex: number) => (
@@ -451,13 +458,13 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                           <div className="font-semibold text-gray-900 mb-1">{item.name}</div>
                           <div className="flex items-center text-xs text-gray-500">
                             <div className="bg-gray-100 px-2 py-1 rounded-full">
-                              Số lượng: {item.quantity}
+                              Quantity: {item.quantity}
                             </div>
                           </div>
                         </div>
                         <div className="bg-green-50 px-3 py-2 rounded-lg">
                           <div className="font-bold text-green-600">
-                            {formatVietnamPrice(item.price * item.quantity)}
+                            {formatUSDPrice(item.price * item.quantity)}
                           </div>
                         </div>
                       </div>
@@ -469,7 +476,7 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
                       <div className="flex items-center text-blue-800">
                         <Truck className="h-5 w-5 mr-2" />
                         <div>
-                          <div className="font-semibold">Dự kiến giao hàng</div>
+                          <div className="font-semibold">Estimated Delivery</div>
                           <div className="text-sm">{formatDate(order.estimatedDelivery)}</div>
                         </div>
                       </div>
@@ -478,9 +485,9 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
 
                   <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl">
                     <div className="flex justify-between items-center">
-                      <div className="text-green-800 font-semibold">Tổng thanh toán:</div>
+                      <div className="text-green-800 font-semibold">Total Amount:</div>
                       <div className="text-2xl font-bold text-green-600">
-                        {formatVietnamPrice(order.total)}
+                        {formatUSDPrice(order.total)}
                       </div>
                     </div>
                   </div>
@@ -493,18 +500,18 @@ export function OrderHistory({ className = '', addToCart, setActiveTab }: OrderH
             <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
               <Package className="h-10 w-10 text-gray-400" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Chưa có đơn hàng</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">No Orders Found</h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto leading-relaxed">
               {selectedFilter === 'all' 
-                ? 'Bạn chưa có đơn hàng nào. Hãy khám phá các sản phẩm tuyệt vời của chúng tôi!' 
-                : `Không có đơn hàng nào ở trạng thái "${ORDER_STATUS_CONFIG[selectedFilter as keyof typeof ORDER_STATUS_CONFIG]?.label}".`
+                ? 'You haven\'t placed any orders yet. Discover our amazing collection of books!' 
+                : `No orders found with "${ORDER_STATUS_CONFIG[selectedFilter as keyof typeof ORDER_STATUS_CONFIG]?.label}" status.`
               }
             </p>
             <Button 
               className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 transform hover:scale-105"
               onClick={() => window.location.href = '/'}
             >
-              Mua sắm ngay
+              Start Shopping
             </Button>
           </div>
         ) : null}
