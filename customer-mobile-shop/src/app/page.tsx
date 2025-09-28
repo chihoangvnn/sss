@@ -17,7 +17,7 @@ import { ProfileTab } from '@/components/ProfileTab';
 import { WishlistTab, getWishlistCount } from '@/components/WishlistTab';
 import { BlogTab } from '@/components/BlogTab';
 import { BlogPost } from '@/components/BlogPost';
-import { BookModal } from '@/components/ProductModal';
+import { FullProductView } from '@/components/FullProductView';
 import { BookCatalog } from '@/components/ProductCatalog';
 import DesktopChatBot from '@/components/DesktopChatBot';
 import DesktopFooter from '@/components/DesktopFooter';
@@ -707,7 +707,7 @@ export default function MobileStorefront() {
   };
 
   const renderContent = () => {
-    // If a book is selected, we'll show the BookModal separately, not here
+    // If a book is selected, we'll show the FullProductView separately, not here
     // Continue with normal content rendering
 
     switch (activeTab) {
@@ -1008,13 +1008,14 @@ export default function MobileStorefront() {
       {/* Desktop Footer - Show on desktop only */}
       {!isMobile && <DesktopFooter />}
 
-      {/* Book Modal */}
-      <BookModal 
+      {/* Full Product View */}
+      <FullProductView
         book={selectedBook}
         isOpen={!!selectedBook}
         onClose={() => setSelectedBook(null)}
         onAddToCart={addToCart}
         cart={cart}
+        isMobile={isMobile}
       />
 
     </div>
