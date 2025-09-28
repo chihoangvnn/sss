@@ -1104,6 +1104,9 @@ video {
 .w-24 {
   width: 6rem;
 }
+.w-32 {
+  width: 8rem;
+}
 .min-w-0 {
   min-width: 0px;
 }
@@ -1112,6 +1115,9 @@ video {
 }
 .min-w-\[3rem\] {
   min-width: 3rem;
+}
+.min-w-\[2rem\] {
+  min-width: 2rem;
 }
 .max-w-4xl {
   max-width: 56rem;
