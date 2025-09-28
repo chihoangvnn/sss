@@ -99,6 +99,7 @@ interface BookGenre {
 interface CartItem {
   book: Book;
   quantity: number;
+  sellerId?: string;
 }
 
 interface BlogPost {
@@ -626,7 +627,7 @@ export default function MobileStorefront() {
     return '📦';
   }
 
-  const addToCart = (book: Book) => {
+  const addToCart = (book: Book, sellerId?: string) => {
     // Require login for adding to cart
     if (!isAuthenticated) {
       alert('Please login to add items to your cart');
@@ -639,11 +640,11 @@ export default function MobileStorefront() {
       if (existing) {
         return prev.map(item =>
           item.book.id === book.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + 1, sellerId }
             : item
         );
       }
-      return [...prev, { book, quantity: 1 }];
+      return [...prev, { book, quantity: 1, sellerId }];
     });
   };
 

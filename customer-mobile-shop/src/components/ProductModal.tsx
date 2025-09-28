@@ -1,9 +1,18 @@
 'use client'
 
-import React from 'react';
-import { X, Plus, Minus, Star, ShoppingCart, Store } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Plus, Minus, Star, ShoppingCart, Store, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatVietnamPrice } from '@/utils/currency';
+
+interface Seller {
+  id: string;
+  name: string;
+  price: number;
+  rating: number;
+  stock: number;
+  deliveryTime?: string;
+}
 
 interface Book {
   id: string;
@@ -26,6 +35,8 @@ interface Book {
   isBestseller?: boolean;
   isRecommended?: boolean;
   isFeatured?: boolean;
+  // Multi-seller support
+  sellers?: Seller[];
 }
 
 interface CartItem {
@@ -37,20 +48,31 @@ interface BookModalProps {
   book: Book | null;
   isOpen: boolean;
   onClose: () => void;
-  onAddToCart: (book: Book) => void;
+  onAddToCart: (book: Book, sellerId?: string) => void;
   cart: CartItem[];
 }
 
 export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModalProps) {
+  const [showAllSellers, setShowAllSellers] = useState(false);
+  
   if (!isOpen || !book) return null;
 
   // Get current quantity in cart
   const cartItem = cart.find(item => item.book.id === book.id);
   const quantityInCart = cartItem?.quantity || 0;
 
-  const handleAddToCart = () => {
-    onAddToCart(book);
+  const handleAddToCart = (sellerId?: string) => {
+    onAddToCart(book, sellerId);
   };
+
+  // Sort sellers by price and get display data
+  const sortedSellers = book.sellers?.sort((a, b) => a.price - b.price) || [];
+  const sellersToShow = showAllSellers ? sortedSellers : sortedSellers.slice(0, 5);
+  const hasMoreSellers = sortedSellers.length > 5;
+  const remainingSellers = sortedSellers.length - 5;
+
+  // Get lowest price for display
+  const lowestPrice = sortedSellers.length > 0 ? sortedSellers[0].price : book.price;
 
 
   return (
@@ -107,10 +129,24 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                 <p className="text-lg text-gray-600 mb-3">
                   Author: <span className="font-medium">{book.author}</span>
                 </p>
+                {/* Price Section */}
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-green-600">
-                    {formatVietnamPrice(book.price)}
-                  </span>
+                  <div>
+                    {sortedSellers.length > 0 ? (
+                      <div>
+                        <span className="text-2xl font-bold text-green-600">
+                          {formatVietnamPrice(lowestPrice)}
+                        </span>
+                        <p className="text-sm text-gray-600">
+                          Starting from • {sortedSellers.length} sellers
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-2xl font-bold text-green-600">
+                        {formatVietnamPrice(book.price)}
+                      </span>
+                    )}
+                  </div>
                   {book.rating && (
                     <div className="flex items-center gap-1">
                       {[...Array(5)].map((_, i) => (
@@ -128,6 +164,66 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                   )}
                 </div>
               </div>
+
+              {/* Sellers Section */}
+              {sortedSellers.length > 0 && (
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Available from sellers</h3>
+                  <div className="space-y-2">
+                    {sellersToShow.map((seller, index) => (
+                      <div key={seller.id} className={`flex items-center justify-between p-3 bg-white rounded-lg border ${index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Store className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900">{seller.name}</span>
+                            {index === 0 && (
+                              <span className="text-xs bg-green-600 text-white px-2 py-1 rounded-full">Best Price</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star 
+                                  key={i} 
+                                  className={`h-3 w-3 ${
+                                    i < Math.floor(seller.rating) 
+                                      ? 'fill-yellow-400 text-yellow-400' 
+                                      : 'fill-gray-200 text-gray-200'
+                                  }`} 
+                                />
+                              ))}
+                              <span className="ml-1">{seller.rating}</span>
+                            </div>
+                            <span>{seller.stock} in stock</span>
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-lg font-bold text-green-600 mb-1">
+                            {formatVietnamPrice(seller.price)}
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleAddToCart(seller.id)}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
+                          >
+                            Add to Cart
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {hasMoreSellers && !showAllSellers && (
+                      <button
+                        onClick={() => setShowAllSellers(true)}
+                        className="w-full py-2 text-sm text-green-600 hover:text-green-700 font-medium flex items-center justify-center gap-1"
+                      >
+                        Xem thêm {remainingSellers} sellers
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Book Details */}
               <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
@@ -211,7 +307,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                 Close
               </Button>
               <Button
-                onClick={handleAddToCart}
+                onClick={() => handleAddToCart()}
                 disabled={book.stock === 0}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
