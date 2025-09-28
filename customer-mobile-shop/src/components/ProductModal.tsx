@@ -5,54 +5,53 @@ import { X, Plus, Minus, Star, ShoppingCart, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatVietnamPrice } from '@/utils/currency';
 
-interface Product {
+interface Book {
   id: string;
-  name: string;
+  title: string;
+  author: string;
   price: number;
-  image?: string;
-  category_id: string;
+  cover_image?: string;
+  isbn?: string;
+  publisher?: string;
+  publication_year?: number;
+  pages?: number;
+  language?: string;
+  genre_id: string;
   stock: number;
-  short_description?: string;
+  description?: string;
+  rating?: number;
   status: string;
-  benefits?: string | string[];
   // Badge properties
   isNew?: boolean;
-  isTopseller?: boolean;
-  isFreeshipping?: boolean;
   isBestseller?: boolean;
+  isRecommended?: boolean;
+  isFeatured?: boolean;
 }
 
 interface CartItem {
-  product: Product;
+  book: Book;
   quantity: number;
 }
 
-interface ProductModalProps {
-  product: Product | null;
+interface BookModalProps {
+  book: Book | null;
   isOpen: boolean;
   onClose: () => void;
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (book: Book) => void;
   cart: CartItem[];
 }
 
-export function ProductModal({ product, isOpen, onClose, onAddToCart, cart }: ProductModalProps) {
-  if (!isOpen || !product) return null;
+export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModalProps) {
+  if (!isOpen || !book) return null;
 
   // Get current quantity in cart
-  const cartItem = cart.find(item => item.product.id === product.id);
+  const cartItem = cart.find(item => item.book.id === book.id);
   const quantityInCart = cartItem?.quantity || 0;
 
   const handleAddToCart = () => {
-    onAddToCart(product);
+    onAddToCart(book);
   };
 
-  const formatBenefits = (benefits: string | string[] | undefined) => {
-    if (!benefits) return [];
-    if (typeof benefits === 'string') {
-      return benefits.split(',').map(b => b.trim()).filter(b => b.length > 0);
-    }
-    return benefits;
-  };
 
   return (
     <>
@@ -67,7 +66,7 @@ export function ProductModal({ product, isOpen, onClose, onAddToCart, cart }: Pr
         <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 zoom-in-95 duration-300">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-lg font-semibold text-gray-900">Chi tiết sản phẩm</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Chi tiết sách</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -80,74 +79,107 @@ export function ProductModal({ product, isOpen, onClose, onAddToCart, cart }: Pr
 
           {/* Content */}
           <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
-            {/* Product Image */}
-            <div className="aspect-square bg-gray-100 relative">
-              {product.image ? (
+            {/* Book Cover */}
+            <div className="aspect-[3/4] bg-gray-100 relative max-w-md mx-auto">
+              {book.cover_image ? (
                 <img 
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
+                  src={book.cover_image}
+                  alt={book.title}
+                  className="w-full h-full object-cover rounded-lg shadow-lg"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <Store className="h-20 w-20" />
+                <div className="w-full h-full flex items-center justify-center text-gray-400 rounded-lg border-2 border-dashed border-gray-300">
+                  <div className="text-center">
+                    <Store className="h-16 w-16 mx-auto mb-2" />
+                    <p className="text-sm">Không có ảnh bìa</p>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Product Info */}
+            {/* Book Info */}
             <div className="p-6 space-y-4">
-              {/* Name & Price */}
+              {/* Title & Author */}
               <div>
-                <h1 className="text-xl font-bold text-gray-900 mb-2">
-                  {product.name}
+                <h1 className="text-xl font-bold text-gray-900 mb-1">
+                  {book.title}
                 </h1>
+                <p className="text-lg text-gray-600 mb-3">
+                  Tác giả: <span className="font-medium">{book.author}</span>
+                </p>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-bold text-green-600">
-                    {formatVietnamPrice(product.price)}
+                    {formatVietnamPrice(book.price)}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <Star className="h-4 w-4 fill-gray-200 text-gray-200" />
-                    <span className="text-sm text-gray-600 ml-1">(4.0)</span>
-                  </div>
+                  {book.rating && (
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`h-4 w-4 ${
+                            i < Math.floor(book.rating!) 
+                              ? 'fill-yellow-400 text-yellow-400' 
+                              : 'fill-gray-200 text-gray-200'
+                          }`} 
+                        />
+                      ))}
+                      <span className="text-sm text-gray-600 ml-1">({book.rating})</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Book Details */}
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                {book.publisher && (
+                  <div>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Nhà xuất bản</span>
+                    <p className="text-sm font-medium text-gray-900">{book.publisher}</p>
+                  </div>
+                )}
+                {book.publication_year && (
+                  <div>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Năm xuất bản</span>
+                    <p className="text-sm font-medium text-gray-900">{book.publication_year}</p>
+                  </div>
+                )}
+                {book.pages && (
+                  <div>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Số trang</span>
+                    <p className="text-sm font-medium text-gray-900">{book.pages}</p>
+                  </div>
+                )}
+                {book.language && (
+                  <div>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Ngôn ngữ</span>
+                    <p className="text-sm font-medium text-gray-900">{book.language}</p>
+                  </div>
+                )}
+                {book.isbn && (
+                  <div className="col-span-2">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">ISBN</span>
+                    <p className="text-sm font-medium text-gray-900 font-mono">{book.isbn}</p>
+                  </div>
+                )}
+              </div>
+
               {/* Description */}
-              {product.short_description && (
+              {book.description && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Mô tả</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">Mô tả sách</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    {product.short_description}
+                    {book.description}
                   </p>
                 </div>
               )}
 
-              {/* Benefits */}
-              {product.benefits && formatBenefits(product.benefits).length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Công dụng</h3>
-                  <ul className="space-y-1">
-                    {formatBenefits(product.benefits).map((benefit, index) => (
-                      <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                        <span className="text-green-500 mt-1">•</span>
-                        <span>{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
 
               {/* Stock Status */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Tình trạng:</span>
-                {product.stock > 0 ? (
+                {book.stock > 0 ? (
                   <span className="text-sm text-green-600 font-medium">
-                    Còn hàng ({product.stock} sản phẩm)
+                    Còn hàng ({book.stock} cuốn)
                   </span>
                 ) : (
                   <span className="text-sm text-red-600 font-medium">Hết hàng</span>
@@ -160,7 +192,7 @@ export function ProductModal({ product, isOpen, onClose, onAddToCart, cart }: Pr
                   <div className="flex items-center gap-2 text-green-800">
                     <ShoppingCart className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Đã có {quantityInCart} sản phẩm trong giỏ hàng
+                      Đã có {quantityInCart} cuốn sách trong giỏ hàng
                     </span>
                   </div>
                 </div>
@@ -180,7 +212,7 @@ export function ProductModal({ product, isOpen, onClose, onAddToCart, cart }: Pr
               </Button>
               <Button
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
+                disabled={book.stock === 0}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />

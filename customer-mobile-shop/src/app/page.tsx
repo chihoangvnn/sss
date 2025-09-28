@@ -16,6 +16,8 @@ import { ImageSlider } from '@/components/ImageSlider';
 import { ProfileTab } from '@/components/ProfileTab';
 import { BlogTab } from '@/components/BlogTab';
 import { BlogPost } from '@/components/BlogPost';
+import { BookModal } from '@/components/ProductModal';
+import { BookCatalog } from '@/components/ProductCatalog';
 import DesktopChatBot from '@/components/DesktopChatBot';
 import DesktopFooter from '@/components/DesktopFooter';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -27,39 +29,62 @@ import { calculateVipStatus } from '@/utils/vipCalculator';
 // API base URL from environment or default  
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
 
-// Banner images for slider
+// Book genres with Vietnamese names and icons
+const BOOK_GENRES = [
+  { id: 'all', name: 'Tất cả', icon: '📚' },
+  { id: 'literature', name: 'Văn học', icon: '✍️' },
+  { id: 'business', name: 'Kinh tế - Kinh doanh', icon: '💼' },
+  { id: 'science', name: 'Khoa học - Công nghệ', icon: '🔬' },
+  { id: 'children', name: 'Thiếu nhi', icon: '🧸' },
+  { id: 'self-help', name: 'Kỹ năng sống', icon: '🎯' },
+  { id: 'history', name: 'Lịch sử', icon: '📜' },
+  { id: 'psychology', name: 'Tâm lý học', icon: '🧠' },
+  { id: 'cooking', name: 'Nấu ăn', icon: '👨‍🍳' },
+  { id: 'art', name: 'Nghệ thuật', icon: '🎨' },
+  { id: 'health', name: 'Sức khỏe', icon: '💪' },
+  { id: 'education', name: 'Giáo dục', icon: '🎓' }
+];
+
+// Banner images for bookstore slider - using placeholder images for now
 const BANNER_IMAGES = [
-  '/images/modern_e-commerce_ba_70f9ff6e.jpg',
-  '/images/modern_e-commerce_ba_a5ed4b23.jpg',
-  '/images/modern_e-commerce_ba_9f23a27c.jpg'
+  'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=800&h=400&fit=crop'
 ];
 
 
-interface Product {
+interface Book {
   id: string;
-  name: string;
+  title: string;
+  author: string;
   price: number;
-  image?: string;
-  media?: string; // Support both image and video URLs
-  category_id: string;
+  cover_image?: string;
+  isbn?: string;
+  publisher?: string;
+  publication_year?: number;
+  pages?: number;
+  language?: string;
+  genre_id: string;
   stock: number;
-  short_description?: string;
+  description?: string;
+  rating?: number;
   status: string;
-  benefits?: string | string[];
   // Badge properties
   isNew?: boolean;
-  isTopseller?: boolean;
-  isFreeshipping?: boolean;
   isBestseller?: boolean;
+  isRecommended?: boolean;
+  isFeatured?: boolean;
 }
 
-interface Category {
+interface BookGenre {
   id: string;
   name: string;
+  icon?: string;
+  description?: string;
 }
 
 interface CartItem {
-  product: Product;
+  book: Book;
   quantity: number;
 }
 
@@ -91,9 +116,9 @@ export default function MobileStorefront() {
   
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedGenre, setSelectedGenre] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedBlogPost, setSelectedBlogPost] = useState<BlogPost | null>(null);
   const [blogSearchQuery, setBlogSearchQuery] = useState('');
   const [blogSelectedCategory, setBlogSelectedCategory] = useState('all');
@@ -112,21 +137,21 @@ export default function MobileStorefront() {
   
   
 
-  // Infinite scroll setup - fetch products with pagination
+  // Infinite scroll setup - fetch books with pagination
   const { 
-    data: productsData,
-    isLoading: productsLoading, 
-    error: productsError,
+    data: booksData,
+    isLoading: booksLoading, 
+    error: booksError,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isRefetching: productsRefetching 
-  } = useInfiniteQuery<Product[]>({
-    queryKey: ['mobile-products', selectedCategory, searchQuery, sortBy, sortOrder],
+    isRefetching: booksRefetching 
+  } = useInfiniteQuery<Book[]>({
+    queryKey: ['mobile-books', selectedGenre, searchQuery, sortBy, sortOrder],
     queryFn: async ({ pageParam = 0 }) => {
       let url = `${API_BASE_URL}/products?limit=20&offset=${pageParam}`;
-      if (selectedCategory !== 'all') {
-        url += `&categoryId=${selectedCategory}`;
+      if (selectedGenre !== 'all') {
+        url += `&categoryId=${selectedGenre}`;
       }
       if (searchQuery) {
         url += `&search=${encodeURIComponent(searchQuery)}`;
@@ -147,94 +172,99 @@ export default function MobileStorefront() {
   });
   
   // Flatten pages into single array
-  const products = productsData?.pages.flat() || [];
+  const books = booksData?.pages.flat() || [];
 
-  // Demo products with badges for testing (when API fails)
-  const demoProducts: Product[] = [
+  // Demo books with badges for testing (when API fails)
+  const demoBooks: Book[] = [
     {
       id: 'demo-1',
-      name: 'Nhang Trầm Hương Cao Cấp',
-      price: 150000,
-      image: '/images/modern_e-commerce_ba_70f9ff6e.jpg',
-      category_id: 'incense',
+      title: 'Đắc Nhân Tâm',
+      author: 'Dale Carnegie',
+      price: 89000,
+      cover_image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop',
+      genre_id: 'self-help',
       stock: 50,
-      short_description: 'Nhang trầm hương thượng hạng từ Huế',
+      description: 'Cuốn sách kinh điển về nghệ thuật giao tiếp và ứng xử',
+      rating: 4.8,
+      publisher: 'NXB Tổng Hợp TP.HCM',
+      publication_year: 2020,
+      pages: 320,
+      language: 'Tiếng Việt',
+      isbn: '978-604-2-12345-6',
       status: 'active',
-      benefits: ['Thanh tịnh tâm hồn', 'Thơm dịu nhẹ'],
       isNew: true,
-      isTopseller: true
-    },
-    {
-      id: 'demo-2', 
-      name: 'Nhang Sandalwood Premium',
-      price: 200000,
-      image: '/images/modern_e-commerce_ba_a5ed4b23.jpg',
-      category_id: 'incense',
-      stock: 30,
-      short_description: 'Nhang gỗ đàn hương nguyên chất',
-      status: 'active',
-      benefits: ['Thư giãn', 'Thiền định'],
-      isFreeshipping: true,
       isBestseller: true
     },
     {
-      id: 'demo-3',
-      name: 'Nhang Que Truyền Thống',
-      price: 80000,
-      image: '/images/modern_e-commerce_ba_9f23a27c.jpg',
-      category_id: 'incense',
-      stock: 100,
-      short_description: 'Nhang que làm thủ công theo phương pháp cổ truyền',
+      id: 'demo-2', 
+      title: 'Sapiens: Lược Sử Loài Người',
+      author: 'Yuval Noah Harari',
+      price: 145000,
+      cover_image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop',
+      genre_id: 'history',
+      stock: 30,
+      description: 'Câu chuyện về sự tiến hóa của loài người từ thời tiền sử đến hiện đại',
+      rating: 4.6,
+      publisher: 'NXB Thế Giới',
+      publication_year: 2019,
+      pages: 512,
+      language: 'Tiếng Việt',
+      isbn: '978-604-7-78910-1',
       status: 'active',
-      benefits: ['Tôn giáo', 'Gia đình'],
+      isRecommended: true,
+      isFeatured: true
+    },
+    {
+      id: 'demo-3',
+      title: 'Tôi Tài Giỏi, Bạn Cũng Thế',
+      author: 'Adam Khoo',
+      price: 75000,
+      cover_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
+      genre_id: 'self-help',
+      stock: 100,
+      description: 'Phương pháp học tập hiệu quả và phát triển bản thân',
+      rating: 4.5,
+      publisher: 'NXB Trẻ',
+      publication_year: 2021,
+      pages: 256,
+      language: 'Tiếng Việt',
+      isbn: '978-604-1-11213-2',
+      status: 'active',
       isNew: true,
-      isFreeshipping: true
+      isRecommended: true
     },
     {
       id: 'demo-4',
-      name: 'Bộ Nhang Ngũ Hành',
-      price: 350000,
-      image: '/images/modern_e-commerce_ba_70f9ff6e.jpg',
-      category_id: 'incense',
+      title: 'Atomic Habits - Thay Đổi Tí Hon Hiệu Quả Bất Ngờ',
+      author: 'James Clear',
+      price: 120000,
+      cover_image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300&h=400&fit=crop',
+      genre_id: 'self-help',
       stock: 20,
-      short_description: 'Bộ nhang 5 loại theo ngũ hành kim, mộc, thủy, hỏa, thổ',
+      description: 'Hướng dẫn xây dựng thói quen tốt và loại bỏ thói quen xấu',
+      rating: 4.9,
+      publisher: 'NXB Thế Giới',
+      publication_year: 2020,
+      pages: 368,
+      language: 'Tiếng Việt',
+      isbn: '978-604-7-14516-3',
       status: 'active',
-      benefits: ['Cân bằng năng lượng', 'Phong thủy'],
-      isTopseller: true,
       isBestseller: true,
-      isFreeshipping: true
+      isFeatured: true
     }
   ];
 
-  // Use demo products when API fails or returns empty
-  const displayProducts = (products.length > 0 || productsLoading) ? products : demoProducts;
+  // Use demo books when API fails or returns empty
+  const displayBooks = (books.length > 0 || booksLoading) ? books : demoBooks;
   
-  // Force demo products for testing (temporary)
-  const finalProducts = productsError || products.length === 0 ? demoProducts : displayProducts;
+  // Force demo books for testing (temporary)
+  const finalBooks = booksError || books.length === 0 ? demoBooks : displayBooks;
 
-  // Fetch real categories with loading states
-  const { 
-    data: allCategories = [], 
-    isLoading: categoriesLoading,
-    error: categoriesError 
-  } = useQuery<Category[]>({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/categories/filter?frontendId=frontend-a`);
-      if (!response.ok) throw new Error('Failed to fetch categories');
-      return response.json();
-    }
-  });
+  // For now, use static book genres (can fetch from API later)
+  const allGenres = BOOK_GENRES;
   
-  // Create simplified category list with real IDs
-  const categories = categoriesLoading ? [] : [
-    { id: 'all', name: 'Tất cả', icon: '🛍️' },
-    ...allCategories.map(cat => ({
-      id: cat.id,
-      name: cat.name,
-      icon: getCategoryIcon(cat.name)
-    }))
-  ];
+  // Use book genres
+  const genres = allGenres;
   
   // Helper function to get category icons
   function getCategoryIcon(categoryName: string): string {
@@ -248,32 +278,32 @@ export default function MobileStorefront() {
     return '📦';
   }
 
-  const addToCart = (product: Product) => {
+  const addToCart = (book: Book) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+      const existing = prev.find(item => item.book.id === book.id);
       if (existing) {
         return prev.map(item =>
-          item.product.id === product.id
+          item.book.id === book.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { book, quantity: 1 }];
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
+  const removeFromCart = (bookId: string) => {
+    setCart(prev => prev.filter(item => item.book.id !== bookId));
   };
 
-  const updateQuantity = (productId: string, newQuantity: number) => {
+  const updateQuantity = (bookId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(bookId);
       return;
     }
     setCart(prev => 
       prev.map(item =>
-        item.product.id === productId
+        item.book.id === bookId
           ? { ...item, quantity: newQuantity }
           : item
       )
@@ -281,7 +311,7 @@ export default function MobileStorefront() {
   };
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (item.book.price * item.quantity), 0);
   };
 
   const getTotalItems = () => {
@@ -289,7 +319,7 @@ export default function MobileStorefront() {
   };
 
   const handleTabChange = (tab: string) => {
-    setSelectedProduct(null); // Always clear product view when changing tabs
+    setSelectedBook(null); // Always clear book view when changing tabs
     setActiveTab(tab);
   };
 
@@ -314,11 +344,11 @@ export default function MobileStorefront() {
     setActiveTab('profile');
   };
 
-  // Helper function to render product badges
-  const renderProductBadges = (product: Product) => {
+  // Helper function to render book badges
+  const renderBookBadges = (book: Book) => {
     const badges = [];
     
-    if (product.isNew) {
+    if (book.isNew) {
       badges.push(
         <Badge key="new" variant="new" className="text-xs">
           🆕 MỚI
@@ -326,26 +356,26 @@ export default function MobileStorefront() {
       );
     }
     
-    if (product.isTopseller) {
+    if (book.isBestseller) {
       badges.push(
-        <Badge key="topseller" variant="topseller" className="text-xs">
+        <Badge key="bestseller" variant="bestseller" className="text-xs">
           🏆 BÁN CHẠY
         </Badge>
       );
     }
     
-    if (product.isFreeshipping) {
+    if (book.isRecommended) {
       badges.push(
-        <Badge key="freeshipping" variant="freeshipping" className="text-xs">
-          🚚 FREESHIP
+        <Badge key="recommended" variant="freeshipping" className="text-xs">
+          🎩 ĐỀ XUẤT
         </Badge>
       );
     }
     
-    if (product.isBestseller) {
+    if (book.isFeatured) {
       badges.push(
-        <Badge key="bestseller" variant="bestseller" className="text-xs">
-          ⭐ YÊU THÍCH
+        <Badge key="featured" variant="bestseller" className="text-xs">
+          ⭐ NỔI BẬT
         </Badge>
       );
     }
@@ -354,125 +384,8 @@ export default function MobileStorefront() {
   };
 
   const renderContent = () => {
-    // If a product is selected, show full page product view
-    if (selectedProduct) {
-      return (
-        <div className="bg-white min-h-screen">
-          {/* Product Image */}
-          <div className="aspect-square bg-gray-100 relative">
-            <MediaViewer
-              src={selectedProduct.media || selectedProduct.image}
-              alt={selectedProduct.name}
-              className="w-full h-full object-cover"
-              isHomepage={false} // Product detail view is not homepage
-            />
-            {/* Back Button */}
-            <button 
-              onClick={() => setSelectedProduct(null)}
-              className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white/90 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </button>
-          </div>
-
-          {/* Product Info */}
-          <div className="p-6 space-y-4">
-            {/* Name & Price */}
-            <div>
-              {/* Product Name and Badges - inline layout */}
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {selectedProduct.name}
-                </h1>
-                {/* Product Badges - displayed next to product name */}
-                {renderProductBadges(selectedProduct).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {renderProductBadges(selectedProduct)}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-3xl font-bold text-green-600">
-                  {formatVietnamPrice(selectedProduct.price)}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <Star className="h-4 w-4 fill-gray-200 text-gray-200" />
-                  <span className="text-sm text-gray-600 ml-1">(4.0)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            {selectedProduct.short_description && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Mô tả</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {selectedProduct.short_description}
-                </p>
-              </div>
-            )}
-
-            {/* Benefits */}
-            {selectedProduct.benefits && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Công dụng</h3>
-                <ul className="space-y-1">
-                  {(typeof selectedProduct.benefits === 'string' 
-                    ? selectedProduct.benefits.split(',').map(b => b.trim()).filter(b => b.length > 0)
-                    : selectedProduct.benefits
-                  ).map((benefit, index) => (
-                    <li key={index} className="flex items-start gap-2 text-gray-600">
-                      <span className="text-green-500 mt-1">•</span>
-                      <span>{benefit}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Stock Status */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Tình trạng:</span>
-              {selectedProduct.stock > 0 ? (
-                <span className="text-sm text-green-600 font-medium">
-                  Còn hàng ({selectedProduct.stock} sản phẩm)
-                </span>
-              ) : (
-                <span className="text-sm text-red-600 font-medium">Hết hàng</span>
-              )}
-            </div>
-
-            {/* Quantity in Cart */}
-            {cart.find(item => item.product.id === selectedProduct.id) && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-green-800">
-                  <ShoppingCart className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    Đã có {cart.find(item => item.product.id === selectedProduct.id)?.quantity} sản phẩm trong giỏ hàng
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Add to Cart Button */}
-            <div className="pt-4">
-              <Button
-                onClick={() => addToCart(selectedProduct)}
-                disabled={selectedProduct.stock === 0}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Thêm vào giỏ hàng
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    // If a book is selected, we'll show the BookModal separately, not here
+    // Continue with normal content rendering
 
     switch (activeTab) {
       case 'categories':
@@ -481,18 +394,18 @@ export default function MobileStorefront() {
             <div className={`${layoutConfig.contentPadding} pt-6`}>
               <h2 className="text-xl font-bold mb-4 text-gray-900">Danh mục sản phẩm</h2>
               <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
-                {categories.map((category) => (
+                {genres.map((genre) => (
                   <button
-                    key={category.id}
+                    key={genre.id}
                     onClick={() => {
-                      setSelectedCategory(category.id);
+                      setSelectedGenre(genre.id);
                       setActiveTab('home');
                     }}
                     className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
                   >
                     <div className="text-center">
-                      <div className="text-3xl mb-2">{category.icon}</div>
-                      <h3 className="font-semibold text-gray-900">{category.name}</h3>
+                      <div className="text-3xl mb-2">{genre.icon}</div>
+                      <h3 className="font-semibold text-gray-900">{genre.name}</h3>
                     </div>
                   </button>
                 ))}
@@ -515,24 +428,30 @@ export default function MobileStorefront() {
               <div>
                 <div className="space-y-4 mb-6">
                   {cart.map((item) => (
-                    <div key={item.product.id} className="flex items-center gap-3 p-3 bg-white border rounded-lg">
-                      <MediaViewer
-                        src={item.product.media || item.product.image}
-                        alt={item.product.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                        isHomepage={false} // Cart view is not homepage
-                      />
+                    <div key={item.book.id} className="flex items-center gap-3 p-3 bg-white border rounded-lg">
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                        {item.book.cover_image ? (
+                          <img 
+                            src={item.book.cover_image} 
+                            alt={item.book.title}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <Store className="h-8 w-8 text-gray-400" />
+                        )}
+                      </div>
                       <div className="flex-1">
-                        <h3 className="font-medium">{item.product.name}</h3>
-                        <p className="text-green-600 font-bold">
-                          {formatVietnamPrice(item.product.price)}
+                        <h3 className="font-medium">{item.book.title}</h3>
+                        <p className="text-sm text-gray-600">{item.book.author}</p>
+                        <p className="text-blue-600 font-bold">
+                          {formatVietnamPrice(item.book.price)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.book.id, item.quantity - 1)}
                           className="w-8 h-8 p-0"
                         >
                           <Minus className="h-4 w-4" />
@@ -541,7 +460,7 @@ export default function MobileStorefront() {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.book.id, item.quantity + 1)}
                           className="w-8 h-8 p-0"
                         >
                           <Plus className="h-4 w-4" />
@@ -632,7 +551,7 @@ export default function MobileStorefront() {
             {/* Product Grid */}
             <div className={layoutConfig.contentPadding}>
               <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
-                {productsLoading && !productsError ? (
+                {booksLoading && !booksError ? (
                   // Loading skeleton
                   Array.from({ length: 8 }).map((_, index) => (
                     <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -651,53 +570,74 @@ export default function MobileStorefront() {
                       Thử lại
                     </Button>
                   </div>
-                ) : finalProducts.length === 0 ? (
+                ) : finalBooks.length === 0 ? (
                   <div className="text-center py-8 col-span-full">
                     <span className="text-4xl mb-4 block">🔍</span>
-                    <p className="text-gray-600">Không tìm thấy sản phẩm</p>
+                    <p className="text-gray-600">Không tìm thấy sách</p>
                   </div>
                 ) : (
-                  finalProducts.map((product) => (
-                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                  finalBooks.map((book) => (
+                    <div key={book.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                       <div 
-                        className="aspect-square bg-gray-100 cursor-pointer relative"
-                        onClick={() => setSelectedProduct(product)}
+                        className="aspect-[3/4] bg-gray-100 cursor-pointer relative"
+                        onClick={() => setSelectedBook(book)}
                       >
-                        <MediaViewer
-                          src={product.media || product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                          isHomepage={activeTab === 'home'} // Use dynamic homepage detection
-                        />
-                        {/* Product Badges - positioned at top of image */}
-                        {renderProductBadges(product).length > 0 && (
+                        {book.cover_image ? (
+                          <img 
+                            src={book.cover_image}
+                            alt={book.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <Store className="h-16 w-16" />
+                          </div>
+                        )}
+                        {/* Book Badges - positioned at top of image */}
+                        {renderBookBadges(book).length > 0 && (
                           <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
-                            {renderProductBadges(product)}
+                            {renderBookBadges(book)}
                           </div>
                         )}
                       </div>
                       <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-2 truncate">
-                          {product.name}
+                        <h3 className="font-semibold text-gray-900 mb-1 truncate text-sm">
+                          {book.title}
                         </h3>
+                        <p className="text-xs text-gray-600 mb-2 truncate">{book.author}</p>
                         <div className="mb-3">
-                          <span className="text-green-600 font-bold text-lg">
-                            {formatVietnamPrice(product.price)}
+                          <span className="text-blue-600 font-bold text-lg">
+                            {formatVietnamPrice(book.price)}
                           </span>
+                          {book.rating && (
+                            <div className="flex items-center gap-1 mt-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star 
+                                  key={i} 
+                                  className={`h-3 w-3 ${
+                                    i < Math.floor(book.rating!) 
+                                      ? 'fill-yellow-400 text-yellow-400' 
+                                      : 'fill-gray-200 text-gray-200'
+                                  }`} 
+                                />
+                              ))}
+                              <span className="text-xs text-gray-600 ml-1">({book.rating})</span>
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <Button 
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedProduct(product)}
+                            onClick={() => setSelectedBook(book)}
                             className="flex-1 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
                           >
-                            Tìm hiểu Thêm
+                            Chi tiết
                           </Button>
                           <Button 
                             size="sm"
-                            onClick={() => addToCart(product)}
-                            className="bg-green-500 hover:bg-green-600 w-10 h-8 p-0"
+                            onClick={() => addToCart(book)}
+                            className="bg-blue-500 hover:bg-blue-600 w-10 h-8 p-0"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -725,15 +665,15 @@ export default function MobileStorefront() {
       {/* Desktop Header - Show on tablet and desktop */}
       {!isMobile && (
         <DesktopHeader
-          storeName="NhangSach.Net"
+          storeName="NhaSach.Net"
           cartCount={getTotalItems()}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onCartClick={handleHeaderCartClick}
           onProfileClick={handleProfileClick}
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onCategorySelect={setSelectedCategory}
+          categories={genres}
+          selectedCategory={selectedGenre}
+          onCategorySelect={setSelectedGenre}
           showCategoryBar={true}
         />
       )}
@@ -745,7 +685,7 @@ export default function MobileStorefront() {
           onCartClick={handleHeaderCartClick}
           onProfileClick={handleProfileClick}
           cartCount={getTotalItems()}
-          storeName="Nhang Sạch .Net"
+          storeName="NhaSach.Net"
         />
       )}
 
@@ -754,7 +694,7 @@ export default function MobileStorefront() {
         <AutoHideSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          placeholder="Tìm kiếm sản phẩm..."
+          placeholder="Tìm kiếm sách..."
         />
       )}
 
@@ -763,7 +703,7 @@ export default function MobileStorefront() {
         <HiddenSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          placeholder="Tìm kiếm sản phẩm..."
+          placeholder="Tìm kiếm sách..."
         />
       )}
 
@@ -784,6 +724,15 @@ export default function MobileStorefront() {
 
       {/* Desktop Footer - Show on desktop only */}
       {!isMobile && <DesktopFooter />}
+
+      {/* Book Modal */}
+      <BookModal 
+        book={selectedBook}
+        isOpen={!!selectedBook}
+        onClose={() => setSelectedBook(null)}
+        onAddToCart={addToCart}
+        cart={cart}
+      />
 
     </div>
   );
