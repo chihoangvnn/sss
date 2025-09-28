@@ -43,7 +43,11 @@ interface Book {
   targetMarkets?: string[];
 }
 
-export function LandingPage() {
+interface LandingPageProps {
+  onBrowseCatalog?: () => void;
+}
+
+export function LandingPage({ onBrowseCatalog }: LandingPageProps = {}) {
   const { login, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -253,6 +257,7 @@ export function LandingPage() {
             </Button>
             
             <Button 
+              onClick={onBrowseCatalog}
               variant="outline" 
               size="lg"
               className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-4 text-lg"

@@ -888,7 +888,7 @@ export default function MobileStorefront() {
         );
 
       default: // 'home' - Always show Landing Page as home
-        return <LandingPage />;
+        return <LandingPage onBrowseCatalog={() => setActiveTab('categories')} />;
     }
   };
 
