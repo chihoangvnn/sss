@@ -23,6 +23,7 @@ import DesktopChatBot from '@/components/DesktopChatBot';
 import DesktopFooter from '@/components/DesktopFooter';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
+import { LandingPage } from '@/components/LandingPage';
 import { formatVietnamPrice } from '@/utils/currency';
 
 // API base URL from environment or default  
@@ -124,7 +125,7 @@ export default function MobileStorefront() {
   const { isMobile, isTablet, deviceType } = useResponsive();
   
   // Authentication
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   
   // Client-side only state to prevent hydration mismatch
   const [isMounted, setIsMounted] = useState(false);
@@ -731,8 +732,13 @@ export default function MobileStorefront() {
   };
 
   const renderContent = () => {
+    // Show Landing Page for unauthenticated users (temporary force for testing)
+    if (!isAuthenticated) {
+      return <LandingPage />;
+    }
+
     // If a book is selected, we'll show the FullProductView separately, not here
-    // Continue with normal content rendering
+    // Continue with normal content rendering for authenticated users
 
     switch (activeTab) {
       case 'categories':
@@ -967,33 +973,34 @@ export default function MobileStorefront() {
   };
 
   // Prevent hydration mismatch by not rendering until mounted
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-white">
-        {/* Static server-side render */}
-        <DesktopHeader
-          storeName="BookStore.Net"
-          cartCount={0}
-          searchQuery=""
-          onSearchChange={() => {}}
-          onCartClick={() => {}}
-          onProfileClick={() => {}}
-          categories={genres}
-          selectedCategory="all"
-          onCategorySelect={() => {}}
-          showCategoryBar={true}
-        />
-        <main className="pt-6">
-          <div className="max-w-7xl mx-auto p-6 lg:p-8">
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-              <p className="mt-2 text-gray-600">Loading BookStore...</p>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  // TODO: Fix hydration issues, temporarily disabled for testing
+  // if (!isMounted) {
+  //   return (
+  //     <div className="min-h-screen bg-white">
+  //       {/* Static server-side render */}
+  //       <DesktopHeader
+  //         storeName="BookStore.Net"
+  //         cartCount={0}
+  //         searchQuery=""
+  //         onSearchChange={() => {}}
+  //         onCartClick={() => {}}
+  //         onProfileClick={() => {}}
+  //         categories={genres}
+  //         selectedCategory="all"
+  //         onCategorySelect={() => {}}
+  //         showCategoryBar={true}
+  //       />
+  //       <main className="pt-6">
+  //         <div className="max-w-7xl mx-auto p-6 lg:p-8">
+  //           <div className="text-center py-8">
+  //             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+  //             <p className="mt-2 text-gray-600">Loading BookStore...</p>
+  //           </div>
+  //         </div>
+  //       </main>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-white">
