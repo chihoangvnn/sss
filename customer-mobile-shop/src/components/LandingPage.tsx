@@ -1,12 +1,13 @@
 'use client'
 
-import React from 'react';
-import { BookOpen, Star, Shield, Heart, LogIn, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, Star, Shield, Heart, LogIn, ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
 export function LandingPage() {
   const { login } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
@@ -48,6 +49,43 @@ export function LandingPage() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
+        </div>
+      </div>
+
+      {/* Search Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Find Your Next Great Read
+            </h2>
+            <p className="text-gray-600">
+              Search through thousands of books across all categories
+            </p>
+          </div>
+          
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search for books, authors, or topics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-12 pr-4 py-4 border border-gray-300 rounded-lg text-lg leading-6 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 shadow-sm"
+            />
+          </div>
+          
+          {searchQuery && (
+            <div className="mt-4 text-center">
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+              >
+                Search Books
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

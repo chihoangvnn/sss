@@ -51,21 +51,8 @@ export function DesktopHeader({
             </h1>
           </div>
 
-          {/* Desktop Search Bar - More Compact */}
-          <div className="flex-1 max-w-xs mx-6">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="block w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md leading-4 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400 text-sm"
-              />
-            </div>
-          </div>
+          {/* Spacer for layout */}
+          <div className="flex-1"></div>
 
           {/* Right Actions */}
           <div className="flex items-center space-x-3">
