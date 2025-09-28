@@ -1,13 +1,225 @@
 'use client'
 
 import React, { useState } from 'react';
-import { BookOpen, Star, Shield, Heart, LogIn, ArrowRight, Search } from 'lucide-react';
+import { BookOpen, Star, Shield, Heart, LogIn, ArrowRight, Search, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { BookCard } from './BookCard';
+
+// API base URL from environment or default
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  price: number;
+  cover_image?: string;
+  isbn?: string;
+  publisher?: string;
+  publication_year?: number;
+  pages?: number;
+  language?: string;
+  genre_id: string;
+  stock: number;
+  description?: string;
+  rating?: number;
+  status: string;
+  isNew?: boolean;
+  isBestseller?: boolean;
+  isRecommended?: boolean;
+  isFeatured?: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  priceRegions?: {
+    USD: number;
+    EUR: number;
+    GBP: number;
+    AUD: number;
+    CAD: number;
+  };
+  targetMarkets?: string[];
+}
 
 export function LandingPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Handle login-guarded actions
+  const handleAddToCart = (book: Book) => {
+    if (!isAuthenticated) {
+      alert('Please login to add items to cart');
+      login();
+      return;
+    }
+    // TODO: Implement actual add to cart logic
+    console.log('Adding to cart:', book);
+  };
+
+  const handleAddToWishlist = (book: Book) => {
+    if (!isAuthenticated) {
+      alert('Please login to add items to wishlist');
+      login();
+      return;
+    }
+    // TODO: Implement actual add to wishlist logic
+    console.log('Adding to wishlist:', book);
+  };
+
+  // Search Results Component (inline)
+  const SearchResults = ({ searchQuery, onBookSelect, onAddToCart }: {
+    searchQuery: string;
+    onBookSelect: (book: Book) => void;
+    onAddToCart: (book: Book) => void;
+  }) => {
+    const { data: searchBooks, isLoading: searchLoading, error: searchError } = useQuery<Book[]>({
+      queryKey: ['search-books', searchQuery],
+      queryFn: async () => {
+        if (!searchQuery.trim()) return [];
+        
+        let url = `${API_BASE_URL}/products?limit=12&search=${encodeURIComponent(searchQuery)}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          // Return demo books if API fails
+          return demoBooks.filter(book => 
+            book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            book.author.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        }
+        
+        return response.json();
+      },
+      enabled: !!searchQuery.trim(),
+    });
+
+    // Demo books for fallback
+    const demoBooks: Book[] = [
+      {
+        id: 'demo-1',
+        title: 'The Lean Startup: How Today\'s Entrepreneurs Use Continuous Innovation to Create Radically Successful Businesses',
+        author: 'Eric Ries',
+        price: 28.99,
+        cover_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
+        genre_id: 'business',
+        stock: 45,
+        description: 'Transform your startup approach with validated learning and iterative product development.',
+        rating: 4.7,
+        publisher: 'Crown Business',
+        publication_year: 2021,
+        pages: 336,
+        language: 'English',
+        isbn: '978-0-307-88789-4',
+        status: 'active',
+        isNew: true,
+        isBestseller: true
+      },
+      {
+        id: 'demo-2',
+        title: 'Think Like a Programmer: An Introduction to Creative Problem Solving',
+        author: 'V. Anton Spraul',
+        price: 32.95,
+        cover_image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop',
+        genre_id: 'science',
+        stock: 60,
+        description: 'Develop systematic problem-solving skills through structured programming exercises.',
+        rating: 4.5,
+        publisher: 'No Starch Press',
+        publication_year: 2020,
+        pages: 260,
+        language: 'English',
+        isbn: '978-1-59327-424-5',
+        status: 'active',
+        isRecommended: true
+      },
+      {
+        id: 'demo-3',
+        title: 'Clean Code: A Handbook of Agile Software Craftsmanship',
+        author: 'Robert C. Martin (Uncle Bob)',
+        price: 45.99,
+        cover_image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop',
+        genre_id: 'science',
+        stock: 35,
+        description: 'Transform your coding practices with software craftsmanship principles.',
+        rating: 4.8,
+        publisher: 'Prentice Hall',
+        publication_year: 2019,
+        pages: 464,
+        language: 'English',
+        isbn: '978-0-13-235088-4',
+        status: 'active',
+        isBestseller: true
+      }
+    ];
+
+    const books = searchBooks || demoBooks;
+
+    if (searchLoading) {
+      return (
+        <div className="mt-8">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            <p className="mt-2 text-gray-600">Searching books...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (books.length === 0) {
+      return (
+        <div className="mt-8 text-center">
+          <p className="text-gray-600">No books found for "{searchQuery}"</p>
+          <p className="text-sm text-gray-500 mt-2">Try different keywords or browse our categories</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-8">
+        <div className="mb-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Search Results for "{searchQuery}"
+          </h3>
+          <p className="text-gray-600">Found {books.length} books</p>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {books.slice(0, 12).map((book) => (
+            <BookCard
+              key={book.id}
+              book={book}
+              onSelect={onBookSelect}
+              onAddToCart={onAddToCart}
+              className="hover:scale-105 transition-transform"
+            />
+          ))}
+        </div>
+        
+        {books.length > 12 && (
+          <div className="text-center mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (!isAuthenticated) {
+                  alert('Please login to view full catalog');
+                  login();
+                  return;
+                }
+                // TODO: Navigate to full search results page
+              }}
+              className="border-green-600 text-green-600 hover:bg-green-50"
+            >
+              View All {books.length} Results
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
@@ -80,6 +292,7 @@ export function LandingPage() {
           {searchQuery && (
             <div className="mt-4 text-center">
               <Button 
+                onClick={() => setShowSearchResults(true)}
                 className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
               >
                 Search Books
@@ -87,6 +300,15 @@ export function LandingPage() {
             </div>
           )}
         </div>
+
+        {/* Search Results Section */}
+        {showSearchResults && searchQuery && (
+          <SearchResults 
+            searchQuery={searchQuery} 
+            onBookSelect={setSelectedBook}
+            onAddToCart={handleAddToCart}
+          />
+        )}
       </div>
 
       {/* Features Section */}
