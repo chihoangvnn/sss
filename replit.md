@@ -29,14 +29,14 @@ An advanced automated social media management system uses a "Bộ Não - Cánh T
 ### Chatbot Integration
 RASA chatbot integration provides customer support automation, product recommendations, and Vietnamese language optimization.
 
-### Vietnamese Books Management System
-A comprehensive ISBN-based book tracking and price comparison system with AbeBooks multi-account integration, featuring:
-- **Multi-Account AbeBooks Integration**: 3 production accounts with automatic rotation and rate limiting
-- **ISBN Search & Tracking**: Advanced search capabilities with database persistence
-- **Price Comparison Engine**: Multi-vendor pricing analysis with shipping cost calculations
-- **Admin Dashboard Interface**: React-based management console for monitoring accounts and searches
-- **Real Database Operations**: Full CRUD operations for accounts, listings, and search history
-- **Vietnamese Business Compliance**: Designed for Vietnamese book retailers and distributors
+### International SEO-Optimized Book Catalog
+A professional English bookstore platform with comprehensive SEO optimization for global markets, featuring:
+- **Complete SEO Metadata Structure**: All books include seoTitle, seoDescription, and seoKeywords arrays
+- **Multi-Currency International Support**: Pricing in USD, EUR, GBP, AUD, CAD with geographic targeting
+- **Unique Content Per Category**: Business & Economics, Science & Technology, Psychology with specialized keywords
+- **Search Engine Optimization**: Keyword-rich titles, targeted descriptions, and international market appeal
+- **Professional Book Catalog**: 12 SEO-optimized books with diverse, non-repetitive marketing content
+- **Global Market Targeting**: Optimized for US, UK, Canada, Australia, and European markets
 
 ### POS Enhancement System
 This system offers a comprehensive set of features for a Vietnamese retail POS, focusing on "functionality over fancy design." Key features include:
