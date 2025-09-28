@@ -11,20 +11,30 @@ import { calculateVipStatus } from '@/utils/vipCalculator';
 import { useQuery } from '@tanstack/react-query';
 import { fetchOrders } from '@/lib/orderApi';
 
-interface Product {
+interface Book {
   id: string;
-  name: string;
+  title: string;
+  author: string;
   price: number;
-  image?: string;
-  media?: string;
-  category_id: string;
+  cover_image?: string;
+  isbn?: string;
+  publisher?: string;
+  publication_year?: number;
+  pages?: number;
+  language?: string;
+  genre_id: string;
   stock: number;
-  short_description?: string;
+  description?: string;
+  rating?: number;
   status: string;
+  isNew?: boolean;
+  isBestseller?: boolean;
+  isRecommended?: boolean;
+  isFeatured?: boolean;
 }
 
 interface ProfileTabProps {
-  addToCart?: (product: Product) => void;
+  addToCart?: (book: Book) => void;
   setActiveTab?: (tab: string) => void;
 }
 
