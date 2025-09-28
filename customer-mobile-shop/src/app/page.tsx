@@ -27,7 +27,7 @@ import { LandingPage } from '@/components/LandingPage';
 import { formatVietnamPrice } from '@/utils/currency';
 
 // API base URL from environment or default  
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://b51e6462-e6cf-49d3-8b05-fb6c43bf964f-00-q0yk7qby8re6.pike.replit.dev:3001/api';
 
 // Book genres with English names and icons
 const BOOK_GENRES = [

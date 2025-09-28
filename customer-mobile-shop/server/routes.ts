@@ -41,6 +41,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Products API routes
+  app.get("/api/products", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const categoryId = req.query.categoryId as string;
+      const search = req.query.search as string;
+      
+      const products = await storage.getProducts({
+        limit,
+        offset,
+        categoryId,
+        search
+      });
+      
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const product = await storage.getProduct(req.params.id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      res.status(500).json({ message: "Failed to fetch product" });
+    }
+  });
+
+  app.get("/api/genres", async (req, res) => {
+    try {
+      const genres = await storage.getGenres();
+      res.json(genres);
+    } catch (error) {
+      console.error("Error fetching genres:", error);
+      res.status(500).json({ message: "Failed to fetch genres" });
+    }
+  });
+
   // Health check route
   app.get("/api/health", (req, res) => {
     res.json({ status: "OK", message: "BookStore API is running" });
