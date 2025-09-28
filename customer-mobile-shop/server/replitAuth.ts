@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import { Strategy as FacebookStrategy } from "passport-facebook";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -36,9 +37,11 @@ export function getSession() {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    name: 'sessionId', // Custom session name
     cookie: {
-      httpOnly: true,
-      secure: true,
+      httpOnly: true, // Prevent XSS attacks
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+      sameSite: 'lax', // CSRF protection
       maxAge: sessionTtl,
     },
   });
@@ -91,16 +94,64 @@ export async function setupAuth(app: Express) {
         name: `replitauth:${domain}`,
         config,
         scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
+        callbackURL: `https://${domain}/auth/replit/callback`,
       },
       verify,
     );
     passport.use(strategy);
   }
 
+  // Facebook OAuth Strategy
+  if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
+    const facebookDomains = process.env.REPLIT_DOMAINS!.split(",");
+    for (const domain of facebookDomains) {
+      passport.use(`facebook:${domain}`, new FacebookStrategy({
+        clientID: process.env.FACEBOOK_APP_ID,
+        clientSecret: process.env.FACEBOOK_APP_SECRET,
+        callbackURL: `https://${domain}/auth/facebook/callback`,
+        profileFields: ['id', 'emails', 'name', 'picture.type(large)']
+      }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+        try {
+          // Upsert user with Facebook profile data
+          await storage.upsertUser({
+            id: `facebook_${profile.id}`,
+            email: profile.emails?.[0]?.value || '',
+            firstName: profile.name?.givenName || '',
+            lastName: profile.name?.familyName || '',
+            profileImageUrl: profile.photos?.[0]?.value || '',
+          });
+          return done(null, {
+            id: `facebook_${profile.id}`,
+            profile,
+            accessToken,
+            refreshToken
+          });
+        } catch (error) {
+          return done(error, null);
+        }
+      }));
+    }
+  }
+
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
+  // Replit OAuth routes
+  app.get("/auth/replit", (req, res, next) => {
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      prompt: "login consent",
+      scope: ["openid", "email", "profile", "offline_access"],
+    })(req, res, next);
+  });
+
+  app.get("/auth/replit/callback", (req, res, next) => {
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      successReturnToOrRedirect: "/",
+      failureRedirect: "/auth/replit",
+    })(req, res, next);
+  });
+
+  // Keep legacy API routes for backward compatibility
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
@@ -112,6 +163,20 @@ export async function setupAuth(app: Express) {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
+    })(req, res, next);
+  });
+
+  // Facebook OAuth routes
+  app.get("/auth/facebook", (req, res, next) => {
+    passport.authenticate(`facebook:${req.hostname}`, {
+      scope: ['email', 'public_profile']
+    })(req, res, next);
+  });
+
+  app.get("/auth/facebook/callback", (req, res, next) => {
+    passport.authenticate(`facebook:${req.hostname}`, {
+      successReturnToOrRedirect: "/",
+      failureRedirect: "/auth/facebook",
     })(req, res, next);
   });
 
@@ -130,7 +195,17 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Handle Facebook OAuth users (they don't have expires_at or refresh_token)
+  if (user.profile && user.profile.provider === 'facebook') {
+    return next(); // Facebook tokens are handled by their API, just check session
+  }
+
+  // Handle Replit OAuth users with token expiry and refresh logic
+  if (!user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

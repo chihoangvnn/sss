@@ -28,6 +28,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: "This is a protected route", userId });
   });
 
+  // CSRF token endpoint
+  app.get("/api/facebook-apps/csrf-token", isAuthenticated, async (req, res) => {
+    try {
+      // Generate CSRF token using session data
+      const csrfToken = require('crypto').randomBytes(32).toString('hex');
+      (req.session as any).csrfToken = csrfToken;
+      res.json({ csrfToken });
+    } catch (error) {
+      console.error("Error generating CSRF token:", error);
+      res.status(500).json({ message: "Failed to generate CSRF token" });
+    }
+  });
+
   // Health check route
   app.get("/api/health", (req, res) => {
     res.json({ status: "OK", message: "BookStore API is running" });

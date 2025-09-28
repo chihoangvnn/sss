@@ -14,7 +14,7 @@ export interface User {
 }
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery<User>({
+  const { data: user, isLoading, error, refetch } = useQuery<User>({
     queryKey: ['auth', 'user'],
     queryFn: async () => {
       try {
@@ -43,14 +43,56 @@ export function useAuth() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  // OAuth login functions matching API specification
+  const loginWithReplit = () => {
+    window.location.href = '/auth/replit';
+  };
+
+  const loginWithFacebook = () => {
+    window.location.href = '/auth/facebook';
+  };
+
+  // Legacy login function for backward compatibility
   const login = () => {
-    // Redirect to Replit Auth login
-    window.location.href = `${API_BASE_URL}/api/login`;
+    window.location.href = '/auth/replit';
   };
 
   const logout = () => {
-    // Redirect to logout endpoint
     window.location.href = `${API_BASE_URL}/api/logout`;
+  };
+
+  // CSRF token helper for protected APIs
+  const getCsrfToken = async () => {
+    try {
+      const response = await fetch('/api/facebook-apps/csrf-token', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.csrfToken;
+      }
+    } catch (error) {
+      console.error('Failed to get CSRF token:', error);
+    }
+    return null;
+  };
+
+  // Session check helper matching specification
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/dashboard/stats', {
+        credentials: 'include',
+      });
+      if (response.status === 401) {
+        // Not logged in, redirect to OAuth
+        window.location.href = '/auth/replit';
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Auth status check failed:', error);
+      return false;
+    }
   };
 
   return {
@@ -58,7 +100,12 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!user,
     login,
+    loginWithReplit,
+    loginWithFacebook,
     logout,
+    refetch,
+    getCsrfToken,
+    checkAuthStatus,
     error
   };
 }
