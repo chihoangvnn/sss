@@ -286,7 +286,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300&h=400&fit=crop',
       genre_id: 'business',
       stock: 50,
-      description: 'Learn the fundamental principles that built Bridgewater Associates, the world\'s largest hedge fund, from billionaire investor Ray Dalio. This international bestseller reveals the decision-making frameworks used by top Wall Street professionals and global business leaders. Discover radical transparency, principled thinking, and systematic approaches to problem-solving that transformed Dalio from middle-class beginnings to billionaire status. Essential for executives, investors, entrepreneurs, and professionals seeking to excel in competitive global markets.',
+      description: 'Systematic decision-making frameworks from Bridgewater Associates founder Ray Dalio. Learn radical transparency principles, principled thinking methodologies, and life management systems that built the world\'s largest hedge fund. Apply systematic approaches to goal-setting, problem-solving, and organizational leadership.',
       rating: 4.6,
       publisher: 'Simon & Schuster',
       publication_year: 2020,
@@ -295,7 +295,18 @@ export default function MobileStorefront() {
       isbn: '978-1-5011-2454-5',
       status: 'active',
       isNew: true,
-      isRecommended: true
+      isRecommended: true,
+      seoTitle: 'Ray Dalio Principles Book | Decision Making Framework | Radical Transparency | Hedge Fund',
+      seoDescription: 'Master Ray Dalio\'s systematic principles for life and work success. Learn decision-making frameworks, radical transparency, and leadership strategies from Bridgewater Associates founder.',
+      seoKeywords: ['ray dalio principles', 'decision making framework', 'radical transparency', 'hedge fund strategies', 'bridgewater associates', 'systematic thinking', 'principled leadership', 'organizational management', 'investment philosophy', 'life principles'],
+      priceRegions: {
+        USD: 35.00,
+        EUR: 32.25,
+        GBP: 28.99,
+        AUD: 52.95,
+        CAD: 47.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-5',
@@ -305,7 +316,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
       genre_id: 'science',
       stock: 25,
-      description: 'The seminal work that revolutionized software engineering worldwide, written by the legendary "Gang of Four" (GoF). This foundational text presents 23 essential design patterns used by software architects at Google, Microsoft, Apple, and top tech companies globally. Master creational, structural, and behavioral patterns including Singleton, Observer, Factory, and Strategy patterns. Indispensable for senior software engineers, system architects, computer science graduates, and developers building scalable enterprise applications. Includes UML diagrams, C++ code examples, and real-world implementation guidance.',
+      description: 'Foundational software architecture patterns from the Gang of Four authors. Master 23 reusable design solutions including Singleton, Observer, Factory, and Strategy patterns. Learn object-oriented design principles that improve code flexibility, maintainability, and scalability across programming languages.',
       rating: 4.9,
       publisher: 'Addison-Wesley',
       publication_year: 2018,
@@ -314,7 +325,18 @@ export default function MobileStorefront() {
       isbn: '978-0-201-63361-0',
       status: 'active',
       isBestseller: true,
-      isFeatured: true
+      isFeatured: true,
+      seoTitle: 'Gang of Four Design Patterns | Software Architecture | OOP Design | GoF Book',
+      seoDescription: 'Master software design patterns with the classic Gang of Four book. Learn 23 reusable OOP patterns including Singleton, Observer, Factory for scalable architecture.',
+      seoKeywords: ['design patterns', 'gang of four', 'GoF', 'software architecture', 'object oriented programming', 'singleton pattern', 'observer pattern', 'factory pattern', 'strategy pattern', 'software design', 'OOP patterns'],
+      priceRegions: {
+        USD: 54.99,
+        EUR: 50.50,
+        GBP: 44.99,
+        AUD: 82.95,
+        CAD: 74.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-6',
@@ -324,7 +346,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop',
       genre_id: 'business',
       stock: 40,
-      description: 'Discover the secrets behind transformational business success through rigorous research of Fortune 500 companies. Jim Collins\' team analyzed 11 companies that made the leap from good performance to sustained greatness, outperforming the stock market by 3x over 15 years. Learn about Level 5 Leadership, the Hedgehog Concept, and building a Culture of Discipline. Essential reading for CEOs, business managers, MBA students, and consultants working with multinational corporations. Features detailed case studies of companies like Wells Fargo, Walgreens, and Circuit City.',
+      description: 'Research-driven analysis of corporate transformation from business researcher Jim Collins. Examine Level 5 Leadership characteristics, Hedgehog Concept implementation, and Culture of Discipline development through 11 company case studies spanning 15 years of sustained market outperformance.',
       rating: 4.4,
       publisher: 'HarperBusiness',
       publication_year: 2019,
@@ -332,7 +354,18 @@ export default function MobileStorefront() {
       language: 'English',
       isbn: '978-0-06-662099-2',
       status: 'active',
-      isRecommended: true
+      isRecommended: true,
+      seoTitle: 'Good to Great Jim Collins | Level 5 Leadership | Corporate Transformation | Business Strategy',
+      seoDescription: 'Discover corporate transformation secrets with Jim Collins\' Good to Great research. Learn Level 5 Leadership, Hedgehog Concept, and Culture of Discipline for sustained business success.',
+      seoKeywords: ['good to great', 'jim collins', 'level 5 leadership', 'hedgehog concept', 'corporate transformation', 'business strategy', 'culture of discipline', 'company research', 'organizational excellence', 'sustained greatness'],
+      priceRegions: {
+        USD: 29.99,
+        EUR: 27.50,
+        GBP: 24.99,
+        AUD: 44.95,
+        CAD: 40.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-7',
@@ -402,7 +435,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
       genre_id: 'science',
       stock: 20,
-      description: 'The gold standard textbook for computer algorithms used by MIT, Stanford, Harvard, and leading technology companies worldwide. Known as "CLRS" after its authors, this comprehensive reference covers fundamental algorithms, data structures, graph algorithms, dynamic programming, and computational complexity. Features rigorous mathematical analysis, pseudocode implementations, and detailed proofs. Essential for computer science students, software engineers preparing for technical interviews at FAANG companies, competitive programmers, and researchers in algorithms and theoretical computer science.',
+      description: 'Comprehensive algorithmic foundations covering sorting, searching, graph algorithms, and dynamic programming. CLRS authors provide mathematical rigor with pseudocode implementations for fundamental computer science algorithms. Study computational complexity, asymptotic analysis, and advanced data structures.',
       rating: 4.8,
       publisher: 'MIT Press',
       publication_year: 2019,
@@ -411,7 +444,18 @@ export default function MobileStorefront() {
       isbn: '978-0-262-03384-8',
       status: 'active',
       isBestseller: true,
-      isFeatured: true
+      isFeatured: true,
+      seoTitle: 'CLRS Algorithms Book | Data Structures | Graph Algorithms | Dynamic Programming | MIT',
+      seoDescription: 'Master fundamental algorithms with the CLRS textbook. Learn sorting, searching, graph algorithms, dynamic programming, and computational complexity with mathematical rigor.',
+      seoKeywords: ['algorithms', 'data structures', 'CLRS', 'graph algorithms', 'dynamic programming', 'sorting algorithms', 'computational complexity', 'computer science', 'algorithm analysis', 'MIT textbook', 'asymptotic analysis'],
+      priceRegions: {
+        USD: 89.99,
+        EUR: 82.75,
+        GBP: 73.99,
+        AUD: 135.95,
+        CAD: 123.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-10',
@@ -421,7 +465,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop',
       genre_id: 'business',
       stock: 55,
-      description: 'Revolutionary insights from PayPal co-founder and Facebook\'s first outside investor Peter Thiel. Learn how to build monopolistic businesses that create new markets rather than competing in existing ones. Discover the secrets behind Silicon Valley\'s most successful companies including Google, Tesla, and SpaceX. Essential reading for startup founders, venture capitalists, technology entrepreneurs, and business school students seeking to create breakthrough innovations. Based on Thiel\'s legendary Stanford University course that launched countless successful startups.',
+      description: 'Monopoly theory and breakthrough innovation strategies from PayPal co-founder Peter Thiel. Learn vertical progress principles, technology development frameworks, and market creation techniques. Explore contrarian thinking approaches that differentiate successful startups from competitive businesses.',
       rating: 4.5,
       publisher: 'Crown Business',
       publication_year: 2020,
@@ -429,7 +473,18 @@ export default function MobileStorefront() {
       language: 'English',
       isbn: '978-0-8041-3929-8',
       status: 'active',
-      isRecommended: true
+      isRecommended: true,
+      seoTitle: 'Zero to One Peter Thiel | Monopoly Strategy | Startup Innovation | Technology Development',
+      seoDescription: 'Learn Peter Thiel\'s monopoly theory and startup innovation strategies. Master vertical progress, technology development, and market creation for breakthrough businesses.',
+      seoKeywords: ['zero to one', 'peter thiel', 'monopoly strategy', 'startup innovation', 'technology development', 'vertical progress', 'market creation', 'contrarian thinking', 'paypal founder', 'silicon valley', 'breakthrough innovation'],
+      priceRegions: {
+        USD: 24.99,
+        EUR: 22.95,
+        GBP: 20.99,
+        AUD: 37.95,
+        CAD: 33.99
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-11',
@@ -439,7 +494,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop',
       genre_id: 'psychology',
       stock: 30,
-      description: 'Groundbreaking insights into human decision-making from Nobel Prize-winning psychologist Daniel Kahneman. Explore the two systems that drive human thinking: System 1 (fast, intuitive) and System 2 (slow, deliberate). Understand cognitive biases, heuristics, and behavioral economics principles that influence daily decisions. Essential for business leaders, behavioral economists, marketers, policymakers, and anyone seeking to improve decision-making skills. Features decades of psychological research from Princeton and Hebrew University, with applications in finance, medicine, and organizational behavior.',
+      description: 'Cognitive psychology research on dual-system thinking from Nobel Prize winner Daniel Kahneman. Understand System 1 automatic responses versus System 2 controlled processing. Examine cognitive biases, prospect theory, and heuristic decision-making patterns affecting judgment and choice.',
       rating: 4.7,
       publisher: 'Farrar, Straus and Giroux',
       publication_year: 2018,
@@ -448,7 +503,18 @@ export default function MobileStorefront() {
       isbn: '978-0-374-27563-1',
       status: 'active',
       isBestseller: true,
-      isFeatured: true
+      isFeatured: true,
+      seoTitle: 'Thinking Fast and Slow Kahneman | Cognitive Bias | Behavioral Psychology | Decision Making',
+      seoDescription: 'Explore cognitive psychology and decision-making with Daniel Kahneman\'s Nobel Prize research. Learn about System 1/2 thinking, cognitive biases, and behavioral economics.',
+      seoKeywords: ['thinking fast and slow', 'daniel kahneman', 'cognitive bias', 'behavioral psychology', 'decision making', 'system 1 system 2', 'prospect theory', 'heuristics', 'nobel prize psychology', 'behavioral economics', 'cognitive psychology'],
+      priceRegions: {
+        USD: 31.95,
+        EUR: 29.25,
+        GBP: 26.99,
+        AUD: 47.95,
+        CAD: 43.50
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     },
     {
       id: 'demo-12',
@@ -458,7 +524,7 @@ export default function MobileStorefront() {
       cover_image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300&h=400&fit=crop',
       genre_id: 'business',
       stock: 40,
-      description: 'The seminal work on disruptive innovation from Harvard Business School legend Clayton Christensen. Discover why industry-leading companies like Kodak, Blockbuster, and Nokia failed despite having superior resources and management. Learn to identify disruptive technologies, sustaining innovations, and market transformation patterns. Essential for corporate strategists, technology executives, business consultants, and MBA students studying competitive strategy. Features detailed case studies from disk drive, steel, and retail industries with lessons applicable to digital transformation and emerging technologies.',
+      description: 'Disruptive innovation theory and corporate failure analysis from Harvard professor Clayton Christensen. Study technology transition patterns, market disruption mechanics, and strategic responses to technological change. Examine historical cases of industry transformation and competitive displacement.',
       rating: 4.4,
       publisher: 'Harvard Business Review Press',
       publication_year: 2019,
@@ -466,7 +532,18 @@ export default function MobileStorefront() {
       language: 'English',
       isbn: '978-1-4221-9524-8',
       status: 'active',
-      isRecommended: true
+      isRecommended: true,
+      seoTitle: 'Innovator\'s Dilemma Christensen | Disruptive Innovation | Technology Disruption | Harvard',
+      seoDescription: 'Master disruptive innovation theory with Clayton Christensen\'s Harvard research. Learn why established companies fail and how to navigate technological disruption.',
+      seoKeywords: ['innovators dilemma', 'clayton christensen', 'disruptive innovation', 'technology disruption', 'sustaining innovation', 'market disruption', 'corporate strategy', 'digital transformation', 'harvard business school', 'competitive strategy'],
+      priceRegions: {
+        USD: 33.99,
+        EUR: 31.25,
+        GBP: 27.99,
+        AUD: 50.95,
+        CAD: 46.50
+      },
+      targetMarkets: ['US', 'UK', 'CA', 'AU', 'EU']
     }
   ];
 
