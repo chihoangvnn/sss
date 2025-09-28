@@ -27,7 +27,7 @@ export function BookCatalog({
     return (
       <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-xl font-bold mb-4 text-gray-900">Thể loại sách</h2>
+          <h2 className="text-xl font-bold mb-4 text-gray-900">Book Categories</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {/* Loading skeleton */}
             {Array.from({ length: 6 }).map((_, index) => (
@@ -45,7 +45,7 @@ export function BookCatalog({
   return (
     <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-8">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-xl font-bold mb-6 text-gray-900">Thể loại sách</h2>
+        <h2 className="text-xl font-bold mb-6 text-gray-900">Book Categories</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
           {genres.map((genre) => (
             <Button

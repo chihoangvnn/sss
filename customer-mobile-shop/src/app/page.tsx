@@ -23,26 +23,24 @@ import DesktopFooter from '@/components/DesktopFooter';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { formatVietnamPrice } from '@/utils/currency';
-import { VipTierCard } from '@/components/VipTierCard';
-import { calculateVipStatus } from '@/utils/vipCalculator';
 
 // API base URL from environment or default  
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
 
-// Book genres with Vietnamese names and icons
+// Book genres with English names and icons
 const BOOK_GENRES = [
-  { id: 'all', name: 'Tất cả', icon: '📚' },
-  { id: 'literature', name: 'Văn học', icon: '✍️' },
-  { id: 'business', name: 'Kinh tế - Kinh doanh', icon: '💼' },
-  { id: 'science', name: 'Khoa học - Công nghệ', icon: '🔬' },
-  { id: 'children', name: 'Thiếu nhi', icon: '🧸' },
-  { id: 'self-help', name: 'Kỹ năng sống', icon: '🎯' },
-  { id: 'history', name: 'Lịch sử', icon: '📜' },
-  { id: 'psychology', name: 'Tâm lý học', icon: '🧠' },
-  { id: 'cooking', name: 'Nấu ăn', icon: '👨‍🍳' },
-  { id: 'art', name: 'Nghệ thuật', icon: '🎨' },
-  { id: 'health', name: 'Sức khỏe', icon: '💪' },
-  { id: 'education', name: 'Giáo dục', icon: '🎓' }
+  { id: 'all', name: 'All Books', icon: '📚' },
+  { id: 'literature', name: 'Literature', icon: '✍️' },
+  { id: 'business', name: 'Business & Economics', icon: '💼' },
+  { id: 'science', name: 'Science & Technology', icon: '🔬' },
+  { id: 'children', name: 'Children\'s Books', icon: '🧸' },
+  { id: 'self-help', name: 'Self-Help & Personal Development', icon: '🎯' },
+  { id: 'history', name: 'History', icon: '📜' },
+  { id: 'psychology', name: 'Psychology', icon: '🧠' },
+  { id: 'cooking', name: 'Cooking & Food', icon: '👨‍🍳' },
+  { id: 'art', name: 'Arts & Crafts', icon: '🎨' },
+  { id: 'health', name: 'Health & Fitness', icon: '💪' },
+  { id: 'education', name: 'Education', icon: '🎓' }
 ];
 
 // Banner images for bookstore slider - using placeholder images for now
@@ -178,76 +176,76 @@ export default function MobileStorefront() {
   const demoBooks: Book[] = [
     {
       id: 'demo-1',
-      title: 'Đắc Nhân Tâm',
+      title: 'How to Win Friends and Influence People',
       author: 'Dale Carnegie',
-      price: 89000,
+      price: 15.99,
       cover_image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=400&fit=crop',
       genre_id: 'self-help',
       stock: 50,
-      description: 'Cuốn sách kinh điển về nghệ thuật giao tiếp và ứng xử',
+      description: 'The classic guide to better relationships and communication skills',
       rating: 4.8,
-      publisher: 'NXB Tổng Hợp TP.HCM',
+      publisher: 'Simon & Schuster',
       publication_year: 2020,
       pages: 320,
-      language: 'Tiếng Việt',
-      isbn: '978-604-2-12345-6',
+      language: 'English',
+      isbn: '978-0-671-72650-2',
       status: 'active',
       isNew: true,
       isBestseller: true
     },
     {
       id: 'demo-2', 
-      title: 'Sapiens: Lược Sử Loài Người',
+      title: 'Sapiens: A Brief History of Humankind',
       author: 'Yuval Noah Harari',
-      price: 145000,
+      price: 24.99,
       cover_image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=300&h=400&fit=crop',
       genre_id: 'history',
       stock: 30,
-      description: 'Câu chuyện về sự tiến hóa của loài người từ thời tiền sử đến hiện đại',
+      description: 'The story of human evolution from prehistoric times to the modern era',
       rating: 4.6,
-      publisher: 'NXB Thế Giới',
+      publisher: 'Harper',
       publication_year: 2019,
       pages: 512,
-      language: 'Tiếng Việt',
-      isbn: '978-604-7-78910-1',
+      language: 'English',
+      isbn: '978-0-062-31609-7',
       status: 'active',
       isRecommended: true,
       isFeatured: true
     },
     {
       id: 'demo-3',
-      title: 'Tôi Tài Giỏi, Bạn Cũng Thế',
+      title: 'I Am Gifted, So Are You',
       author: 'Adam Khoo',
-      price: 75000,
+      price: 18.95,
       cover_image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop',
       genre_id: 'self-help',
       stock: 100,
-      description: 'Phương pháp học tập hiệu quả và phát triển bản thân',
+      description: 'Effective learning methods and personal development strategies',
       rating: 4.5,
-      publisher: 'NXB Trẻ',
+      publisher: 'Marshall Cavendish',
       publication_year: 2021,
       pages: 256,
-      language: 'Tiếng Việt',
-      isbn: '978-604-1-11213-2',
+      language: 'English',
+      isbn: '978-981-3065-26-8',
       status: 'active',
       isNew: true,
       isRecommended: true
     },
     {
       id: 'demo-4',
-      title: 'Atomic Habits - Thay Đổi Tí Hon Hiệu Quả Bất Ngờ',
+      title: 'Atomic Habits: An Easy & Proven Way to Build Good Habits',
       author: 'James Clear',
-      price: 120000,
+      price: 21.99,
       cover_image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=300&h=400&fit=crop',
       genre_id: 'self-help',
       stock: 20,
-      description: 'Hướng dẫn xây dựng thói quen tốt và loại bỏ thói quen xấu',
+      description: 'A guide to building good habits and breaking bad ones',
       rating: 4.9,
-      publisher: 'NXB Thế Giới',
+      publisher: 'Avery',
       publication_year: 2020,
       pages: 368,
-      language: 'Tiếng Việt',
-      isbn: '978-604-7-14516-3',
+      language: 'English',
+      isbn: '978-0-7352-1129-2',
       status: 'active',
       isBestseller: true,
       isFeatured: true
@@ -328,7 +326,7 @@ export default function MobileStorefront() {
     setActiveTab('home');
     // Focus search input if it exists
     setTimeout(() => {
-      const searchInput = document.querySelector('input[placeholder*="Tìm kiếm"]') as HTMLInputElement;
+      const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
       if (searchInput) {
         searchInput.focus();
         searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -351,7 +349,7 @@ export default function MobileStorefront() {
     if (book.isNew) {
       badges.push(
         <Badge key="new" variant="new" className="text-xs">
-          🆕 MỚI
+          🆕 NEW
         </Badge>
       );
     }
@@ -359,7 +357,7 @@ export default function MobileStorefront() {
     if (book.isBestseller) {
       badges.push(
         <Badge key="bestseller" variant="bestseller" className="text-xs">
-          🏆 BÁN CHẠY
+          🏆 BESTSELLER
         </Badge>
       );
     }
@@ -367,7 +365,7 @@ export default function MobileStorefront() {
     if (book.isRecommended) {
       badges.push(
         <Badge key="recommended" variant="freeshipping" className="text-xs">
-          🎩 ĐỀ XUẤT
+          🎩 FEATURED
         </Badge>
       );
     }
@@ -375,7 +373,7 @@ export default function MobileStorefront() {
     if (book.isFeatured) {
       badges.push(
         <Badge key="featured" variant="bestseller" className="text-xs">
-          ⭐ NỔI BẬT
+          ⭐ POPULAR
         </Badge>
       );
     }
@@ -392,7 +390,7 @@ export default function MobileStorefront() {
         return (
           <div className={`${layoutConfig.containerClass}`}>
             <div className={`${layoutConfig.contentPadding} pt-6`}>
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Danh mục sản phẩm</h2>
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Book Categories</h2>
               <div className={`grid ${layoutConfig.gridCols} ${layoutConfig.gridGap}`}>
                 {genres.map((genre) => (
                   <button
@@ -417,12 +415,12 @@ export default function MobileStorefront() {
       case 'cart':
         return (
           <div className="p-4 pt-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Giỏ hàng ({getTotalItems()} sản phẩm)</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Shopping Cart ({getTotalItems()} items)</h2>
             {cart.length === 0 ? (
               <div className="text-center py-12">
                 <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">Giỏ hàng trống</p>
-                <p className="text-gray-400 text-sm">Thêm sản phẩm để bắt đầu mua sắm</p>
+                <p className="text-gray-500 text-lg">Your cart is empty</p>
+                <p className="text-gray-400 text-sm">Add books to start shopping</p>
               </div>
             ) : (
               <div>
@@ -472,13 +470,13 @@ export default function MobileStorefront() {
                 
                 <div className="bg-white p-4 rounded-xl border border-gray-200">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-lg font-semibold">Tổng cộng:</span>
+                    <span className="text-lg font-semibold">Total:</span>
                     <span className="text-2xl font-bold text-green-600">
                       {formatVietnamPrice(getTotalPrice())}
                     </span>
                   </div>
                   <Button className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-full font-semibold">
-                    Đặt hàng ngay
+                    Checkout Now
                   </Button>
                 </div>
               </div>
@@ -504,47 +502,6 @@ export default function MobileStorefront() {
               autoplayDelay={4000}
             />
 
-            {/* VIP Tier Demo Section */}
-            <div className={`${layoutConfig.contentPadding} pb-0`}>
-              <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-6 mb-6">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    🏆 Hệ Thống VIP Thành Viên
-                  </h2>
-                  <p className="text-gray-600">
-                    Mua sắm nhiều hơn, nhận ưu đãi tốt hơn!
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Thành viên - 0đ */}
-                  <div className="transform hover:scale-105 transition-transform duration-300">
-                    <VipTierCard vipProgress={calculateVipStatus(0)} />
-                  </div>
-                  
-                  {/* Bạc - 1M */}
-                  <div className="transform hover:scale-105 transition-transform duration-300">
-                    <VipTierCard vipProgress={calculateVipStatus(1500000)} />
-                  </div>
-                  
-                  {/* Vàng - 3M */}
-                  <div className="transform hover:scale-105 transition-transform duration-300">
-                    <VipTierCard vipProgress={calculateVipStatus(4200000)} />
-                  </div>
-                  
-                  {/* Kim Cương - 10M */}
-                  <div className="transform hover:scale-105 transition-transform duration-300">
-                    <VipTierCard vipProgress={calculateVipStatus(12000000)} />
-                  </div>
-                </div>
-                
-                <div className="text-center mt-6">
-                  <p className="text-sm text-gray-500">
-                    💡 <strong>Demo:</strong> Đăng nhập để xem cấp độ thực tế của bạn!
-                  </p>
-                </div>
-              </div>
-            </div>
             
             {/* ProductCatalog removed - categories now shown in DesktopHeader */}
             
@@ -565,15 +522,15 @@ export default function MobileStorefront() {
                 ) : false ? (
                   <div className="text-center py-8 col-span-full">
                     <span className="text-4xl mb-4 block">⚠️</span>
-                    <p className="text-gray-600 mb-4">Không thể tải sản phẩm - hiển thị demo</p>
+                    <p className="text-gray-600 mb-4">Unable to load books - showing demo</p>
                     <Button onClick={() => window.location.reload()}>
-                      Thử lại
+                      Try Again
                     </Button>
                   </div>
                 ) : finalBooks.length === 0 ? (
                   <div className="text-center py-8 col-span-full">
                     <span className="text-4xl mb-4 block">🔍</span>
-                    <p className="text-gray-600">Không tìm thấy sách</p>
+                    <p className="text-gray-600">No books found</p>
                   </div>
                 ) : (
                   finalBooks.map((book) => (
@@ -632,7 +589,7 @@ export default function MobileStorefront() {
                             onClick={() => setSelectedBook(book)}
                             className="flex-1 text-sm border-gray-300 text-gray-700 hover:bg-gray-50"
                           >
-                            Chi tiết
+                            Details
                           </Button>
                           <Button 
                             size="sm"
@@ -665,7 +622,7 @@ export default function MobileStorefront() {
       {/* Desktop Header - Show on tablet and desktop */}
       {!isMobile && (
         <DesktopHeader
-          storeName="NhaSach.Net"
+          storeName="BookStore.Net"
           cartCount={getTotalItems()}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -685,7 +642,7 @@ export default function MobileStorefront() {
           onCartClick={handleHeaderCartClick}
           onProfileClick={handleProfileClick}
           cartCount={getTotalItems()}
-          storeName="NhaSach.Net"
+          storeName="BookStore.Net"
         />
       )}
 
@@ -694,7 +651,7 @@ export default function MobileStorefront() {
         <AutoHideSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          placeholder="Tìm kiếm sách..."
+          placeholder="Search books..."
         />
       )}
 
@@ -703,7 +660,7 @@ export default function MobileStorefront() {
         <HiddenSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          placeholder="Tìm kiếm sách..."
+          placeholder="Search books..."
         />
       )}
 

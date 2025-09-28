@@ -59,7 +59,7 @@ export function DesktopHeader({
               </div>
               <input
                 type="text"
-                placeholder="Tìm kiếm..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="block w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md leading-4 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-green-400 focus:border-green-400 text-sm"
@@ -82,7 +82,7 @@ export function DesktopHeader({
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
-              <span className="ml-2 hidden lg:inline">Giỏ hàng</span>
+              <span className="ml-2 hidden lg:inline">Cart</span>
             </Button>
 
             {/* Profile/Login Button */}
@@ -115,7 +115,7 @@ export function DesktopHeader({
                 <span className="ml-2">
                   {user?.firstName || user?.lastName 
                     ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-                    : 'Tài khoản'
+                    : 'Account'
                   }
                 </span>
               </Button>
@@ -127,7 +127,7 @@ export function DesktopHeader({
                 className="hidden lg:flex bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30"
               >
                 <LogIn className="h-4 w-4" />
-                <span className="ml-2">Đăng nhập</span>
+                <span className="ml-2">Login</span>
               </Button>
             )}
           </div>

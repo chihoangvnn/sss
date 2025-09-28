@@ -66,7 +66,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
         <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 zoom-in-95 duration-300">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-lg font-semibold text-gray-900">Chi tiết sách</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Book Details</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -91,7 +91,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                 <div className="w-full h-full flex items-center justify-center text-gray-400 rounded-lg border-2 border-dashed border-gray-300">
                   <div className="text-center">
                     <Store className="h-16 w-16 mx-auto mb-2" />
-                    <p className="text-sm">Không có ảnh bìa</p>
+                    <p className="text-sm">No cover image</p>
                   </div>
                 </div>
               )}
@@ -105,7 +105,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                   {book.title}
                 </h1>
                 <p className="text-lg text-gray-600 mb-3">
-                  Tác giả: <span className="font-medium">{book.author}</span>
+                  Author: <span className="font-medium">{book.author}</span>
                 </p>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-bold text-green-600">
@@ -133,25 +133,25 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
               <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
                 {book.publisher && (
                   <div>
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">Nhà xuất bản</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Publisher</span>
                     <p className="text-sm font-medium text-gray-900">{book.publisher}</p>
                   </div>
                 )}
                 {book.publication_year && (
                   <div>
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">Năm xuất bản</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Year</span>
                     <p className="text-sm font-medium text-gray-900">{book.publication_year}</p>
                   </div>
                 )}
                 {book.pages && (
                   <div>
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">Số trang</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Pages</span>
                     <p className="text-sm font-medium text-gray-900">{book.pages}</p>
                   </div>
                 )}
                 {book.language && (
                   <div>
-                    <span className="text-xs text-gray-500 uppercase tracking-wide">Ngôn ngữ</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Language</span>
                     <p className="text-sm font-medium text-gray-900">{book.language}</p>
                   </div>
                 )}
@@ -166,7 +166,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
               {/* Description */}
               {book.description && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Mô tả sách</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">Book Description</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
                     {book.description}
                   </p>
@@ -176,13 +176,13 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
 
               {/* Stock Status */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Tình trạng:</span>
+                <span className="text-sm text-gray-600">Availability:</span>
                 {book.stock > 0 ? (
                   <span className="text-sm text-green-600 font-medium">
-                    Còn hàng ({book.stock} cuốn)
+                    In Stock ({book.stock} copies)
                   </span>
                 ) : (
-                  <span className="text-sm text-red-600 font-medium">Hết hàng</span>
+                  <span className="text-sm text-red-600 font-medium">Out of Stock</span>
                 )}
               </div>
 
@@ -192,7 +192,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                   <div className="flex items-center gap-2 text-green-800">
                     <ShoppingCart className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Đã có {quantityInCart} cuốn sách trong giỏ hàng
+                      {quantityInCart} books in cart
                     </span>
                   </div>
                 </div>
@@ -208,7 +208,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                 onClick={onClose}
                 className="flex-1"
               >
-                Đóng
+                Close
               </Button>
               <Button
                 onClick={handleAddToCart}
@@ -216,7 +216,7 @@ export function BookModal({ book, isOpen, onClose, onAddToCart, cart }: BookModa
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Thêm vào giỏ
+                Add to Cart
               </Button>
             </div>
           </div>
