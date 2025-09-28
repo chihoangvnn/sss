@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BookCard } from './BookCard';
 
 // API base URL from environment or default
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://766e6631-b60d-4ccf-85ca-3c49dcdde735-00-mhe9utjyvofo.sisko.replit.dev/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 interface Book {
   id: string;
@@ -46,6 +46,77 @@ interface Book {
 interface LandingPageProps {
   onBrowseCatalog?: () => void;
 }
+
+// Featured Books Component
+const FeaturedBooksSection = ({ onBookSelect, onAddToCart }: {
+  onBookSelect: (book: Book) => void;
+  onAddToCart: (book: Book) => void;
+}) => {
+  const { data: featuredBooks, isLoading: featuredLoading } = useQuery<Book[]>({
+    queryKey: ['featured-books'],
+    queryFn: async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products?limit=8`);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching featured books:', error);
+        return [];
+      }
+    },
+  });
+
+  if (featuredLoading) {
+    return (
+      <div className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            Featured Books
+          </h2>
+          <div className="text-center text-gray-600">Loading featured books...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!featuredBooks || featuredBooks.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="bg-white py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+          Featured Books
+        </h2>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featuredBooks.map((book) => (
+            <BookCard
+              key={book.id}
+              book={book}
+              onSelect={onBookSelect}
+              onAddToCart={onAddToCart}
+            />
+          ))}
+        </div>
+
+        <div className="text-center mt-12">
+          <Button 
+            onClick={() => {}}
+            variant="outline"
+            className="border-green-600 text-green-600 hover:bg-green-50"
+          >
+            View All Books
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export function LandingPage({ onBrowseCatalog }: LandingPageProps = {}) {
   const { login, isAuthenticated } = useAuth();
@@ -314,6 +385,9 @@ export function LandingPage({ onBrowseCatalog }: LandingPageProps = {}) {
             onAddToCart={handleAddToCart}
           />
         )}
+
+        {/* Featured Books Section */}
+        <FeaturedBooksSection onBookSelect={setSelectedBook} onAddToCart={handleAddToCart} />
       </div>
 
       {/* Features Section */}
