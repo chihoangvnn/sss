@@ -1,80 +1,61 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { MapPin, Phone, Mail, Facebook, MessageCircle, Star, Shield, Truck, CreditCard } from 'lucide-react';
+import { MapPin, Phone, Mail, Facebook, Twitter, Instagram, Star, Shield, Truck, CreditCard, Book, Globe, Award } from 'lucide-react';
 
 const DesktopFooter = () => {
-  // SEO Schema markup for LocalBusiness (Spiritual Products)
+  // SEO Schema markup for International BookStore
   const businessSchema = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": "NhangSach.Net",
-    "description": "Nhà cung cấp nhang sạch, sản phẩm tâm linh và phong thủy hàng đầu Việt Nam",
-    "url": "https://nhangsach.net",
-    "telephone": "+84-912-345-678",
+    "@type": "BookStore", 
+    "name": "BookStore.Net",
+    "description": "Professional international bookstore specializing in business, science & technology, and psychology books with global shipping",
+    "url": "https://bookstore.net",
+    "telephone": "+1-555-123-4567",
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "123 Nguyễn Huệ, Quận 1",
-      "addressLocality": "Hồ Chí Minh",
-      "addressRegion": "TP.HCM",
-      "postalCode": "700000",
-      "addressCountry": "VN"
+      "streetAddress": "456 Knowledge Avenue",
+      "addressLocality": "New York",
+      "addressRegion": "NY", 
+      "postalCode": "10001",
+      "addressCountry": "US"
     },
     "geo": {
       "@type": "GeoCoordinates",
-      "latitude": 10.8231,
-      "longitude": 106.6297
+      "latitude": 40.7128,
+      "longitude": -74.0060
     },
     "openingHoursSpecification": {
       "@type": "OpeningHoursSpecification",
       "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-      "opens": "08:00",
-      "closes": "22:00"
+      "opens": "09:00",
+      "closes": "21:00"
     },
-    "priceRange": "$$",
-    "category": ["Spiritual Products", "Incense", "Feng Shui", "Religious Items"],
+    "priceRange": "$$$",
+    "category": ["Business Books", "Technology Books", "Psychology Books", "Professional Literature"],
     "aggregateRating": {
       "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "reviewCount": "2847"
-    },
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Sản phẩm nhang sạch và tâm linh",
-      "itemListElement": [
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Product",
-            "name": "Nhang trầm hương cao cấp"
-          }
-        },
-        {
-          "@type": "Offer", 
-          "itemOffered": {
-            "@type": "Product",
-            "name": "Tinh dầu thảo mộc phong thủy"
-          }
-        }
-      ]
+      "ratingValue": "4.9",
+      "reviewCount": "5247"
     }
   };
 
   const organizationSchema = {
-    "@context": "https://schema.org",
+    "@context": "https://schema.org", 
     "@type": "Organization",
-    "name": "NhangSach.Net",
-    "url": "https://nhangsach.net",
-    "logo": "https://nhangsach.net/logo.png",
+    "name": "BookStore.Net",
+    "url": "https://bookstore.net",
+    "logo": "https://bookstore.net/logo.png",
     "sameAs": [
-      "https://facebook.com/nhangsach.net",
-      "https://zalo.me/nhangsach"
+      "https://facebook.com/bookstore.net",
+      "https://twitter.com/bookstore_net", 
+      "https://instagram.com/bookstore.net"
     ],
     "contactPoint": {
       "@type": "ContactPoint",
-      "telephone": "+84-912-345-678",
+      "telephone": "+1-555-123-4567", 
       "contactType": "customer service",
-      "availableLanguage": "Vietnamese"
+      "availableLanguage": ["English", "Spanish", "French", "German"]
     }
   };
 
@@ -96,29 +77,38 @@ const DesktopFooter = () => {
     };
   }, []);
 
-  const productCategories = [
-    { name: 'Nhang Trầm Hương', href: '/category/nhang-tram-huong', seo: 'Nhang trầm hương cao cấp Việt Nam' },
-    { name: 'Nhang Thảo Mộc', href: '/category/nhang-thao-moc', seo: 'Nhang thảo mộc thiên nhiên' },
-    { name: 'Tinh Dầu Thơm', href: '/category/tinh-dau-thom', seo: 'Tinh dầu thơm phòng cao cấp' },
-    { name: 'Phụ Kiện Phong Thủy', href: '/category/phu-kien-phong-thuy', seo: 'Đồ phong thủy may mắn' },
-    { name: 'Nến Cầu Nguyện', href: '/category/nen-cau-nguyen', seo: 'Nến cầu nguyện tâm linh' },
-    { name: 'Bình Hương Đồng', href: '/category/binh-huong-dong', seo: 'Bình hương đồng thau cao cấp' }
+  const bookCategories = [
+    { name: 'Business & Economics', href: '/category/business', seo: 'Professional business and economics books' },
+    { name: 'Science & Technology', href: '/category/science', seo: 'Computer science and technology books' },
+    { name: 'Psychology', href: '/category/psychology', seo: 'Behavioral psychology and decision making' },
+    { name: 'Literature', href: '/category/literature', seo: 'Classic and modern literature' },
+    { name: 'Self-Help & Development', href: '/category/self-help', seo: 'Personal development and self-improvement' },
+    { name: 'History', href: '/category/history', seo: 'Historical books and biographies' }
   ];
 
   const supportLinks = [
-    { name: 'Liên Hệ', href: '/lien-he' },
-    { name: 'Chính Sách Bảo Hành', href: '/chinh-sach-bao-hanh' },
-    { name: 'Hướng Dẫn Mua Hàng', href: '/huong-dan-mua-hang' },
-    { name: 'Chính Sách Vận Chuyển', href: '/chinh-sach-van-chuyen' },
-    { name: 'Chính Sách Đổi Trả', href: '/chinh-sach-doi-tra' },
-    { name: 'Câu Hỏi Thường Gặp', href: '/faq' }
+    { name: 'Contact Us', href: '/contact' },
+    { name: 'Shipping Information', href: '/shipping' },
+    { name: 'Return Policy', href: '/returns' },
+    { name: 'Order Tracking', href: '/track-order' },
+    { name: 'Customer Support', href: '/support' },
+    { name: 'FAQ', href: '/faq' }
+  ];
+
+  const companyLinks = [
+    { name: 'About Us', href: '/about' },
+    { name: 'Our Mission', href: '/mission' }, 
+    { name: 'Careers', href: '/careers' },
+    { name: 'Press & Media', href: '/press' },
+    { name: 'Partnerships', href: '/partnerships' },
+    { name: 'Wholesale', href: '/wholesale' }
   ];
 
   const socialLinks = [
-    { name: 'Facebook', href: 'https://facebook.com/nhangsach.net', icon: Facebook },
-    { name: 'Zalo', href: 'https://zalo.me/nhangsach', icon: MessageCircle },
-    { name: 'Email', href: 'mailto:info@nhangsach.net', icon: Mail },
-    { name: 'Hotline', href: 'tel:+84912345678', icon: Phone }
+    { name: 'Facebook', href: 'https://facebook.com/bookstore.net', icon: Facebook },
+    { name: 'Twitter', href: 'https://twitter.com/bookstore_net', icon: Twitter },
+    { name: 'Instagram', href: 'https://instagram.com/bookstore.net', icon: Instagram },
+    { name: 'Email', href: 'mailto:hello@bookstore.net', icon: Mail }
   ];
 
   return (
@@ -130,31 +120,36 @@ const DesktopFooter = () => {
           {/* Company Info Column */}
           <div className="lg:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">N</span>
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Book className="text-white" size={18} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">NhangSach.Net</h3>
+              <h3 className="text-xl font-bold text-gray-900">BookStore.Net</h3>
             </div>
             
             <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-              Nhà cung cấp nhang sạch, sản phẩm tâm linh và phong thủy hàng đầu Việt Nam. 
-              Chất lượng cao, nguồn gốc thiên nhiên, mang lại bình an và may mắn.
+              Your premier destination for professional books in business, technology, and psychology. 
+              Serving readers worldwide with carefully curated content for lifelong learning.
             </p>
 
             <div className="space-y-3">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <MapPin size={16} className="text-green-500" />
-                <span>123 Nguyễn Huệ, Quận 1, TP.HCM</span>
+                <MapPin size={16} className="text-blue-500" />
+                <span>456 Knowledge Avenue, New York, NY 10001</span>
               </div>
               
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Phone size={16} className="text-green-500" />
-                <span>Hotline: 0912.345.678</span>
+                <Phone size={16} className="text-blue-500" />
+                <span>+1 (555) 123-4567</span>
               </div>
               
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Mail size={16} className="text-green-500" />
-                <span>info@nhangsach.net</span>
+                <Mail size={16} className="text-blue-500" />
+                <span>hello@bookstore.net</span>
+              </div>
+
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Globe size={16} className="text-blue-500" />
+                <span>Global shipping available</span>
               </div>
             </div>
 
@@ -166,21 +161,21 @@ const DesktopFooter = () => {
                     <Star key={i} size={14} className="text-yellow-400 fill-current" />
                   ))}
                 </div>
-                <span className="text-sm font-semibold text-gray-900">4.8/5</span>
+                <span className="text-sm font-semibold text-gray-900">4.9/5</span>
               </div>
-              <p className="text-xs text-gray-500">Từ 2,847 đánh giá khách hàng</p>
+              <p className="text-xs text-gray-500">Based on 5,247 customer reviews</p>
             </div>
           </div>
 
-          {/* Products Column */}
+          {/* Book Categories Column */}
           <div className="lg:col-span-1">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Sản Phẩm</h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Book Categories</h4>
             <ul className="space-y-3">
-              {productCategories.map((category) => (
+              {bookCategories.map((category) => (
                 <li key={category.href}>
                   <a
                     href={category.href}
-                    className="text-sm text-gray-600 hover:text-green-600 transition-colors duration-200 block"
+                    className="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 block"
                     title={category.seo}
                   >
                     {category.name}
@@ -189,38 +184,38 @@ const DesktopFooter = () => {
               ))}
             </ul>
 
-            {/* Special Categories */}
-            <div className="mt-6 p-3 bg-green-50 rounded-lg border border-green-100">
-              <h5 className="text-sm font-semibold text-green-800 mb-2">🕯️ Đặc Biệt</h5>
+            {/* Featured Collections */}
+            <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <h5 className="text-sm font-semibold text-blue-800 mb-2">📚 Featured Collections</h5>
               <ul className="space-y-1">
                 <li>
-                  <a href="/san-pham-moi" className="text-xs text-green-700 hover:text-green-900">
-                    Sản phẩm mới về
+                  <a href="/bestsellers" className="text-xs text-blue-700 hover:text-blue-900">
+                    International Bestsellers
                   </a>
                 </li>
                 <li>
-                  <a href="/best-seller" className="text-xs text-green-700 hover:text-green-900">
-                    Nhang bán chạy nhất
+                  <a href="/new-releases" className="text-xs text-blue-700 hover:text-blue-900">
+                    New Releases
                   </a>
                 </li>
                 <li>
-                  <a href="/combo-gia-dinh" className="text-xs text-green-700 hover:text-green-900">
-                    Combo gia đình
+                  <a href="/recommended" className="text-xs text-blue-700 hover:text-blue-900">
+                    Staff Recommendations
                   </a>
                 </li>
               </ul>
             </div>
           </div>
 
-          {/* Support Column */}
+          {/* Customer Support Column */}
           <div className="lg:col-span-1">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Hỗ Trợ Khách Hàng</h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Customer Support</h4>
             <ul className="space-y-3">
               {supportLinks.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
-                    className="text-sm text-gray-600 hover:text-green-600 transition-colors duration-200 block"
+                    className="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 block"
                   >
                     {link.name}
                   </a>
@@ -229,24 +224,24 @@ const DesktopFooter = () => {
             </ul>
 
             {/* Business Hours */}
-            <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <h5 className="text-sm font-semibold text-blue-800 mb-2">⏰ Giờ Mở Cửa</h5>
-              <p className="text-xs text-blue-700">Thứ 2 - Chủ nhật</p>
-              <p className="text-xs text-blue-700 font-semibold">8:00 - 22:00</p>
-              <p className="text-xs text-blue-600 mt-1">Tư vấn 24/7 qua Zalo</p>
+            <div className="mt-6 p-3 bg-green-50 rounded-lg border border-green-100">
+              <h5 className="text-sm font-semibold text-green-800 mb-2">🕘 Business Hours</h5>
+              <p className="text-xs text-green-700">Monday - Sunday</p>
+              <p className="text-xs text-green-700 font-semibold">9:00 AM - 9:00 PM (EST)</p>
+              <p className="text-xs text-green-600 mt-1">24/7 online ordering</p>
             </div>
           </div>
 
-          {/* Connect Column */}
+          {/* Connect & Newsletter Column */}
           <div className="lg:col-span-1">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Kết Nối</h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Connect With Us</h4>
             
             <div className="space-y-3 mb-6">
               {socialLinks.map((social) => (
                 <a
                   key={social.name}
                   href={social.href}
-                  className="flex items-center space-x-3 text-sm text-gray-600 hover:text-green-600 transition-colors duration-200"
+                  className="flex items-center space-x-3 text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200"
                   target={social.href.startsWith('http') ? '_blank' : '_self'}
                   rel={social.href.startsWith('http') ? 'noopener noreferrer' : ''}
                 >
@@ -257,34 +252,35 @@ const DesktopFooter = () => {
             </div>
 
             {/* Newsletter Signup */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <h5 className="text-sm font-semibold text-gray-900 mb-2">📧 Nhận tin khuyến mãi</h5>
-              <div className="flex space-x-2">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 mb-4">
+              <h5 className="text-sm font-semibold text-gray-900 mb-2">📬 Newsletter</h5>
+              <div className="flex space-x-2 mb-2">
                 <input
                   type="email"
-                  placeholder="Email của bạn"
-                  className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter your email"
+                  className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <button className="px-4 py-2 bg-green-500 text-white text-xs rounded-md hover:bg-green-600 transition-colors">
-                  Đăng ký
+                <button className="px-4 py-2 bg-blue-500 text-white text-xs rounded-md hover:bg-blue-600 transition-colors">
+                  Subscribe
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Nhận thông tin ưu đãi và sản phẩm mới
+              <p className="text-xs text-gray-500">
+                Get book recommendations and exclusive deals
               </p>
             </div>
 
-            {/* App Download */}
-            <div className="mt-4 space-y-2">
-              <h5 className="text-sm font-semibold text-gray-900">📱 Tải App</h5>
-              <div className="flex space-x-2">
-                <button className="flex-1 bg-black text-white text-xs px-3 py-2 rounded-md hover:bg-gray-800 transition-colors">
-                  App Store
-                </button>
-                <button className="flex-1 bg-green-600 text-white text-xs px-3 py-2 rounded-md hover:bg-green-700 transition-colors">
-                  Google Play
-                </button>
-              </div>
+            {/* Company Links */}
+            <div className="space-y-2">
+              <h5 className="text-sm font-semibold text-gray-900">Company</h5>
+              {companyLinks.slice(0, 3).map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="block text-xs text-gray-600 hover:text-blue-600 transition-colors"
+                >
+                  {link.name}
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -293,34 +289,34 @@ const DesktopFooter = () => {
         <div className="border-t border-gray-200 py-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div className="flex flex-col items-center space-y-2">
-              <Shield size={24} className="text-green-500" />
+              <Shield size={24} className="text-blue-500" />
               <div>
-                <p className="text-xs font-semibold text-gray-900">Bảo Mật</p>
-                <p className="text-xs text-gray-600">SSL & An toàn</p>
+                <p className="text-xs font-semibold text-gray-900">Secure Shopping</p>
+                <p className="text-xs text-gray-600">SSL Protected</p>
               </div>
             </div>
             
             <div className="flex flex-col items-center space-y-2">
-              <Truck size={24} className="text-blue-500" />
+              <Truck size={24} className="text-green-500" />
               <div>
-                <p className="text-xs font-semibold text-gray-900">Giao Hàng</p>
-                <p className="text-xs text-gray-600">Toàn quốc 24h</p>
+                <p className="text-xs font-semibold text-gray-900">Global Shipping</p>
+                <p className="text-xs text-gray-600">Fast Delivery</p>
               </div>
             </div>
             
             <div className="flex flex-col items-center space-y-2">
               <CreditCard size={24} className="text-purple-500" />
               <div>
-                <p className="text-xs font-semibold text-gray-900">Thanh Toán</p>
-                <p className="text-xs text-gray-600">Đa dạng & An toàn</p>
+                <p className="text-xs font-semibold text-gray-900">Easy Payments</p>
+                <p className="text-xs text-gray-600">All Major Cards</p>
               </div>
             </div>
             
             <div className="flex flex-col items-center space-y-2">
-              <Star size={24} className="text-yellow-500" />
+              <Award size={24} className="text-yellow-500" />
               <div>
-                <p className="text-xs font-semibold text-gray-900">Chất Lượng</p>
-                <p className="text-xs text-gray-600">Cam kết 100%</p>
+                <p className="text-xs font-semibold text-gray-900">Quality Guarantee</p>
+                <p className="text-xs text-gray-600">Authentic Books</p>
               </div>
             </div>
           </div>
@@ -331,17 +327,18 @@ const DesktopFooter = () => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-center md:text-left">
               <p className="text-sm text-gray-600">
-                🕯️ © 2024 <strong>NhangSach.Net</strong> - Nhang sạch cho tâm linh và phong thủy
+                📚 © 2024 <strong>BookStore.Net</strong> - Your Gateway to Professional Knowledge
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Bản quyền thuộc về NhangSach.Net. Thiết kế bởi <span className="text-green-600">NhangSach Team</span>
+                Empowering professionals worldwide through quality literature and expert knowledge.
               </p>
             </div>
             
             <div className="flex items-center space-x-6 text-xs text-gray-500">
-              <a href="/terms" className="hover:text-green-600 transition-colors">Điều khoản</a>
-              <a href="/privacy" className="hover:text-green-600 transition-colors">Bảo mật</a>
-              <a href="/sitemap.xml" className="hover:text-green-600 transition-colors">Sitemap</a>
+              <a href="/terms" className="hover:text-blue-600 transition-colors">Terms of Service</a>
+              <a href="/privacy" className="hover:text-blue-600 transition-colors">Privacy Policy</a>
+              <a href="/sitemap" className="hover:text-blue-600 transition-colors">Sitemap</a>
+              <a href="/accessibility" className="hover:text-blue-600 transition-colors">Accessibility</a>
             </div>
           </div>
         </div>
