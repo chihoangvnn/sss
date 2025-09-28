@@ -14,25 +14,25 @@ export function StorefrontBottomNav({ activeTab, onTabChange, wishlistCount = 0 
   const tabs = [
     {
       id: 'home',
-      label: 'Trang chủ',
+      label: 'Home',
       icon: Home,
       badge: null
     },
     {
       id: 'categories',
-      label: 'Danh mục',
+      label: 'Categories',
       icon: Grid3X3,
       badge: null
     },
     {
       id: 'calendar',
-      label: 'Lịch Âm',
+      label: 'Calendar',
       icon: Calendar,
       badge: null
     },
     {
       id: 'profile',
-      label: 'Cá nhân',
+      label: 'Profile',
       icon: User,
       badge: null
     }

@@ -97,11 +97,11 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           </div>
           
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Chào mừng bạn!
+            Welcome!
           </h2>
           
           <p className="text-gray-600 mb-6">
-            Đăng nhập để trải nghiệm mua sắm tốt nhất và theo dõi đơn hàng của bạn.
+            Sign in to enjoy the best shopping experience and track your book orders.
           </p>
           
           <Button 
@@ -109,13 +109,13 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
             className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
           >
             <LogIn className="w-5 h-5 mr-2" />
-            Đăng nhập với Replit
+            Sign in with Replit
           </Button>
           
           <div className="mt-4 text-sm text-gray-500">
             <p className="flex items-center justify-center">
               <Shield className="w-4 h-4 mr-1" />
-              Đăng nhập an toàn với Google, GitHub, hoặc email
+              Secure sign in with Google, GitHub, or email
             </p>
           </div>
         </div>
@@ -123,24 +123,24 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
         {/* Guest Features */}
         <div className="bg-white rounded-xl p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            Tính năng khi đăng nhập
+            Features when signed in
           </h3>
           <ul className="space-y-2 text-gray-600">
             <li className="flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-              Lưu giỏ hàng và sản phẩm yêu thích
+              Save cart and favorite books
             </li>
             <li className="flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-              Theo dõi lịch sử đơn hàng
+              Track order history
             </li>
             <li className="flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-              Thanh toán nhanh với thông tin đã lưu
+              Quick checkout with saved information
             </li>
             <li className="flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-              Nhận thông báo về ưu đãi đặc biệt
+              Get notifications about special offers
             </li>
           </ul>
         </div>
@@ -164,7 +164,7 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold text-gray-900">Lịch sử đơn hàng</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Order History</h1>
         </div>
         
         <OrderHistory addToCart={addToCart} setActiveTab={setActiveTab} />
@@ -200,7 +200,7 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
             <h2 className="text-xl font-semibold text-gray-900">
               {user.firstName || user.lastName 
                 ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-                : 'Người dùng'
+                : 'User'
               }
             </h2>
             {user.email && (
@@ -218,7 +218,7 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           className="w-full text-red-600 border-red-200 hover:bg-red-50"
         >
           <LogOut className="w-5 h-5 mr-2" />
-          Đăng xuất
+          Sign Out
         </Button>
       </div>
 
@@ -233,7 +233,7 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
         <div className="bg-white rounded-xl p-6 mb-4">
           <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
             <p className="text-yellow-700 text-sm">
-              Không thể tải thông tin cấp độ. Hãy thử lại sau.
+              Unable to load tier information. Please try again later.
             </p>
           </div>
         </div>
@@ -244,7 +244,7 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
       {/* Account Features */}
       <div className="bg-white rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Tài khoản của tôi
+          My Account
         </h3>
         
         <div className="space-y-3">
@@ -254,8 +254,8 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           >
             <Package className="h-5 w-5 text-green-600 mr-3" />
             <div className="flex-1">
-              <div className="font-medium text-gray-900">Lịch sử đơn hàng</div>
-              <div className="text-sm text-gray-500">Xem các đơn hàng đã mua</div>
+              <div className="font-medium text-gray-900">Order History</div>
+              <div className="text-sm text-gray-500">View your purchased orders</div>
             </div>
           </button>
           
@@ -265,8 +265,8 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           >
             <Heart className="h-5 w-5 text-red-500 mr-3" />
             <div className="flex-1">
-              <div className="font-medium text-gray-900">Sản phẩm yêu thích</div>
-              <div className="text-sm text-gray-500">Quản lý danh sách yêu thích</div>
+              <div className="font-medium text-gray-900">Favorite Books</div>
+              <div className="text-sm text-gray-500">Manage your wishlist</div>
             </div>
           </button>
           
@@ -276,8 +276,8 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           >
             <MapPin className="h-5 w-5 text-blue-600 mr-3" />
             <div className="flex-1">
-              <div className="font-medium text-gray-900">Thông tin giao hàng</div>
-              <div className="text-sm text-gray-500">Địa chỉ và thông tin liên lạc</div>
+              <div className="font-medium text-gray-900">Shipping Information</div>
+              <div className="text-sm text-gray-500">Address and contact information</div>
             </div>
           </button>
           
@@ -287,8 +287,8 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           >
             <Bell className="h-5 w-5 text-orange-600 mr-3" />
             <div className="flex-1">
-              <div className="font-medium text-gray-900">Cài đặt thông báo</div>
-              <div className="text-sm text-gray-500">Quản lý thông báo qua email/SMS</div>
+              <div className="font-medium text-gray-900">Notification Settings</div>
+              <div className="text-sm text-gray-500">Manage email/SMS notifications</div>
             </div>
           </button>
         </div>
