@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { ShoppingCart, User, ArrowLeft, Plus, Minus, Store, Calendar, Star } from 'lucide-react';
+import { ShoppingCart, User, ArrowLeft, Plus, Minus, Store, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StorefrontBottomNav } from '@/components/StorefrontBottomNav';
@@ -14,6 +14,7 @@ import { FullScreenLunarCalendar } from '@/components/FullScreenLunarCalendar';
 import { MediaViewer } from '@/components/MediaViewer';
 import { ImageSlider } from '@/components/ImageSlider';
 import { ProfileTab } from '@/components/ProfileTab';
+import { WishlistTab, getWishlistCount } from '@/components/WishlistTab';
 import { BlogTab } from '@/components/BlogTab';
 import { BlogPost } from '@/components/BlogPost';
 import { BookModal } from '@/components/ProductModal';
@@ -135,6 +136,35 @@ export default function MobileStorefront() {
   const [blogSelectedCategory, setBlogSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'newest'>('newest');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [wishlistCount, setWishlistCount] = useState(0);
+
+  // Update wishlist count on component mount and when switching to wishlist tab
+  useEffect(() => {
+    const updateWishlistCount = () => {
+      const count = getWishlistCount();
+      setWishlistCount(count);
+    };
+    
+    updateWishlistCount();
+    
+    // Add event listener for storage changes (when wishlist is updated)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'bookstore_wishlist') {
+        updateWishlistCount();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event for wishlist updates within same tab
+    const handleWishlistUpdate = () => updateWishlistCount();
+    window.addEventListener('wishlistUpdated', handleWishlistUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('wishlistUpdated', handleWishlistUpdate);
+    };
+  }, []);
   
   // Responsive layout configurations
   const layoutConfig = {
@@ -779,8 +809,8 @@ export default function MobileStorefront() {
           </div>
         );
 
-      case 'calendar':
-        return <FullScreenLunarCalendar />;
+      case 'wishlist':
+        return <WishlistTab addToCart={addToCart} onBookClick={setSelectedBook} />;
 
       case 'profile':
         return <ProfileTab addToCart={addToCart} setActiveTab={setActiveTab} />;
@@ -968,6 +998,7 @@ export default function MobileStorefront() {
         <StorefrontBottomNav
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          wishlistCount={wishlistCount}
         />
       )}
 

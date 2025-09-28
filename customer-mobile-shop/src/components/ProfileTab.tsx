@@ -167,7 +167,7 @@ export function ProfileTab({ addToCart, setActiveTab }: ProfileTabProps = {}) {
           <h1 className="text-xl font-semibold text-gray-900">Order History</h1>
         </div>
         
-        <OrderHistory addToCart={addToCart} setActiveTab={setActiveTab} />
+        <OrderHistory addToCart={addToCart as any} setActiveTab={setActiveTab} />
       </div>
     );
   }

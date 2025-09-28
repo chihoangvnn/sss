@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { Home, Grid3X3, User, Calendar } from 'lucide-react';
+import { Home, Grid3X3, User, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface StorefrontBottomNavProps {
@@ -25,10 +25,10 @@ export function StorefrontBottomNav({ activeTab, onTabChange, wishlistCount = 0 
       badge: null
     },
     {
-      id: 'calendar',
-      label: 'Calendar',
-      icon: Calendar,
-      badge: null
+      id: 'wishlist',
+      label: 'Wishlist',
+      icon: Heart,
+      badge: wishlistCount > 0 ? wishlistCount : null
     },
     {
       id: 'profile',
