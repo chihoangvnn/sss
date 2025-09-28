@@ -627,6 +627,13 @@ export default function MobileStorefront() {
   }
 
   const addToCart = (book: Book) => {
+    // Require login for adding to cart
+    if (!isAuthenticated) {
+      alert('Please login to add items to your cart');
+      login();
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.book.id === book.id);
       if (existing) {
